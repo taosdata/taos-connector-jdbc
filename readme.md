@@ -1,13 +1,4 @@
----
-toc_max_heading_level: 4
-sidebar_position: 2
-sidebar_label: Java
-title: TDengine Java Connector
-description: TDengine Java 连接器基于标准 JDBC API 实现, 并提供原生连接与 REST连接两种连接器。
----
-
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
+# TDengine Java Connector
 
 `taos-jdbcdriver` 是 TDengine 的官方 Java 语言连接器，Java 开发人员可以通过它开发存取 TDengine 数据库的应用软件。`taos-jdbcdriver` 实现了 JDBC driver 标准的接口，并提供两种形式的连接器。一种是通过 TDengine 客户端驱动程序（taosc）原生连接 TDengine 实例，支持数据写入、查询、订阅、schemaless 接口和参数绑定接口等功能，一种是通过 taosAdapter 提供的 REST 接口连接 TDengine 实例（2.0.18 及更高版本）。REST 连接实现的功能集合和原生连接有少量不同。
 
@@ -20,13 +11,10 @@ import TabItem from '@theme/TabItem';
 
 使用 REST 连接，不依赖 TDengine 客户端驱动，可以跨平台，更加方便灵活，但性能比原生连接器低约 30%。
 
-:::info
 TDengine 的 JDBC 驱动实现尽可能与关系型数据库驱动保持一致，但 TDengine 与关系对象型数据库的使用场景和技术特征存在差异，所以`taos-jdbcdriver` 与传统的 JDBC driver 也存在一定差异。在使用时需要注意以下几点：
 
 - TDengine 目前不支持针对单条数据记录的删除操作。
 - 目前不支持事务操作。
-
-:::
 
 ## 支持的平台
 
@@ -66,10 +54,9 @@ TDengine 目前支持时间戳、数字、字符、布尔类型，与 Java 对�
 - 已安装 Java 1.8 或以上版本运行时环境和 Maven 3.6 或以上版本
 - 已安装 TDengine 客户端驱动（使用原生连接必须安装，使用 REST 连接无需安装），具体步骤请参考[安装客户端驱动](https://docs.taosdata.com/reference/connector/#安装客户端驱动)
 
-### 安装连接器
+## 安装连接器
 
-<Tabs defaultValue="maven">
-<TabItem value="maven" label="使用 Maven 安装">
+### 使用 Maven 安装
 
 目前 taos-jdbcdriver 已经发布到 [Sonatype Repository](https://search.maven.org/artifact/com.taosdata.jdbc/taos-jdbcdriver) 仓库，且各大仓库都已同步。
 
@@ -87,15 +74,14 @@ Maven 项目中，在 pom.xml 中添加以下依赖：
 </dependency>
 ```
 
-</TabItem>
-<TabItem value="source" label="使用源码编译安装">
+### 使用源码编译安装
 
 可以通过下载 TDengine 的源码，自己编译最新版本的 Java connector
 
 ```shell
 git clone https://github.com/taosdata/TDengine.git
 cd TDengine/src/connector/jdbc
-mvn clean install -Dmaven.test.skip=true
+mvn clean install -D maven.test.skip=true
 ```
 
 编译后，在 target 目录下会产生 taos-jdbcdriver-2.0.XX-dist.jar 的 jar 包，并自动将编译的 jar 文件放在本地的 Maven 仓库中。
@@ -110,8 +96,7 @@ TDengine 的 JDBC URL 规范格式为：
 
 对于建立连接，原生连接与 REST 连接有细微不同。
 
-<Tabs defaultValue="native">
-<TabItem value="native" label="原生连接">
+### 原生连接
 
 ```java
 Class.forName("com.taosdata.jdbc.TSDBDriver");
@@ -136,7 +121,7 @@ url 中的配置参数如下：
 
 JDBC 原生连接的使用请参见[视频教程](https://www.taosdata.com/blog/2020/11/11/1955.html)。
 
-**使用 TDengine 客户端驱动配置文件建立连接 **
+#### 使用 TDengine 客户端驱动配置文件建立连接
 
 当使用 JDBC 原生连接连接 TDengine 集群时，可以使用 TDengine 客户端驱动配置文件，在配置文件中指定集群的 firstEp、secondEp 等参数。如下所示：
 
@@ -155,7 +140,7 @@ public Connection getConn() throws Exception{
 }
 ```
 
-2. 在配置文件中指定 firstEp 和 secondEp
+1. 在配置文件中指定 firstEp 和 secondEp
 
 ```shell
 # first fully qualified domain name (FQDN) for TDengine system
@@ -177,8 +162,7 @@ TDengine 中，只要保证 firstEp 和 secondEp 中一个节点有效，就可�
 
 > **注意**：这里的配置文件指的是调用 JDBC Connector 的应用程序所在机器上的配置文件，Linux OS 上默认值 /etc/taos/taos.cfg ，Windows OS 上默认值 C://TDengine/cfg/taos.cfg。
 
-</TabItem>
-<TabItem value="rest" label="REST 连接">
+### REST 连接
 
 ```java
 Class.forName("com.taosdata.jdbc.rs.RestfulDriver");
@@ -203,20 +187,13 @@ url 中的配置参数如下：
 
 **注意**：部分配置项（比如：locale、timezone）在 REST 连接中不生效。
 
-:::note
-
 - 与原生连接方式不同，REST 接口是无状态的。在使用 JDBC REST 连接时，需要在 SQL 中指定表、超级表的数据库名称。例如：
 
 ```sql
 INSERT INTO test.t1 USING test.weather (ts, temperature) TAGS('beijing') VALUES(now, 24.6);
 ```
 
-- 从 taos-jdbcdriver-2.0.36 和 TDengine 2.2.0.0 版本开始，如果在 url 中指定了 dbname，那么，JDBC REST 连接会默认使用/rest/sql/dbname 作为 resful 请求的 url，在 SQL 中不需要指定 dbname。例如：url 为 jdbc:TAOS-RS://127.0.0.1:6041/test，那么，可以执行 sql：insert into t1 using weather(ts, temperatrue) tags('beijing') values(now, 24.6);
-
-:::
-
-</TabItem>
-</Tabs>
+- 从 taos-jdbcdriver-2.0.36 和 TDengine 2.2.0.0 版本开始，如果在 url 中指定了 dbname，那么，JDBC REST 连接会默认使用/rest/sql/dbname 作为 restful 请求的 url，在 SQL 中不需要指定 dbname。例如：url 为 jdbc:TAOS-RS://127.0.0.1:6041/test，那么，可以执行 sql：insert into t1 using weather(ts, temperature) tags('beijing') values(now, 24.6);
 
 ### 指定 URL 和 Properties 获取连接
 
@@ -348,8 +325,8 @@ JDBC 连接器可能报错的错误码包括 3 种：JDBC driver 本身的报错
 
 具体的错误码请参考：
 
-- https://github.com/taosdata/TDengine/blob/develop/src/connector/jdbc/src/main/java/com/taosdata/jdbc/TSDBErrorNumbers.java
-- https://github.com/taosdata/TDengine/blob/develop/src/inc/taoserror.h
+- [TDengine Java Connector](https://github.com/taosdata/TDengine/blob/develop/src/connector/jdbc/src/main/java/com/taosdata/jdbc/TSDBErrorNumbers.java)
+- [TDengine_ERROR_CODE](https://github.com/taosdata/TDengine/blob/develop/src/inc/taoserror.h)
 
 ### 通过参数绑定写入数据
 
@@ -621,7 +598,7 @@ public void setNString(int columnIndex, ArrayList<String> list, int size) throws
 
 ### 无模式写入
 
-从 2.2.0.0 版本开始，TDengine 增加了对无模式写入功能。无模式写入兼容 InfluxDB 的 行协议（Line Protocol）、OpenTSDB 的 telnet 行协议和 OpenTSDB 的 JSON 格式协议。详情请参见[无模式写入](/reference/schemaless/)。
+从 2.2.0.0 版本开始，TDengine 增加了对无模式写入功能。无模式写入兼容 InfluxDB 的 行协议（Line Protocol）、OpenTSDB 的 telnet 行协议和 OpenTSDB 的 JSON 格式协议。详情请参见[无模式写入](https://docs.taosdata.com/reference/schemaless/)。
 
 **注意**：
 
@@ -784,7 +761,7 @@ public static void main(String[] args) throws Exception {
 
 如下所示，`select server_status()` 执行成功会返回 `1`。
 
-```sql
+```shell
 taos> select server_status();
 server_status()|
 ================
@@ -820,19 +797,19 @@ Query OK, 1 row(s) in set (0.000141s)
 
 **解决方法**：1. 在一条 insert 语句中拼接多个 values 值；2. 使用多线程的方式并发插入；3. 使用参数绑定的写入方式
 
-2. java.lang.UnsatisfiedLinkError: no taos in java.library.path
+1. java.lang.UnsatisfiedLinkError: no taos in java.library.path
 
 **原因**：程序没有找到依赖的本地函数库 taos。
 
 **解决方法**：Windows 下可以将 C:\TDengine\driver\taos.dll 拷贝到 C:\Windows\System32\ 目录下，Linux 下将建立如下软链 `ln -s /usr/local/taos/driver/libtaos.so.x.x.x.x /usr/lib/libtaos.so` 即可。
 
-3. java.lang.UnsatisfiedLinkError: taos.dll Can't load AMD 64 bit on a IA 32-bit platform
+1. java.lang.UnsatisfiedLinkError: taos.dll Can't load AMD 64 bit on a IA 32-bit platform
 
 **原因**：目前 TDengine 只支持 64 位 JDK。
 
 **解决方法**：重新安装 64 位 JDK。
 
-4. 其它问题请参考 [FAQ](https://docs.taosdata.com/train-faq/faq/)
+1. 其它问题请参考 [FAQ](https://docs.taosdata.com/train-faq/faq/)
 
 ## API 参考
 
