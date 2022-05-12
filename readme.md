@@ -140,7 +140,7 @@ public Connection getConn() throws Exception{
 }
 ```
 
-1. 在配置文件中指定 firstEp 和 secondEp
+2. 在配置文件中指定 firstEp 和 secondEp
 
 ```shell
 # first fully qualified domain name (FQDN) for TDengine system
@@ -797,19 +797,19 @@ Query OK, 1 row(s) in set (0.000141s)
 
 **解决方法**：1. 在一条 insert 语句中拼接多个 values 值；2. 使用多线程的方式并发插入；3. 使用参数绑定的写入方式
 
-1. java.lang.UnsatisfiedLinkError: no taos in java.library.path
+2. java.lang.UnsatisfiedLinkError: no taos in java.library.path
 
 **原因**：程序没有找到依赖的本地函数库 taos。
 
 **解决方法**：Windows 下可以将 C:\TDengine\driver\taos.dll 拷贝到 C:\Windows\System32\ 目录下，Linux 下将建立如下软链 `ln -s /usr/local/taos/driver/libtaos.so.x.x.x.x /usr/lib/libtaos.so` 即可。
 
-1. java.lang.UnsatisfiedLinkError: taos.dll Can't load AMD 64 bit on a IA 32-bit platform
+3. java.lang.UnsatisfiedLinkError: taos.dll Can't load AMD 64 bit on a IA 32-bit platform
 
 **原因**：目前 TDengine 只支持 64 位 JDK。
 
 **解决方法**：重新安装 64 位 JDK。
 
-1. 其它问题请参考 [FAQ](https://docs.taosdata.com/train-faq/faq/)
+4. 其它问题请参考 [FAQ](https://docs.taosdata.com/train-faq/faq/)
 
 ## API 参考
 
