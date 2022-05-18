@@ -126,14 +126,10 @@ public class JsonTagTest {
     }
 
     // windows not recognize \t
-//    @Test
+//    @Test(expected = SQLException.class)
 //    @Description("exception will throw when json key is '\\t'")
-//    public void case02_AbnormalKeyErrorTest2()  {
-//        try {
-//            statement.execute("CREATE TABLE if not exists jsons1_14 using jsons1 tags('{\"\t\":\"fff\"}')");
-//        }catch (Exception e){
-//            System.out.println(e);
-//        }
+//    public void case02_AbnormalKeyErrorTest2() throws SQLException {
+//        statement.execute("CREATE TABLE if not exists jsons1_14 using jsons1 tags('{\"\t\":\"fff\"}')");
 //    }
 
     @Test(expected = SQLException.class)
