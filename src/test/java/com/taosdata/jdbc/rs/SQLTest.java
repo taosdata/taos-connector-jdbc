@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.rs;
 
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.*;
 import org.junit.runners.MethodSorters;
 
@@ -572,7 +573,11 @@ public class SQLTest {
 
     @BeforeClass
     public static void before() throws SQLException {
-        connection = DriverManager.getConnection("jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata");
+        String url = SpecifyAddress.getInstance().getRestUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+        }
+        connection = DriverManager.getConnection(url);
     }
 
     @AfterClass

@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.cases;
 
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -68,7 +69,11 @@ public class PreparedStatementBatchInsertRestfulTest {
 
     @Before
     public void before() throws SQLException {
-        conn = DriverManager.getConnection("jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata");
+        String url = SpecifyAddress.getInstance().getRestUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+        }
+        conn = DriverManager.getConnection(url);
         Statement stmt = conn.createStatement();
         stmt.execute("drop database if exists " + dbname);
         stmt.execute("create database if not exists " + dbname);

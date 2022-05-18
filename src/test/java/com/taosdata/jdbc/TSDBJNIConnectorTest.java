@@ -2,6 +2,9 @@ package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
+import com.taosdata.jdbc.utils.SpecifyAddress;
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
@@ -18,8 +21,16 @@ import static org.junit.Assert.assertTrue;
 
 public class TSDBJNIConnectorTest {
 
-    private static final String host = "127.0.0.1";
+    private static String host = "127.0.0.1";
     private static TSDBResultSetRowData rowData;
+
+    @BeforeClass
+    public static void beforeClass() {
+        String specifyHost = SpecifyAddress.getInstance().getJniUrl();
+        if (specifyHost != null) {
+            host = specifyHost;
+        }
+    }
 
     @Test
     public void test() throws SQLException {

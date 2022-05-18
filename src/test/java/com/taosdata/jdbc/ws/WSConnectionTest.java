@@ -4,6 +4,8 @@ import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
+import com.taosdata.jdbc.utils.SpecifyAddress;
+import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -20,8 +22,8 @@ import java.util.concurrent.TimeUnit;
 @TestTarget(alias = "test connection with server", author = "huolibo", version = "2.0.37")
 public class WSConnectionTest {
     //    private static final String host = "192.168.1.98";
-    private static final String host = "127.0.0.1";
-    private static final int port = 6041;
+    private static String host = "127.0.0.1";
+    private static String port = "6041";
     private Connection connection;
 
     @Test
@@ -77,5 +79,17 @@ public class WSConnectionTest {
         resultSet.close();
         statement.close();
         connection.close();
+    }
+
+    @BeforeClass
+    public static void beforeClass() {
+        String specifyHost = SpecifyAddress.getInstance().getHost();
+        if (specifyHost != null) {
+            host = specifyHost;
+        }
+        String specifyPort = SpecifyAddress.getInstance().getRestPort();
+        if (specifyHost != null) {
+            port = specifyPort;
+        }
     }
 }

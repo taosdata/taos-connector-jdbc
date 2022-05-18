@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.cases;
 
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -107,7 +108,10 @@ public class InvalidResultSetPointerTest {
     @BeforeClass
     public static void beforeClass() {
         try {
-            String url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+            String url = SpecifyAddress.getInstance().getJniUrl();
+            if (url == null) {
+                url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+            }
             Class.forName("com.taosdata.jdbc.TSDBDriver");
             Properties properties = new Properties();
             properties.setProperty("charset", "UTF-8");

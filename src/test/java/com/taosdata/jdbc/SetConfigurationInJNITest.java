@@ -1,5 +1,6 @@
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.Test;
 
 import java.sql.Connection;
@@ -17,7 +18,13 @@ public class SetConfigurationInJNITest {
     @Test
     public void setConfigInUrl() {
         try {
-            Connection conn = DriverManager.getConnection("jdbc:TAOS://" + host + ":0/?user=root&password=taosdata&debugFlag=143&rpcTimer=500");
+            String url = SpecifyAddress.getInstance().getJniUrl();
+            if (url == null) {
+                url = "jdbc:TAOS://" + host + ":0/?user=root&password=taosdata&debugFlag=143&rpcTimer=500";
+            } else {
+                url += "&debugFlag=143&rpcTimer=500";
+            }
+            Connection conn = DriverManager.getConnection(url);
             Statement stmt = conn.createStatement();
 
             stmt.execute("drop database if exists " + dbname);
@@ -39,7 +46,11 @@ public class SetConfigurationInJNITest {
             Properties props = new Properties();
             props.setProperty("debugFlag", "143");
             props.setProperty("r pcTimer", "500");
-            Connection conn = DriverManager.getConnection("jdbc:TAOS://" + host + ":0/?user=root&password=taosdata", props);
+            String url = SpecifyAddress.getInstance().getJniUrl();
+            if (url == null) {
+                url = "jdbc:TAOS://" + host + ":0/?user=root&password=taosdata";
+            }
+            Connection conn = DriverManager.getConnection(url, props);
 
             Statement stmt = conn.createStatement();
             stmt.execute("drop database if exists " + dbname);
@@ -64,7 +75,11 @@ public class SetConfigurationInJNITest {
             Properties props = new Properties();
             //set debugFlag=135
             props.setProperty("debugFlag", "135");
-            Connection conn = DriverManager.getConnection("jdbc:TAOS://" + host + ":0/?user=root&password=taosdata", props);
+            String url = SpecifyAddress.getInstance().getJniUrl();
+            if (url == null) {
+                url = "jdbc:TAOS://" + host + ":0/?user=root&password=taosdata";
+            }
+            Connection conn = DriverManager.getConnection(url, props);
 
             Statement stmt = conn.createStatement();
             stmt.execute("drop database if exists " + dbname);
@@ -79,6 +94,7 @@ public class SetConfigurationInJNITest {
             e.printStackTrace();
         }
     }
+
     @Test
     //test case2:set debugFlag=abc (wrong type)
     //expect:debugFlag:135 
@@ -88,7 +104,11 @@ public class SetConfigurationInJNITest {
             Properties props = new Properties();
             //set debugFlag=135
             props.setProperty("debugFlag", "abc");
-            Connection conn = DriverManager.getConnection("jdbc:TAOS://" + host + ":0/?user=root&password=taosdata", props);
+            String url = SpecifyAddress.getInstance().getJniUrl();
+            if (url == null) {
+                url = "jdbc:TAOS://" + host + ":0/?user=root&password=taosdata";
+            }
+            Connection conn = DriverManager.getConnection(url, props);
 
             Statement stmt = conn.createStatement();
             stmt.execute("drop database if exists " + dbname);
@@ -103,6 +123,7 @@ public class SetConfigurationInJNITest {
             e.printStackTrace();
         }
     }
+
     @Test
     //test case3:set rpcTimer=0 (smaller than the boundary conditions)
     //expect:rpcTimer:300 
@@ -112,7 +133,11 @@ public class SetConfigurationInJNITest {
             Properties props = new Properties();
             //set rpcTimer=0
             props.setProperty("rpcTimer", "0");
-            Connection conn = DriverManager.getConnection("jdbc:TAOS://" + host + ":0/?user=root&password=taosdata", props);
+            String url = SpecifyAddress.getInstance().getJniUrl();
+            if (url == null) {
+                url = "jdbc:TAOS://" + host + ":0/?user=root&password=taosdata";
+            }
+            Connection conn = DriverManager.getConnection(url, props);
 
             Statement stmt = conn.createStatement();
             stmt.execute("drop database if exists " + dbname);
@@ -127,6 +152,7 @@ public class SetConfigurationInJNITest {
             e.printStackTrace();
         }
     }
+
     @Test
     //test case4:set rpcMaxTime=10000 (bigger than the boundary conditions)
     //expect:rpcMaxTime:600 
@@ -136,7 +162,11 @@ public class SetConfigurationInJNITest {
             Properties props = new Properties();
             //set rpcMaxTime=10000
             props.setProperty("rpcMaxTime", "10000");
-            Connection conn = DriverManager.getConnection("jdbc:TAOS://" + host + ":0/?user=root&password=taosdata", props);
+            String url = SpecifyAddress.getInstance().getJniUrl();
+            if (url == null) {
+                url = "jdbc:TAOS://" + host + ":0/?user=root&password=taosdata";
+            }
+            Connection conn = DriverManager.getConnection(url, props);
 
             Statement stmt = conn.createStatement();
             stmt.execute("drop database if exists " + dbname);
@@ -151,6 +181,7 @@ public class SetConfigurationInJNITest {
             e.printStackTrace();
         }
     }
+
     @Test
     //test case5:set numOfThreadsPerCore=aaa (wrong type)
     //expect:numOfThreadsPerCore:1.0 
@@ -160,7 +191,11 @@ public class SetConfigurationInJNITest {
             Properties props = new Properties();
             //set numOfThreadsPerCore=aaa
             props.setProperty("numOfThreadsPerCore", "aaa");
-            Connection conn = DriverManager.getConnection("jdbc:TAOS://" + host + ":0/?user=root&password=taosdata", props);
+            String url = SpecifyAddress.getInstance().getJniUrl();
+            if (url == null) {
+                url = "jdbc:TAOS://" + host + ":0/?user=root&password=taosdata";
+            }
+            Connection conn = DriverManager.getConnection(url, props);
 
             Statement stmt = conn.createStatement();
             stmt.execute("drop database if exists " + dbname);
@@ -175,6 +210,7 @@ public class SetConfigurationInJNITest {
             e.printStackTrace();
         }
     }
+
     @Test
     //test case6:set numOfThreadsPerCore=100000 (bigger than the boundary conditions)
     //expect:numOfThreadsPerCore:1.0 
@@ -184,7 +220,11 @@ public class SetConfigurationInJNITest {
             Properties props = new Properties();
             //set numOfThreadsPerCore=100000
             props.setProperty("numOfThreadsPerCore", "100000");
-            Connection conn = DriverManager.getConnection("jdbc:TAOS://" + host + ":0/?user=root&password=taosdata", props);
+            String url = SpecifyAddress.getInstance().getJniUrl();
+            if (url == null) {
+                url = "jdbc:TAOS://" + host + ":0/?user=root&password=taosdata";
+            }
+            Connection conn = DriverManager.getConnection(url, props);
 
             Statement stmt = conn.createStatement();
             stmt.execute("drop database if exists " + dbname);
@@ -199,6 +239,7 @@ public class SetConfigurationInJNITest {
             e.printStackTrace();
         }
     }
+
     @Test
     // test case7:set both true and wrong config(debugFlag=0,rpcDebugFlag=143,cDebugFlag=143,rpcTimer=100000)
     // expect:rpcDebugFlag:143,cDebugFlag:143,rpcTimer:300
@@ -210,7 +251,11 @@ public class SetConfigurationInJNITest {
             props.setProperty("rpcDebugFlag", "143");
             props.setProperty("cDebugFlag", "143");
             props.setProperty("rpcTimer", "100000");
-            Connection conn = DriverManager.getConnection("jdbc:TAOS://" + host + ":0/?user=root&password=taosdata", props);
+            String url = SpecifyAddress.getInstance().getJniUrl();
+            if (url == null) {
+                url = "jdbc:TAOS://" + host + ":0/?user=root&password=taosdata";
+            }
+            Connection conn = DriverManager.getConnection(url, props);
 
             Statement stmt = conn.createStatement();
             stmt.execute("drop database if exists " + dbname);
@@ -225,13 +270,20 @@ public class SetConfigurationInJNITest {
             e.printStackTrace();
         }
     }
+
     @Test
     //test case 8:use url to set with wrong type(debugFlag=abc,rpcTimer=abc)
     //expect:default value
     //result:pass
     public void setConfigInUrlwithwrongtype() {
         try {
-            Connection conn = DriverManager.getConnection("jdbc:TAOS://" + host + ":0/?user=root&password=taosdata&debugFlag=abc&rpcTimer=abc");
+            String url = SpecifyAddress.getInstance().getJniUrl();
+            if (url == null) {
+                url = "jdbc:TAOS://" + host + ":0/?user=root&password=taosdata&debugFlag=abc&rpcTimer=abc";
+            }else {
+               url += "&debugFlag=abc&rpcTimer=abc";
+            }
+            Connection conn = DriverManager.getConnection(url);
             Statement stmt = conn.createStatement();
 
             stmt.execute("drop database if exists " + dbname);

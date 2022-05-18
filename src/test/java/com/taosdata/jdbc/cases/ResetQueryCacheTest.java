@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.cases;
 
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.Test;
 
 import java.sql.Connection;
@@ -15,7 +16,13 @@ public class ResetQueryCacheTest {
     @Test
     public void jni() throws SQLException {
         // given
-        Connection connection = DriverManager.getConnection("jdbc:TAOS://127.0.0.1:0/?user=root&password=taosdata&timezone=UTC-8&charset=UTF-8&locale=en_US.UTF-8");
+        String url = SpecifyAddress.getInstance().getJniUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://127.0.0.1:0/?user=root&password=taosdata&timezone=UTC-8&charset=UTF-8&locale=en_US.UTF-8";
+        } else {
+            url += "&timezone=UTC-8&charset=UTF-8&locale=en_US.UTF-8";
+        }
+        Connection connection = DriverManager.getConnection(url);
         Statement statement = connection.createStatement();
 
         // when
@@ -32,7 +39,13 @@ public class ResetQueryCacheTest {
     @Test
     public void restful() throws SQLException {
         // given
-        Connection connection = DriverManager.getConnection("jdbc:TAOS-RS://127.0.0.1:6041/?user=root&password=taosdata&timezone=UTC-8&charset=UTF-8&locale=en_US.UTF-8");
+        String url = SpecifyAddress.getInstance().getRestUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-RS://127.0.0.1:6041/?user=root&password=taosdata&timezone=UTC-8&charset=UTF-8&locale=en_US.UTF-8";
+        } else {
+            url += "&timezone=UTC-8&charset=UTF-8&locale=en_US.UTF-8";
+        }
+        Connection connection = DriverManager.getConnection(url);
         Statement statement = connection.createStatement();
 
         // when

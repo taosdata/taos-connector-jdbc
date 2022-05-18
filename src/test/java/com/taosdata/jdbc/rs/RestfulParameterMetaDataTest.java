@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.rs;
 
 import com.taosdata.jdbc.TSDBConstants;
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -147,7 +148,11 @@ public class RestfulParameterMetaDataTest {
     public static void beforeClass() {
         try {
             Class.forName("com.taosdata.jdbc.rs.RestfulDriver");
-            conn = DriverManager.getConnection("jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata");
+            String url = SpecifyAddress.getInstance().getRestUrl();
+            if (url == null) {
+                url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+            }
+            conn = DriverManager.getConnection(url);
             try (Statement stmt = conn.createStatement()) {
                 stmt.execute("drop database if exists " + dbname);
                 stmt.execute("create database if not exists " + dbname);

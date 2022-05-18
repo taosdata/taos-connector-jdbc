@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.cases;
 
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.Test;
 
 import java.sql.DriverManager;
@@ -9,12 +10,24 @@ public class ConnectWrongDatabaseTest {
 
     @Test(expected = SQLException.class)
     public void connectByJni() throws SQLException {
-        DriverManager.getConnection("jdbc:TAOS://localhost:6030/wrong_db?user=root&password=taosdata");
+        String url = SpecifyAddress.getInstance().getJniWithoutUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://localhost:6030/wrong_db?user=root&password=taosdata";
+        }else {
+            url += "wrong_db?user=root&password=taosdata";
+        }
+        DriverManager.getConnection(url);
     }
 
     @Test(expected = SQLException.class)
     public void connectByRestful() throws SQLException {
-        DriverManager.getConnection("jdbc:TAOS-RS://localhost:6041/wrong_db?user=root&password=taosdata");
+        String url = SpecifyAddress.getInstance().getRestWithoutUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-RS://localhost:6041/wrong_db?user=root&password=taosdata";
+        }else {
+            url += "wrong_db?user=root&password=taosdata";
+        }
+        DriverManager.getConnection(url);
     }
 
 }

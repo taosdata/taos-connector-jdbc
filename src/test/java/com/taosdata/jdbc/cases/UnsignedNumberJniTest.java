@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.*;
 import org.junit.runners.MethodSorters;
 
@@ -143,7 +144,10 @@ public class UnsignedNumberJniTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
         ts = System.currentTimeMillis();
 
-        final String url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+        String url = SpecifyAddress.getInstance().getJniUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+        }
         conn = DriverManager.getConnection(url, properties);
         Statement stmt = conn.createStatement();
         stmt.execute("drop database if exists unsign_jni");

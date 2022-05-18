@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.cases;
 
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -37,7 +38,12 @@ public class MultiConnectionWithDifferentDbTest {
             }
 
             private void queryDb() throws SQLException {
-                String url = "jdbc:TAOS-RS://" + host + ":6041/db" + i + "?user=root&password=taosdata";
+                String url = SpecifyAddress.getInstance().getRestWithoutUrl();
+                if (url == null) {
+                    url = "jdbc:TAOS-RS://" + host + ":6041/db" + i + "?user=root&password=taosdata";
+                } else {
+                    url = url + "db" + i + "?user=root&password=taosdata";
+                }
                 try (Connection connection = DriverManager.getConnection(url)) {
                     Statement stmt = connection.createStatement();
 
@@ -75,7 +81,11 @@ public class MultiConnectionWithDifferentDbTest {
     public void before() throws SQLException {
         ts = System.currentTimeMillis();
 
-        try (Connection conn = DriverManager.getConnection("jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata")) {
+        String url = SpecifyAddress.getInstance().getRestUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+        }
+        try (Connection conn = DriverManager.getConnection(url)) {
             Statement stmt = conn.createStatement();
             stmt.execute("drop database if exists " + db1);
             stmt.execute("create database if not exists " + db1);
@@ -93,7 +103,10 @@ public class MultiConnectionWithDifferentDbTest {
 
     @After
     public void after() {
-        String url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+        String url = SpecifyAddress.getInstance().getRestUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+        }
         try (Connection connection = DriverManager.getConnection(url);
              Statement statement = connection.createStatement()) {
             statement.execute("drop database if exists " + db1);

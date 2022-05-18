@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.confprops;
 
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.*;
 import org.junit.runners.MethodSorters;
 
@@ -14,7 +15,12 @@ public class BatchFetchTest {
 
     @Test
     public void case01_rowFetch() throws SQLException {
-        String url = "jdbc:TAOS://" + host + ":6030/test?user=root&password=taosdata";
+        String url = SpecifyAddress.getInstance().getJniWithoutUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://" + host + ":6030/test?user=root&password=taosdata";
+        } else {
+            url += "test?user=root&password=taosdata";
+        }
         try (Connection conn = DriverManager.getConnection(url);
              Statement stmt = conn.createStatement()) {
 
@@ -32,7 +38,12 @@ public class BatchFetchTest {
 
     @Test
     public void case02_batchFetch() throws SQLException {
-        String url = "jdbc:TAOS://" + host + ":6030/test?user=root&password=taosdata&batchfetch=true";
+        String url = SpecifyAddress.getInstance().getJniWithoutUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://" + host + ":6030/test?user=root&password=taosdata&batchfetch=true";
+        } else {
+            url += "test?user=root&password=taosdata&batchfetch=true";
+        }
         try (Connection conn = DriverManager.getConnection(url);
              Statement stmt = conn.createStatement()) {
 
@@ -55,7 +66,10 @@ public class BatchFetchTest {
 
     @BeforeClass
     public static void beforeClass() throws SQLException {
-        String url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+        String url = SpecifyAddress.getInstance().getJniUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+        }
         try (Connection conn = DriverManager.getConnection(url);
              Statement stmt = conn.createStatement()) {
             stmt.execute("drop database if exists test");
@@ -81,8 +95,11 @@ public class BatchFetchTest {
     }
 
     @AfterClass
-    public static void afterClass(){
-        String url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+    public static void afterClass() {
+        String url = SpecifyAddress.getInstance().getJniUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+        }
         try (Connection conn = DriverManager.getConnection(url);
              Statement stmt = conn.createStatement()) {
             stmt.execute("drop database if exists test");

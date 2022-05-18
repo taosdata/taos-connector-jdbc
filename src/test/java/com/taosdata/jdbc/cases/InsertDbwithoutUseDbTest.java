@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.cases;
 
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.*;
 import org.junit.runners.MethodSorters;
 
@@ -18,7 +19,10 @@ public class InsertDbwithoutUseDbTest {
     @Test
     public void case001() throws SQLException {
         // prepare schema
-        String url = "jdbc:TAOS://127.0.0.1:6030/?user=root&password=taosdata";
+        String url = SpecifyAddress.getInstance().getJniUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://127.0.0.1:6030/?user=root&password=taosdata";
+        }
         Connection conn = DriverManager.getConnection(url, properties);
         Statement stmt = conn.createStatement();
         stmt.execute("drop database if exists " + dbname);
@@ -28,7 +32,12 @@ public class InsertDbwithoutUseDbTest {
         conn.close();
 
         // execute insert
-        url = "jdbc:TAOS://127.0.0.1:6030/" + dbname + "?user=root&password=taosdata";
+        url = SpecifyAddress.getInstance().getJniWithoutUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://127.0.0.1:6030/" + dbname + "?user=root&password=taosdata";
+        } else {
+            url = url + dbname + "?user=root&password=taosdata";
+        }
         conn = DriverManager.getConnection(url, properties);
         stmt = conn.createStatement();
         int affectedRow = stmt.executeUpdate("insert into weather(ts, f1) values(now," + random.nextInt(100) + ")");
@@ -45,7 +54,10 @@ public class InsertDbwithoutUseDbTest {
     @Test
     public void case002() throws SQLException {
         // prepare the schema
-        final String url = "jdbc:TAOS-RS://" + host + ":6041/inWithoutDb?user=root&password=taosdata";
+        String url = SpecifyAddress.getInstance().getRestUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-RS://" + host + ":6041/inWithoutDb?user=root&password=taosdata";
+        }
         Connection conn = DriverManager.getConnection(url, properties);
         Statement stmt = conn.createStatement();
         stmt.execute("drop database if exists " + dbname);

@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.cases;
 
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -51,7 +52,11 @@ public class ResultSetMetaShouldNotBeNullRestfulTest {
 
     @Before
     public void before() throws SQLException {
-        connection = DriverManager.getConnection("jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata");
+        String url = SpecifyAddress.getInstance().getRestUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+        }
+        connection = DriverManager.getConnection(url);
         Statement stmt = connection.createStatement();
         stmt.execute("drop database if exists " + dbname);
         stmt.execute("create database if not exists " + dbname);

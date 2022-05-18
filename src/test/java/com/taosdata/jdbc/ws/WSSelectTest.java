@@ -2,6 +2,7 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.enums.TimestampFormat;
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -67,7 +68,10 @@ public class WSSelectTest {
 
     @BeforeClass
     public static void beforeClass() throws SQLException {
-        String url = "jdbc:TAOS-RS://" + host + ":" + port + "/?user=root&password=taosdata";
+        String url = SpecifyAddress.getInstance().getRestUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-RS://" + host + ":" + port + "/?user=root&password=taosdata";
+        }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIMESTAMP_FORMAT, String.valueOf(TimestampFormat.UTC));
         properties.setProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, "100000");

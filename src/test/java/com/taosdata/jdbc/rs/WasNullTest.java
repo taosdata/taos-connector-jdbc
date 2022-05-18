@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.rs;
 
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -67,7 +68,11 @@ public class WasNullTest {
 
     @Before
     public void before() throws SQLException {
-        conn = DriverManager.getConnection("jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata");
+        String url = SpecifyAddress.getInstance().getRestUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+        }
+        conn = DriverManager.getConnection(url);
         try (Statement stmt = conn.createStatement()) {
             stmt.execute("drop database if exists restful_test");
             stmt.execute("create database if not exists restful_test");

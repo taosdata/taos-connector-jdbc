@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.cases;
 
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.*;
 
 import java.sql.*;
@@ -148,7 +149,10 @@ public class NanoSecondTimestampRestfulTest {
 
     @BeforeClass
     public static void beforeClass() throws SQLException {
-        final String url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+        String url = SpecifyAddress.getInstance().getRestUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+        }
         conn = DriverManager.getConnection(url);
         try (Statement stmt = conn.createStatement()) {
             stmt.execute("drop database if exists " + dbname);

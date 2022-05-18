@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.confprops;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Test;
@@ -14,7 +15,10 @@ public class CharsetTest {
     @Test
     public void test() throws SQLException {
         // given
-        String url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+        String url = SpecifyAddress.getInstance().getJniUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+        }
         Properties props = new Properties();
         props.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
 
@@ -40,7 +44,10 @@ public class CharsetTest {
 
     @AfterClass
     public static void afterClass(){
-        String url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+        String url = SpecifyAddress.getInstance().getJniUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+        }
         Properties props = new Properties();
         props.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
 

@@ -1,5 +1,6 @@
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.*;
 
 import java.sql.*;
@@ -7,7 +8,7 @@ import java.util.Properties;
 
 public class TSDBDatabaseMetaDataTest {
     private static final String host = "127.0.0.1";
-    private static final String url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+    private static String url ;
     private static Connection connection;
     private static TSDBDatabaseMetaData metaData;
 
@@ -1087,6 +1088,10 @@ public class TSDBDatabaseMetaDataTest {
             properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
             properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "en_US.UTF-8");
             properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
+            url = SpecifyAddress.getInstance().getJniUrl();
+            if (url == null) {
+                url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+            }
             connection = DriverManager.getConnection(url, properties);
             metaData = connection.getMetaData().unwrap(TSDBDatabaseMetaData.class);
         } catch (SQLException e) {

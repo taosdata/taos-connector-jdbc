@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.cases;
 
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -13,7 +14,10 @@ public class GetLongWithDifferentTimestampPrecision {
     @Test
     public void testRestful() throws SQLException {
         // given
-        String url = "jdbc:TAOS-RS://" + host + ":6041/";
+        String url = SpecifyAddress.getInstance().getRestWithoutUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-RS://" + host + ":6041/";
+        }
         Connection conn = DriverManager.getConnection(url, "root", "taosdata");
         long ts = System.currentTimeMillis();
 
@@ -26,7 +30,10 @@ public class GetLongWithDifferentTimestampPrecision {
     @Test
     public void testJni() throws SQLException {
         // given
-        String url = "jdbc:TAOS://" + host + ":6030/";
+        String url = SpecifyAddress.getInstance().getJniWithoutUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://" + host + ":6030/";
+        }
         Connection conn = DriverManager.getConnection(url, "root", "taosdata");
         long ts = System.currentTimeMillis();
 

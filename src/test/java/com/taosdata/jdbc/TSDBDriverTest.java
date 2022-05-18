@@ -1,5 +1,7 @@
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.utils.SpecifyAddress;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.sql.*;
@@ -9,25 +11,17 @@ import static org.junit.Assert.*;
 
 public class TSDBDriverTest {
 
-    private static final String[] validURLs = {
-            "jdbc:TAOS://localhost:0",
-            "jdbc:TAOS://localhost",
-            "jdbc:TAOS://localhost:6030/test",
-            "jdbc:TAOS://localhost:6030",
-            "jdbc:TAOS://localhost:6030/",
-            "jdbc:TSDB://localhost:6030",
-            "jdbc:TSDB://localhost:6030/",
-            "jdbc:TAOS://127.0.0.1:0/db?user=root&password=taosdata",
-            "jdbc:TAOS://:",
-            "jdbc:TAOS://:/",
-            "jdbc:TAOS://:/test",
-            "jdbc:TAOS://localhost:0/?user=root&password=taosdata"
-    };
+    private static String[] validURLs;
     private Connection conn;
 
     @Test
     public void connectWithJdbcURL() {
-        final String url = "jdbc:TAOS://localhost:6030/log?user=root&password=taosdata";
+        String url = SpecifyAddress.getInstance().getJniWithoutUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://localhost:6030/log?user=root&password=taosdata";
+        } else {
+            url += "log?user=root&password=taosdata";
+        }
         try {
             conn = DriverManager.getConnection(url);
             assertNotNull("failure - connection should not be null", conn);
@@ -38,13 +32,18 @@ public class TSDBDriverTest {
 
     @Test
     public void connectWithProperties() {
-        final String jdbcUrl = "jdbc:TAOS://localhost:6030/log?user=root&password=taosdata";
+        String url = SpecifyAddress.getInstance().getJniWithoutUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://localhost:6030/log?user=root&password=taosdata";
+        } else {
+            url += "log?user=root&password=taosdata";
+        }
         Properties connProps = new Properties();
         connProps.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
         connProps.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "en_US.UTF-8");
         connProps.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
         try {
-            conn = DriverManager.getConnection(jdbcUrl, connProps);
+            conn = DriverManager.getConnection(url, connProps);
             assertNotNull("failure - connection should not be null", conn);
         } catch (SQLException e) {
             fail("failure - should not throw Exception");
@@ -70,28 +69,65 @@ public class TSDBDriverTest {
     public void testParseURL() {
         TSDBDriver driver = new TSDBDriver();
 
-        String url = "jdbc:TAOS://127.0.0.1:0/db?user=root&password=taosdata&charset=UTF-8";
+        String url = SpecifyAddress.getInstance().getJniWithoutUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://127.0.0.1:0/db?user=root&password=taosdata&charset=UTF-8";
+        } else {
+            url += "db?user=root&password=taosdata&charset=UTF-8";
+        }
+        String host = SpecifyAddress.getInstance().getHost();
+        if (host == null) {
+            host = "127.0.0.1";
+        }
+        String port = SpecifyAddress.getInstance().getJniPort();
+        if (port == null) {
+            port = "0";
+        }
         Properties config = new Properties();
         Properties actual = driver.parseURL(url, config);
-        assertEquals("failure - host should be 127.0.0.1", "127.0.0.1", actual.get("host"));
-        assertEquals("failure - port should be 0", "0", actual.get("port"));
+        assertEquals("failure - host should be " + host, host, actual.get("host"));
+        assertEquals("failure - port should be " + port, port, actual.get("port"));
         assertEquals("failure - dbname should be db", "db", actual.get("dbname"));
         assertEquals("failure - user should be root", "root", actual.get("user"));
         assertEquals("failure - password should be taosdata", "taosdata", actual.get("password"));
         assertEquals("failure - charset should be UTF-8", "UTF-8", actual.get("charset"));
 
-        url = "jdbc:TAOS://127.0.0.1:0";
+        url = SpecifyAddress.getInstance().getJniWithoutUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://127.0.0.1:0";
+        }
+        host = SpecifyAddress.getInstance().getHost();
+        if (host == null) {
+            host = "127.0.0.1";
+        }
+        port = SpecifyAddress.getInstance().getJniPort();
+        if (port == null) {
+            port = "0";
+        }
         config = new Properties();
         actual = driver.parseURL(url, config);
-        assertEquals("failure - host should be 127.0.0.1", "127.0.0.1", actual.getProperty("host"));
-        assertEquals("failure - port should be 0", "0", actual.get("port"));
+        assertEquals("failure - host should be " + host, host, actual.getProperty("host"));
+        assertEquals("failure - port should be " + port, port, actual.get("port"));
         assertNull("failure - dbname should be null", actual.get("dbname"));
 
-        url = "jdbc:TAOS://127.0.0.1:0/db";
+        url = SpecifyAddress.getInstance().getJniWithoutUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://127.0.0.1:0/db";
+        } else {
+            url += "db";
+        }
+        host = SpecifyAddress.getInstance().getHost();
+        if (host == null) {
+            host = "127.0.0.1";
+        }
+        port = SpecifyAddress.getInstance().getJniPort();
+        if (port == null) {
+            port = "0";
+        }
         config = new Properties();
         actual = driver.parseURL(url, config);
-        assertEquals("failure - host should be 127.0.0.1", "127.0.0.1", actual.getProperty("host"));
-        assertEquals("failure - port should be 0", "0", actual.get("port"));
+        assertEquals("failure - host should be " + host, host, actual.getProperty("host"));
+        assertEquals("failure - port should be " + port, port, actual.get("port"));
         assertEquals("failure - dbname should be db", "db", actual.get("dbname"));
 
         url = "jdbc:TAOS://:/?";
@@ -120,14 +156,27 @@ public class TSDBDriverTest {
     @Test
     public void getPropertyInfo() throws SQLException {
         Driver driver = new TSDBDriver();
-        final String url = "jdbc:TAOS://localhost:6030/log?user=root&password=taosdata";
+        String url = SpecifyAddress.getInstance().getJniWithoutUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://localhost:6030/log?user=root&password=taosdata";
+        } else {
+            url += "log?user=root&password=taosdata";
+        }
+        String host = SpecifyAddress.getInstance().getHost();
+        if (host == null) {
+            host = "localhost";
+        }
+        String port = SpecifyAddress.getInstance().getJniPort();
+        if (port == null) {
+            port = "6030";
+        }
         Properties connProps = new Properties();
         DriverPropertyInfo[] propertyInfo = driver.getPropertyInfo(url, connProps);
         for (DriverPropertyInfo info : propertyInfo) {
             if (info.name.equals(TSDBDriver.PROPERTY_KEY_HOST))
-                assertEquals("failure - host should be localhost", "localhost", info.value);
+                assertEquals("failure - host should be " + host, host, info.value);
             if (info.name.equals(TSDBDriver.PROPERTY_KEY_PORT))
-                assertEquals("failure - port should be 6030", "6030", info.value);
+                assertEquals("failure - port should be " + port, port, info.value);
             if (info.name.equals(TSDBDriver.PROPERTY_KEY_DBNAME))
                 assertEquals("failure - dbname should be test", "log", info.value);
             if (info.name.equals(TSDBDriver.PROPERTY_KEY_USER))
@@ -155,6 +204,32 @@ public class TSDBDriverTest {
     @Test
     public void getParentLogger() {
         assertNull(new TSDBDriver().getParentLogger());
+    }
+
+    @BeforeClass
+    public static void beforeClass() {
+        String specifyHost = SpecifyAddress.getInstance().getHost();
+        if (specifyHost == null) {
+            specifyHost = "localhost";
+        }
+        String port = SpecifyAddress.getInstance().getJniPort();
+        if (port == null) {
+            port = "6030";
+        }
+        validURLs = new String[]{
+                "jdbc:TAOS://" + specifyHost + ":0",
+                "jdbc:TAOS://" + specifyHost,
+                "jdbc:TAOS://" + specifyHost + ":" + port + "/test",
+                "jdbc:TAOS://" + specifyHost + ":" + port,
+                "jdbc:TAOS://" + specifyHost + ":" + port + "/",
+                "jdbc:TSDB://" + specifyHost + ":" + port,
+                "jdbc:TSDB://" + specifyHost + ":" + port + "/",
+                "jdbc:TAOS://" + specifyHost + ":0/db?user=root&password=taosdata",
+                "jdbc:TAOS://:",
+                "jdbc:TAOS://:/",
+                "jdbc:TAOS://:/test",
+                "jdbc:TAOS://" + specifyHost + ":0/?user=root&password=taosdata"
+        };
     }
 
 }

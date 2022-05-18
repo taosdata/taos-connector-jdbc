@@ -7,6 +7,7 @@ import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -18,8 +19,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 @RunWith(CatalogRunner.class)
-@TestTarget(alias = "Schemaless",author = "huolibo", version = "2.0.36")
+@TestTarget(alias = "Schemaless", author = "huolibo", version = "2.0.36")
 public class SchemalessInsertTest {
+    private static String host = "127.0.0.1";
     private final String dbname = "test_schemaless_insert";
     private Connection conn;
 
@@ -169,18 +171,16 @@ public class SchemalessInsertTest {
     }
 
     @Before
-    public void before() {
-        String host = "127.0.0.1";
-        final String url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
-        try {
-            conn = DriverManager.getConnection(url);
-            Statement stmt = conn.createStatement();
-            stmt.execute("drop database if exists " + dbname);
-            stmt.execute("create database if not exists " + dbname + " precision 'ns'");
-            stmt.execute("use " + dbname);
-        } catch (SQLException e) {
-            e.printStackTrace();
+    public void before() throws SQLException {
+        String url = SpecifyAddress.getInstance().getJniUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
         }
+        conn = DriverManager.getConnection(url);
+        Statement stmt = conn.createStatement();
+        stmt.execute("drop database if exists " + dbname);
+        stmt.execute("create database if not exists " + dbname + " precision 'ns'");
+        stmt.execute("use " + dbname);
     }
 
     @After

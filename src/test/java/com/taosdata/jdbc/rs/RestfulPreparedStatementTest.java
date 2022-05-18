@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.rs;
 
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -373,7 +374,11 @@ public class RestfulPreparedStatementTest {
     @BeforeClass
     public static void beforeClass() {
         try {
-            conn = DriverManager.getConnection("jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata");
+            String url = SpecifyAddress.getInstance().getRestUrl();
+            if (url == null) {
+                url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+            }
+            conn = DriverManager.getConnection(url);
 
             Statement stmt = conn.createStatement();
             stmt.execute("drop database if exists test_pstmt");

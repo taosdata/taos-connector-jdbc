@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.confprops;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.*;
 
 import java.sql.*;
@@ -16,8 +17,10 @@ public class TimestampFormatTest {
     @Test
     public void string() throws SQLException {
         // given
-        String url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
-
+        String url = SpecifyAddress.getInstance().getRestUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+        }
         // when
         try (Connection conn = DriverManager.getConnection(url);
              Statement stmt = conn.createStatement()) {
@@ -37,8 +40,10 @@ public class TimestampFormatTest {
     @Test
     public void stringInProperties() throws SQLException {
         // given
-        String url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
-
+        String url = SpecifyAddress.getInstance().getRestUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+        }
         // when
         String timestampFormat = "STRING";
         Properties props = new Properties();
@@ -62,7 +67,12 @@ public class TimestampFormatTest {
     @Test
     public void timestampInUrl() throws SQLException {
         // given
-        String url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata&timestampFormat=";
+        String url = SpecifyAddress.getInstance().getRestUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata&timestampFormat=";
+        } else {
+            url += "&timestampFormat=";
+        }
         String timestampFormat = "TIMESTAMP";
 
         // when
@@ -84,7 +94,10 @@ public class TimestampFormatTest {
     @Test
     public void timestampInProperties() throws SQLException {
         // given
-        String url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+        String url = SpecifyAddress.getInstance().getRestUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+        }
         String timestampFormat = "TIMESTAMP";
 
         // when
@@ -109,8 +122,12 @@ public class TimestampFormatTest {
     public void utcInUrl() throws SQLException {
         // given
         String timestampFormat = "UTC";
-        String url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata&timestampFormat=" + timestampFormat;
-
+        String url = SpecifyAddress.getInstance().getRestUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata&timestampFormat=" + timestampFormat;
+        } else {
+            url = url + "&timestampFormat=" + timestampFormat;
+        }
         // when & then
         try (Connection conn = DriverManager.getConnection(url);
              Statement stmt = conn.createStatement()) {
@@ -130,8 +147,10 @@ public class TimestampFormatTest {
     public void utcInProperties() throws SQLException {
         // given
         String timestampFormat = "UTC";
-        String url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
-
+        String url = SpecifyAddress.getInstance().getRestUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+        }
         // when
         Properties props = new Properties();
         props.setProperty(TSDBDriver.PROPERTY_KEY_TIMESTAMP_FORMAT, timestampFormat);
@@ -153,7 +172,10 @@ public class TimestampFormatTest {
 
     @Before
     public void before() throws SQLException {
-        String url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+        String url = SpecifyAddress.getInstance().getRestUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+        }
         conn = DriverManager.getConnection(url);
         Statement stmt = conn.createStatement();
         stmt.execute("drop database if exists test");

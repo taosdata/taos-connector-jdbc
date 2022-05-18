@@ -3,6 +3,7 @@ package com.taosdata.jdbc.cases;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TimestampUtil;
 import org.junit.*;
 import org.junit.runner.RunWith;
@@ -228,7 +229,12 @@ public class DatetimeBefore1970Test {
     }
 
     private Connection createEnvironment(String precision) throws SQLException {
-        String url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata&timezone=UTC";
+        String url = SpecifyAddress.getInstance().getJniUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata&timezone=UTC";
+        } else {
+            url += "&timezone=UTC";
+        }
         String createSql = "create database if not exists test_timestamp keep 36500";
         if (!isEmpty(precision)) {
             createSql += " precision '" + precision + "'";

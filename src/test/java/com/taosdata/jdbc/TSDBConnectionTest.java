@@ -1,5 +1,6 @@
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -371,7 +372,13 @@ public class TSDBConnectionTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "en_US.UTF-8");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
-        conn = DriverManager.getConnection("jdbc:TAOS://" + host + ":6030/log?user=root&password=taosdata", properties);
+        String url = SpecifyAddress.getInstance().getJniWithoutUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://" + host + ":6030/log?user=root&password=taosdata";
+        } else {
+            url += "log?user=root&password=taosdata";
+        }
+        conn = DriverManager.getConnection(url, properties);
         // create test database for test cases
         try (Statement stmt = conn.createStatement()) {
             stmt.execute("create database if not exists test");

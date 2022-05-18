@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.rs;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -12,7 +13,7 @@ import java.util.Properties;
 public class RestfulDatabaseMetaDataTest {
 
     private static final String host = "127.0.0.1";
-    private static final String url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+    private static String url;
     private static Connection connection;
     private static RestfulDatabaseMetaData metaData;
     private static final String dbName = "test";
@@ -1091,6 +1092,10 @@ public class RestfulDatabaseMetaDataTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "en_US.UTF-8");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
+        url = SpecifyAddress.getInstance().getRestUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+        }
         connection = DriverManager.getConnection(url, properties);
         Statement stmt = connection.createStatement();
         stmt.execute("drop database if exists " + dbName);
