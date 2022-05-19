@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.cases;
 
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.*;
 
 import java.sql.*;
@@ -12,7 +13,11 @@ public class BatchErrorIgnoreTest {
     @Test
     public void batchErrorThrowException() throws SQLException {
         // given
-        Connection conn = DriverManager.getConnection("jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata");
+        String url = SpecifyAddress.getInstance().getJniUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+        }
+        Connection conn = DriverManager.getConnection(url);
 
         // when
         try (Statement stmt = conn.createStatement()) {
@@ -47,7 +52,13 @@ public class BatchErrorIgnoreTest {
     @Test
     public void batchErrorIgnore() throws SQLException {
         // given
-        Connection conn = DriverManager.getConnection("jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata&batchErrorIgnore=true");
+        String url = SpecifyAddress.getInstance().getJniUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata&batchErrorIgnore=true";
+        } else {
+            url += "&batchErrorIgnore=true";
+        }
+        Connection conn = DriverManager.getConnection(url);
 
         // when
         int[] results = null;
@@ -89,7 +100,11 @@ public class BatchErrorIgnoreTest {
 
     @Before
     public void before() throws SQLException {
-        try (Connection conn = DriverManager.getConnection("jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata");
+        String url = SpecifyAddress.getInstance().getJniUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+        }
+        try (Connection conn = DriverManager.getConnection(url);
              Statement stmt = conn.createStatement();) {
 
             stmt.execute("use test");
@@ -107,7 +122,11 @@ public class BatchErrorIgnoreTest {
 
     @BeforeClass
     public static void beforeClass() throws SQLException {
-        try (Connection conn = DriverManager.getConnection("jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata");
+        String url = SpecifyAddress.getInstance().getJniUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+        }
+        try (Connection conn = DriverManager.getConnection(url);
              Statement stmt = conn.createStatement()) {
 
             stmt.execute("drop database if exists test");
@@ -117,7 +136,11 @@ public class BatchErrorIgnoreTest {
 
     @AfterClass
     public static void afterClass() throws SQLException {
-        try (Connection conn = DriverManager.getConnection("jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata");
+        String url = SpecifyAddress.getInstance().getJniUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+        }
+        try (Connection conn = DriverManager.getConnection(url);
              Statement stmt = conn.createStatement()) {
 
             stmt.execute("drop database if exists test");

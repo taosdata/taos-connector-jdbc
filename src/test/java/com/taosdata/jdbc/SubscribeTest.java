@@ -1,5 +1,6 @@
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -74,7 +75,11 @@ public class SubscribeTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "en_US.UTF-8");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
-        connection = DriverManager.getConnection("jdbc:TAOS://" + host + ":0/", properties);
+        String url = SpecifyAddress.getInstance().getJniWithoutUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://" + host + ":0/";
+        }
+        connection = DriverManager.getConnection(url, properties);
 
         statement = connection.createStatement();
         statement.execute("drop database if exists " + dbName);

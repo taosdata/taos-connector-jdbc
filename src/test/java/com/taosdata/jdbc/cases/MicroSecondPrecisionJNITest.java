@@ -2,6 +2,7 @@ package com.taosdata.jdbc.cases;
 
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -60,7 +61,10 @@ public class MicroSecondPrecisionJNITest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "en_US.UTF-8");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
 
-        String url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+        String url = SpecifyAddress.getInstance().getJniUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+        }
         conn = DriverManager.getConnection(url, properties);
 
         Statement stmt = conn.createStatement();

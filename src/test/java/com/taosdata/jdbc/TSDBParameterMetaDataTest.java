@@ -1,5 +1,6 @@
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -151,7 +152,11 @@ public class TSDBParameterMetaDataTest {
     @BeforeClass
     public static void beforeClass() {
         try {
-            conn = DriverManager.getConnection("jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata");
+            String url = SpecifyAddress.getInstance().getJniUrl();
+            if (url == null) {
+                url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+            }
+            conn = DriverManager.getConnection(url);
             try (Statement stmt = conn.createStatement()) {
                 stmt.execute("drop database if exists " + dbname);
                 stmt.execute("create database if not exists " + dbname);

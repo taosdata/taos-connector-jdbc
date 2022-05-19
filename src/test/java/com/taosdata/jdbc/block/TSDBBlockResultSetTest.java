@@ -5,6 +5,7 @@ import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.TSDBResultSet;
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -181,7 +182,7 @@ public class TSDBBlockResultSetTest {
     }
 
     @SuppressWarnings("deprecation")
-	@Test(expected = SQLFeatureNotSupportedException.class)
+    @Test(expected = SQLFeatureNotSupportedException.class)
     public void getUnicodeStream() throws SQLException {
         rs.getUnicodeStream("f1");
     }
@@ -648,22 +649,22 @@ public class TSDBBlockResultSetTest {
     }
 
     @BeforeClass
-    public static void beforeClass() {
-        try {
-            Properties properties = new Properties();
-            properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
-            conn = DriverManager.getConnection("jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata", properties);
-            stmt = conn.createStatement();
-            stmt.execute("create database if not exists restful_test");
-            stmt.execute("use restful_test");
-            stmt.execute("drop table if exists weather");
-            stmt.execute("create table if not exists weather(f1 timestamp, f2 int, f3 bigint, f4 float, f5 double, f6 binary(64), f7 smallint, f8 tinyint, f9 bool, f10 nchar(64))");
-            stmt.execute("insert into restful_test.weather values('2021-01-01 00:00:00.000', 1, 100, 3.1415, 3.1415926, 'abc', 10, 10, true, '涛思数据')");
-            rs = stmt.executeQuery("select * from restful_test.weather");
-            rs.next();
-        } catch (SQLException e) {
-            e.printStackTrace();
+    public static void beforeClass() throws SQLException {
+        Properties properties = new Properties();
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
+        String url = SpecifyAddress.getInstance().getJniUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
         }
+        conn = DriverManager.getConnection(url, properties);
+        stmt = conn.createStatement();
+        stmt.execute("create database if not exists restful_test");
+        stmt.execute("use restful_test");
+        stmt.execute("drop table if exists weather");
+        stmt.execute("create table if not exists weather(f1 timestamp, f2 int, f3 bigint, f4 float, f5 double, f6 binary(64), f7 smallint, f8 tinyint, f9 bool, f10 nchar(64))");
+        stmt.execute("insert into restful_test.weather values('2021-01-01 00:00:00.000', 1, 100, 3.1415, 3.1415926, 'abc', 10, 10, true, '涛思数据')");
+        rs = stmt.executeQuery("select * from restful_test.weather");
+        rs.next();
     }
 
     @AfterClass

@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -17,7 +18,10 @@ public class DriverAutoloadTest {
 
     @Test
     public void testRestful() throws SQLException {
-        final String url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+        String url = SpecifyAddress.getInstance().getRestUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+        }
         Connection conn = DriverManager.getConnection(url, properties);
         Assert.assertNotNull(conn);
         conn.close();
@@ -25,7 +29,10 @@ public class DriverAutoloadTest {
 
     @Test
     public void testJni() throws SQLException {
-        final String url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+        String url = SpecifyAddress.getInstance().getRestUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+        }
         Connection conn = DriverManager.getConnection(url, properties);
         Assert.assertNotNull(conn);
         conn.close();

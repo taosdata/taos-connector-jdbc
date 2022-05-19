@@ -3,6 +3,7 @@ package com.taosdata.jdbc.rs;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.MethodSorters;
@@ -21,6 +22,7 @@ import java.util.Set;
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "JsonTag", author = "huolibo", version = "2.0.37")
 public class RestfulJsonTagTest {
+    private static String host = "127.0.0.1";
     private static final String dbName = "json_tag_test";
     private static Connection connection;
     private static Statement statement;
@@ -1248,8 +1250,10 @@ public class RestfulJsonTagTest {
 
     @BeforeClass
     public static void beforeClass() {
-        String host = "127.0.0.1";
-        final String url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+        String url = SpecifyAddress.getInstance().getRestUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+        }
         try {
             connection = DriverManager.getConnection(url);
             statement = connection.createStatement();

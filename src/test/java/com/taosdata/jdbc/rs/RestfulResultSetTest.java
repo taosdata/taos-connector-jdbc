@@ -3,6 +3,7 @@ package com.taosdata.jdbc.rs;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -17,14 +18,18 @@ import java.text.SimpleDateFormat;
 
 public class RestfulResultSetTest {
 
-    private static final String host = "127.0.0.1";
+    private static final String host = "192.168.1.98";
     private static Connection conn;
     private static Statement stmt;
     private static ResultSet rs;
 
     @BeforeClass
     public static void beforeClass() throws SQLException {
-        conn = DriverManager.getConnection("jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata");
+        String url = SpecifyAddress.getInstance().getRestUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+        }
+        conn = DriverManager.getConnection(url);
         stmt = conn.createStatement();
         stmt.execute("drop database if exists restful_test");
         stmt.execute("create database if not exists restful_test");

@@ -2,6 +2,7 @@ package com.taosdata.jdbc.cases;
 
 import com.alibaba.fastjson.JSONObject;
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.*;
 
 import java.sql.*;
@@ -36,34 +37,35 @@ public class DoubleQuoteInSqlTest {
     }
 
     @Before
-    public void before() {
-        String url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+    public void before() throws SQLException {
+        String url = SpecifyAddress.getInstance().getJniUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+        }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "en_US.UTF-8");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
 
-        try {
-            conn = DriverManager.getConnection(url, properties);
-            Statement stmt = conn.createStatement();
-            stmt.execute("drop database if exists " + dbname);
-            stmt.execute("create database if not exists " + dbname);
-            stmt.execute("use " + dbname);
-            stmt.execute("create table weather(ts timestamp, text binary(64))");
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        conn = DriverManager.getConnection(url, properties);
+        Statement stmt = conn.createStatement();
+        stmt.execute("drop database if exists " + dbname);
+        stmt.execute("create database if not exists " + dbname);
+        stmt.execute("use " + dbname);
+        stmt.execute("create table weather(ts timestamp, text binary(64))");
     }
 
     @After
     public void after() {
-        try {
-            Statement stmt = conn.createStatement();
-            stmt.execute("drop database if exists " + dbname);
-            stmt.close();
-            conn.close();
-        } catch (SQLException e) {
-            e.printStackTrace();
+        if (null != conn) {
+            try {
+                Statement stmt = conn.createStatement();
+                stmt.execute("drop database if exists " + dbname);
+                stmt.close();
+                conn.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
     }
 

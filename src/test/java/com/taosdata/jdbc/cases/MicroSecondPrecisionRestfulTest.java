@@ -2,6 +2,7 @@ package com.taosdata.jdbc.cases;
 
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -119,14 +120,17 @@ public class MicroSecondPrecisionRestfulTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
 //        properties.setProperty(TSDBDriver.PROPERTY_KEY_TIMESTAMP_FORMAT, "TIMESTAMP");
 
-        String url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+        String url = SpecifyAddress.getInstance().getRestUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+        }
         conn1 = DriverManager.getConnection(url, properties);
 
-        url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata&timestampFormat=timestamp";
-        conn2 = DriverManager.getConnection(url, properties);
+        String url1 = url + "&timestampFormat=timestamp";
+        conn2 = DriverManager.getConnection(url1, properties);
 
-        url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata&timestampFormat=utc";
-        conn3 = DriverManager.getConnection(url, properties);
+        String url2 = url + "&timestampFormat=utc";
+        conn3 = DriverManager.getConnection(url2, properties);
 
         Statement stmt = conn1.createStatement();
         stmt.execute("drop database if exists " + ms_timestamp_db);

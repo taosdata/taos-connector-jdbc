@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.confprops;
 
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -29,7 +30,11 @@ public class HttpKeepAliveTest {
         Properties props = new Properties();
         props.setProperty("httpKeepAlive", "false");
         props.setProperty("httpPoolSize", "20");
-        Connection connection = DriverManager.getConnection("jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata", props);
+        String url = SpecifyAddress.getInstance().getRestUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+        }
+        Connection connection = DriverManager.getConnection(url, props);
 
         List<Thread> threads = IntStream.range(0, multi).mapToObj(i -> new Thread(
                 () -> {

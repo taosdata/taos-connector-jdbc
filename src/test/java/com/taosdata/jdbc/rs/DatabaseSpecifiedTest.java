@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.rs;
 
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -19,7 +20,13 @@ public class DatabaseSpecifiedTest {
     @Test
     public void test() throws SQLException {
         // when
-        connection = DriverManager.getConnection("jdbc:TAOS-RS://" + host + ":6041/" + dbname + "?user=root&password=taosdata");
+        String url = SpecifyAddress.getInstance().getRestWithoutUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-RS://" + host + ":6041/" + dbname + "?user=root&password=taosdata";
+        } else {
+            url = url + dbname + "?user=root&password=taosdata";
+        }
+        connection = DriverManager.getConnection(url);
         try (Statement stmt = connection.createStatement();) {
             ResultSet rs = stmt.executeQuery("select * from weather");
 
@@ -39,7 +46,11 @@ public class DatabaseSpecifiedTest {
     public void before() {
         ts = System.currentTimeMillis();
         try {
-            Connection connection = DriverManager.getConnection("jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata");
+            String url = SpecifyAddress.getInstance().getRestUrl();
+            if (url == null) {
+                url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+            }
+            Connection connection = DriverManager.getConnection(url);
             Statement stmt = connection.createStatement();
 
             stmt.execute("drop database if exists " + dbname);

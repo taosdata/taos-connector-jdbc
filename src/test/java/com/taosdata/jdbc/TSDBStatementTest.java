@@ -1,5 +1,6 @@
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -15,20 +16,16 @@ public class TSDBStatementTest {
     private static Statement stmt;
 
     @Test
-    public void executeUpdate() {
+    public void executeUpdate() throws SQLException {
         final String dbName = ("test_" + UUID.randomUUID()).replace("-", "_").substring(0, 32);
-        try {
-            int affectRows = stmt.executeUpdate("create database " + dbName);
-            Assert.assertEquals(0, affectRows);
-            affectRows = stmt.executeUpdate("create table " + dbName + ".weather(ts timestamp, temperature float) tags(loc nchar(64))");
-            Assert.assertEquals(0, affectRows);
-            affectRows = stmt.executeUpdate("insert into " + dbName + ".t1 using " + dbName + ".weather tags('北京') values(now, 22.33)");
-            Assert.assertEquals(1, affectRows);
-            affectRows = stmt.executeUpdate("drop database " + dbName);
-            Assert.assertEquals(0, affectRows);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        int affectRows = stmt.executeUpdate("create database " + dbName);
+        Assert.assertEquals(0, affectRows);
+        affectRows = stmt.executeUpdate("create table " + dbName + ".weather(ts timestamp, temperature float) tags(loc nchar(64))");
+        Assert.assertEquals(0, affectRows);
+        affectRows = stmt.executeUpdate("insert into " + dbName + ".t1 using " + dbName + ".weather tags('北京') values(now, 22.33)");
+        Assert.assertEquals(1, affectRows);
+        affectRows = stmt.executeUpdate("drop database " + dbName);
+        Assert.assertEquals(0, affectRows);
     }
 
     @Test
@@ -98,74 +95,66 @@ public class TSDBStatementTest {
     }
 
     @Test
-    public void execute() {
+    public void execute() throws SQLException {
         final String dbName = ("test_" + UUID.randomUUID()).replace("-", "_").substring(0, 32);
-        try {
-            boolean isSelect = stmt.execute("create database " + dbName);
-            Assert.assertEquals(false, isSelect);
-            int affectedRows = stmt.getUpdateCount();
-            Assert.assertEquals(0, affectedRows);
+        boolean isSelect = stmt.execute("create database " + dbName);
+        Assert.assertEquals(false, isSelect);
+        int affectedRows = stmt.getUpdateCount();
+        Assert.assertEquals(0, affectedRows);
 
-            isSelect = stmt.execute("create table " + dbName + ".weather(ts timestamp, temperature float) tags(loc nchar(64))");
-            Assert.assertEquals(false, isSelect);
-            affectedRows = stmt.getUpdateCount();
-            Assert.assertEquals(0, affectedRows);
+        isSelect = stmt.execute("create table " + dbName + ".weather(ts timestamp, temperature float) tags(loc nchar(64))");
+        Assert.assertEquals(false, isSelect);
+        affectedRows = stmt.getUpdateCount();
+        Assert.assertEquals(0, affectedRows);
 
-            isSelect = stmt.execute("insert into " + dbName + ".t1 using " + dbName + ".weather tags('北京') values(now, 22.33)");
-            Assert.assertEquals(false, isSelect);
-            affectedRows = stmt.getUpdateCount();
-            Assert.assertEquals(1, affectedRows);
+        isSelect = stmt.execute("insert into " + dbName + ".t1 using " + dbName + ".weather tags('北京') values(now, 22.33)");
+        Assert.assertEquals(false, isSelect);
+        affectedRows = stmt.getUpdateCount();
+        Assert.assertEquals(1, affectedRows);
 
-            isSelect = stmt.execute("select * from " + dbName + ".weather");
-            Assert.assertEquals(true, isSelect);
+        isSelect = stmt.execute("select * from " + dbName + ".weather");
+        Assert.assertEquals(true, isSelect);
 
-            isSelect = stmt.execute("drop database " + dbName);
-            Assert.assertEquals(false, isSelect);
-            affectedRows = stmt.getUpdateCount();
-            Assert.assertEquals(0, affectedRows);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        isSelect = stmt.execute("drop database " + dbName);
+        Assert.assertEquals(false, isSelect);
+        affectedRows = stmt.getUpdateCount();
+        Assert.assertEquals(0, affectedRows);
     }
 
     @Test
-    public void getResultSet() {
+    public void getResultSet() throws SQLException {
         final String dbName = ("test_" + UUID.randomUUID()).replace("-", "_").substring(0, 32);
-        try {
-            boolean isSelect = stmt.execute("create database " + dbName);
-            Assert.assertEquals(false, isSelect);
-            int affectedRows = stmt.getUpdateCount();
-            Assert.assertEquals(0, affectedRows);
+        boolean isSelect = stmt.execute("create database " + dbName);
+        Assert.assertEquals(false, isSelect);
+        int affectedRows = stmt.getUpdateCount();
+        Assert.assertEquals(0, affectedRows);
 
-            isSelect = stmt.execute("create table " + dbName + ".weather(ts timestamp, temperature float) tags(loc nchar(64))");
-            Assert.assertEquals(false, isSelect);
-            affectedRows = stmt.getUpdateCount();
-            Assert.assertEquals(0, affectedRows);
+        isSelect = stmt.execute("create table " + dbName + ".weather(ts timestamp, temperature float) tags(loc nchar(64))");
+        Assert.assertEquals(false, isSelect);
+        affectedRows = stmt.getUpdateCount();
+        Assert.assertEquals(0, affectedRows);
 
-            isSelect = stmt.execute("insert into " + dbName + ".t1 using " + dbName + ".weather tags('北京') values(now, 22.33)");
-            Assert.assertEquals(false, isSelect);
-            affectedRows = stmt.getUpdateCount();
-            Assert.assertEquals(1, affectedRows);
+        isSelect = stmt.execute("insert into " + dbName + ".t1 using " + dbName + ".weather tags('北京') values(now, 22.33)");
+        Assert.assertEquals(false, isSelect);
+        affectedRows = stmt.getUpdateCount();
+        Assert.assertEquals(1, affectedRows);
 
-            isSelect = stmt.execute("select * from " + dbName + ".weather");
-            Assert.assertEquals(true, isSelect);
-            ResultSet rs = stmt.getResultSet();
-            Assert.assertNotNull(rs);
-            ResultSetMetaData meta = rs.getMetaData();
-            Assert.assertEquals(3, meta.getColumnCount());
-            int count = 0;
-            while (rs.next()) {
-                count++;
-            }
-            Assert.assertEquals(1, count);
-
-            isSelect = stmt.execute("drop database " + dbName);
-            Assert.assertEquals(false, isSelect);
-            affectedRows = stmt.getUpdateCount();
-            Assert.assertEquals(0, affectedRows);
-        } catch (SQLException e) {
-            e.printStackTrace();
+        isSelect = stmt.execute("select * from " + dbName + ".weather");
+        Assert.assertEquals(true, isSelect);
+        ResultSet rs = stmt.getResultSet();
+        Assert.assertNotNull(rs);
+        ResultSetMetaData meta = rs.getMetaData();
+        Assert.assertEquals(3, meta.getColumnCount());
+        int count = 0;
+        while (rs.next()) {
+            count++;
         }
+        Assert.assertEquals(1, count);
+
+        isSelect = stmt.execute("drop database " + dbName);
+        Assert.assertEquals(false, isSelect);
+        affectedRows = stmt.getUpdateCount();
+        Assert.assertEquals(0, affectedRows);
     }
 
     @Test
@@ -215,64 +204,48 @@ public class TSDBStatementTest {
     }
 
     @Test
-    public void addBatch() {
+    public void addBatch() throws SQLException {
         final String dbName = ("test_" + UUID.randomUUID()).replace("-", "_").substring(0, 32);
-        try {
-            stmt.addBatch("create database " + dbName);
-            stmt.addBatch("create table " + dbName + ".weather(ts timestamp, temperature float) tags(loc nchar(64))");
-            stmt.addBatch("insert into " + dbName + ".t1 using " + dbName + ".weather tags('北京') values(now, 22.33)");
-            stmt.addBatch("select * from " + dbName + ".weather");
-            stmt.addBatch("drop database " + dbName);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        stmt.addBatch("create database " + dbName);
+        stmt.addBatch("create table " + dbName + ".weather(ts timestamp, temperature float) tags(loc nchar(64))");
+        stmt.addBatch("insert into " + dbName + ".t1 using " + dbName + ".weather tags('北京') values(now, 22.33)");
+        stmt.addBatch("select * from " + dbName + ".weather");
+        stmt.addBatch("drop database " + dbName);
     }
 
     @Test
-    public void clearBatch() {
+    public void clearBatch() throws SQLException {
         final String dbName = ("test_" + UUID.randomUUID()).replace("-", "_").substring(0, 32);
-        try {
-            stmt.clearBatch();
-            stmt.addBatch("create database " + dbName);
-            stmt.addBatch("create table " + dbName + ".weather(ts timestamp, temperature float) tags(loc nchar(64))");
-            stmt.addBatch("insert into " + dbName + ".t1 using " + dbName + ".weather tags('北京') values(now, 22.33)");
-            stmt.addBatch("select * from " + dbName + ".weather");
-            stmt.addBatch("drop database " + dbName);
-            stmt.clearBatch();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        stmt.clearBatch();
+        stmt.addBatch("create database " + dbName);
+        stmt.addBatch("create table " + dbName + ".weather(ts timestamp, temperature float) tags(loc nchar(64))");
+        stmt.addBatch("insert into " + dbName + ".t1 using " + dbName + ".weather tags('北京') values(now, 22.33)");
+        stmt.addBatch("select * from " + dbName + ".weather");
+        stmt.addBatch("drop database " + dbName);
+        stmt.clearBatch();
     }
 
     @Test
-    public void executeBatch() {
+    public void executeBatch() throws SQLException {
         final String dbName = ("test_" + UUID.randomUUID()).replace("-", "_").substring(0, 32);
-        try {
-            stmt.addBatch("create database " + dbName);
-            stmt.addBatch("create table " + dbName + ".weather(ts timestamp, temperature float) tags(loc nchar(64))");
-            stmt.addBatch("insert into " + dbName + ".t1 using " + dbName + ".weather tags('北京') values(now, 22.33)");
-            stmt.addBatch("select * from " + dbName + ".weather");
-            stmt.addBatch("drop database " + dbName);
-            int[] results = stmt.executeBatch();
-            Assert.assertEquals(0, results[0]);
-            Assert.assertEquals(0, results[1]);
-            Assert.assertEquals(1, results[2]);
-            Assert.assertEquals(Statement.SUCCESS_NO_INFO, results[3]);
-            Assert.assertEquals(0, results[4]);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        stmt.addBatch("create database " + dbName);
+        stmt.addBatch("create table " + dbName + ".weather(ts timestamp, temperature float) tags(loc nchar(64))");
+        stmt.addBatch("insert into " + dbName + ".t1 using " + dbName + ".weather tags('北京') values(now, 22.33)");
+        stmt.addBatch("select * from " + dbName + ".weather");
+        stmt.addBatch("drop database " + dbName);
+        int[] results = stmt.executeBatch();
+        Assert.assertEquals(0, results[0]);
+        Assert.assertEquals(0, results[1]);
+        Assert.assertEquals(1, results[2]);
+        Assert.assertEquals(Statement.SUCCESS_NO_INFO, results[3]);
+        Assert.assertEquals(0, results[4]);
     }
 
     @Test
-    public void getConnection() {
-        try {
-            Connection connection = stmt.getConnection();
-            Assert.assertNotNull(connection);
-            Assert.assertTrue(this.conn == connection);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+    public void getConnection() throws SQLException {
+        Connection connection = stmt.getConnection();
+        Assert.assertNotNull(connection);
+        Assert.assertTrue(this.conn == connection);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
@@ -367,9 +340,13 @@ public class TSDBStatementTest {
         try {
             Properties properties = new Properties();
             properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
-            properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "en_US.UTF-8");
+//            properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "en_US.UTF-8");
             properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
-            conn = DriverManager.getConnection("jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata", properties);
+            String url = SpecifyAddress.getInstance().getJniUrl();
+            if (url == null) {
+                url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+            }
+            conn = DriverManager.getConnection(url, properties);
             stmt = conn.createStatement();
         } catch (SQLException e) {
             e.printStackTrace();

@@ -1,6 +1,8 @@
 package com.taosdata.jdbc.cases;
 
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.sql.*;
@@ -9,7 +11,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class UseNowInsertTimestampTest {
-    private static String url = "jdbc:TAOS://127.0.0.1:6030/?user=root&password=taosdata";
+    private static String url ;
 
     @Test
     public void millisec() throws SQLException {
@@ -74,6 +76,14 @@ public class UseNowInsertTimestampTest {
             assertTrue(nanos % 1000 != 0);
 
             stmt.execute("drop database if exists test");
+        }
+    }
+
+    @BeforeClass
+    public static void beforeClass(){
+        url = SpecifyAddress.getInstance().getJniUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://127.0.0.1:6030/?user=root&password=taosdata";
         }
     }
 

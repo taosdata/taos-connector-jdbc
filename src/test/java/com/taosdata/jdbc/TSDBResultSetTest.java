@@ -3,6 +3,7 @@ package com.taosdata.jdbc;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -647,7 +648,11 @@ public class TSDBResultSetTest {
     @BeforeClass
     public static void beforeClass() {
         try {
-            conn = DriverManager.getConnection("jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata");
+            String url = SpecifyAddress.getInstance().getJniUrl();
+            if (url == null) {
+                url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+            }
+            conn = DriverManager.getConnection(url);
             stmt = conn.createStatement();
             stmt.execute("create database if not exists restful_test");
             stmt.execute("use restful_test");

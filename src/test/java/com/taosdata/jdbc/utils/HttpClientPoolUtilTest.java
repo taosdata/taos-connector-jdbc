@@ -75,7 +75,14 @@ public class HttpClientPoolUtilTest {
     private String login(int connPoolSize) throws SQLException, UnsupportedEncodingException {
         user = URLEncoder.encode(user, StandardCharsets.UTF_8.displayName());
         password = URLEncoder.encode(password, StandardCharsets.UTF_8.displayName());
-        String loginUrl = "http://" + host + ":" + 6041 + "/rest/login/" + user + "/" + password + "";
+        String loginUrl;
+        String specifyHost = SpecifyAddress.getInstance().getHost();
+        if (null == specifyHost) {
+            loginUrl = "http://" + host + ":" + 6041 + "/rest/login/" + user + "/" + password;
+        } else {
+            loginUrl = "http://" + specifyHost + ":" + 6041 + "/rest/login/" + user + "/" + password;
+        }
+
         HttpClientPoolUtil.init(connPoolSize, false);
         String result = HttpClientPoolUtil.execute(loginUrl);
         JSONObject jsonResult = JSON.parseObject(result);
@@ -88,7 +95,14 @@ public class HttpClientPoolUtilTest {
     }
 
     private boolean executeOneSql(String sql, String token) throws SQLException {
-        String url = "http://" + host + ":6041/rest/sql";
+
+        String url ;
+        String specifyHost = SpecifyAddress.getInstance().getHost();
+        if (null == specifyHost) {
+            url = "http://" + host + ":6041/rest/sql";
+        } else {
+            url = "http://" + specifyHost + ":6041/rest/sql";
+        }
         String result = HttpClientPoolUtil.execute(url, sql, token);
         JSONObject resultJson = JSON.parseObject(result);
         if (resultJson.getString("status").equals("error")) {

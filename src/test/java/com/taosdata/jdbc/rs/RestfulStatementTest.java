@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.rs;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -38,7 +39,7 @@ public class RestfulStatementTest {
         affectRows = stmt.executeUpdate("create table " + dbName + ".weather(ts timestamp, temperature float) tags(loc nchar(64))");
         Assert.assertEquals(0, affectRows);
 
-        try (ResultSet resultSet = stmt.executeQuery("desc " + dbName + ".weather")){
+        try (ResultSet resultSet = stmt.executeQuery("desc " + dbName + ".weather")) {
             ResultSetMetaData metaData = resultSet.getMetaData();
             Assert.assertEquals(4, metaData.getColumnCount());
         }
@@ -350,7 +351,11 @@ public class RestfulStatementTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "en_US.UTF-8");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
-        conn = DriverManager.getConnection("jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata", properties);
+        String url = SpecifyAddress.getInstance().getRestUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+        }
+        conn = DriverManager.getConnection(url, properties);
         stmt = conn.createStatement();
     }
 

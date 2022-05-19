@@ -4,6 +4,7 @@ import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.*;
 import org.junit.runner.RunWith;
 
@@ -49,7 +50,12 @@ public class WSQueryTest {
 
     @Before
     public void before() throws SQLException {
-        String url = "jdbc:TAOS-RS://" + host + ":" + port + "/log?user=root&password=taosdata";
+        String url = SpecifyAddress.getInstance().getRestWithoutUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-RS://" + host + ":" + port + "/log?user=root&password=taosdata";
+        } else {
+            url += "log?user=root&password=taosdata";
+        }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
         connection = DriverManager.getConnection(url, properties);

@@ -1,6 +1,8 @@
 package com.taosdata.jdbc.confprops;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.utils.SpecifyAddress;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.sql.*;
@@ -11,7 +13,7 @@ import java.util.Properties;
 
 public class TimeZoneTest {
 
-    private String url = "jdbc:TAOS://127.0.0.1:6030/?user=root&password=taosdata";
+    private String url ;
 
     @Test
     public void javaTimeZone() {
@@ -63,6 +65,14 @@ public class TimeZoneTest {
             stmt.execute("drop database if exists timezone_test");
 
             stmt.close();
+        }
+    }
+
+    @Before
+    public void before(){
+        url = SpecifyAddress.getInstance().getJniUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://127.0.0.1:6030/?user=root&password=taosdata";
         }
     }
 

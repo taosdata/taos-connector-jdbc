@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.rs;
 
+import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -11,9 +12,19 @@ public class RestfulDriverTest {
     @Test
     public void acceptsURL() throws SQLException {
         Driver driver = new RestfulDriver();
-        boolean isAccept = driver.acceptsURL("jdbc:TAOS-RS://" + host + ":6041");
+        String url = SpecifyAddress.getInstance().getRestWithoutUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-RS://" + host + ":6041";
+        }
+        boolean isAccept = driver.acceptsURL(url);
         Assert.assertTrue(isAccept);
-        isAccept = driver.acceptsURL("jdbc:TAOS://" + host + ":6041");
+        String specifyHost = SpecifyAddress.getInstance().getHost();
+        if (specifyHost == null) {
+            url = "jdbc:TAOS://" + host + ":6041";
+        } else {
+            url = "jdbc:TAOS://" + specifyHost + ":6041";
+        }
+        isAccept = driver.acceptsURL(url);
         Assert.assertFalse(isAccept);
     }
 
