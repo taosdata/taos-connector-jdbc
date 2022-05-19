@@ -16,6 +16,7 @@ import java.sql.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Properties;
 
 public class TSDBResultSetTest {
 
@@ -652,7 +653,10 @@ public class TSDBResultSetTest {
             if (url == null) {
                 url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
             }
-            conn = DriverManager.getConnection(url);
+            Properties properties = new Properties();
+            properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
+            properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
+            conn = DriverManager.getConnection(url, properties);
             stmt = conn.createStatement();
             stmt.execute("create database if not exists restful_test");
             stmt.execute("use restful_test");
