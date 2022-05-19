@@ -125,6 +125,7 @@ public class JsonTagTest {
         statement.execute("CREATE TABLE if not exists jsons1_14 using jsons1 tags('{\"。loc\":\"fff\"}')");
     }
 
+    // TODO: need fix later
     // windows not recognize \t
 //    @Test(expected = SQLException.class)
 //    @Description("exception will throw when json key is '\\t'")
