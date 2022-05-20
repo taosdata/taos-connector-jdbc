@@ -58,7 +58,7 @@ public class UseNowInsertTimestampTest {
 
     @Test
     public void nanosec() throws SQLException {
-        long now_time = System.currentTimeMillis() * 1000_000L + System.nanoTime() % 1000_000L;
+        long now_time = System.currentTimeMillis() * 1000_000L + 123456;
         try (Connection conn = DriverManager.getConnection(url)) {
             Statement stmt = conn.createStatement();
             stmt.execute("drop database if exists test");
