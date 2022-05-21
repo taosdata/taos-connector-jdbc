@@ -6,6 +6,7 @@ import org.junit.*;
 import java.math.BigDecimal;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Properties;
 import java.util.Random;
 
 public class TSDBPreparedStatementTest {
@@ -1222,7 +1223,10 @@ public class TSDBPreparedStatementTest {
             if (url == null) {
                 url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
             }
-            conn = DriverManager.getConnection(url);
+            Properties properties = new Properties();
+            properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
+            properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
+            conn = DriverManager.getConnection(url, properties);
             try (Statement stmt = conn.createStatement()) {
                 stmt.execute("drop database if exists " + dbname);
                 stmt.execute("create database if not exists " + dbname);

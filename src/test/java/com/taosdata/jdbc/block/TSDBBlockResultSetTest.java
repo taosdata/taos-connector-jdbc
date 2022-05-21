@@ -652,6 +652,8 @@ public class TSDBBlockResultSetTest {
     public static void beforeClass() throws SQLException {
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
             url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";

@@ -1,11 +1,13 @@
 package com.taosdata.jdbc.cases;
 
+import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.sql.*;
+import java.util.Properties;
 
 public class NullValueInResultSetJNITest {
 
@@ -29,7 +31,10 @@ public class NullValueInResultSetJNITest {
         if (url == null) {
             url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
         }
-        conn = DriverManager.getConnection(url);
+        Properties properties = new Properties();
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
+        conn = DriverManager.getConnection(url, properties);
         try (Statement stmt = conn.createStatement()) {
             stmt.execute("drop database if exists test_null");
             stmt.execute("create database if not exists test_null");

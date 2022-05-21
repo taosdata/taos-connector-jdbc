@@ -52,13 +52,18 @@ public class TSDBDriverTest {
 
     @Test
     public void connectWithConfigFile() {
-        String jdbcUrl = "jdbc:TAOS://:/log?user=root&password=taosdata";
+        String url = SpecifyAddress.getInstance().getJniWithoutUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://:/log?user=root&password=taosdata";
+        }else {
+            url += "log?user=root&password=taosdata";
+        }
         Properties connProps = new Properties();
         connProps.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
         connProps.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "en_US.UTF-8");
         connProps.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
         try {
-            conn = DriverManager.getConnection(jdbcUrl, connProps);
+            conn = DriverManager.getConnection(url, connProps);
             assertNotNull("failure - connection should not be null", conn);
         } catch (SQLException e) {
             fail("failure - should not throw Exception");
