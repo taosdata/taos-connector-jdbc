@@ -34,18 +34,18 @@ Please refer to [Version Support List](https://docs.taosdata.com/reference/conne
 TDengine currently supports timestamp, number, character, Boolean type, and the corresponding type conversion with Java is as follows:
 
 | TDengine DataType | JDBCType (driver version < 2.0.24) | JDBCType (driver version > = 2.0.24) |
-| ----------------- | --------------------------------- | ---------------------------------- |
-| TIMESTAMP         | java.lang.Long                    | java.sql.Timestamp                 |
-| INT               | java.lang.Integer                 | java.lang.Integer                  |
-| BIGINT            | java.lang.Long                    | java.lang.Long                     |
-| FLOAT             | java.lang.Float                   | java.lang.Float                    |
-| DOUBLE            | java.lang.Double                  | java.lang.Double                   |
-| SMALLINT          | java.lang.Short                   | java.lang.Short                    |
-| TINYINT           | java.lang.Byte                    | java.lang.Byte                     |
-| BOOL              | java.lang.Boolean                 | java.lang.Boolean                  |
-| BINARY            | java.lang.String                  | byte array                         |
-| NCHAR             | java.lang.String                  | java.lang.String                   |
-| JSON              | -                                 | java.lang.String                   |
+| ----------------- | ---------------------------------- | ------------------------------------ |
+| TIMESTAMP         | java.lang.Long                     | java.sql.Timestamp                   |
+| INT               | java.lang.Integer                  | java.lang.Integer                    |
+| BIGINT            | java.lang.Long                     | java.lang.Long                       |
+| FLOAT             | java.lang.Float                    | java.lang.Float                      |
+| DOUBLE            | java.lang.Double                   | java.lang.Double                     |
+| SMALLINT          | java.lang.Short                    | java.lang.Short                      |
+| TINYINT           | java.lang.Byte                     | java.lang.Byte                       |
+| BOOL              | java.lang.Boolean                  | java.lang.Boolean                    |
+| BINARY            | java.lang.String                   | byte array                           |
+| NCHAR             | java.lang.String                   | java.lang.String                     |
+| JSON              | -                                  | java.lang.String                     |
 
 **Note**: Only TAG supports JSON types
 
@@ -56,7 +56,7 @@ TDengine currently supports timestamp, number, character, Boolean type, and the 
 Before using Java Connector to connect to the database, the following conditions are required.
 
 - Java 1.8 or above runtime environment and Maven 3.6 or above installed
-- TDengine client driver installed (required for native connections, not required for REST connections), please refer to [Installing Client Driver](/reference/connector#Install-Client-Driver)
+- TDengine client driver installed (required for native connections, not required for REST connections), please refer to [Installing Client Driver](https://docs.taosdata.com/reference/connector#Install-Client-Driver)
 
 ## Install the connectors
 
@@ -120,7 +120,7 @@ The configuration parameters in the URL are as follows:
 
 For more information about JDBC native connections, see [Video Tutorial](https://www.taosdata.com/blog/2020/11/11/1955.html).
 
-**Connect using the TDengine client-driven configuration file **
+**Connect using the TDengine client-driven configuration file**
 
 When you use a JDBC native connection to connect to a TDengine cluster, you can use the TDengine client driver configuration file to specify parameters such as `firstEp` and `secondEp` of the cluster in the configuration file as below:
 
@@ -786,11 +786,11 @@ Please refer to: [JDBC example](https://github.com/taosdata/TDengine/tree/develo
 
 ## Recent update logs
 
-| taos-jdbcdriver version | major changes |
-| :------------------: | :----------------------------: |
-| 2.0.38 | JDBC REST connections add bulk pull function |
-| 2.0.37 | Added support for json tags |
-| 2.0.36 | Add support for schemaless writing |
+| taos-jdbcdriver version |                major changes                 |
+| :---------------------: | :------------------------------------------: |
+|         2.0.38          | JDBC REST connections add bulk pull function |
+|         2.0.37          |         Added support for json tags          |
+|         2.0.36          |      Add support for schemaless writing      |
 
 ## Frequently Asked Questions
 
