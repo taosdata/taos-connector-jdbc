@@ -1,5 +1,7 @@
 # TDengine Java Connector
 
+简体中文 | [English](./README.md)
+
 `taos-jdbcdriver` 是 TDengine 的官方 Java 语言连接器，Java 开发人员可以通过它开发存取 TDengine 数据库的应用软件。`taos-jdbcdriver` 实现了 JDBC driver 标准的接口，并提供两种形式的连接器。一种是通过 TDengine 客户端驱动程序（taosc）原生连接 TDengine 实例，支持数据写入、查询、订阅、schemaless 接口和参数绑定接口等功能，一种是通过 taosAdapter 提供的 REST 接口连接 TDengine 实例（2.0.18 及更高版本）。REST 连接实现的功能集合和原生连接有少量不同。
 
 ![tdengine-connector](tdengine-jdbc-connector.png)
@@ -10,6 +12,8 @@
 - JDBC REST 连接：Java 应用通过 RestfulDriver 将 SQL 封装成一个 REST 请求，发送给物理节点 2 的 REST 服务器（taosAdapter），通过 REST 服务器请求 taosd 并返回结果。
 
 使用 REST 连接，不依赖 TDengine 客户端驱动，可以跨平台，更加方便灵活，但性能比原生连接器低约 30%。
+
+**注意**：
 
 TDengine 的 JDBC 驱动实现尽可能与关系型数据库驱动保持一致，但 TDengine 与关系对象型数据库的使用场景和技术特征存在差异，所以`taos-jdbcdriver` 与传统的 JDBC driver 也存在一定差异。在使用时需要注意以下几点：
 
@@ -23,7 +27,7 @@ REST 连接支持所有能运行 Java 的平台。
 
 ## 版本支持
 
-请参考[版本支持列表](https://docs.taosdata.com/reference/connector/#版本支持)
+请参考[版本支持列表](https://docs.taosdata.com/reference/connector/#版本支持)。
 
 ## TDengine DataType 和 Java DataType
 
@@ -79,15 +83,12 @@ Maven 项目中，在 pom.xml 中添加以下依赖：
 可以通过下载 TDengine 的源码，自己编译最新版本的 Java connector
 
 ```shell
-git clone https://github.com/taosdata/TDengine.git
-cd TDengine/src/connector/jdbc
+git clone https://github.com/taosdata/taos-connector-jdbc.git
+cd taos-connector-jdbc
 mvn clean install -D maven.test.skip=true
 ```
 
 编译后，在 target 目录下会产生 taos-jdbcdriver-2.0.XX-dist.jar 的 jar 包，并自动将编译的 jar 文件放在本地的 Maven 仓库中。
-
-</TabItem>
-</Tabs>
 
 ## 建立连接
 
@@ -325,7 +326,7 @@ JDBC 连接器可能报错的错误码包括 3 种：JDBC driver 本身的报错
 
 具体的错误码请参考：
 
-- [TDengine Java Connector](https://github.com/taosdata/TDengine/blob/develop/src/connector/jdbc/src/main/java/com/taosdata/jdbc/TSDBErrorNumbers.java)
+- [TDengine Java Connector](https://github.com/taosdata/taos-connector-jdbc/blob/main/src/main/java/com/taosdata/jdbc/TSDBErrorNumbers.java)
 - [TDengine_ERROR_CODE](https://github.com/taosdata/TDengine/blob/develop/src/inc/taoserror.h)
 
 ### 通过参数绑定写入数据
