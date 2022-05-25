@@ -18,7 +18,7 @@ import java.text.SimpleDateFormat;
 
 public class RestfulResultSetTest {
 
-    private static final String host = "192.168.1.98";
+    private static final String host = "127.0.0.1";
     private static Connection conn;
     private static Statement stmt;
     private static ResultSet rs;
