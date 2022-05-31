@@ -15,12 +15,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
-@Ignore
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "query test", author = "huolibo", version = "2.0.38")
 @FixMethodOrder
 public class WSQueryTest {
-    //    private static final String host = "192.168.1.98";
     private static final String host = "127.0.0.1";
     private static final int port = 6041;
     private static final String databaseName = "ws_query";

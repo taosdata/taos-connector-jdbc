@@ -1,16 +1,14 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+@Ignore
 public class AppMemoryLeakTest {
 
     private static String url;

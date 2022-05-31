@@ -2,6 +2,7 @@ package com.taosdata.jdbc.utils;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.UnsupportedEncodingException;
@@ -12,6 +13,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+@Ignore
 public class HttpClientPoolUtilTest {
 
     String user = "root";

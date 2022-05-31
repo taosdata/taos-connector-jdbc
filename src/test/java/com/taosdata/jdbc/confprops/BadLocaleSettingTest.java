@@ -3,9 +3,7 @@ package com.taosdata.jdbc.confprops;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -13,6 +11,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Properties;
 
+@Ignore
 public class BadLocaleSettingTest {
 
     private static final String host = "127.0.0.1";
@@ -41,14 +40,14 @@ public class BadLocaleSettingTest {
         stmt.close();
     }
 
-    @BeforeClass
-    public static void beforeClass() {
+    @Before
+    public void beforeClass() {
         System.setProperty("sun.jnu.encoding", "ANSI_X3.4-1968");
         System.setProperty("file.encoding", "ANSI_X3.4-1968");
     }
 
-    @AfterClass
-    public static void afterClass() throws SQLException {
+    @After
+    public void afterClass() throws SQLException {
         if (conn != null) {
             Statement statement = conn.createStatement();
             statement.execute("drop database " + dbName);

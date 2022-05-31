@@ -13,9 +13,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
-@Ignore
 public class WSSelectTest {
-    //    private static final String host = "192.168.1.98";
     private static final String host = "127.0.0.1";
     private static final int port = 6041;
     private static Connection connection;
@@ -40,7 +38,7 @@ public class WSSelectTest {
         Statement statement = connection.createStatement();
         int count = 0;
         long start = System.nanoTime();
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < 1; i++) {
             ResultSet resultSet = statement.executeQuery("select ts,c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13 from " + databaseName + ".alltype_query limit 3000");
             while (resultSet.next()) {
                 count++;
@@ -61,8 +59,8 @@ public class WSSelectTest {
             }
         }
         long d = System.nanoTime() - start;
-        System.out.println(d / 1000);
-        System.out.println(count);
+//        System.out.println(d / 1000);
+//        System.out.println(count);
         statement.close();
     }
 

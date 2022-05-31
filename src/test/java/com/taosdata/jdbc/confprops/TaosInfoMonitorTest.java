@@ -2,6 +2,7 @@ package com.taosdata.jdbc.confprops;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.sql.*;
@@ -11,6 +12,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+@Ignore
 public class TaosInfoMonitorTest {
 
     private static final String host = "127.0.0.1";
