@@ -243,8 +243,8 @@ public class Utils {
     public static String preprocessSql(String rawSql) {
         //For processing some of Spark SQLs
         // SELECT * FROM db.tb WHERE 1=0
-        rawSql = rawSql.replaceAll("WHERE 1=0", "WHERE _c0=1");
-        rawSql = rawSql.replaceAll("WHERE 1=2", "WHERE _c0=1");
+        rawSql = rawSql.replaceAll("WHERE 1=0", "WHERE _c0 is null");
+        rawSql = rawSql.replaceAll("WHERE 1=2", "WHERE _c0 is null");
 
         // SELECT "ts","val" FROM db.tb
         rawSql = rawSql.replaceAll("\"", "");
