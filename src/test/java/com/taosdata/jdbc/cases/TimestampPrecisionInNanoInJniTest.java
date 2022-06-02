@@ -35,7 +35,6 @@ public class TimestampPrecisionInNanoInJniTest {
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "en_US.UTF-8");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
 
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
@@ -95,7 +94,7 @@ public class TimestampPrecisionInNanoInJniTest {
     }
 
     @Test
-    public void canInsertTimestampAndQueryByEqualToInDateTypeInBothFirstAndSecondCol() {
+    public void canInsertTimestampAndQueryByEqualToInDateTypeInBothFirstAndSecondCol() throws SQLException {
         try (Statement stmt = conn.createStatement()) {
             ResultSet rs = stmt.executeQuery("select count(*) from " + ns_timestamp_db + ".weather where ts = '" + date3 + "'");
             checkCount(1l, rs);
@@ -105,13 +104,11 @@ public class TimestampPrecisionInNanoInJniTest {
             checkCount(1l, rs);
             rs = stmt.executeQuery("select ts2 from " + ns_timestamp_db + ".weather where ts2 = '" + date3 + "'");
             checkTime(timestamp3, rs);
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
     }
 
     @Test
-    public void canImportTimestampAndQueryByEqualToInDateTypeInBothFirstAndSecondCol() {
+    public void canImportTimestampAndQueryByEqualToInDateTypeInBothFirstAndSecondCol() throws SQLException {
         try (Statement stmt = conn.createStatement()) {
             stmt.executeUpdate("import into " + ns_timestamp_db + ".weather(ts, ts2, f1) values(\"" + date1 + "123123\", \"" + date1 + "123123\", 127)");
             ResultSet rs = stmt.executeQuery("select count(*) from " + ns_timestamp_db + ".weather where ts = '" + date1 + "123123'");
@@ -122,13 +119,11 @@ public class TimestampPrecisionInNanoInJniTest {
             checkCount(1l, rs);
             rs = stmt.executeQuery("select ts2 from " + ns_timestamp_db + ".weather where ts2 = '" + date1 + "123123'");
             checkTime(timestamp1 * 1000_000l + 123123l, rs);
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
     }
 
     @Test
-    public void canInsertTimestampAndQueryByEqualToInNumberTypeInBothFirstAndSecondCol() {
+    public void canInsertTimestampAndQueryByEqualToInNumberTypeInBothFirstAndSecondCol() throws SQLException {
         try (Statement stmt = conn.createStatement()) {
             ResultSet rs = stmt.executeQuery("select count(*) from " + ns_timestamp_db + ".weather where ts = '" + timestamp2 + "'");
             checkCount(1l, rs);
@@ -138,13 +133,11 @@ public class TimestampPrecisionInNanoInJniTest {
             checkCount(1l, rs);
             rs = stmt.executeQuery("select ts2 from " + ns_timestamp_db + ".weather where ts2 = '" + timestamp2 + "'");
             checkTime(timestamp2, rs);
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
     }
 
     @Test
-    public void canImportTimestampAndQueryByEqualToInNumberTypeInBothFirstAndSecondCol() {
+    public void canImportTimestampAndQueryByEqualToInNumberTypeInBothFirstAndSecondCol() throws SQLException {
         try (Statement stmt = conn.createStatement()) {
             long timestamp4 = timestamp1 * 1000_000 + 123123;
             stmt.executeUpdate("import into " + ns_timestamp_db + ".weather(ts, ts2, f1) values(" + timestamp4 + ", " + timestamp4 + ", 127)");
@@ -156,38 +149,30 @@ public class TimestampPrecisionInNanoInJniTest {
             checkCount(1l, rs);
             rs = stmt.executeQuery("select ts2 from " + ns_timestamp_db + ".weather where ts2 = '" + timestamp4 + "'");
             checkTime(timestamp4, rs);
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
     }
 
     @Test
-    public void canSelectLastRowFromWeatherForFirstCol() {
+    public void canSelectLastRowFromWeatherForFirstCol() throws SQLException {
         try (Statement stmt = conn.createStatement()) {
             ResultSet rs = stmt.executeQuery("select last(ts) from " + ns_timestamp_db + ".weather");
             checkTime(timestamp3, rs);
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
     }
 
     @Test
-    public void canSelectLastRowFromWeatherForSecondCol() {
+    public void canSelectLastRowFromWeatherForSecondCol() throws SQLException {
         try (Statement stmt = conn.createStatement()) {
             ResultSet rs = stmt.executeQuery("select last(ts2) from " + ns_timestamp_db + ".weather");
             checkTime(timestamp3, rs);
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
     }
 
     @Test
-    public void canSelectFirstRowFromWeatherForFirstCol() {
+    public void canSelectFirstRowFromWeatherForFirstCol() throws SQLException {
         try (Statement stmt = conn.createStatement()) {
             ResultSet rs = stmt.executeQuery("select first(ts) from " + ns_timestamp_db + ".weather");
             checkTime(timestamp2, rs);
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
     }
 
