@@ -17,7 +17,6 @@ import java.util.concurrent.TimeUnit;
 /**
  * You need to start taosadapter before testing this method
  */
-@Ignore
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "test connection with server", author = "huolibo", version = "2.0.37")
 public class WSConnectionTest {
@@ -71,10 +70,11 @@ public class WSConnectionTest {
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
         connection = DriverManager.getConnection(url, properties);
-        TimeUnit.SECONDS.sleep(20);
+//        TimeUnit.SECONDS.sleep(20);
         Statement statement = connection.createStatement();
         ResultSet resultSet = statement.executeQuery("show databases");
-        TimeUnit.SECONDS.sleep(20);
+        // Taosd recycles resources, if the sleep more than 30 seconds,
+//        TimeUnit.SECONDS.sleep(30);
         resultSet.next();
         resultSet.close();
         statement.close();

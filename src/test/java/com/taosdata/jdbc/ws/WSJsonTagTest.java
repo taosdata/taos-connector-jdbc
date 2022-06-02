@@ -12,7 +12,6 @@ import org.junit.runners.MethodSorters;
 import java.sql.*;
 import java.util.Properties;
 
-@Ignore
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "JsonTag", author = "huolibo", version = "2.0.38")
@@ -242,7 +241,7 @@ public class WSJsonTagTest {
         ResultSet resultSet = statement.executeQuery("select jtag from jsons1_8");
         resultSet.next();
         String result = resultSet.getString(1);
-        Assert.assertEquals("{\" \":90,\"tag1\":null,\"1tag$\":2}", result);
+        Assert.assertEquals("{\"tag1\":null,\"1tag$\":2,\" \":90}", result);
         close(resultSet);
     }
 
@@ -1266,7 +1265,7 @@ public class WSJsonTagTest {
     public static void afterClass() {
         try {
             if (null != statement) {
-//                statement.execute("drop database " + dbName);
+                statement.execute("drop database " + dbName);
                 statement.close();
             }
             if (null != connection) {

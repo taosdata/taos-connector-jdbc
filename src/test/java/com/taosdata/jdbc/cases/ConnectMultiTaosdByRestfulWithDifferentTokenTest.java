@@ -3,11 +3,13 @@ package com.taosdata.jdbc.cases;
 import com.taosdata.jdbc.TSDBDriver;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.sql.*;
 import java.util.Properties;
 
+@Ignore
 public class ConnectMultiTaosdByRestfulWithDifferentTokenTest {
 
     private static final String host1 = "192.168.17.156";
