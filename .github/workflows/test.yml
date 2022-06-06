@@ -55,4 +55,4 @@ jobs:
             cache: 'maven'
 
       - name: Test
-        run: mvn --no-transfer-progress -B clean package --file pom.xml
+        run: mvn -B clean test --file pom.xml
