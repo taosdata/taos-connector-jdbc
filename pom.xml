@@ -149,7 +149,7 @@
                         <exclude>**/UnsignedNumberJniTest.java</exclude>
                         <exclude>**/TimeZoneTest.java</exclude>
                     </excludes>
-                    <testFailureIgnore>true</testFailureIgnore>
+                    <testFailureIgnore>false</testFailureIgnore>
                 </configuration>
             </plugin>
         </plugins>
