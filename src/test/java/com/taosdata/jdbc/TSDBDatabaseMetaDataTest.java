@@ -12,6 +12,11 @@ public class TSDBDatabaseMetaDataTest {
     private static Connection connection;
     private static TSDBDatabaseMetaData metaData;
 
+    @Test
+    public void exceptionTest() throws SQLException {
+        throw new SQLException("exception");
+    }
+
 
     @Test
     public void unwrap() throws SQLException {
