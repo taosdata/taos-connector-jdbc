@@ -224,7 +224,6 @@ public class RestfulResultSet extends AbstractResultSet implements ResultSet {
             }
             case UTC: {
                 String value = row.getString(colIndex);
-                value = "2022-06-02T18:02:58.876123Z";
                 int index = value.lastIndexOf(":");
                 // ns timestamp: yyyy-MM-ddTHH:mm:ss.SSSSSSSSS+0x:00
                 if (index > 19) {
