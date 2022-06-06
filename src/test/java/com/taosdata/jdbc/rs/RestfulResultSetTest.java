@@ -114,7 +114,9 @@ public class RestfulResultSetTest {
     public void getBigDecimal() throws SQLException {
         BigDecimal f1 = rs.getBigDecimal("f1");
         long actual = (f1 == null) ? 0 : f1.longValue();
-        Assert.assertEquals(1609430400000L, actual);
+
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+        Assert.assertTrue("2021-01-01 00:00:00.000".equals(format.format(new java.util.Date(actual))));
 
         BigDecimal f2 = rs.getBigDecimal("f2");
         Assert.assertEquals(1, f2.intValue());

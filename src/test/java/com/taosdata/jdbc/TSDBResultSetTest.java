@@ -95,9 +95,11 @@ public class TSDBResultSetTest {
     }
 
     @Test
-    public void getBigDecimal() throws SQLException {
+    public void getBigDecimal() throws SQLException, ParseException {
         BigDecimal f1 = rs.getBigDecimal("f1");
-        Assert.assertEquals(1609430400000L, f1.longValue());
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+        java.util.Date parse = simpleDateFormat.parse("2021-01-01 00:00:00.000");
+        Assert.assertEquals(parse.getTime(), f1.longValue());
 
         BigDecimal f2 = rs.getBigDecimal("f2");
         Assert.assertEquals(1, f2.intValue());
@@ -180,7 +182,7 @@ public class TSDBResultSetTest {
     }
 
     @SuppressWarnings("deprecation")
-	@Test(expected = SQLFeatureNotSupportedException.class)
+    @Test(expected = SQLFeatureNotSupportedException.class)
     public void getUnicodeStream() throws SQLException {
         rs.getUnicodeStream("f1");
     }
