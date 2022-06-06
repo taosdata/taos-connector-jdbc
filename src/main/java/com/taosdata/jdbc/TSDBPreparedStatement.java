@@ -70,37 +70,7 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
     }
 
     private void init(String sql) {
-        this.rawSql = sql;
-        preprocessSql();
-    }
-
-    /**
-     * Some of the SQLs sent by other popular frameworks or tools like Spark, contains syntax that cannot be parsed by
-     * the TDengine client. Thus, some simple parsers/filters are intentionally added in this JDBC implementation in
-     * order to process those supported SQLs.
-     */
-    private void preprocessSql() {
-        /***For processing some of Spark SQLs*/
-        // SELECT * FROM db.tb WHERE 1=0
-        this.rawSql = this.rawSql.replaceAll("WHERE 1=0", "WHERE _c0=1");
-        this.rawSql = this.rawSql.replaceAll("WHERE 1=2", "WHERE _c0=1");
-
-        // SELECT "ts","val" FROM db.tb
-        this.rawSql = this.rawSql.replaceAll("\"", "");
-
-        /***** For processing inner subqueries *****/
-        Pattern pattern = Pattern.compile("FROM\\s+((\\(.+\\))\\s+SUB_QRY)", Pattern.CASE_INSENSITIVE);
-        Matcher matcher = pattern.matcher(rawSql);
-        String tableFullName = "";
-        if (matcher.find() && matcher.groupCount() == 2) {
-            String subQry = matcher.group(2);
-            Pattern pattern1 = Pattern.compile("FROM\\s+(\\w+\\.\\w+)", Pattern.CASE_INSENSITIVE);
-            Matcher matcher1 = pattern1.matcher(subQry);
-            if (matcher1.find() && matcher1.groupCount() == 1) {
-                tableFullName = matcher1.group(1);
-            }
-            rawSql = rawSql.replace(matcher.group(1), tableFullName);
-        }
+        this.rawSql = Utils.preprocessSql(sql);
     }
 
     @Override
