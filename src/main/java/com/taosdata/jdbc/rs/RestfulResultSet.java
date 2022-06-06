@@ -15,7 +15,6 @@ import com.taosdata.jdbc.utils.Utils;
 import java.math.BigDecimal;
 import java.sql.*;
 import java.time.Instant;
-import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.chrono.IsoChronology;
 import java.time.format.DateTimeFormatter;
@@ -26,32 +25,32 @@ import java.time.temporal.ChronoField;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class RestfulResultSet extends AbstractResultSet implements ResultSet {
 
-    public static DateTimeFormatter rfc3339Parser = null;
+    public static DateTimeFormatter rfc3339Parser = new DateTimeFormatterBuilder()
+            .parseCaseInsensitive()
+            .appendValue(ChronoField.YEAR, 4)
+            .appendLiteral('-')
+            .appendValue(ChronoField.MONTH_OF_YEAR, 2)
+            .appendLiteral('-')
+            .appendValue(ChronoField.DAY_OF_MONTH, 2)
+            .appendLiteral('T')
+            .appendValue(ChronoField.HOUR_OF_DAY, 2)
+            .appendLiteral(':')
+            .appendValue(ChronoField.MINUTE_OF_HOUR, 2)
+            .appendLiteral(':')
+            .appendValue(ChronoField.SECOND_OF_MINUTE, 2)
+            .optionalStart()
+            .appendFraction(ChronoField.NANO_OF_SECOND, 2, 9, true)
+            .optionalEnd()
+            .appendOffset("+HHMM", "Z").toFormatter()
+            .withResolverStyle(ResolverStyle.STRICT)
+            .withChronology(IsoChronology.INSTANCE);
 
-    {
-        rfc3339Parser = new DateTimeFormatterBuilder()
-                .parseCaseInsensitive()
-                .appendValue(ChronoField.YEAR, 4)
-                .appendLiteral('-')
-                .appendValue(ChronoField.MONTH_OF_YEAR, 2)
-                .appendLiteral('-')
-                .appendValue(ChronoField.DAY_OF_MONTH, 2)
-                .appendLiteral('T')
-                .appendValue(ChronoField.HOUR_OF_DAY, 2)
-                .appendLiteral(':')
-                .appendValue(ChronoField.MINUTE_OF_HOUR, 2)
-                .appendLiteral(':')
-                .appendValue(ChronoField.SECOND_OF_MINUTE, 2)
-                .optionalStart()
-                .appendFraction(ChronoField.NANO_OF_SECOND, 2, 9, true)
-                .optionalEnd()
-                .appendOffset("+HHMM", "Z").toFormatter()
-                .withResolverStyle(ResolverStyle.STRICT)
-                .withChronology(IsoChronology.INSTANCE);
-    }
+    Pattern pattern = Pattern.compile("^[0-9a-zT\\-:]+\\.([0-9]+).*$");
 
     private final Statement statement;
     // data
@@ -231,15 +230,16 @@ public class RestfulResultSet extends AbstractResultSet implements ResultSet {
                     value = value.substring(0, index) + value.substring(index + 1);
                 }
                 ZonedDateTime parse = ZonedDateTime.parse(value, rfc3339Parser);
-                long nanoAdjustment;
-                if (value.length() > 32) {
-                    // ns timestamp: yyyy-MM-ddTHH:mm:ss.SSSSSSSSS+0x00
+                Matcher matcher = pattern.matcher(value);
+                int len = 0;
+                if (matcher.find()) {
+                    len = matcher.group(1).length();
+                }
+                if (len > 6) {
                     this.timestampPrecision = TimestampPrecision.NS;
-                } else if (value.length() > 29) {
-                    // ms timestamp: yyyy-MM-ddTHH:mm:ss.SSSSSS+0x00
+                } else if (len > 3) {
                     this.timestampPrecision = TimestampPrecision.US;
                 } else {
-                    // ms timestamp: yyyy-MM-ddTHH:mm:ss.SSS+0x00
                     this.timestampPrecision = TimestampPrecision.MS;
                 }
                 return Timestamp.from(parse.toInstant());
