@@ -1250,6 +1250,7 @@ public class WSJsonTagTest {
         try {
             Properties properties = new Properties();
             properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
+            properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
             connection = DriverManager.getConnection(url, properties);
             statement = connection.createStatement();
             statement.execute("drop database if exists " + dbName);

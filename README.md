@@ -182,6 +182,7 @@ The configuration parameters in the URL are as follows.
 - user: Login TDengine user name, default value 'root'.
 - password: user login password, default value 'taosdata'.
 - batchfetch: true: pull the result set in batch when executing the query; false: pull the result set row by row. The default value is false. batchfetch uses HTTP for data transfer. The JDBC REST connection supports bulk data pulling function in taos-jdbcdriver-2.0.38 and TDengine 2.4.0.12 and later versions. taos-jdbcdriver and TDengine transfer data via WebSocket connection. Compared with HTTP, WebSocket enables JDBC REST connection to support large data volume querying and improve query performance.
+- charset: specify the charset to parse the string, this parameter is valid only when set batchfetch to true. Default value is UTF-8.
 - batchErrorIgnore: true: when executing executeBatch of Statement, if one SQL execution fails in the middle, continue to execute the following SQL. false: no longer execute any statement after the failed SQL. The default value is: false.
 
 **Note**: Some configuration items (e.g., locale, timezone) do not work in the REST connection.
@@ -236,7 +237,7 @@ The configuration parameters in properties are as follows.
 - TSDBDriver.PROPERTY_KEY_BATCH_LOAD: true: pull the result set in batch when executing query; false: pull the result set row by row. The default value is: false.
 - TSDBDriver.PROPERTY_KEY_BATCH_ERROR_IGNORE: true: when executing executeBatch of Statement, if there is a SQL execution failure in the middle, continue to execute the following sq. false: no longer execute any statement after the failed SQL. The default value is: false.
 - TSDBDriver.PROPERTY_KEY_CONFIG_DIR: Only works when using JDBC native connection. Client configuration file directory path, default value `/etc/taos` on Linux OS, default value `C:/TDengine/cfg` on Windows OS.
-- TSDBDriver.PROPERTY_KEY_CHARSET: takes effect only when using JDBC native connection. In the character set used by the client, the default value is the system character set.
+- TSDBDriver.PROPERTY_KEY_CHARSET: In the character set used by the client, the default value is the system character set.
 - TSDBDriver.PROPERTY_KEY_LOCALE: this only takes effect when using JDBC native connection. Client language environment, the default value is system current locale.
 - TSDBDriver.PROPERTY_KEY_TIME_ZONE: only takes effect when using JDBC native connection. In the time zone used by the client, the default value is the system's current time zone.
   For JDBC native connections, you can specify other parameters, such as log level, SQL length, etc., by specifying URL and Properties. For more detailed configuration, please refer to [Client Configuration](https://docs.taosdata.com/reference/config/#Client-Only).
