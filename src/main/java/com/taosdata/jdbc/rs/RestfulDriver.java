@@ -1,9 +1,6 @@
 package com.taosdata.jdbc.rs;
 
-import com.taosdata.jdbc.AbstractDriver;
-import com.taosdata.jdbc.TSDBDriver;
-import com.taosdata.jdbc.TSDBError;
-import com.taosdata.jdbc.TSDBErrorNumbers;
+import com.taosdata.jdbc.*;
 import com.taosdata.jdbc.enums.TimestampFormat;
 import com.taosdata.jdbc.utils.HttpClientPoolUtil;
 import com.taosdata.jdbc.ws.InFlightRequest;
@@ -115,6 +112,7 @@ public class RestfulDriver extends AbstractDriver {
                 throw new SQLException("creat websocket connection has been Interrupted ", e);
             }
             props.setProperty(TSDBDriver.PROPERTY_KEY_TIMESTAMP_FORMAT, String.valueOf(TimestampFormat.TIMESTAMP));
+            TaosGlobalConfig.setCharset(props.getProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8"));
             return new WSConnection(url, props, transport, database);
         }
         int poolSize = Integer.parseInt(props.getProperty("httpPoolSize", HttpClientPoolUtil.DEFAULT_MAX_PER_ROUTE));

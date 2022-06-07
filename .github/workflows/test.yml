@@ -55,4 +55,4 @@ jobs:
             cache: 'maven'
 
       - name: Test
-        run: mvn test
+        run: mvn -B clean test --file pom.xml
