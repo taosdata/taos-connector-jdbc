@@ -115,9 +115,7 @@ public class RestfulDriver extends AbstractDriver {
             TaosGlobalConfig.setCharset(props.getProperty(TSDBDriver.PROPERTY_KEY_CHARSET));
             return new WSConnection(url, props, transport, database);
         }
-        int poolSize = Integer.parseInt(props.getProperty("httpPoolSize", HttpClientPoolUtil.DEFAULT_MAX_PER_ROUTE));
-        boolean keepAlive = Boolean.parseBoolean(props.getProperty("httpKeepAlive", HttpClientPoolUtil.DEFAULT_HTTP_KEEP_ALIVE));
-        HttpClientPoolUtil.init(poolSize, keepAlive);
+        HttpClientPoolUtil.init(props);
 
         String auth = Base64.getEncoder().encodeToString(
                 (user + ":" + password).getBytes(StandardCharsets.UTF_8));
