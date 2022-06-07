@@ -40,8 +40,8 @@ public class RestfulConnection extends AbstractConnection {
 
     /**
      * A convenient constructor for cloud user
-     * @param url
-     * @param token
+     * @param url TDengine Cloud URL
+     * @param token TDengine Cloud Token
      * @throws Exception
      */
     public RestfulConnection(String url, String token) throws Exception {
