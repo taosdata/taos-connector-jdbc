@@ -2,6 +2,7 @@ package com.taosdata.jdbc.utils;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.taosdata.jdbc.TSDBDriver;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -10,6 +11,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Properties;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -84,8 +86,10 @@ public class HttpClientPoolUtilTest {
         } else {
             loginUrl = "http://" + specifyHost + ":" + 6041 + "/rest/login/" + user + "/" + password;
         }
-
-        HttpClientPoolUtil.init(connPoolSize, false);
+        Properties properties = new Properties();
+        properties.setProperty(TSDBDriver.HTTP_POOL_SIZE, String.valueOf(connPoolSize));
+        properties.setProperty(TSDBDriver.HTTP_KEEP_ALIVE, "false");
+        HttpClientPoolUtil.init(properties);
         String result = HttpClientPoolUtil.execute(loginUrl);
         JSONObject jsonResult = JSON.parseObject(result);
         String status = jsonResult.getString("status");
@@ -98,7 +102,7 @@ public class HttpClientPoolUtilTest {
 
     private boolean executeOneSql(String sql, String token) throws SQLException {
 
-        String url ;
+        String url;
         String specifyHost = SpecifyAddress.getInstance().getHost();
         if (null == specifyHost) {
             url = "http://" + host + ":6041/rest/sql";

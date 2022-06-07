@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.utils;
 
+import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import org.apache.http.HeaderElement;
@@ -23,6 +24,7 @@ import org.apache.http.util.EntityUtils;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
+import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
 public class HttpClientPoolUtil {
@@ -33,6 +35,8 @@ public class HttpClientPoolUtil {
     public static final String DEFAULT_HTTP_KEEP_ALIVE = "true";
     public static final String DEFAULT_MAX_PER_ROUTE = "20";
     private static final int DEFAULT_HTTP_KEEP_TIME = -1;
+    public static final String DEFAULT_CONNECT_TIMEOUT = "5000";
+    private static final String DEFAULT_SOCKET_TIMEOUT = "5000";
     private static String isKeepAlive;
 
     private static final ConnectionKeepAliveStrategy DEFAULT_KEEP_ALIVE_STRATEGY = (response, context) -> {
@@ -52,15 +56,21 @@ public class HttpClientPoolUtil {
     };
 
     private static CloseableHttpClient httpClient;
+    private static int connectTimeout = 0;
+    private static int socketTimeout = 0;
 
-    public static void init(Integer connPoolSize, boolean keepAlive) {
+    public static void init(Properties props) {
+        int poolSize = Integer.parseInt(props.getProperty(TSDBDriver.HTTP_POOL_SIZE, HttpClientPoolUtil.DEFAULT_MAX_PER_ROUTE));
+        boolean keepAlive = Boolean.parseBoolean(props.getProperty(TSDBDriver.HTTP_KEEP_ALIVE, HttpClientPoolUtil.DEFAULT_HTTP_KEEP_ALIVE));
+        connectTimeout = Integer.parseInt(props.getProperty(TSDBDriver.HTTP_CONNECT_TIMEOUT, HttpClientPoolUtil.DEFAULT_CONNECT_TIMEOUT));
+        socketTimeout = Integer.parseInt(props.getProperty(TSDBDriver.HTTP_SOCKET_TIMEOUT, HttpClientPoolUtil.DEFAULT_SOCKET_TIMEOUT));
         if (httpClient == null) {
             synchronized (HttpClientPoolUtil.class) {
                 if (httpClient == null) {
                     isKeepAlive = keepAlive ? HTTP.CONN_KEEP_ALIVE : HTTP.CONN_CLOSE;
                     PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
-                    connectionManager.setMaxTotal(connPoolSize * 10);
-                    connectionManager.setDefaultMaxPerRoute(connPoolSize);
+                    connectionManager.setMaxTotal(poolSize * 10);
+                    connectionManager.setDefaultMaxPerRoute(poolSize);
                     httpClient = HttpClients.custom()
                             .setKeepAliveStrategy(DEFAULT_KEEP_ALIVE_STRATEGY)
                             .setConnectionManager(connectionManager)
@@ -132,6 +142,9 @@ public class HttpClientPoolUtil {
         HttpRequestBase method;
         RequestConfig requestConfig = RequestConfig.custom()
                 .setExpectContinueEnabled(false)
+                .setConnectTimeout(connectTimeout)
+                .setConnectionRequestTimeout(1000)
+                .setSocketTimeout(socketTimeout)
                 .build();
         if (HttpPut.METHOD_NAME.equalsIgnoreCase(methodName)) {
             method = new HttpPut(uri);

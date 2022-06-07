@@ -40,7 +40,8 @@ public class RestfulConnection extends AbstractConnection {
 
     /**
      * A convenient constructor for cloud user
-     * @param url TDengine Cloud URL
+     *
+     * @param url   TDengine Cloud URL
      * @param token TDengine Cloud Token
      * @throws Exception
      */
@@ -48,8 +49,10 @@ public class RestfulConnection extends AbstractConnection {
         super(new Properties());
         clientInfoProps.setProperty(TSDBDriver.PROPERTY_KEY_TIMESTAMP_FORMAT, String.valueOf(TimestampFormat.TIMESTAMP));
 
-        int poolSize = Integer.parseInt(HttpClientPoolUtil.DEFAULT_MAX_PER_ROUTE);
-        HttpClientPoolUtil.init(poolSize, true);
+        Properties properties = new Properties();
+        properties.setProperty(TSDBDriver.HTTP_POOL_SIZE, HttpClientPoolUtil.DEFAULT_MAX_PER_ROUTE);
+        properties.setProperty(TSDBDriver.HTTP_KEEP_ALIVE, "true");
+        HttpClientPoolUtil.init(properties);
         if (url == null || token == null) {
             throw new Exception("url and token can't be null");
         }

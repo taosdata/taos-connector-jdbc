@@ -61,7 +61,7 @@ public class TSDBDriver extends AbstractDriver {
      */
     public static final String PROPERTY_KEY_PASSWORD = "password";
     /**
-     * Key used to retrieve the token value from the properties instance passed to 
+     * Key used to retrieve the token value from the properties instance passed to
      * the driver.
      * Just for Cloud Service
      */
@@ -112,6 +112,27 @@ public class TSDBDriver extends AbstractDriver {
      * max message number send to server concurrently
      */
     public static final String PROPERTY_KEY_MAX_CONCURRENT_REQUEST = "maxConcurrentRequest";
+
+    /**
+     * max pool size
+     */
+    public static final String HTTP_POOL_SIZE = "httpPoolSize";
+
+    public static final String HTTP_KEEP_ALIVE = "httpKeepAlive";
+
+    /**
+     * the timeout in milliseconds until a connection is established.
+     * zero is interpreted as an infinite timeout.
+     */
+    public static final String HTTP_CONNECT_TIMEOUT = "httpConnectTimeout";
+
+    /**
+     * Defines the socket timeout in milliseconds,
+     * which is the timeout for waiting for data or, put differently,
+     * a maximum period inactivity between two consecutive data packets.
+     * zero is interpreted as an infinite timeout.
+     */
+    public static final String HTTP_SOCKET_TIMEOUT = "httpSocketTimeout";
 
     private TSDBDatabaseMetaData dbMetaData = null;
 

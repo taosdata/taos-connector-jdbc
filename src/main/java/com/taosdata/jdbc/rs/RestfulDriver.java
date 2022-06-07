@@ -84,12 +84,9 @@ public class RestfulDriver extends AbstractDriver {
             WSClient client;
             Transport transport;
             try {
-                int timeout = props.containsKey(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT)
-                        ? Integer.parseInt(props.getProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT))
-                        : Transport.DEFAULT_MESSAGE_WAIT_TIMEOUT;
-                int maxRequest = props.containsKey(TSDBDriver.PROPERTY_KEY_MAX_CONCURRENT_REQUEST)
-                        ? Integer.parseInt(props.getProperty(TSDBDriver.PROPERTY_KEY_MAX_CONCURRENT_REQUEST))
-                        : Transport.DEFAULT_MAX_REQUEST;
+                int timeout = Integer.parseInt(props.getProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, String.valueOf(Transport.DEFAULT_MESSAGE_WAIT_TIMEOUT)));
+                int maxRequest = Integer.parseInt(props.getProperty(TSDBDriver.HTTP_POOL_SIZE, HttpClientPoolUtil.DEFAULT_MAX_PER_ROUTE));
+                int connectTimeout = Integer.parseInt(props.getProperty(TSDBDriver.HTTP_CONNECT_TIMEOUT, HttpClientPoolUtil.DEFAULT_CONNECT_TIMEOUT));
 
                 InFlightRequest inFlightRequest = new InFlightRequest(timeout, maxRequest);
                 CountDownLatch latch = new CountDownLatch(1);
@@ -97,7 +94,7 @@ public class RestfulDriver extends AbstractDriver {
                 client = new WSClient(new URI(loginUrl), user, password, database,
                         inFlightRequest, httpHeaders, latch, maxRequest);
                 transport = new Transport(client, inFlightRequest);
-                if (!client.connectBlocking(timeout, TimeUnit.MILLISECONDS)) {
+                if (!client.connectBlocking(connectTimeout, TimeUnit.MILLISECONDS)) {
                     throw new SQLException("can't create connection with server");
                 }
                 if (!latch.await(timeout, TimeUnit.MILLISECONDS)) {
@@ -115,9 +112,7 @@ public class RestfulDriver extends AbstractDriver {
             TaosGlobalConfig.setCharset(props.getProperty(TSDBDriver.PROPERTY_KEY_CHARSET));
             return new WSConnection(url, props, transport, database);
         }
-        int poolSize = Integer.parseInt(props.getProperty("httpPoolSize", HttpClientPoolUtil.DEFAULT_MAX_PER_ROUTE));
-        boolean keepAlive = Boolean.parseBoolean(props.getProperty("httpKeepAlive", HttpClientPoolUtil.DEFAULT_HTTP_KEEP_ALIVE));
-        HttpClientPoolUtil.init(poolSize, keepAlive);
+        HttpClientPoolUtil.init(props);
 
         String auth = Base64.getEncoder().encodeToString(
                 (user + ":" + password).getBytes(StandardCharsets.UTF_8));
