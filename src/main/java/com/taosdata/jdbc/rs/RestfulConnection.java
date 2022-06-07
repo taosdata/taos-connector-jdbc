@@ -53,10 +53,6 @@ public class RestfulConnection extends AbstractConnection {
         if (url == null || token == null) {
             throw new Exception("url and token can't be null");
         }
-        if (!url.startsWith("http://") && !url.startsWith("https://")) {
-            System.out.println("No protocol specified in url, use \"http://\" by default");
-        }
-
         this.url = url;
         this.useSsl = url.startsWith("https://");
         String tmpSchema = this.useSsl ? "https://" : "http://";
