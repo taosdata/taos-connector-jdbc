@@ -101,7 +101,9 @@ public class HttpClientPoolUtil {
         HttpEntityEnclosingRequestBase method = (HttpEntityEnclosingRequestBase) getRequest(uri, HttpPost.METHOD_NAME);
         method.setHeader(HTTP.CONTENT_TYPE, "text/plain");
         method.setHeader(HTTP.CONN_DIRECTIVE, isKeepAlive);
-        method.setHeader("Authorization", auth);
+        if (auth != null) {
+            method.setHeader("Authorization", auth);
+        }
         method.setEntity(new StringEntity(data, StandardCharsets.UTF_8));
         HttpContext context = HttpClientContext.create();
 

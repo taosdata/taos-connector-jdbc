@@ -112,7 +112,7 @@ public class RestfulDriver extends AbstractDriver {
             } catch (URISyntaxException e) {
                 throw new SQLException("Websocket url parse error: " + loginUrl, e);
             } catch (InterruptedException e) {
-                throw new SQLException("creat websocket connection has been Interrupted ", e);
+                throw new SQLException("create websocket connection has been Interrupted ", e);
             }
             props.setProperty(TSDBDriver.PROPERTY_KEY_TIMESTAMP_FORMAT, String.valueOf(TimestampFormat.TIMESTAMP));
             return new WSConnection(url, props, transport, database);

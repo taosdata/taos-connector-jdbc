@@ -4,6 +4,8 @@ import com.taosdata.jdbc.AbstractConnection;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
+import com.taosdata.jdbc.enums.TimestampFormat;
+import com.taosdata.jdbc.utils.HttpClientPoolUtil;
 
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
@@ -34,6 +36,42 @@ public class RestfulConnection extends AbstractConnection {
         this.useSsl = useSsl;
         this.token = token;
         this.metadata = new RestfulDatabaseMetaData(url, props.getProperty(TSDBDriver.PROPERTY_KEY_USER), this);
+    }
+
+    /**
+     * A convenient constructor for cloud user
+     * @param url
+     * @param token
+     * @throws Exception
+     */
+    public RestfulConnection(String url, String token) throws Exception {
+        super(new Properties());
+        clientInfoProps.setProperty(TSDBDriver.PROPERTY_KEY_TIMESTAMP_FORMAT, String.valueOf(TimestampFormat.TIMESTAMP));
+
+        int poolSize = Integer.parseInt(HttpClientPoolUtil.DEFAULT_MAX_PER_ROUTE);
+        HttpClientPoolUtil.init(poolSize, true);
+        if (url == null || token == null) {
+            throw new Exception("url and token can't be null");
+        }
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            System.out.println("No protocol specified in url, use \"http://\" by default");
+        }
+
+        this.url = url;
+        this.useSsl = url.startsWith("https://");
+        String tmpSchema = this.useSsl ? "https://" : "http://";
+        String hostPort = url.replaceFirst(tmpSchema, "");
+        String[] splits = hostPort.split(":");
+        this.host = splits[0];
+        if (splits.length == 2) {
+            this.port = Integer.parseInt(splits[1]);
+        } else {
+            this.port = this.useSsl ? 443 : 80;
+        }
+        this.database = null;
+        this.auth = null;
+        this.token = token;
+        this.metadata = new RestfulDatabaseMetaData(this.url, null, this);
     }
 
     @Override
