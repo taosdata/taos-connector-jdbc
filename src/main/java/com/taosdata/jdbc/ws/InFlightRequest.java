@@ -4,9 +4,7 @@ import com.taosdata.jdbc.ws.entity.Action;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.*;
-import java.util.stream.Stream;
 
 /**
  * Unfinished execution
@@ -75,14 +73,16 @@ public class InFlightRequest {
 
     public void close() {
         expireMap.keySet().stream()
-                .flatMap(k -> expireMap.get(k).stream())
+                .flatMap(k -> {
+                    PriorityBlockingQueue<ResponseFuture> futures = expireMap.get(k);
+                    expireMap.put(k, new PriorityBlockingQueue<>());
+                    futureMap.put(k, new ConcurrentHashMap<>());
+                    return futures.stream();
+                })
                 .parallel().map(ResponseFuture::getFuture)
                 .forEach(e -> {
                     e.completeExceptionally(new Exception("close all inFlightRequest"));
                 });
         scheduledExecutorService.shutdown();
-        // help gc
-        expireMap = null;
-        futureMap = null;
     }
 }

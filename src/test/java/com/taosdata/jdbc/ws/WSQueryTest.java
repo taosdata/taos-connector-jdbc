@@ -38,9 +38,11 @@ public class WSQueryTest {
                 resultSet.next();
                 Assert.assertEquals(100, resultSet.getInt(2));
                 statement.close();
-                latch.countDown();
+
             } catch (SQLException e) {
                 e.printStackTrace();
+            } finally {
+                latch.countDown();
             }
         });
         latch.await();
