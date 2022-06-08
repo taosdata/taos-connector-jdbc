@@ -4,7 +4,9 @@ import com.taosdata.jdbc.ws.entity.Action;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.*;
+import java.util.stream.Stream;
 
 /**
  * Unfinished execution
@@ -12,8 +14,8 @@ import java.util.concurrent.*;
 public class InFlightRequest {
     private final int timeoutSec;
     private final Semaphore semaphore;
-    private final Map<String, ConcurrentHashMap<Long, ResponseFuture>> futureMap = new HashMap<>();
-    private final Map<String, PriorityBlockingQueue<ResponseFuture>> expireMap = new HashMap<>();
+    private Map<String, ConcurrentHashMap<Long, ResponseFuture>> futureMap = new HashMap<>();
+    private Map<String, PriorityBlockingQueue<ResponseFuture>> expireMap = new HashMap<>();
     private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread t = new Thread(r);
         t.setName("timer-" + t.getId());
@@ -69,5 +71,18 @@ public class InFlightRequest {
                 }
             }
         });
+    }
+
+    public void close() {
+        expireMap.keySet().stream()
+                .flatMap(k -> expireMap.get(k).stream())
+                .parallel().map(ResponseFuture::getFuture)
+                .forEach(e -> {
+                    e.completeExceptionally(new Exception("close all inFlightRequest"));
+                });
+        scheduledExecutorService.shutdown();
+        // help gc
+        expireMap = null;
+        futureMap = null;
     }
 }
