@@ -12,8 +12,8 @@ import java.util.concurrent.*;
 public class InFlightRequest {
     private final int timeoutSec;
     private final Semaphore semaphore;
-    private final Map<String, ConcurrentHashMap<Long, ResponseFuture>> futureMap = new HashMap<>();
-    private final Map<String, PriorityBlockingQueue<ResponseFuture>> expireMap = new HashMap<>();
+    private Map<String, ConcurrentHashMap<Long, ResponseFuture>> futureMap = new HashMap<>();
+    private Map<String, PriorityBlockingQueue<ResponseFuture>> expireMap = new HashMap<>();
     private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread t = new Thread(r);
         t.setName("timer-" + t.getId());
@@ -69,5 +69,20 @@ public class InFlightRequest {
                 }
             }
         });
+    }
+
+    public void close() {
+        expireMap.keySet().stream()
+                .flatMap(k -> {
+                    PriorityBlockingQueue<ResponseFuture> futures = expireMap.get(k);
+                    expireMap.put(k, new PriorityBlockingQueue<>());
+                    futureMap.put(k, new ConcurrentHashMap<>());
+                    return futures.stream();
+                })
+                .parallel().map(ResponseFuture::getFuture)
+                .forEach(e -> {
+                    e.completeExceptionally(new Exception("close all inFlightRequest"));
+                });
+        scheduledExecutorService.shutdown();
     }
 }

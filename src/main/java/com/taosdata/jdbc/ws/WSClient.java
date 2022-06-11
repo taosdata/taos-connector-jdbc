@@ -23,6 +23,15 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
 
     private boolean auth;
     private int reqId;
+    private ConcurrentHashMap<Transport, Integer> transports = new ConcurrentHashMap<>();
+
+    public void removeTransports(Transport transport) {
+        transports.remove(transport);
+    }
+
+    public void addTransport(Transport transport) {
+        this.transports.put(transport, 1);
+    }
 
     public boolean isAuth() {
         return auth;
@@ -118,6 +127,7 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
     public void close() {
         super.close();
         executor.shutdown();
+        transports.keySet().forEach(Transport::close);
     }
 
     static class ConnectReq extends Payload {
