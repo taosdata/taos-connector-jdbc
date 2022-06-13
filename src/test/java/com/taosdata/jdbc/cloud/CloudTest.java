@@ -12,13 +12,12 @@ public class CloudTest {
 
     @Test
     public void connectCloudService() throws Exception {
-        String url = System.getenv("TDENGINE_CLOUD_URL");
-        String token = System.getenv("TDENGINE_CLOUD_TOKEN");
-        if (url == null || token == null) {
+        String jdbcUrl = System.getenv("TDENGINE_JDBC_URL");
+        if (jdbcUrl == null) {
             System.out.println("Environment variable for CloudTest not set properly");
             return;
         }
-        Connection conn = new RestfulConnection(url, token);
+        Connection conn = DriverManager.getConnection(jdbcUrl);
         Statement stmt = conn.createStatement();
         ResultSet rs = stmt.executeQuery("select server_version()");
         rs.next();
