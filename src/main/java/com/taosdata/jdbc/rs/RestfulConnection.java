@@ -32,46 +32,12 @@ public class RestfulConnection extends AbstractConnection {
         this.port = Integer.parseInt(port);
         this.database = database;
         this.url = url;
-        this.auth = "Basic " + auth;
+        this.auth = auth == null ? null : "Basic " + auth;
         this.useSsl = useSsl;
         this.token = token;
         this.metadata = new RestfulDatabaseMetaData(url, props.getProperty(TSDBDriver.PROPERTY_KEY_USER), this);
     }
 
-    /**
-     * A convenient constructor for cloud user
-     *
-     * @param url   TDengine Cloud URL
-     * @param token TDengine Cloud Token
-     * @throws Exception
-     */
-    public RestfulConnection(String url, String token) throws Exception {
-        super(new Properties());
-        clientInfoProps.setProperty(TSDBDriver.PROPERTY_KEY_TIMESTAMP_FORMAT, String.valueOf(TimestampFormat.TIMESTAMP));
-
-        Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.HTTP_POOL_SIZE, HttpClientPoolUtil.DEFAULT_MAX_PER_ROUTE);
-        properties.setProperty(TSDBDriver.HTTP_KEEP_ALIVE, "true");
-        HttpClientPoolUtil.init(properties);
-        if (url == null || token == null) {
-            throw new Exception("url and token can't be null");
-        }
-        this.url = url;
-        this.useSsl = url.startsWith("https://");
-        String tmpSchema = this.useSsl ? "https://" : "http://";
-        String hostPort = url.replaceFirst(tmpSchema, "");
-        String[] splits = hostPort.split(":");
-        this.host = splits[0];
-        if (splits.length == 2) {
-            this.port = Integer.parseInt(splits[1]);
-        } else {
-            this.port = this.useSsl ? 443 : 80;
-        }
-        this.database = null;
-        this.auth = null;
-        this.token = token;
-        this.metadata = new RestfulDatabaseMetaData(this.url, null, this);
-    }
 
     @Override
     public Statement createStatement() throws SQLException {
