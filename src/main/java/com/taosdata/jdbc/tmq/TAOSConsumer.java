@@ -26,6 +26,14 @@ public interface TAOSConsumer extends AutoCloseable {
 
     void commitSync();
 
+    String getTopicName();
+
+    String getDatabaseName();
+
+    int getVgroupId();
+
+    String getTableName();
+
     @Override
     void close() throws SQLException;
 

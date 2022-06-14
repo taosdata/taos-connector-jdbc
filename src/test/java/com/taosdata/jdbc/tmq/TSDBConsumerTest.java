@@ -59,7 +59,11 @@ public class TSDBConsumerTest {
                 TimeUnit.MILLISECONDS.sleep(10);
             }
             Set<String> subscription = consumer.subscription();
-            Assert.assertEquals(1,subscription.size());
+            Assert.assertEquals(1, subscription.size());
+            Assert.assertTrue(subscription.contains(topic));
+            Assert.assertEquals(topic, consumer.getTopicName());
+            Assert.assertEquals(dbName, consumer.getDatabaseName());
+            Assert.assertEquals("ct1", consumer.getTableName());
             consumer.unsubscribe();
         } finally {
             scheduledExecutorService.shutdown();

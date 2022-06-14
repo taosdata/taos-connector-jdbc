@@ -21,6 +21,7 @@ public class JNIConsumer implements TAOSConsumer {
     private final AtomicInteger refcount = new AtomicInteger(0);
     private volatile boolean closed = false;
 
+    long resultSet;
 
     private TMQConnector connector;
     private Consumer<CallbackResult> callback;
@@ -41,8 +42,8 @@ public class JNIConsumer implements TAOSConsumer {
         }
         connector = new TMQConnector();
         String url = properties.getProperty(TMQConstants.CONNECT_URL);
-        if (!StringUtils.isEmpty(url)){
-            properties = StringUtils.parseUrl(url,properties);
+        if (!StringUtils.isEmpty(url)) {
+            properties = StringUtils.parseUrl(url, properties);
         }
         long config = connector.createConfig(properties);
         try {
@@ -95,7 +96,7 @@ public class JNIConsumer implements TAOSConsumer {
     public ResultSet poll(Duration timeout) throws SQLException {
         acquireAndEnsureOpen();
         try {
-            long resultSet = connector.poll(timeout.toMillis());
+            resultSet = connector.poll(timeout.toMillis());
             if (resultSet == 0) {
                 return new EmptyResultSet();
             }
@@ -115,6 +116,26 @@ public class JNIConsumer implements TAOSConsumer {
     @Override
     public void commitSync() {
         connector.syncCommit(0);
+    }
+
+    @Override
+    public String getTopicName() {
+        return connector.getTopicName(resultSet);
+    }
+
+    @Override
+    public String getDatabaseName() {
+        return connector.getDbName(resultSet);
+    }
+
+    @Override
+    public int getVgroupId() {
+        return connector.getVgroupId(resultSet);
+    }
+
+    @Override
+    public String getTableName() {
+        return connector.getTableName(resultSet);
     }
 
 
