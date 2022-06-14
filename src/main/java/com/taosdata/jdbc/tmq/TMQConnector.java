@@ -59,7 +59,10 @@ public class TMQConnector extends TSDBJNIConnector{
     private native void tmqConfDestroyImp(long conf);
 
     public void createConsumer(long conf) throws SQLException {
-        taos = tmqConsumerNewImp(conf);
+        taos = tmqConsumerNewImp(conf, this);
+        if (taos == TMQ_CONF_NULL){
+            throw TSDBError.createSQLException(TMQ_CONF_NULL, "consumer config reference has been destroyed");
+        }
         if (taos < 0) {
             throw TSDBError.createSQLException(TMQConstants.TMQ_CONSUMER_CREATE_ERROR, createConsumerErrorMsg);
         }
@@ -67,7 +70,7 @@ public class TMQConnector extends TSDBJNIConnector{
 
     // DLL_EXPORT tmq_t *tmq_consumer_new(tmq_conf_t *conf,
     // char *errstr, int32_t errstrLen);
-    private native long tmqConsumerNewImp(long conf);
+    private native long tmqConsumerNewImp(long conf, TMQConnector connector);
 
     void setCreateConsumerErrorMsg(String msg) {
         this.createConsumerErrorMsg = msg;
@@ -130,7 +133,7 @@ public class TMQConnector extends TSDBJNIConnector{
     private native int tmqSubscribeImp(long tmq, long topic);
 
     public Set<String> subscription() throws SQLException {
-        int code = tmqSubscriptionImp(taos);
+        int code = tmqSubscriptionImp(taos, this);
         if (code == TMQ_CONSUMER_NULL) {
             throw TSDBError.createSQLException(TMQ_CONSUMER_NULL, "consumer reference has been destroyed");
         }
@@ -141,7 +144,7 @@ public class TMQConnector extends TSDBJNIConnector{
     }
 
     // DLL_EXPORT tmq_resp_err_t tmq_subscription(tmq_t *tmq, tmq_list_t **topics);
-    private native int tmqSubscriptionImp(long tmq);
+    private native int tmqSubscriptionImp(long tmq, TMQConnector connector);
 
     public void setTopicList(String[] topics) {
         this.topics = topics;

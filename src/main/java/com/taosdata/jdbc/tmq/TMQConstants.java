@@ -77,8 +77,9 @@ public class TMQConstants {
 
     /*---- error code ----*/
     public static final int TMQ_SUCCESS = 0;
-    public static final int TMQ_CONF_KEY_NULL = -1;
-    public static final int TMQ_CONF_VALUE_NULL = -2;
+    public static final int TMQ_CONF_NULL = -100;
+    public static final int TMQ_CONF_KEY_NULL = -101;
+    public static final int TMQ_CONF_VALUE_NULL = -102;
 
     public static final int TMQ_TOPIC_NULL = -110;
     public static final int TMQ_TOPIC_NAME_NULL = -111;
