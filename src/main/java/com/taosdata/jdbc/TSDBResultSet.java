@@ -35,6 +35,7 @@ public class TSDBResultSet extends AbstractResultSet implements ResultSet {
     private boolean batchFetch;
     private boolean lastWasNull;
     private boolean isClosed;
+    private boolean isSubscribe;
 
     public void setBatchFetch(boolean batchFetch) {
         this.batchFetch = batchFetch;
@@ -54,6 +55,27 @@ public class TSDBResultSet extends AbstractResultSet implements ResultSet {
 
     public TSDBResultSet(TSDBStatement statement, TSDBJNIConnector connector, long resultSetPointer, int timestampPrecision) throws SQLException {
         this.statement = statement;
+        this.jniConnector = connector;
+        this.resultSetPointer = resultSetPointer;
+
+        int code = this.jniConnector.getSchemaMetaData(this.resultSetPointer, this.columnMetaDataList);
+        if (code == TSDBConstants.JNI_CONNECTION_NULL) {
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_JNI_CONNECTION_NULL);
+        }
+        if (code == TSDBConstants.JNI_RESULT_SET_NULL) {
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_JNI_RESULT_SET_NULL);
+        }
+        if (code == TSDBConstants.JNI_NUM_OF_FIELDS_0) {
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_JNI_NUM_OF_FIELDS_0);
+        }
+        this.rowData = new TSDBResultSetRowData(this.columnMetaDataList.size());
+        this.blockData = new TSDBResultSetBlockData(this.columnMetaDataList, this.columnMetaDataList.size(), timestampPrecision);
+        this.timestampPrecision = timestampPrecision;
+    }
+
+    public TSDBResultSet(TSDBJNIConnector connector, long resultSetPointer, int timestampPrecision) throws SQLException {
+        this.statement = null;
+        this.isSubscribe = true;
         this.jniConnector = connector;
         this.resultSetPointer = resultSetPointer;
 
@@ -98,18 +120,14 @@ public class TSDBResultSet extends AbstractResultSet implements ResultSet {
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_JNI_RESULT_SET_NULL);
             } else if (code == TSDBConstants.JNI_NUM_OF_FIELDS_0) {
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_JNI_NUM_OF_FIELDS_0);
-            } else if (code == TSDBConstants.JNI_FETCH_END) {
-                return false;
-            } else {
-                return true;
-            }
+            } else return code != TSDBConstants.JNI_FETCH_END;
         }
     }
 
     public void close() throws SQLException {
         if (isClosed)
             return;
-        if (this.statement == null)
+        if (this.statement == null && !isSubscribe)
             return;
         if (this.jniConnector != null) {
             int code = this.jniConnector.freeResultSet(this.resultSetPointer);
@@ -268,7 +286,7 @@ public class TSDBResultSet extends AbstractResultSet implements ResultSet {
         checkAvailability(columnIndex, this.columnMetaDataList.size());
 
         if (this.getBatchFetch())
-            return this.blockData.getBytes(columnIndex -1);
+            return this.blockData.getBytes(columnIndex - 1);
 
         Object value = this.rowData.getObject(columnIndex);
         this.lastWasNull = value == null;
