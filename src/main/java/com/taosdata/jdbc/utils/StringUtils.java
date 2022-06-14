@@ -12,7 +12,7 @@ public class StringUtils {
 
     public static Properties parseUrl(String url, Properties defaults) {
         Properties urlProps = (defaults != null) ? defaults : new Properties();
-        if (null == url) {
+        if (StringUtils.isEmpty(url)) {
             return urlProps;
         }
 
