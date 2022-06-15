@@ -12,7 +12,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @FixMethodOrder
-//@Ignore
+@Ignore
 public class TSDBConsumerTest {
     private static final String host = "127.0.0.1";
     private static final String dbName = "tmq_test";
@@ -42,6 +42,7 @@ public class TSDBConsumerTest {
         String topic = "topic_ctb_column";
         // create topic
         statement.executeUpdate("create topic if not exists " + topic + " as select ts, c1 from ct1");
+//        statement.executeUpdate("create topic if not exists " + topic + " as database " + dbName);
 
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");

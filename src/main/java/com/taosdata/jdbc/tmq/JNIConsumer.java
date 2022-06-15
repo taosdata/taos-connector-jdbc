@@ -10,7 +10,6 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public class JNIConsumer implements TAOSConsumer {
@@ -35,7 +34,6 @@ public class JNIConsumer implements TAOSConsumer {
                 return t;
             },
             new ThreadPoolExecutor.CallerRunsPolicy());
-    ArrayBlockingQueue<Integer> queue = new ArrayBlockingQueue<>(1);
 
     public JNIConsumer(Properties properties) throws SQLException {
         new JNIConsumer(properties, null);
@@ -122,7 +120,7 @@ public class JNIConsumer implements TAOSConsumer {
     @Override
     public void commitAsync() {
         // currently offset is zero
-        connector.asyncCommit(0,this);
+        connector.asyncCommit(0, this);
     }
 
 
@@ -130,7 +128,7 @@ public class JNIConsumer implements TAOSConsumer {
     public void commitAsync(Consumer<CallbackResult> consumer) {
         // currently offset is zero
         this.callback = consumer;
-        connector.asyncCommit(0,this);
+        connector.asyncCommit(0, this);
     }
 
     @Override
