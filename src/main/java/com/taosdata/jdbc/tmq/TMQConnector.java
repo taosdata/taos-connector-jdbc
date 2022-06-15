@@ -9,13 +9,13 @@ import java.util.stream.Collectors;
 
 import static com.taosdata.jdbc.tmq.TMQConstants.*;
 
-public class TMQConnector extends TSDBJNIConnector{
+public class TMQConnector extends TSDBJNIConnector {
 
     private String createConsumerErrorMsg;
     private String[] topics;
 
-    public long createConfig(Properties properties) throws SQLException {
-        long conf = tmqConfNewImp();
+    public long createConfig(Properties properties, JNIConsumer consumer) throws SQLException {
+        long conf = tmqConfNewImp(consumer);
         if (null == properties || properties.size() < 1)
             return conf;
         for (Map.Entry<?, ?> entry : properties.entrySet()) {
@@ -41,15 +41,11 @@ public class TMQConnector extends TSDBJNIConnector{
     }
 
     // DLL_EXPORT tmq_conf_t *tmq_conf_new();
-    private native long tmqConfNewImp();
+    private native long tmqConfNewImp(JNIConsumer consumer);
 
     // DLL_EXPORT tmq_conf_res_t tmq_conf_set(tmq_conf_t *conf,
     // const char *key, const char *value);
     private native int tmqConfSetImp(long conf, String key, String value);
-
-    // DLL_EXPORT void tmq_conf_set_auto_commit_cb(tmq_conf_t *conf,
-    // tmq_commit_cb *cb, void *param);
-    // private native void tmqConfSetAutoCommitCb(long conf);
 
     public void destroyConf(long conf) {
         tmqConfDestroyImp(conf);
@@ -60,7 +56,7 @@ public class TMQConnector extends TSDBJNIConnector{
 
     public void createConsumer(long conf) throws SQLException {
         taos = tmqConsumerNewImp(conf, this);
-        if (taos == TMQ_CONF_NULL){
+        if (taos == TMQ_CONF_NULL) {
             throw TSDBError.createSQLException(TMQ_CONF_NULL, "consumer config reference has been destroyed");
         }
         if (taos < 0) {
@@ -150,21 +146,27 @@ public class TMQConnector extends TSDBJNIConnector{
         this.topics = topics;
     }
 
-    public void syncCommit(long offsets) {
-        tmqCommitSync(taos, offsets);
+    public void syncCommit(long offsets) throws SQLException {
+        int code = tmqCommitSync(taos, offsets);
+        if (code == TMQ_CONSUMER_NULL) {
+            throw TSDBError.createSQLException(TMQ_CONSUMER_NULL, "consumer reference has been destroyed");
+        }
+        if (code != TMQ_SUCCESS) {
+            throw TSDBError.createSQLException(code, createConsumerErrorMsg);
+        }
     }
 
     // DLL_EXPORT tmq_resp_err_t tmq_commit_sync(tmq_t *tmq,
     // const tmq_topic_vgroup_list_t *offsets);
     private native int tmqCommitSync(long tmq, long offsets);
 
-    public void asyncCommit(long offsets) {
-        tmqCommitAsync(taos, offsets);
+    public void asyncCommit(long offsets, JNIConsumer consumer) {
+        tmqCommitAsync(taos, offsets, consumer);
     }
 
     // DLL_EXPORT void tmq_commit_async(tmq_t *tmq,
     // const tmq_topic_vgroup_list_t *offsets, tmq_commit_cb *cb, void *param);
-    private native void tmqCommitAsync(long tmq, long offsets);
+    private native void tmqCommitAsync(long tmq, long offsets, JNIConsumer consumer);
 
     public void unsubscribe() throws SQLException {
         int code = tmqUnsubscribeImp(taos);

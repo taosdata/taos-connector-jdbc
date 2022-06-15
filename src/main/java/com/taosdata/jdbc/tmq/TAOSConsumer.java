@@ -24,7 +24,9 @@ public interface TAOSConsumer extends AutoCloseable {
 
     void commitAsync();
 
-    void commitSync();
+    void commitAsync(Consumer<CallbackResult> consumer);
+
+    void commitSync() throws SQLException;
 
     String getTopicName();
 
@@ -36,8 +38,6 @@ public interface TAOSConsumer extends AutoCloseable {
 
     @Override
     void close() throws SQLException;
-
-    //    void commitAsync(OffsetCommitCallback callback);
 
     static TAOSConsumer getInstance(Properties properties, Consumer<CallbackResult> consumer) throws SQLException {
         if (null == properties) {

@@ -7,8 +7,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public class JNIConsumer implements TAOSConsumer {
@@ -22,9 +24,18 @@ public class JNIConsumer implements TAOSConsumer {
     private volatile boolean closed = false;
 
     long resultSet;
-
     private TMQConnector connector;
     private Consumer<CallbackResult> callback;
+    ThreadPoolExecutor executor = new ThreadPoolExecutor(1, 1,
+            0L, TimeUnit.MILLISECONDS,
+            new ArrayBlockingQueue<>(10),
+            r -> {
+                Thread t = new Thread(r);
+                t.setName("consumer-callback-" + t.getId());
+                return t;
+            },
+            new ThreadPoolExecutor.CallerRunsPolicy());
+    ArrayBlockingQueue<Integer> queue = new ArrayBlockingQueue<>(1);
 
     public JNIConsumer(Properties properties) throws SQLException {
         new JNIConsumer(properties, null);
@@ -45,7 +56,7 @@ public class JNIConsumer implements TAOSConsumer {
         if (!StringUtils.isEmpty(url)) {
             properties = StringUtils.parseUrl(url, properties);
         }
-        long config = connector.createConfig(properties);
+        long config = connector.createConfig(properties, this);
         try {
             connector.createConsumer(config);
         } finally {
@@ -53,8 +64,9 @@ public class JNIConsumer implements TAOSConsumer {
         }
     }
 
-    public void commitCallbackHandler(CallbackResult r) {
-        callback.accept(r);
+    public void commitCallbackHandler(int code, long offset) {
+        CallbackResult r = new CallbackResult(code, this, offset);
+        executor.submit(() -> callback.accept(r));
     }
 
     @Override
@@ -110,11 +122,19 @@ public class JNIConsumer implements TAOSConsumer {
     @Override
     public void commitAsync() {
         // currently offset is zero
-        connector.asyncCommit(0);
+        connector.asyncCommit(0,this);
+    }
+
+
+    @Override
+    public void commitAsync(Consumer<CallbackResult> consumer) {
+        // currently offset is zero
+        this.callback = consumer;
+        connector.asyncCommit(0,this);
     }
 
     @Override
-    public void commitSync() {
+    public void commitSync() throws SQLException {
         connector.syncCommit(0);
     }
 
@@ -179,6 +199,7 @@ public class JNIConsumer implements TAOSConsumer {
     public void close() throws SQLException {
         acquire();
         try {
+            executor.shutdown();
             connector.closeConsumer();
         } finally {
             closed = true;

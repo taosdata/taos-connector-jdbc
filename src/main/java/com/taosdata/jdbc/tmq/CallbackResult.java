@@ -1,16 +1,17 @@
 package com.taosdata.jdbc.tmq;
 
+
 public class CallbackResult {
     private int code;
-    private long consumerPointer;
+    private TAOSConsumer consumer;
     private long offset;
 
     public CallbackResult() {
     }
 
-    public CallbackResult(int code, long consumerPointer, long offset) {
+    public CallbackResult(int code, TAOSConsumer consumer, long offset) {
         this.code = code;
-        this.consumerPointer = consumerPointer;
+        this.consumer = consumer;
         this.offset = offset;
     }
 
@@ -22,12 +23,12 @@ public class CallbackResult {
         this.code = code;
     }
 
-    public long getConsumerPointer() {
-        return consumerPointer;
+    public TAOSConsumer getConsumer() {
+        return consumer;
     }
 
-    public void setConsumerPointer(long consumerPointer) {
-        this.consumerPointer = consumerPointer;
+    public void setConsumer(TAOSConsumer consumer) {
+        this.consumer = consumer;
     }
 
     public long getOffset() {
