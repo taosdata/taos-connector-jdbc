@@ -213,7 +213,7 @@ public class TMQConnector extends TSDBJNIConnector {
 
 
     public String getTopicName(long res) {
-        return tmqGetTableName(res);
+        return tmqGetTopicName(res);
     }
 
     // DLL_EXPORT const char *tmq_get_topic_name(TAOS_RES *res);
