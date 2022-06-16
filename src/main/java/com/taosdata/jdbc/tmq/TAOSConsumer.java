@@ -57,8 +57,4 @@ public interface TAOSConsumer extends AutoCloseable {
     static TAOSConsumer getInstance(Properties properties) throws SQLException {
         return getInstance(properties, null);
     }
-
-    static TAOSConsumer getInstance() throws SQLException {
-        return getInstance(null, null);
-    }
 }
