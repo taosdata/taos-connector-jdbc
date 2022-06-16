@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.rs;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.utils.RuntimeUtils;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -81,7 +82,8 @@ public class RestfulDatabaseMetaDataTest {
 
     @Test
     public void getDatabaseProductVersion() throws SQLException {
-        Assert.assertEquals("2.0.x.x", metaData.getDatabaseProductVersion());
+        String version = RuntimeUtils.getLocalTDengineVersion();
+        Assert.assertEquals("get version from sql not equals from taos -V,please check!", version, metaData.getDatabaseProductVersion());
     }
 
     @Test

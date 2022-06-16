@@ -54,7 +54,25 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
     }
 
     public String getDatabaseProductVersion() throws SQLException {
-        return PRODUCT_VESION;
+
+        Connection conn = getConnection();
+        if (conn == null || conn.isClosed()) {
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
+        }
+
+        String version = null;
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("select server_version()  as version")) {
+            while (rs.next()) {
+                version = rs.getString("version");
+            }
+        }
+
+        if (StringUtils.isEmpty(version)) {
+            return PRODUCT_VESION;
+        } else {
+            return version;
+        }
     }
 
     public abstract String getDriverName() throws SQLException;
