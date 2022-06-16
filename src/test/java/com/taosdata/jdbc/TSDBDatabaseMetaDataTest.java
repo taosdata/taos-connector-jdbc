@@ -76,7 +76,7 @@ public class TSDBDatabaseMetaDataTest {
 
     @Test
     public void getDatabaseProductVersion() throws SQLException {
-        Assert.assertEquals("2.0.x.x", metaData.getDatabaseProductVersion());
+        Assert.assertTrue(metaData.getDatabaseProductVersion().startsWith("2."));
     }
 
     @Test
