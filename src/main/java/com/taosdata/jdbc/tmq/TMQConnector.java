@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 
 import static com.taosdata.jdbc.tmq.TMQConstants.*;
 
-public class TMQConnector extends TSDBJNIConnector{
+public class TMQConnector extends TSDBJNIConnector {
 
     private String createConsumerErrorMsg;
     private String[] topics;
@@ -240,40 +240,11 @@ public class TMQConnector extends TSDBJNIConnector{
     // DLL_EXPORT const char *tmq_get_table_name(TAOS_RES *res);
     private native String tmqGetTableName(long res);
 
-    /**
-     * Get Result Time Precision.
-     *
-     * @return 0: ms, 1: us, 2: ns
-     */
-    public int getResultTimePrecision(long sqlObj) {
-        return this.getResultTimePrecisionImp(this.taos, sqlObj);
-    }
-
-    private native int getResultTimePrecisionImp(long connection, long result);
-
-    /**
-     * Free result set operation from C to release result set pointer by JNI
-     */
-    public int freeResultSet(long pSql) {
-        return this.freeResultSetImp(this.taos, pSql);
-    }
-
-    private native int freeResultSetImp(long connection, long result);
-
-    /**
-     * Get schema metadata
-     */
-    public int getSchemaMetaData(long resultSet, List<ColumnMetaData> columnMetaData) {
-        int ret = this.getSchemaMetaDataImp(this.taos, resultSet, columnMetaData);
+    public int fetchBlock(long resultSet, TSDBResultSetBlockData blockData, int flag, List<ColumnMetaData> columnMetaData) {
+        int ret = this.fetchBlockImp(this.taos, resultSet, blockData, flag, columnMetaData);
         columnMetaData.forEach(column -> column.setColIndex(column.getColIndex() + 1));
         return ret;
     }
 
-    private native int getSchemaMetaDataImp(long connection, long resultSet, List<ColumnMetaData> columnMetaData);
-
-    public int fetchBlock(long resultSet, TSDBResultSetBlockData blockData) {
-        return this.fetchBlockImp(this.taos, resultSet, blockData);
-    }
-
-    private native int fetchBlockImp(long connection, long resultSet, TSDBResultSetBlockData blockData);
+    private native int fetchBlockImp(long connection, long resultSet, TSDBResultSetBlockData blockData, int flag, List<ColumnMetaData> columnMetaData);
 }

@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
-public class TMQResultSet extends AbstractResultSet implements ResultSet {
+public class TMQResultSet extends AbstractResultSet {
     private final TMQConnector jniConnector;
     private final long resultSetPointer;
     private final List<ColumnMetaData> columnMetaDataList = new ArrayList<>();
@@ -27,7 +27,12 @@ public class TMQResultSet extends AbstractResultSet implements ResultSet {
         if (this.blockData.forward())
             return true;
 
-        int code = this.jniConnector.fetchBlock(this.resultSetPointer, this.blockData);
+        int code;
+        if (columnMetaDataList.size() < 1) {
+            code = this.jniConnector.fetchBlock(this.resultSetPointer, this.blockData, 1, this.columnMetaDataList);
+        } else {
+            code = this.jniConnector.fetchBlock(this.resultSetPointer, this.blockData, 0, this.columnMetaDataList);
+        }
         if (code == TSDBConstants.JNI_CONNECTION_NULL) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_JNI_CONNECTION_NULL);
         } else if (code == TSDBConstants.JNI_RESULT_SET_NULL) {
@@ -38,19 +43,6 @@ public class TMQResultSet extends AbstractResultSet implements ResultSet {
             return false;
         } else {
             this.blockData.reset();
-
-            if (columnMetaDataList.size() < 1) {
-                code = this.jniConnector.getSchemaMetaData(this.resultSetPointer, this.columnMetaDataList);
-                if (code == TSDBConstants.JNI_CONNECTION_NULL) {
-                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_JNI_CONNECTION_NULL);
-                }
-                if (code == TSDBConstants.JNI_RESULT_SET_NULL) {
-                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_JNI_RESULT_SET_NULL);
-                }
-                if (code == TSDBConstants.JNI_NUM_OF_FIELDS_0) {
-                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_JNI_NUM_OF_FIELDS_0);
-                }
-            }
             return true;
         }
     }
