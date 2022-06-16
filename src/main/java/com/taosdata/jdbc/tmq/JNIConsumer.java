@@ -111,7 +111,7 @@ public class JNIConsumer implements TAOSConsumer {
                 return new EmptyResultSet();
             }
             int timestampPrecision = connector.getResultTimePrecision(resultSet);
-            return new TSDBResultSet(connector, resultSet, timestampPrecision);
+            return new TMQResultSet(connector, resultSet, timestampPrecision);
         } finally {
             release();
         }
