@@ -38,7 +38,7 @@ import java.util.regex.Pattern;
 public class TSDBPreparedStatement extends TSDBStatement implements PreparedStatement {
     // for jdbc preparedStatement interface
     private String rawSql;
-    private Object[] parameters;
+    private Object[] parameters = new Object[0];
     // for parameter binding
     private long nativeStmtHandle;
     private String tableName;
