@@ -9,11 +9,10 @@ import java.util.stream.Collectors;
 
 import static com.taosdata.jdbc.tmq.TMQConstants.*;
 
-public class TMQConnector {
+public class TMQConnector extends TSDBJNIConnector{
 
     private String createConsumerErrorMsg;
     private String[] topics;
-    protected long taos = TSDBConstants.JNI_NULL_POINTER;     // Connection pointer used in C
 
     public long createConfig(Properties properties, JNIConsumer consumer) throws SQLException {
         long conf = tmqConfNewImp(consumer);
