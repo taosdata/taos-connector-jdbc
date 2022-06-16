@@ -3,6 +3,7 @@ package com.taosdata.jdbc.tmq;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.sql.Connection;
@@ -11,6 +12,7 @@ import java.sql.SQLException;
 import java.util.Collections;
 import java.util.Properties;
 
+@Ignore
 public class JNIConsumerTest {
     private static final String host = "127.0.0.1";
     private static Connection connection;

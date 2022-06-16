@@ -50,9 +50,11 @@ public class JNIConsumer implements TAOSConsumer {
             };
         }
         connector = new TMQConnector();
-        String url = properties.getProperty(TMQConstants.CONNECT_URL);
-        if (!StringUtils.isEmpty(url)) {
-            properties = StringUtils.parseUrl(url, properties);
+        if (null != properties) {
+            String url = properties.getProperty(TMQConstants.CONNECT_URL);
+            if (!StringUtils.isEmpty(url)) {
+                properties = StringUtils.parseUrl(url, properties);
+            }
         }
         long config = connector.createConfig(properties, this);
         try {
