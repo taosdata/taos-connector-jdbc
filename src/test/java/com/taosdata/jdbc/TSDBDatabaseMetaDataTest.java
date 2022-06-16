@@ -1,5 +1,6 @@
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.utils.RuntimeUtils;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.*;
 
@@ -76,7 +77,8 @@ public class TSDBDatabaseMetaDataTest {
 
     @Test
     public void getDatabaseProductVersion() throws SQLException {
-        Assert.assertTrue(metaData.getDatabaseProductVersion().startsWith("2."));
+        String version = RuntimeUtils.getLocalTDengineVersion();
+        Assert.assertEquals("get version from sql not equals from taos -V,please check!", version, metaData.getDatabaseProductVersion());
     }
 
     @Test
