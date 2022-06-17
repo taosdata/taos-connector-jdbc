@@ -20,7 +20,7 @@ public interface TAOSConsumer extends AutoCloseable {
 
     Set<String> subscription() throws SQLException;
 
-    ResultSet poll(Duration timeout) throws SQLException;
+    ResultSet poll(Duration timeout);
 
     void commitAsync();
 

@@ -106,11 +106,12 @@ public class JNIConsumer implements TAOSConsumer {
     }
 
     @Override
-    public ResultSet poll(Duration timeout) throws SQLException {
+    public ResultSet poll(Duration timeout) {
         acquireAndEnsureOpen();
         try {
             resultSet = connector.poll(timeout.toMillis());
-            if (resultSet == 0) {
+            // when tmq pointer is null or result set is null
+            if (resultSet == 0 || resultSet == TMQConstants.TMQ_CONSUMER_NULL) {
                 return new EmptyResultSet();
             }
             int timestampPrecision = connector.getResultTimePrecision(resultSet);

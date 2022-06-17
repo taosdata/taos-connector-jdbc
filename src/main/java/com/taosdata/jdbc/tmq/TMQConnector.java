@@ -200,12 +200,8 @@ public class TMQConnector extends TSDBJNIConnector {
     // DLL_EXPORT const char *tmq_err2str(tmq_resp_err_t);
     private native String getErrMsgImp(int code);
 
-    public long poll(long waitTime) throws SQLException {
-        long res = tmqConsumerPoll(taos, waitTime);
-        if (res == TMQ_CONSUMER_NULL) {
-            throw TSDBError.createSQLException(TMQ_CONSUMER_NULL, "consumer reference has been destroyed");
-        }
-        return res;
+    public long poll(long waitTime) {
+        return tmqConsumerPoll(taos, waitTime);
     }
 
     // DLL_EXPORT TAOS_RES *tmq_consumer_poll(tmq_t *tmq, int64_t wait_time);
