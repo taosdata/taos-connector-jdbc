@@ -3,6 +3,7 @@ package com.taosdata.jdbc.rs;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.RuntimeUtils;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.StringUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -80,10 +81,25 @@ public class RestfulDatabaseMetaDataTest {
         Assert.assertEquals("TDengine", metaData.getDatabaseProductName());
     }
 
+    /**
+     * don't have other method to obtain server version，so just check patterns
+     *
+     * @throws SQLException
+     */
     @Test
     public void getDatabaseProductVersion() throws SQLException {
-        String version = RuntimeUtils.getLocalTDengineVersion();
-        Assert.assertEquals("get version from sql not equals from taos -V,please check!", version, metaData.getDatabaseProductVersion());
+        String version = metaData.getDatabaseProductVersion();
+
+        Assert.assertNotNull(version);
+        String[] array = version.split("\\.");
+
+        Assert.assertNotNull(array);
+        Assert.assertEquals(4, array.length);
+        for (String str : array) {
+            for (int i = str.length(); --i >= 0; ) {
+                Assert.assertTrue(StringUtils.isNumeric(str));
+            }
+        }
     }
 
     @Test
