@@ -2,6 +2,7 @@ package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.utils.RuntimeUtils;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.StringUtils;
 import org.junit.*;
 
 import java.sql.*;
@@ -9,7 +10,7 @@ import java.util.Properties;
 
 public class TSDBDatabaseMetaDataTest {
     private static final String host = "127.0.0.1";
-    private static String url ;
+    private static String url;
     private static Connection connection;
     private static TSDBDatabaseMetaData metaData;
 
@@ -75,10 +76,25 @@ public class TSDBDatabaseMetaDataTest {
         Assert.assertEquals("TDengine", metaData.getDatabaseProductName());
     }
 
+    /**
+     * don't have other method to obtain server version，so just check patterns
+     *
+     * @throws SQLException
+     */
     @Test
     public void getDatabaseProductVersion() throws SQLException {
-        String version = RuntimeUtils.getLocalTDengineVersion();
-        Assert.assertEquals("get version from sql not equals from taos -V,please check!", version, metaData.getDatabaseProductVersion());
+        String version = metaData.getDatabaseProductVersion();
+
+        Assert.assertNotNull(version);
+        String[] array = version.split("\\.");
+
+        Assert.assertNotNull(array);
+        Assert.assertEquals(4, array.length);
+        for (String str : array) {
+            for (int i = str.length(); --i >= 0; ) {
+                Assert.assertTrue(StringUtils.isNumeric(str));
+            }
+        }
     }
 
     @Test
