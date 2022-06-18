@@ -98,11 +98,7 @@ public class TSDBResultSet extends AbstractResultSet implements ResultSet {
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_JNI_RESULT_SET_NULL);
             } else if (code == TSDBConstants.JNI_NUM_OF_FIELDS_0) {
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_JNI_NUM_OF_FIELDS_0);
-            } else if (code == TSDBConstants.JNI_FETCH_END) {
-                return false;
-            } else {
-                return true;
-            }
+            } else return code != TSDBConstants.JNI_FETCH_END;
         }
     }
 
@@ -268,7 +264,7 @@ public class TSDBResultSet extends AbstractResultSet implements ResultSet {
         checkAvailability(columnIndex, this.columnMetaDataList.size());
 
         if (this.getBatchFetch())
-            return this.blockData.getBytes(columnIndex -1);
+            return this.blockData.getBytes(columnIndex - 1);
 
         Object value = this.rowData.getObject(columnIndex);
         this.lastWasNull = value == null;

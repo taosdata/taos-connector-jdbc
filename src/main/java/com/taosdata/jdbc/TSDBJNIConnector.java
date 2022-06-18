@@ -20,7 +20,7 @@ public class TSDBJNIConnector {
     private static volatile boolean isInitialized;
 
     private final TaosInfo taosInfo = TaosInfo.getInstance();
-    private long taos = TSDBConstants.JNI_NULL_POINTER;     // Connection pointer used in C
+    protected long taos = TSDBConstants.JNI_NULL_POINTER;     // Connection pointer used in C
     private boolean isResultsetClosed;      // result set status in current connection
     private int affectedRows = -1;
 

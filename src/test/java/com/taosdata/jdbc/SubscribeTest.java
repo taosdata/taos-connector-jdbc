@@ -24,47 +24,41 @@ public class SubscribeTest {
     private long ts;
 
     @Test
-    public void subscribe() {
-        try {
-            String rawSql = "select * from " + dbName + "." + tName + ";";
-            TSDBConnection conn = connection.unwrap(TSDBConnection.class);
-            TSDBSubscribe subscribe = conn.subscribe(topic, rawSql, false);
+    public void subscribe() throws SQLException, InterruptedException {
+        String rawSql = "select * from " + dbName + "." + tName + ";";
+        TSDBConnection conn = connection.unwrap(TSDBConnection.class);
+        TSDBSubscribe subscribe = conn.subscribe(topic, rawSql, false);
 
-            for (int j = 0; j < 10; j++) {
-                TimeUnit.SECONDS.sleep(1);
-                TSDBResultSet resSet = subscribe.consume();
+        for (int j = 0; j < 10; j++) {
+            TimeUnit.SECONDS.sleep(1);
+            TSDBResultSet resSet = subscribe.consume();
 
-                int rowCnt = 0;
-                while (resSet.next()) {
-                    if (rowCnt == 0) {
-                        long cur_ts = resSet.getTimestamp(1).getTime();
-                        int k = resSet.getInt(2);
-                        int v = resSet.getInt(3);
-                        Assert.assertEquals(ts, cur_ts);
-                        Assert.assertEquals(100, k);
-                        Assert.assertEquals(1, v);
-                    }
-                    if (rowCnt == 1) {
-                        long cur_ts = resSet.getTimestamp(1).getTime();
-                        int k = resSet.getInt(2);
-                        int v = resSet.getInt(3);
-                        Assert.assertEquals(ts + 1, cur_ts);
-                        Assert.assertEquals(101, k);
-                        Assert.assertEquals(2, v);
-
-                    }
-                    rowCnt++;
+            int rowCnt = 0;
+            while (resSet.next()) {
+                if (rowCnt == 0) {
+                    long cur_ts = resSet.getTimestamp(1).getTime();
+                    int k = resSet.getInt(2);
+                    int v = resSet.getInt(3);
+                    Assert.assertEquals(ts, cur_ts);
+                    Assert.assertEquals(100, k);
+                    Assert.assertEquals(1, v);
                 }
-                if (j == 0)
-                    Assert.assertEquals(2, rowCnt);
-                resSet.close();
+                if (rowCnt == 1) {
+                    long cur_ts = resSet.getTimestamp(1).getTime();
+                    int k = resSet.getInt(2);
+                    int v = resSet.getInt(3);
+                    Assert.assertEquals(ts + 1, cur_ts);
+                    Assert.assertEquals(101, k);
+                    Assert.assertEquals(2, v);
+
+                }
+                rowCnt++;
             }
-            subscribe.close(true);
-
-
-        } catch (SQLException | InterruptedException throwables) {
-            throwables.printStackTrace();
+            if (j == 0)
+                Assert.assertEquals(2, rowCnt);
+            resSet.close();
         }
+        subscribe.close(true);
     }
 
     @Before

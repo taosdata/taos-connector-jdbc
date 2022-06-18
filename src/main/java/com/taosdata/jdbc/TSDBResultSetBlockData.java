@@ -52,6 +52,12 @@ public class TSDBResultSetBlockData {
         this.timestampPrecision = timestampPrecision;
     }
 
+    public TSDBResultSetBlockData(List<ColumnMetaData> colMeta, int timestampPrecision) {
+        this.columnMetaDataList = colMeta;
+        this.colData = new ArrayList<>();
+        this.timestampPrecision = timestampPrecision;
+    }
+
     public TSDBResultSetBlockData() {
         this.colData = new ArrayList<>();
     }
