@@ -1,6 +1,6 @@
 package com.taosdata.jdbc.tmq;
 
-import java.security.Timestamp;
+import java.sql.Timestamp;
 
 public class ResultBean {
     private Timestamp ts;

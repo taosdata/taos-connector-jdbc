@@ -129,9 +129,9 @@ public class TAOSConsumer<V> implements TConsumer<V> {
         acquireAndEnsureOpen();
         try {
             resultSet = connector.poll(timeout.toMillis());
+            list = new ArrayList<>();
             // when tmq pointer is null or result set is null
             if (resultSet == 0 || resultSet == TMQConstants.TMQ_CONSUMER_NULL) {
-                list = new ArrayList<>();
                 return ConsumerRecords.empty();
             }
 
