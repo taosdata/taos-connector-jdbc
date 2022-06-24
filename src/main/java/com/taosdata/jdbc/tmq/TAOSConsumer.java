@@ -4,6 +4,8 @@ import com.taosdata.jdbc.*;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.Utils;
 
+import java.beans.IntrospectionException;
+import java.lang.reflect.InvocationTargetException;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.time.Duration;
@@ -27,6 +29,7 @@ public class TAOSConsumer<V> implements TConsumer<V> {
     long resultSet;
     private final TMQConnector connector;
     private OffsetCommitCallback callback;
+    List<ConsumerRecord<V>> list = new ArrayList<>();
     ThreadPoolExecutor executor = new ThreadPoolExecutor(1, 1,
             0L, TimeUnit.MILLISECONDS,
             new ArrayBlockingQueue<>(10),
@@ -61,7 +64,11 @@ public class TAOSConsumer<V> implements TConsumer<V> {
         String s = properties.getProperty(TMQConstants.VALUE_DESERIALIZER);
         if (!StringUtils.isEmpty(s)) {
             deserializer = (Deserializer<V>) Utils.newInstance(Utils.parseClassType(s));
+        } else {
+            deserializer = (Deserializer<V>) new MapDeserializer();
         }
+
+        deserializer.configure(properties);
 
         long config = connector.createConfig(properties);
         try {
@@ -71,10 +78,15 @@ public class TAOSConsumer<V> implements TConsumer<V> {
         }
     }
 
-    public void commitCallbackHandler(int code, long offset) {
-//        CallbackResult r = new CallbackResult(code, this, offset);
-//        Exception exception = null;
-//        executor.submit(() -> callback.onComplete(offset, exception));
+    public void commitCallbackHandler(int code) {
+        CallbackResult<V> r = new CallbackResult<>(code, list);
+        if (TMQConstants.TMQ_SUCCESS != code) {
+            Exception exception = TSDBError.createSQLException(code, connector.getErrMsg(code));
+            executor.submit(() -> callback.onComplete(r, exception));
+        } else {
+            executor.submit(() -> callback.onComplete(r, null));
+        }
+
     }
 
     @Override
@@ -119,32 +131,31 @@ public class TAOSConsumer<V> implements TConsumer<V> {
             resultSet = connector.poll(timeout.toMillis());
             // when tmq pointer is null or result set is null
             if (resultSet == 0 || resultSet == TMQConstants.TMQ_CONSUMER_NULL) {
+                list = new ArrayList<>();
                 return ConsumerRecords.empty();
             }
 
             String topic = connector.getTopicName(resultSet);
             String dbName = connector.getDbName(resultSet);
             int vgroupId = connector.getVgroupId(resultSet);
-            TopicPartition partition = new TopicPartition(topic, dbName, vgroupId);
+            String tableName = connector.getTableName(resultSet);
+            TopicPartition partition = new TopicPartition(topic, dbName, vgroupId, tableName);
 
             int timestampPrecision = connector.getResultTimePrecision(resultSet);
-            TMQResultSet rs = new TMQResultSet(connector, resultSet, timestampPrecision);
 
-            List<ConsumerRecord<V>> list = new ArrayList<>();
-            while (rs.next()) {
-                try {
-                    ConsumerRecord<V> record = new ConsumerRecord<>();
-                    record.setKey(connector.getTableName(resultSet));
-                    record.setValue(deserializer.deserialize(rs));
-                    list.add(record);
-                } catch (InstantiationException | IllegalAccessException e) {
-                    // ignore
+            try (TMQResultSet rs = new TMQResultSet(connector, resultSet, timestampPrecision)) {
+                while (rs.next()) {
+                    try {
+                        ConsumerRecord<V> record = new ConsumerRecord<>(deserializer.deserialize(rs));
+                        list.add(record);
+                    } catch (IntrospectionException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
+                        throw new RuntimeException(e);
+                    }
                 }
             }
-
             Map<TopicPartition, List<ConsumerRecord<V>>> records = new HashMap<>();
             records.put(partition, list);
-            return new ConsumerRecords<V>(records);
+            return new ConsumerRecords<>(records);
         } finally {
             release();
         }

@@ -39,7 +39,11 @@ public class TMQConstants {
      * deserializer Bean
      */
     public static final String VALUE_DESERIALIZER = "value.deserializer";
-    public static final String DEFAULT_VALUE_DESERIALIZER = "com.taosdata.jdbc.tmq.MapDeserializer";
+
+    /**
+     * encode for deserializer String value
+     */
+    public static final String VALUE_DESERIALIZER_ENCODING = "value.deserializer.encoding";
 
     /**
      * connection ip

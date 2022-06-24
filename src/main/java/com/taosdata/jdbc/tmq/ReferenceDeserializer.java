@@ -1,60 +1,100 @@
 package com.taosdata.jdbc.tmq;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
+import com.taosdata.jdbc.TaosGlobalConfig;
+
+import java.beans.BeanInfo;
+import java.beans.IntrospectionException;
+import java.beans.Introspector;
+import java.beans.PropertyDescriptor;
+import java.lang.reflect.*;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.*;
 
 public class ReferenceDeserializer<T> implements Deserializer<T> {
+    private Param[] params;
 
     @Override
-    public T deserialize(ResultSet data) throws InstantiationException, IllegalAccessException, SQLException {
+    public void configure(Map<?, ?> configs) {
+        Object encodingValue = configs.get(TMQConstants.VALUE_DESERIALIZER_ENCODING);
+        if (encodingValue instanceof String)
+            TaosGlobalConfig.setCharset(((String) encodingValue).trim());
+    }
+
+    @Override
+    public T deserialize(ResultSet data) throws InstantiationException, IllegalAccessException, IntrospectionException, SQLException, InvocationTargetException {
         Class<T> clazz = getGenericType();
         T t = clazz.newInstance();
-        for (Field field : clazz.getDeclaredFields()) {
-            field.setAccessible(true);
-            if (field.getType().isAssignableFrom(String.class)) {
-                field.set(t, data.getString(field.getName()));
+
+        if (params == null) {
+            List<Param> lists = new ArrayList<>();
+            BeanInfo beanInfo = Introspector.getBeanInfo(clazz);
+            for (PropertyDescriptor property : beanInfo.getPropertyDescriptors()) {
+                String name = property.getName();
+                if ("class".equals(name))
+                    continue;
+                Method method = property.getWriteMethod();
+                Param param = new Param();
+                param.name = name;
+                param.method = method;
+                param.clazz = method.getParameterTypes()[0];
+                lists.add(param);
             }
-            if (field.getType().isAssignableFrom(Integer.class)) {
-                field.set(t, data.getInt(field.getName()));
-            }
-            if (field.getType().isAssignableFrom(Short.class)) {
-                field.set(t, data.getShort(field.getName()));
-            }
-            if (field.getType().isAssignableFrom(Byte.class)) {
-                field.set(t, data.getByte(field.getName()));
-            }
-            if (field.getType().isAssignableFrom(Float.class)) {
-                field.set(t, data.getFloat(field.getName()));
-            }
-            if (field.getType().isAssignableFrom(Double.class)) {
-                field.set(t, data.getDouble(field.getName()));
-            }
-            if (field.getType().isAssignableFrom(Long.class)) {
-                field.set(t, data.getLong(field.getName()));
-            }
-            if (field.getType().isAssignableFrom(Timestamp.class)) {
-                field.set(t, data.getTimestamp(field.getName()));
-            }
-            if (field.getType().isAssignableFrom(Boolean.class)) {
-                field.set(t, data.getBoolean(field.getName()));
-            }
-            if (field.getType().isAssignableFrom(Byte[].class)) {
-                field.set(t, data.getBytes(field.getName()));
+            params = lists.toArray(new Param[0]);
+        }
+
+        for (Param param : params) {
+            if (param.clazz.isAssignableFrom(String.class)) {
+                param.method.invoke(t, data.getString(param.name));
+            } else if (param.clazz.isAssignableFrom(Integer.class)
+                    || param.clazz.isAssignableFrom(int.class)) {
+                param.method.invoke(t, data.getInt(param.name));
+            } else if (param.clazz.isAssignableFrom(Short.class)
+                    || param.clazz.isAssignableFrom(short.class)) {
+                param.method.invoke(t, data.getShort(param.name));
+            } else if (param.clazz.isAssignableFrom(Byte.class)
+                    || param.clazz.isAssignableFrom(byte.class)) {
+                param.method.invoke(t, data.getByte(param.name));
+            } else if (param.clazz.isAssignableFrom(Character.class)
+                    || param.clazz.isAssignableFrom(char.class)) {
+                param.method.invoke(t, (char) data.getByte(param.name));
+            } else if (param.clazz.isAssignableFrom(Float.class)
+                    || param.clazz.isAssignableFrom(float.class)) {
+                param.method.invoke(t, data.getFloat(param.name));
+            } else if (param.clazz.isAssignableFrom(Double.class)
+                    || param.clazz.isAssignableFrom(double.class)) {
+                param.method.invoke(t, data.getDouble(param.name));
+            } else if (param.clazz.isAssignableFrom(Long.class)
+                    || param.clazz.isAssignableFrom(long.class)) {
+                param.method.invoke(t, data.getLong(param.name));
+            } else if (param.clazz.isAssignableFrom(Boolean.class)
+                    || param.clazz.isAssignableFrom(boolean.class)) {
+                param.method.invoke(t, data.getLong(param.name));
+            } else if (param.clazz.isAssignableFrom(String.class)) {
+                param.method.invoke(t, data.getString(param.name));
+            } else if (param.clazz.isAssignableFrom(Timestamp.class)) {
+                param.method.invoke(t, data.getTimestamp(param.name));
+            } else if (param.clazz.isAssignableFrom(Byte[].class)
+                    || param.clazz.isAssignableFrom(byte[].class)) {
+                param.method.invoke(t, data.getBytes(param.name));
             }
         }
         return t;
     }
 
-    public Class<T> getGenericType() {
+    private Class<T> getGenericType() {
         Type type = getClass().getGenericSuperclass();
         if (type instanceof ParameterizedType) {
             ParameterizedType parameterizedType = (ParameterizedType) type;
             return (Class<T>) parameterizedType.getActualTypeArguments()[0];
         }
         throw new RuntimeException();
+    }
+
+    private static class Param {
+        String name;
+        Method method;
+        Class<?> clazz;
     }
 }
