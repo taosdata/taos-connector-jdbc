@@ -6,7 +6,6 @@ import com.taosdata.jdbc.utils.Utils;
 
 import java.beans.IntrospectionException;
 import java.lang.reflect.InvocationTargetException;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.*;
@@ -14,7 +13,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class TAOSConsumer<V> implements TConsumer<V> {
+public class TaosConsumer<V> implements TConsumer<V> {
 
     private static final long NO_CURRENT_THREAD = -1L;
     // currentThread holds the threadId of the current thread accessing
@@ -41,11 +40,11 @@ public class TAOSConsumer<V> implements TConsumer<V> {
             new ThreadPoolExecutor.CallerRunsPolicy());
 
     /**
-     * Note: after creating a {@link TAOSConsumer} you must always {@link #close()}
+     * Note: after creating a {@link TaosConsumer} you must always {@link #close()}
      * it to avoid resource leaks.
      */
     @SuppressWarnings("unchecked")
-    public TAOSConsumer(Properties properties) throws SQLException {
+    public TaosConsumer(Properties properties) throws SQLException {
         connector = new TMQConnector();
         if (null == properties)
             throw TSDBError.createSQLException(TMQConstants.TMQ_CONF_NULL, "consumer properties must not be null!");

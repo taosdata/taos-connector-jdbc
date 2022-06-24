@@ -158,12 +158,12 @@ public class TMQConnector extends TSDBJNIConnector {
     // DLL_EXPORT int32_t tmq_commit_sync(tmq_t *tmq, const TAOS_RES *msg);
     private native int tmqCommitSync(long tmq, long offsets);
 
-    public void asyncCommit(long offsets, TAOSConsumer consumer) {
+    public void asyncCommit(long offsets, TaosConsumer consumer) {
         tmqCommitAsync(taos, offsets, consumer);
     }
 
     // DLL_EXPORT void tmq_commit_async(tmq_t *tmq, const TAOS_RES *msg, tmq_commit_cb *cb, void *param);
-    private native void tmqCommitAsync(long tmq, long offsets, TAOSConsumer consumer);
+    private native void tmqCommitAsync(long tmq, long offsets, TaosConsumer consumer);
 
     public void unsubscribe() throws SQLException {
         int code = tmqUnsubscribeImp(taos);
