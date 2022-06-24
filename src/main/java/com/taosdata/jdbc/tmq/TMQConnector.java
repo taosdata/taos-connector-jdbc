@@ -14,8 +14,8 @@ public class TMQConnector extends TSDBJNIConnector {
     private String createConsumerErrorMsg;
     private String[] topics;
 
-    public long createConfig(Properties properties, JNIConsumer consumer) throws SQLException {
-        long conf = tmqConfNewImp(consumer);
+    public long createConfig(Properties properties) throws SQLException {
+        long conf = tmqConfNewImp();
         if (null == properties || properties.size() < 1)
             return conf;
         for (Map.Entry<?, ?> entry : properties.entrySet()) {
@@ -41,7 +41,7 @@ public class TMQConnector extends TSDBJNIConnector {
     }
 
     // DLL_EXPORT tmq_conf_t *tmq_conf_new();
-    private native long tmqConfNewImp(JNIConsumer consumer);
+    private native long tmqConfNewImp();
 
     // DLL_EXPORT tmq_conf_res_t tmq_conf_set(tmq_conf_t *conf,
     // const char *key, const char *value);
@@ -124,8 +124,7 @@ public class TMQConnector extends TSDBJNIConnector {
         }
     }
 
-    // DLL_EXPORT tmq_resp_err_t tmq_subscribe(tmq_t *tmq,
-    // const tmq_list_t *topic_list);
+    // DLL_EXPORT int32_t tmq_subscribe(tmq_t *tmq, const tmq_list_t *topic_list);
     private native int tmqSubscribeImp(long tmq, long topic);
 
     public Set<String> subscription() throws SQLException {
@@ -139,7 +138,7 @@ public class TMQConnector extends TSDBJNIConnector {
         return Arrays.stream(topics).collect(Collectors.toSet());
     }
 
-    // DLL_EXPORT tmq_resp_err_t tmq_subscription(tmq_t *tmq, tmq_list_t **topics);
+    // DLL_EXPORT int32_t tmq_subscription(tmq_t *tmq, tmq_list_t **topics);
     private native int tmqSubscriptionImp(long tmq, TMQConnector connector);
 
     public void setTopicList(String[] topics) {
@@ -156,17 +155,15 @@ public class TMQConnector extends TSDBJNIConnector {
         }
     }
 
-    // DLL_EXPORT tmq_resp_err_t tmq_commit_sync(tmq_t *tmq,
-    // const tmq_topic_vgroup_list_t *offsets);
+    // DLL_EXPORT int32_t tmq_commit_sync(tmq_t *tmq, const TAOS_RES *msg);
     private native int tmqCommitSync(long tmq, long offsets);
 
-    public void asyncCommit(long offsets, JNIConsumer consumer) {
+    public void asyncCommit(long offsets, TAOSConsumer consumer) {
         tmqCommitAsync(taos, offsets, consumer);
     }
 
-    // DLL_EXPORT void tmq_commit_async(tmq_t *tmq,
-    // const tmq_topic_vgroup_list_t *offsets, tmq_commit_cb *cb, void *param);
-    private native void tmqCommitAsync(long tmq, long offsets, JNIConsumer consumer);
+    // DLL_EXPORT void tmq_commit_async(tmq_t *tmq, const TAOS_RES *msg, tmq_commit_cb *cb, void *param);
+    private native void tmqCommitAsync(long tmq, long offsets, TAOSConsumer consumer);
 
     public void unsubscribe() throws SQLException {
         int code = tmqUnsubscribeImp(taos);
@@ -178,7 +175,7 @@ public class TMQConnector extends TSDBJNIConnector {
         }
     }
 
-    // DLL_EXPORT tmq_resp_err_t tmq_unsubscribe(tmq_t *tmq);
+    // DLL_EXPORT int32_t tmq_unsubscribe(tmq_t *tmq);
     private native int tmqUnsubscribeImp(long tmq);
 
     public void closeConsumer() throws SQLException {
@@ -188,7 +185,7 @@ public class TMQConnector extends TSDBJNIConnector {
         }
     }
 
-    // DLL_EXPORT tmq_resp_err_t tmq_consumer_close(tmq_t *tmq);
+    // DLL_EXPORT int32_t tmq_consumer_close(tmq_t *tmq);
     private native int tmqConsumerCloseImp(long tmq);
 
 
@@ -197,7 +194,7 @@ public class TMQConnector extends TSDBJNIConnector {
         return this.getErrMsgImp(code);
     }
 
-    // DLL_EXPORT const char *tmq_err2str(tmq_resp_err_t);
+    // DLL_EXPORT const char *tmq_err2str(int32_t code);
     private native String getErrMsgImp(int code);
 
     public long poll(long waitTime) {

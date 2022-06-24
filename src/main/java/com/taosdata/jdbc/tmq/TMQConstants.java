@@ -31,6 +31,17 @@ public class TMQConstants {
     public static final String MSG_WITH_TABLE_NAME = "msg.with.table.name";
 
     /**
+     * indicate host and port of connection
+     */
+    public static final String BOOTSTRAP_SERVERS = "bootstrap.servers";
+
+    /**
+     * deserializer Bean
+     */
+    public static final String VALUE_DESERIALIZER = "value.deserializer";
+    public static final String DEFAULT_VALUE_DESERIALIZER = "com.taosdata.jdbc.tmq.MapDeserializer";
+
+    /**
      * connection ip
      */
     public static final String CONNECT_IP = "td.connect.ip";
@@ -69,17 +80,12 @@ public class TMQConstants {
         configSet.add(CONNECT_DB);
     }
 
-    /**
-     * indicate which connection to create and username password...
-     */
-    public static final String CONNECT_URL = "td.connect.url";
-
-
     /*---- error code ----*/
     public static final int TMQ_SUCCESS = 0;
     public static final int TMQ_CONF_NULL = -100;
     public static final int TMQ_CONF_KEY_NULL = -101;
     public static final int TMQ_CONF_VALUE_NULL = -102;
+    public static final int TMQ_CONF_ERROR = -103;
 
     public static final int TMQ_TOPIC_NULL = -110;
     public static final int TMQ_TOPIC_NAME_NULL = -111;
