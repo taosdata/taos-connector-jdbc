@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @FixMethodOrder
 @Ignore
-public class TSDBConsumerTest {
+public class TaosConsumerTest {
     private static final String host = "127.0.0.1";
     private static final String dbName = "tmq_test";
     private static final String superTable = "st";
