@@ -49,7 +49,7 @@ public class TSDBConsumerTest {
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
         properties.setProperty(TMQConstants.GROUP_ID, "tg1");
 
-        try (TConsumer<Map<String, Object>> consumer = new TAOSConsumer<>(properties)) {
+        try (TaosConsumer<Map<String, Object>> consumer = new TaosConsumer<>(properties)) {
             consumer.subscribe(Collections.singletonList(topic));
             Set<String> subscription = consumer.subscription();
             Assert.assertTrue(subscription.contains(topic));
@@ -99,7 +99,7 @@ public class TSDBConsumerTest {
         properties.setProperty(TMQConstants.GROUP_ID, "withBean");
         properties.setProperty(TMQConstants.VALUE_DESERIALIZER, "com.taosdata.jdbc.tmq.ResultDeserializer");
 
-        try (TAOSConsumer<ResultBean> consumer = new TAOSConsumer<>(properties)) {
+        try (TaosConsumer<ResultBean> consumer = new TaosConsumer<>(properties)) {
             consumer.subscribe(Collections.singletonList(topic));
             for (int i = 0; i < 10; i++) {
                 ConsumerRecords<ResultBean> consumerRecords = consumer.poll(Duration.ofMillis(100));
@@ -129,7 +129,7 @@ public class TSDBConsumerTest {
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "false");
         properties.setProperty(TMQConstants.GROUP_ID, "tg3");
 
-        try (TAOSConsumer<ResultBean> consumer = new TAOSConsumer<>(properties)) {
+        try (TaosConsumer<ResultBean> consumer = new TaosConsumer<>(properties)) {
             consumer.subscribe(Collections.singletonList(topic));
             for (int i = 0; i < 100; i++) {
                 for (ConsumerRecord<ResultBean> resultBeanConsumerRecord : consumer.poll(Duration.ofMillis(100))) {
@@ -152,7 +152,7 @@ public class TSDBConsumerTest {
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.GROUP_ID, "tg4");
 
-        try (TAOSConsumer<ResultBean> consumer = new TAOSConsumer<>(properties)) {
+        try (TaosConsumer<ResultBean> consumer = new TaosConsumer<>(properties)) {
             consumer.subscribe(Collections.singletonList(topic));
             for (int i = 0; i < 100; i++) {
                 for (ConsumerRecord<ResultBean> resultBeanConsumerRecord : consumer.poll(Duration.ofMillis(100))) {
@@ -177,7 +177,7 @@ public class TSDBConsumerTest {
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.GROUP_ID, "tg5");
 
-        try (TAOSConsumer<ResultBean> consumer = new TAOSConsumer<>(properties)) {
+        try (TaosConsumer<ResultBean> consumer = new TaosConsumer<>(properties)) {
             consumer.subscribe(Collections.singletonList(topic));
             for (int i = 0; i < 100; i++) {
                 for (ConsumerRecord<ResultBean> resultBeanConsumerRecord : consumer.poll(Duration.ofMillis(100))) {

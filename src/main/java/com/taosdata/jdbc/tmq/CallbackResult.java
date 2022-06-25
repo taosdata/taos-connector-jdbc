@@ -1,6 +1,5 @@
 package com.taosdata.jdbc.tmq;
 
-
 import java.util.List;
 
 public class CallbackResult<V> {
