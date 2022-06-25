@@ -7,13 +7,13 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Map;
 
-public interface Deserializer<T> extends Closeable {
+public interface Deserializer<V> extends Closeable {
 
     default void configure(Map<?, ?> configs) {
         // intentionally left blank
     }
 
-    T deserialize(ResultSet data) throws InstantiationException, IllegalAccessException, SQLException, IntrospectionException, InvocationTargetException;
+    V deserialize(ResultSet data) throws InstantiationException, IllegalAccessException, SQLException, IntrospectionException, InvocationTargetException;
 
     @Override
     default void close() {

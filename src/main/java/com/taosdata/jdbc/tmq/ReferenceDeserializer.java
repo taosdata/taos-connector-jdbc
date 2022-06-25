@@ -12,7 +12,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.*;
 
-public class ReferenceDeserializer<T> implements Deserializer<T> {
+public class ReferenceDeserializer<V> implements Deserializer<V> {
     private Param[] params;
 
     @Override
@@ -23,9 +23,9 @@ public class ReferenceDeserializer<T> implements Deserializer<T> {
     }
 
     @Override
-    public T deserialize(ResultSet data) throws InstantiationException, IllegalAccessException, IntrospectionException, SQLException, InvocationTargetException {
-        Class<T> clazz = getGenericType();
-        T t = clazz.newInstance();
+    public V deserialize(ResultSet data) throws InstantiationException, IllegalAccessException, IntrospectionException, SQLException, InvocationTargetException {
+        Class<V> clazz = getGenericType();
+        V t = clazz.newInstance();
 
         if (params == null) {
             List<Param> lists = new ArrayList<>();
@@ -83,11 +83,11 @@ public class ReferenceDeserializer<T> implements Deserializer<T> {
         return t;
     }
 
-    private Class<T> getGenericType() {
+    private Class<V> getGenericType() {
         Type type = getClass().getGenericSuperclass();
         if (type instanceof ParameterizedType) {
             ParameterizedType parameterizedType = (ParameterizedType) type;
-            return (Class<T>) parameterizedType.getActualTypeArguments()[0];
+            return (Class<V>) parameterizedType.getActualTypeArguments()[0];
         }
         throw new RuntimeException();
     }

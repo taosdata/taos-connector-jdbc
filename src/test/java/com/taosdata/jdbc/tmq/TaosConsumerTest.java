@@ -56,9 +56,8 @@ public class TaosConsumerTest {
             for (int i = 0; i < 10; i++) {
                 ConsumerRecords<Map<String, Object>> consumerRecords = consumer.poll(Duration.ofMillis(100));
                 int count = 0;
-                for (ConsumerRecord<Map<String, Object>> consumerRecord : consumerRecords) {
+                for (Map<String, Object> map : consumerRecords) {
                     count++;
-                    Map<String, Object> map = consumerRecord.getValue();
                     Assert.assertEquals(6, map.size());
                 }
                 Assert.assertEquals(3, count);
@@ -93,28 +92,27 @@ public class TaosConsumerTest {
         // create topic
         statement.executeUpdate("create topic if not exists " + topic + " as select ts, c1, c2, c3, c4, t1 from ct1");
 
-        Properties properties = new Properties();
-        properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
-        properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
-        properties.setProperty(TMQConstants.GROUP_ID, "withBean");
-        properties.setProperty(TMQConstants.VALUE_DESERIALIZER, "com.taosdata.jdbc.tmq.ResultDeserializer");
+Properties properties = new Properties();
+properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
+properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
+properties.setProperty(TMQConstants.GROUP_ID, "withBean");
+properties.setProperty(TMQConstants.VALUE_DESERIALIZER, "com.taosdata.jdbc.tmq.ResultDeserializer");
 
-        try (TaosConsumer<ResultBean> consumer = new TaosConsumer<>(properties)) {
-            consumer.subscribe(Collections.singletonList(topic));
-            for (int i = 0; i < 10; i++) {
-                ConsumerRecords<ResultBean> consumerRecords = consumer.poll(Duration.ofMillis(100));
-                int count = 0;
-                for (ConsumerRecord<ResultBean> consumerRecord : consumerRecords) {
-                    count++;
-                    ResultBean bean = consumerRecord.getValue();
-                    Assert.assertTrue(strings.contains(bean.getC3()));
-                }
-                Assert.assertEquals(3, count);
-            }
-            TimeUnit.MILLISECONDS.sleep(10);
-            consumer.unsubscribe();
+try (TaosConsumer<ResultBean> consumer = new TaosConsumer<>(properties)) {
+    consumer.subscribe(Collections.singletonList(topic));
+    for (int i = 0; i < 10; i++) {
+        ConsumerRecords<ResultBean> consumerRecords = consumer.poll(Duration.ofMillis(100));
+        int count = 0;
+        for (ResultBean bean : consumerRecords) {
+            count++;
+            Assert.assertTrue(strings.contains(bean.getC3()));
         }
-        scheduledExecutorService.shutdown();
+        Assert.assertEquals(3, count);
+    }
+    TimeUnit.MILLISECONDS.sleep(10);
+    consumer.unsubscribe();
+}
+scheduledExecutorService.shutdown();
     }
 
     @Test
@@ -132,7 +130,7 @@ public class TaosConsumerTest {
         try (TaosConsumer<ResultBean> consumer = new TaosConsumer<>(properties)) {
             consumer.subscribe(Collections.singletonList(topic));
             for (int i = 0; i < 100; i++) {
-                for (ConsumerRecord<ResultBean> resultBeanConsumerRecord : consumer.poll(Duration.ofMillis(100))) {
+                for (ResultBean bean : consumer.poll(Duration.ofMillis(100))) {
                     TimeUnit.MILLISECONDS.sleep(100);
                 }
                 consumer.commitSync();
@@ -155,7 +153,7 @@ public class TaosConsumerTest {
         try (TaosConsumer<ResultBean> consumer = new TaosConsumer<>(properties)) {
             consumer.subscribe(Collections.singletonList(topic));
             for (int i = 0; i < 100; i++) {
-                for (ConsumerRecord<ResultBean> resultBeanConsumerRecord : consumer.poll(Duration.ofMillis(100))) {
+                for (ResultBean bean : consumer.poll(Duration.ofMillis(100))) {
                     TimeUnit.MILLISECONDS.sleep(100);
                 }
                 consumer.commitAsync((result, exception) -> {
@@ -180,7 +178,7 @@ public class TaosConsumerTest {
         try (TaosConsumer<ResultBean> consumer = new TaosConsumer<>(properties)) {
             consumer.subscribe(Collections.singletonList(topic));
             for (int i = 0; i < 100; i++) {
-                for (ConsumerRecord<ResultBean> resultBeanConsumerRecord : consumer.poll(Duration.ofMillis(100))) {
+                for (ResultBean bean : consumer.poll(Duration.ofMillis(100))) {
                     TimeUnit.MILLISECONDS.sleep(100);
                 }
                 consumer.commitAsync();

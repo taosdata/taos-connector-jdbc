@@ -28,7 +28,7 @@ public class TaosConsumer<V> implements TConsumer<V> {
     long resultSet;
     private final TMQConnector connector;
     private OffsetCommitCallback callback;
-    List<ConsumerRecord<V>> list = new ArrayList<>();
+    List<V> list = new ArrayList<>();
     ThreadPoolExecutor executor = new ThreadPoolExecutor(1, 1,
             0L, TimeUnit.MILLISECONDS,
             new ArrayBlockingQueue<>(10),
@@ -145,14 +145,14 @@ public class TaosConsumer<V> implements TConsumer<V> {
             try (TMQResultSet rs = new TMQResultSet(connector, resultSet, timestampPrecision)) {
                 while (rs.next()) {
                     try {
-                        ConsumerRecord<V> record = new ConsumerRecord<>(deserializer.deserialize(rs));
+                        V record = deserializer.deserialize(rs);
                         list.add(record);
                     } catch (IntrospectionException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
                         throw new RuntimeException(e);
                     }
                 }
             }
-            Map<TopicPartition, List<ConsumerRecord<V>>> records = new HashMap<>();
+            Map<TopicPartition, List<V>> records = new HashMap<>();
             records.put(partition, list);
             return new ConsumerRecords<>(records);
         } finally {

@@ -2,18 +2,18 @@ package com.taosdata.jdbc.tmq;
 
 import java.util.*;
 
-public class ConsumerRecords<V> implements Iterable<ConsumerRecord<V>> {
+public class ConsumerRecords<V> implements Iterable<V> {
 
     public static final ConsumerRecords<?> EMPTY = new ConsumerRecords(Collections.EMPTY_MAP);
 
-    private final Map<TopicPartition, List<ConsumerRecord<V>>> records;
+    private final Map<TopicPartition, List<V>> records;
 
-    public ConsumerRecords(Map<TopicPartition, List<ConsumerRecord<V>>> records) {
+    public ConsumerRecords(Map<TopicPartition, List<V>> records) {
         this.records = records;
     }
 
-    public List<ConsumerRecord<V>> records(TopicPartition partition) {
-        List<ConsumerRecord<V>> recs = this.records.get(partition);
+    public List<V> records(TopicPartition partition) {
+        List<V> recs = this.records.get(partition);
         if (recs == null)
             return Collections.emptyList();
         else
@@ -21,10 +21,10 @@ public class ConsumerRecords<V> implements Iterable<ConsumerRecord<V>> {
     }
 
     @Override
-    public Iterator<ConsumerRecord<V>> iterator() {
-        return new Iterator<ConsumerRecord<V>>() {
-            final Iterator<? extends Iterable<ConsumerRecord<V>>> iters = records.values().iterator();
-            Iterator<ConsumerRecord<V>> current;
+    public Iterator iterator() {
+        return new Iterator<V>() {
+            final Iterator<? extends Iterable<V>> iters = records.values().iterator();
+            Iterator<V> current;
 
             @Override
             public boolean hasNext() {
@@ -38,7 +38,7 @@ public class ConsumerRecords<V> implements Iterable<ConsumerRecord<V>> {
             }
 
             @Override
-            public ConsumerRecord<V> next() {
+            public V next() {
                 return current.next();
             }
         };
