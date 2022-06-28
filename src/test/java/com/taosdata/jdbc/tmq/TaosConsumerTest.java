@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @FixMethodOrder
 @Ignore
-public class TSDBConsumerTest {
+public class TaosConsumerTest {
     private static final String host = "127.0.0.1";
     private static final String dbName = "tmq_test";
     private static final String superTable = "st";
@@ -31,9 +31,9 @@ public class TSDBConsumerTest {
         scheduledExecutorService.scheduleWithFixedDelay(() -> {
             try {
                 statement.executeUpdate(
-                        "insert into ct1 values(now, " + a.getAndIncrement() + ", 0.2, 'a')" +
-                                "(now+1s," + a.getAndIncrement() + ",0.4,'b')" +
-                                "(now+2s," + a.getAndIncrement() + ",0.6,'c')");
+                        "insert into ct0 values(now, " + a.getAndIncrement() + ", 0.2, 'a','一')" +
+                                "(now+1s," + a.getAndIncrement() + ",0.4,'b','二')" +
+                                "(now+2s," + a.getAndIncrement() + ",0.6,'c','三')");
             } catch (SQLException e) {
                 // ignore
             }
@@ -41,7 +41,7 @@ public class TSDBConsumerTest {
 
         String topic = "topic_ctb_column";
         // create topic
-        statement.executeUpdate("create topic if not exists " + topic + " as select ts, c1 from ct1");
+        statement.executeUpdate("create topic if not exists " + topic + " as select ts, c1, c2, c3, c4, t1 from ct0");
 //        statement.executeUpdate("create topic if not exists " + topic + " as database " + dbName);
 
         Properties properties = new Properties();
@@ -49,56 +49,70 @@ public class TSDBConsumerTest {
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
         properties.setProperty(TMQConstants.GROUP_ID, "tg1");
 
-        try (TAOSConsumer consumer = TAOSConsumer.getInstance(properties)) {
+        try (TaosConsumer<Map<String, Object>> consumer = new TaosConsumer<>(properties)) {
             consumer.subscribe(Collections.singletonList(topic));
-            for (int i = 0; i < 10; i++) {
-                try (ResultSet resultSet = consumer.poll(Duration.ofMillis(100))) {
-                    int count = 0;
-                    while (resultSet.next()) {
-                        count++;
-                    }
-                    Assert.assertEquals(3, count);
-                }
-                TimeUnit.MILLISECONDS.sleep(10);
-            }
             Set<String> subscription = consumer.subscription();
-            Assert.assertEquals(1, subscription.size());
             Assert.assertTrue(subscription.contains(topic));
-            Assert.assertEquals(topic, consumer.getTopicName());
-            Assert.assertEquals(dbName, consumer.getDatabaseName());
-//            Assert.assertEquals("ct1", consumer.getTableName());
+            for (int i = 0; i < 10; i++) {
+                ConsumerRecords<Map<String, Object>> consumerRecords = consumer.poll(Duration.ofMillis(100));
+                int count = 0;
+                for (Map<String, Object> map : consumerRecords) {
+                    count++;
+                    Assert.assertEquals(6, map.size());
+                }
+                Assert.assertEquals(3, count);
+            }
+            TimeUnit.MILLISECONDS.sleep(10);
             consumer.unsubscribe();
-        } finally {
-            scheduledExecutorService.shutdown();
         }
+        scheduledExecutorService.shutdown();
     }
 
     @Test
-    public void JNI_02_AutoCommitTest() throws Exception {
+    public void JNI_01_TestWithBean() throws Exception {
+        AtomicInteger a = new AtomicInteger(1);
+        List<String> strings = Arrays.asList("a", "b", "c");
+        ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r);
+            t.setName("topic-thread-" + t.getId());
+            return t;
+        });
+        scheduledExecutorService.scheduleWithFixedDelay(() -> {
+            try {
+                statement.executeUpdate(
+                        "insert into ct1 values(now, " + a.getAndIncrement() + ", 0.2, 'a','一')" +
+                                "(now+1s," + a.getAndIncrement() + ",0.4,'b','二')" +
+                                "(now+2s," + a.getAndIncrement() + ",0.6,'c','三')");
+            } catch (SQLException e) {
+                // ignore
+            }
+        }, 0, 10, TimeUnit.MILLISECONDS);
 
-        String topic = "topic_auto";
+        String topic = "topic_ctb_column_with_bean";
         // create topic
-        statement.executeUpdate("create topic if not exists " + topic + " as select ts, c1 from ct1");
+        statement.executeUpdate("create topic if not exists " + topic + " as select ts, c1, c2, c3, c4, t1 from ct1");
+
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
-        properties.setProperty(TMQConstants.GROUP_ID, "tg2");
+        properties.setProperty(TMQConstants.GROUP_ID, "withBean");
+        properties.setProperty(TMQConstants.VALUE_DESERIALIZER, "com.taosdata.jdbc.tmq.ResultDeserializer");
 
-        CallbackResult result = new CallbackResult();
-        TAOSConsumer consumer = TAOSConsumer.getInstance(properties, r -> {
-            result.setConsumer(r.getConsumer());
-        });
-        consumer.subscribe(Collections.singletonList(topic));
-        for (int i = 0; i < 10; i++) {
-            try (ResultSet resultSet = consumer.poll(Duration.ofMillis(100))) {
-                while (resultSet.next()) {
+        try (TaosConsumer<ResultBean> consumer = new TaosConsumer<>(properties)) {
+            consumer.subscribe(Collections.singletonList(topic));
+            for (int i = 0; i < 10; i++) {
+                ConsumerRecords<ResultBean> consumerRecords = consumer.poll(Duration.ofMillis(100));
+                int count = 0;
+                for (ResultBean bean : consumerRecords) {
+                    count++;
+                    Assert.assertTrue(strings.contains(bean.getC3()));
                 }
+                Assert.assertEquals(3, count);
             }
-            TimeUnit.MILLISECONDS.sleep(1000);
+            TimeUnit.MILLISECONDS.sleep(10);
+            consumer.unsubscribe();
         }
-        Assert.assertEquals(consumer, result.getConsumer());
-        consumer.unsubscribe();
-        consumer.close();
+        scheduledExecutorService.shutdown();
     }
 
     @Test
@@ -109,24 +123,20 @@ public class TSDBConsumerTest {
         statement.executeUpdate("create topic if not exists " + topic + " as select ts, c1 from ct1");
 
         Properties properties = new Properties();
-        properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
+//        properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "false");
         properties.setProperty(TMQConstants.GROUP_ID, "tg3");
 
-        TAOSConsumer consumer = TAOSConsumer.getInstance(properties);
-        consumer.subscribe(Collections.singletonList(topic));
-        for (int i = 0; i < 100; i++) {
-            try (ResultSet resultSet = consumer.poll(Duration.ofMillis(100))) {
-                int count = 0;
-                while (resultSet.next()) {
-                    count++;
+        try (TaosConsumer<ResultBean> consumer = new TaosConsumer<>(properties)) {
+            consumer.subscribe(Collections.singletonList(topic));
+            for (int i = 0; i < 100; i++) {
+                for (ResultBean bean : consumer.poll(Duration.ofMillis(100))) {
+                    TimeUnit.MILLISECONDS.sleep(100);
                 }
-                Assert.assertEquals(3, count);
                 consumer.commitSync();
             }
+            consumer.unsubscribe();
         }
-        consumer.unsubscribe();
-        consumer.close();
     }
 
     @Test
@@ -140,23 +150,18 @@ public class TSDBConsumerTest {
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.GROUP_ID, "tg4");
 
-        CallbackResult result = new CallbackResult();
-        TAOSConsumer consumer = TAOSConsumer.getInstance(properties);
-        consumer.subscribe(Collections.singletonList(topic));
-
-        for (int i = 0; i < 10; i++) {
-            try (ResultSet resultSet = consumer.poll(Duration.ofMillis(100))) {
-                while (resultSet.next()) {
+        try (TaosConsumer<ResultBean> consumer = new TaosConsumer<>(properties)) {
+            consumer.subscribe(Collections.singletonList(topic));
+            for (int i = 0; i < 100; i++) {
+                for (ResultBean bean : consumer.poll(Duration.ofMillis(100))) {
+                    TimeUnit.MILLISECONDS.sleep(100);
                 }
+                consumer.commitAsync((result, exception) -> {
+                    // do nothing
+                });
             }
-            consumer.commitAsync(c -> {
-                result.setConsumer(c.getConsumer());
-            });
-            TimeUnit.MILLISECONDS.sleep(10);
+            consumer.unsubscribe();
         }
-        Assert.assertEquals(consumer, result.getConsumer());
-        consumer.unsubscribe();
-        consumer.close();
     }
 
     @Test
@@ -170,22 +175,16 @@ public class TSDBConsumerTest {
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.GROUP_ID, "tg5");
 
-        CallbackResult result = new CallbackResult();
-        TAOSConsumer consumer = TAOSConsumer.getInstance(properties, r -> {
-            result.setConsumer(r.getConsumer());
-        });
-        consumer.subscribe(Collections.singletonList(topic));
-        for (int i = 0; i < 10; i++) {
-            try (ResultSet resultSet = consumer.poll(Duration.ofMillis(100))) {
-                while (resultSet.next()) {
+        try (TaosConsumer<ResultBean> consumer = new TaosConsumer<>(properties)) {
+            consumer.subscribe(Collections.singletonList(topic));
+            for (int i = 0; i < 100; i++) {
+                for (ResultBean bean : consumer.poll(Duration.ofMillis(100))) {
+                    TimeUnit.MILLISECONDS.sleep(100);
                 }
+                consumer.commitAsync();
             }
-            consumer.commitAsync();
-            TimeUnit.MILLISECONDS.sleep(10);
+            consumer.unsubscribe();
         }
-        Assert.assertEquals(consumer, result.getConsumer());
-        consumer.unsubscribe();
-        consumer.close();
     }
 
     @BeforeClass
@@ -204,10 +203,9 @@ public class TSDBConsumerTest {
         statement.execute("create database if not exists " + dbName);
         statement.execute("use " + dbName);
         statement.execute("create stable if not exists " + superTable
-                + " (ts timestamp, c1 int, c2 float, c3 binary(10)) tags(t1 int)");
+                + " (ts timestamp, c1 int, c2 float, c3 nchar(10), c4 binary(10)) tags(t1 int)");
         statement.execute("create table if not exists ct0 using " + superTable + " tags(1000)");
         statement.execute("create table if not exists ct1 using " + superTable + " tags(2000)");
-        statement.execute("create table if not exists ct2 using " + superTable + " tags(3000)");
     }
 
     @AfterClass

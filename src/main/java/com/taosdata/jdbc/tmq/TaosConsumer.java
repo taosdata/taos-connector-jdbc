@@ -2,17 +2,18 @@ package com.taosdata.jdbc.tmq;
 
 import com.taosdata.jdbc.*;
 import com.taosdata.jdbc.utils.StringUtils;
+import com.taosdata.jdbc.utils.Utils;
 
-import java.sql.ResultSet;
+import java.beans.IntrospectionException;
+import java.lang.reflect.InvocationTargetException;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Consumer;
 
-public class JNIConsumer implements TAOSConsumer {
+public class TaosConsumer<V> implements TConsumer<V> {
 
     private static final long NO_CURRENT_THREAD = -1L;
     // currentThread holds the threadId of the current thread accessing
@@ -22,9 +23,12 @@ public class JNIConsumer implements TAOSConsumer {
     private final AtomicInteger refcount = new AtomicInteger(0);
     private volatile boolean closed = false;
 
+    private Deserializer<V> deserializer;
+
     long resultSet;
-    private TMQConnector connector;
-    private Consumer<CallbackResult> callback;
+    private final TMQConnector connector;
+    private OffsetCommitCallback callback;
+    List<V> list = new ArrayList<>();
     ThreadPoolExecutor executor = new ThreadPoolExecutor(1, 1,
             0L, TimeUnit.MILLISECONDS,
             new ArrayBlockingQueue<>(10),
@@ -35,29 +39,37 @@ public class JNIConsumer implements TAOSConsumer {
             },
             new ThreadPoolExecutor.CallerRunsPolicy());
 
-    public JNIConsumer(Properties properties) throws SQLException {
-        new JNIConsumer(properties, null);
-    }
-
     /**
-     * Note: after creating a {@link JNIConsumer} you must always {@link #close()}
+     * Note: after creating a {@link TaosConsumer} you must always {@link #close()}
      * it to avoid resource leaks.
      */
-    public JNIConsumer(Properties properties, Consumer<CallbackResult> callback) throws SQLException {
-        this.callback = callback;
-        if (null == callback) {
-            this.callback = e -> {
-            };
-        }
+    @SuppressWarnings("unchecked")
+    public TaosConsumer(Properties properties) throws SQLException {
         connector = new TMQConnector();
         if (null == properties)
             throw TSDBError.createSQLException(TMQConstants.TMQ_CONF_NULL, "consumer properties must not be null!");
 
-        String url = properties.getProperty(TMQConstants.CONNECT_URL);
-        if (!StringUtils.isEmpty(url)) {
-            properties = StringUtils.parseUrl(url, properties);
+        String servers = properties.getProperty(TMQConstants.BOOTSTRAP_SERVERS);
+        if (!StringUtils.isEmpty(servers)) {
+            // TODO HOW TO CONNECT WITH TDengine CLUSTER
+            Arrays.stream(servers.split(",")).filter(s -> !StringUtils.isEmpty(s))
+                    .findFirst().ifPresent(s -> {
+                        String[] host = s.split(":");
+                        properties.setProperty(TMQConstants.CONNECT_IP, host[0]);
+                        properties.setProperty(TMQConstants.CONNECT_PORT, host[1]);
+                    });
         }
-        long config = connector.createConfig(properties, this);
+
+        String s = properties.getProperty(TMQConstants.VALUE_DESERIALIZER);
+        if (!StringUtils.isEmpty(s)) {
+            deserializer = (Deserializer<V>) Utils.newInstance(Utils.parseClassType(s));
+        } else {
+            deserializer = (Deserializer<V>) new MapDeserializer();
+        }
+
+        deserializer.configure(properties);
+
+        long config = connector.createConfig(properties);
         try {
             connector.createConsumer(config);
         } finally {
@@ -65,9 +77,15 @@ public class JNIConsumer implements TAOSConsumer {
         }
     }
 
-    public void commitCallbackHandler(int code, long offset) {
-        CallbackResult r = new CallbackResult(code, this, offset);
-        executor.submit(() -> callback.accept(r));
+    public void commitCallbackHandler(int code) {
+        CallbackResult<V> r = new CallbackResult<>(code, list);
+        if (TMQConstants.TMQ_SUCCESS != code) {
+            Exception exception = TSDBError.createSQLException(code, connector.getErrMsg(code));
+            executor.submit(() -> callback.onComplete(r, exception));
+        } else {
+            executor.submit(() -> callback.onComplete(r, null));
+        }
+
     }
 
     @Override
@@ -106,20 +124,42 @@ public class JNIConsumer implements TAOSConsumer {
     }
 
     @Override
-    public ResultSet poll(Duration timeout) {
+    public ConsumerRecords<V> poll(Duration timeout) throws SQLException {
         acquireAndEnsureOpen();
         try {
             resultSet = connector.poll(timeout.toMillis());
+            list = new ArrayList<>();
             // when tmq pointer is null or result set is null
             if (resultSet == 0 || resultSet == TMQConstants.TMQ_CONSUMER_NULL) {
-                return new EmptyResultSet();
+                return ConsumerRecords.empty();
             }
+
+            String topic = connector.getTopicName(resultSet);
+            String dbName = connector.getDbName(resultSet);
+            int vgroupId = connector.getVgroupId(resultSet);
+            String tableName = connector.getTableName(resultSet);
+            TopicPartition partition = new TopicPartition(topic, dbName, vgroupId, tableName);
+
             int timestampPrecision = connector.getResultTimePrecision(resultSet);
-            return new TMQResultSet(connector, resultSet, timestampPrecision);
+
+            try (TMQResultSet rs = new TMQResultSet(connector, resultSet, timestampPrecision)) {
+                while (rs.next()) {
+                    try {
+                        V record = deserializer.deserialize(rs);
+                        list.add(record);
+                    } catch (IntrospectionException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            }
+            Map<TopicPartition, List<V>> records = new HashMap<>();
+            records.put(partition, list);
+            return new ConsumerRecords<>(records);
         } finally {
             release();
         }
     }
+
 
     @Override
     public void commitAsync() {
@@ -127,39 +167,18 @@ public class JNIConsumer implements TAOSConsumer {
         connector.asyncCommit(0, this);
     }
 
-
     @Override
-    public void commitAsync(Consumer<CallbackResult> consumer) {
+    public void commitAsync(OffsetCommitCallback callback) {
         // currently offset is zero
-        this.callback = consumer;
+        this.callback = callback;
         connector.asyncCommit(0, this);
     }
+
 
     @Override
     public void commitSync() throws SQLException {
         connector.syncCommit(0);
     }
-
-    @Override
-    public String getTopicName() {
-        return connector.getTopicName(resultSet);
-    }
-
-    @Override
-    public String getDatabaseName() {
-        return connector.getDbName(resultSet);
-    }
-
-    @Override
-    public int getVgroupId() {
-        return connector.getVgroupId(resultSet);
-    }
-
-    @Override
-    public String getTableName() {
-        return connector.getTableName(resultSet);
-    }
-
 
     /**
      * Acquire the light lock and ensure that the consumer hasn't been closed.
@@ -176,9 +195,8 @@ public class JNIConsumer implements TAOSConsumer {
 
     /**
      * Acquire the light lock protecting this consumer from multi-threaded access.
-     * Instead of blocking
-     * when the lock is not available, however, we just throw an exception (since
-     * multi-threaded usage is not supported).
+     * Instead of blocking when the lock is not available, however,
+     * we just throw an exception (since multi-threaded usage is not supported).
      *
      * @throws ConcurrentModificationException if another thread already has the lock
      */

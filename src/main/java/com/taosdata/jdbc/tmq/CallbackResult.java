@@ -1,41 +1,21 @@
 package com.taosdata.jdbc.tmq;
 
+import java.util.List;
 
-public class CallbackResult {
-    private int code;
-    private TAOSConsumer consumer;
-    private long offset;
+public class CallbackResult<V> {
+    private final int code;
+    private final List<V> recordList;
 
-    public CallbackResult() {
-    }
-
-    public CallbackResult(int code, TAOSConsumer consumer, long offset) {
+    public CallbackResult(int code, List<V> recordList) {
         this.code = code;
-        this.consumer = consumer;
-        this.offset = offset;
+        this.recordList = recordList;
     }
 
     public int getCode() {
         return code;
     }
 
-    public void setCode(int code) {
-        this.code = code;
-    }
-
-    public TAOSConsumer getConsumer() {
-        return consumer;
-    }
-
-    public void setConsumer(TAOSConsumer consumer) {
-        this.consumer = consumer;
-    }
-
-    public long getOffset() {
-        return offset;
-    }
-
-    public void setOffset(long offset) {
-        this.offset = offset;
+    public List<V> getRecordList() {
+        return recordList;
     }
 }

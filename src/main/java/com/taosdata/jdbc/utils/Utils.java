@@ -3,7 +3,10 @@ package com.taosdata.jdbc.utils;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
+import com.taosdata.jdbc.TSDBError;
+import com.taosdata.jdbc.TSDBJNIConnector;
 import com.taosdata.jdbc.enums.TimestampPrecision;
+import com.taosdata.jdbc.tmq.TMQConstants;
 
 import java.nio.charset.StandardCharsets;
 import java.sql.Date;
@@ -260,5 +263,37 @@ public class Utils {
             rawSql = rawSql.replace(matcher.group(1), tableFullName);
         }
         return rawSql;
+    }
+
+    public static ClassLoader getClassLoader() {
+        ClassLoader cl = Thread.currentThread().getContextClassLoader();
+        if (cl == null)
+            return Utils.class.getClassLoader();
+        else
+            return cl;
+    }
+
+    public static Class<?> parseClassType(String key) {
+        ClassLoader contextClassLoader = Utils.getClassLoader();
+        try {
+            return Class.forName(key, true, contextClassLoader);
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Instantiate the class
+     */
+    public static <T> T newInstance(Class<T> c) {
+        if (c == null)
+            throw new RuntimeException("class cannot be null");
+        try {
+            return c.getDeclaredConstructor().newInstance();
+        } catch (NoSuchMethodException e) {
+            throw new RuntimeException("Could not find a public no-argument constructor for " + c.getName(), e);
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            throw new RuntimeException("Could not instantiate class " + c.getName(), e);
+        }
     }
 }
