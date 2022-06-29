@@ -39,73 +39,100 @@ public class BlockResultSet extends AbstractWSResultSet {
         ByteBuffer buffer = resp.getBuffer();
         List<List<Object>> list = new ArrayList<>();
         if (resp.getBuffer() != null) {
+            int bitMapOffset = BitmapLen(numOfRows);
+            int pHeader = buffer.position() + fields.size() * 4 + 12 + 6 * fields.size();
+            buffer.position(pHeader);
             for (int i = 0; i < fields.size(); i++) {
                 List<Object> col = new ArrayList<>(numOfRows);
                 int type = fields.get(i).getTaosType();
                 switch (type) {
                     case TSDB_DATA_TYPE_BOOL:
                     case TSDB_DATA_TYPE_TINYINT:
-                    case TSDB_DATA_TYPE_UTINYINT:
+                    case TSDB_DATA_TYPE_UTINYINT: {
+                        byte[] tmp = new byte[bitMapOffset];
+                        buffer.get(tmp);
                         for (int j = 0; j < numOfRows; j++) {
+                            if (isNull(tmp, j)) {
+                                col.add(null);
+                            }
                             col.add(buffer.get());
                         }
                         break;
+                    }
                     case TSDB_DATA_TYPE_SMALLINT:
-                    case TSDB_DATA_TYPE_USMALLINT:
+                    case TSDB_DATA_TYPE_USMALLINT: {
+                        byte[] tmp = new byte[bitMapOffset];
+                        buffer.get(tmp);
                         for (int j = 0; j < numOfRows; j++) {
+                            if (isNull(tmp, j)) {
+                                col.add(null);
+                            }
                             col.add(buffer.getShort());
                         }
                         break;
+                    }
                     case TSDB_DATA_TYPE_INT:
-                    case TSDB_DATA_TYPE_UINT:
+                    case TSDB_DATA_TYPE_UINT: {
+                        byte[] tmp = new byte[bitMapOffset];
+                        buffer.get(tmp);
                         for (int j = 0; j < numOfRows; j++) {
+                            if (isNull(tmp, j)) {
+                                col.add(null);
+                            }
                             col.add(buffer.getInt());
                         }
                         break;
+                    }
                     case TSDB_DATA_TYPE_BIGINT:
                     case TSDB_DATA_TYPE_UBIGINT:
-                    case TSDB_DATA_TYPE_TIMESTAMP:
+                    case TSDB_DATA_TYPE_TIMESTAMP: {
+                        byte[] tmp = new byte[bitMapOffset];
+                        buffer.get(tmp);
                         for (int j = 0; j < numOfRows; j++) {
+                            if (isNull(tmp, j)) {
+                                col.add(null);
+                            }
                             col.add(buffer.getLong());
                         }
                         break;
-                    case TSDB_DATA_TYPE_FLOAT:
+                    }
+                    case TSDB_DATA_TYPE_FLOAT: {
+                        byte[] tmp = new byte[bitMapOffset];
+                        buffer.get(tmp);
                         for (int j = 0; j < numOfRows; j++) {
+                            if (isNull(tmp, j)) {
+                                col.add(null);
+                            }
                             col.add(buffer.getFloat());
                         }
                         break;
-                    case TSDB_DATA_TYPE_DOUBLE:
+                    }
+                    case TSDB_DATA_TYPE_DOUBLE: {
+                        byte[] tmp = new byte[bitMapOffset];
+                        buffer.get(tmp);
                         for (int j = 0; j < numOfRows; j++) {
+                            if (isNull(tmp, j)) {
+                                col.add(null);
+                            }
                             col.add(buffer.getDouble());
                         }
                         break;
-                    case TSDB_DATA_TYPE_BINARY: {
-                        byte[] bytes = new byte[fieldLength.get(i) - 2];
-                        for (int j = 0; j < numOfRows; j++) {
-                            short s = buffer.getShort();
-                            buffer.get(bytes);
-
-                            byte[] tmp = Arrays.copyOf(bytes, s);
-                            if (NullType.isBinaryNull(tmp, s)) {
-                                col.add(null);
-                                continue;
-                            }
-                            col.add(tmp);
-                        }
-                        break;
                     }
+                    case TSDB_DATA_TYPE_BINARY:
                     case TSDB_DATA_TYPE_NCHAR:
                     case TSDB_DATA_TYPE_JSON: {
-                        byte[] bytes = new byte[fieldLength.get(i) - 2];
-                        for (int j = 0; j < numOfRows; j++) {
-                            short s = buffer.getShort();
-                            buffer.get(bytes);
-
-                            byte[] tmp = Arrays.copyOf(bytes, s);
-                            if (NullType.isNcharNull(tmp, s)) {
+                        List<Integer> offset = new ArrayList<>(numOfRows);
+                        for (int m = 0; m < numOfRows; m++) {
+                            offset.add(buffer.getInt());
+                        }
+                        for (int m = 0; m < numOfRows; m++) {
+                            if (-1 == offset.get(m)) {
                                 col.add(null);
                                 continue;
                             }
+                            short len = buffer.getShort();
+                            byte[] tmp = new byte[len];
+                            buffer.get(tmp);
                             col.add(tmp);
                         }
                         break;
@@ -668,7 +695,7 @@ public class BlockResultSet extends AbstractWSResultSet {
                     throwRangeException(value.toString(), columnIndex, Types.FLOAT);
                 return tmp.floatValue();
             }
-            case TSDB_DATA_TYPE_DOUBLE:{
+            case TSDB_DATA_TYPE_DOUBLE: {
                 Double tmp = (double) value;
                 if (tmp < Float.MIN_VALUE || tmp > Float.MAX_VALUE)
                     throwRangeException(value.toString(), columnIndex, Types.FLOAT);
@@ -1036,5 +1063,16 @@ public class BlockResultSet extends AbstractWSResultSet {
     @Override
     public Timestamp getTimestamp(int columnIndex, Calendar cal) throws SQLException {
         return getTimestamp(columnIndex);
+    }
+
+    //    ceil(numOfRows/8.0)
+    private int BitmapLen(int n) {
+        return (n + 0x7) >> 3;
+    }
+
+    private boolean isNull(byte[] c, int n) {
+        int position = n >>> 3;
+        int index = n & 0x7;
+        return (c[position] & 1 << index) == 0;
     }
 }

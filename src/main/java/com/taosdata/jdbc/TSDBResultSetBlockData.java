@@ -42,7 +42,8 @@ public class TSDBResultSetBlockData {
     private int rowIndex = 0;
 
     private List<ColumnMetaData> columnMetaDataList;
-    private ArrayList<Object> colData;
+//    private ArrayList<Object> colData;
+    private ArrayList<List<byte[]>> colData;
 
     private int timestampPrecision;
 
@@ -101,78 +102,8 @@ public class TSDBResultSetBlockData {
         this.rowIndex = 0;
     }
 
-    public void setBoolean(int col, boolean value) {
-        colData.set(col, value);
-    }
-
-    public void setByteArray(int col, int length, byte[] value) {
-        switch (this.columnMetaDataList.get(col).getColType()) {
-            case TSDBConstants.TSDB_DATA_TYPE_BOOL: {
-                ByteBuffer buf = ByteBuffer.wrap(value, 0, length);
-                buf.order(ByteOrder.LITTLE_ENDIAN).asCharBuffer();
-                this.colData.set(col, buf);
-                break;
-            }
-            case TSDBConstants.TSDB_DATA_TYPE_UTINYINT:
-            case TSDBConstants.TSDB_DATA_TYPE_TINYINT: {
-                ByteBuffer buf = ByteBuffer.wrap(value, 0, length);
-                buf.order(ByteOrder.LITTLE_ENDIAN);
-                this.colData.set(col, buf);
-                break;
-            }
-            case TSDBConstants.TSDB_DATA_TYPE_USMALLINT:
-            case TSDBConstants.TSDB_DATA_TYPE_SMALLINT: {
-                ByteBuffer buf = ByteBuffer.wrap(value, 0, length);
-                ShortBuffer sb = buf.order(ByteOrder.LITTLE_ENDIAN).asShortBuffer();
-                this.colData.set(col, sb);
-                break;
-            }
-            case TSDBConstants.TSDB_DATA_TYPE_UINT:
-            case TSDBConstants.TSDB_DATA_TYPE_INT: {
-                ByteBuffer buf = ByteBuffer.wrap(value, 0, length);
-                IntBuffer ib = buf.order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
-                this.colData.set(col, ib);
-                break;
-            }
-            case TSDBConstants.TSDB_DATA_TYPE_UBIGINT:
-            case TSDBConstants.TSDB_DATA_TYPE_BIGINT: {
-                ByteBuffer buf = ByteBuffer.wrap(value, 0, length);
-                LongBuffer lb = buf.order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
-                this.colData.set(col, lb);
-                break;
-            }
-            case TSDBConstants.TSDB_DATA_TYPE_FLOAT: {
-                ByteBuffer buf = ByteBuffer.wrap(value, 0, length);
-                FloatBuffer fb = buf.order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer();
-                this.colData.set(col, fb);
-                break;
-            }
-            case TSDBConstants.TSDB_DATA_TYPE_DOUBLE: {
-                ByteBuffer buf = ByteBuffer.wrap(value, 0, length);
-                DoubleBuffer db = buf.order(ByteOrder.LITTLE_ENDIAN).asDoubleBuffer();
-                this.colData.set(col, db);
-                break;
-            }
-            case TSDBConstants.TSDB_DATA_TYPE_BINARY: {
-                ByteBuffer buf = ByteBuffer.wrap(value, 0, length);
-                buf.order(ByteOrder.LITTLE_ENDIAN);
-                this.colData.set(col, buf);
-                break;
-            }
-            case TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP: {
-                ByteBuffer buf = ByteBuffer.wrap(value, 0, length);
-                LongBuffer lb = buf.order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
-                this.colData.set(col, lb);
-                break;
-            }
-            case TSDBConstants.TSDB_DATA_TYPE_JSON:
-            case TSDBConstants.TSDB_DATA_TYPE_NCHAR: {
-                ByteBuffer buf = ByteBuffer.wrap(value, 0, length);
-                buf.order(ByteOrder.LITTLE_ENDIAN);
-                this.colData.set(col, buf);
-                break;
-            }
-        }
+    public void setByteArray(int col, List<byte[]> value) {
+        this.colData.set(col, value);
     }
 
 
