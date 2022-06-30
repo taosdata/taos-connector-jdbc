@@ -40,7 +40,8 @@ public class BlockResultSet extends AbstractWSResultSet {
         List<List<Object>> list = new ArrayList<>();
         if (resp.getBuffer() != null) {
             int bitMapOffset = BitmapLen(numOfRows);
-            int pHeader = buffer.position() + fields.size() * 4 + 12 + 6 * fields.size();
+            // 10 = 4 + 6
+            int pHeader = buffer.position() + 12 + fields.size() * 10;
             buffer.position(pHeader);
             for (int i = 0; i < fields.size(); i++) {
                 List<Object> col = new ArrayList<>(numOfRows);
@@ -119,7 +120,6 @@ public class BlockResultSet extends AbstractWSResultSet {
                         break;
                     }
                     case TSDB_DATA_TYPE_BINARY:
-                    case TSDB_DATA_TYPE_NCHAR:
                     case TSDB_DATA_TYPE_JSON: {
                         List<Integer> offset = new ArrayList<>(numOfRows);
                         for (int m = 0; m < numOfRows; m++) {
@@ -133,6 +133,25 @@ public class BlockResultSet extends AbstractWSResultSet {
                             short len = buffer.getShort();
                             byte[] tmp = new byte[len];
                             buffer.get(tmp);
+                            col.add(tmp);
+                        }
+                        break;
+                    }
+                    case TSDB_DATA_TYPE_NCHAR: {
+                        List<Integer> offset = new ArrayList<>(numOfRows);
+                        for (int m = 0; m < numOfRows; m++) {
+                            offset.add(buffer.getInt());
+                        }
+                        for (int m = 0; m < numOfRows; m++) {
+                            if (-1 == offset.get(m)) {
+                                col.add(null);
+                                continue;
+                            }
+                            int len = buffer.getShort() / 4;
+                            int[] tmp = new int[len];
+                            for (int n = 0; n < len; n++) {
+                                tmp[n] = buffer.getInt();
+                            }
                             col.add(tmp);
                         }
                         break;
@@ -174,100 +193,46 @@ public class BlockResultSet extends AbstractWSResultSet {
         switch (type) {
             case TSDB_DATA_TYPE_BOOL: {
                 byte val = (byte) source;
-                if (NullType.isBooleanNull(val)) {
-                    return null;
-                }
                 return (val == 0x0) ? Boolean.FALSE : Boolean.TRUE;
             }
             case TSDB_DATA_TYPE_TINYINT: {
-                byte val = (byte) source;
-                if (NullType.isTinyIntNull(val)) {
-                    return null;
-                }
-                return val;
+                return source;
             }
             case TSDB_DATA_TYPE_UTINYINT: {
                 byte val = (byte) source;
-                if (NullType.isUnsignedTinyIntNull(val)) {
-                    return null;
-                }
                 return (short) val & 0xFF;
             }
-            case TSDB_DATA_TYPE_SMALLINT: {
-                short val = (short) source;
-                if (NullType.isSmallIntNull(val)) {
-                    return null;
-                }
-                return val;
+            case TSDB_DATA_TYPE_SMALLINT:
+            case TSDB_DATA_TYPE_INT:
+            case TSDB_DATA_TYPE_BIGINT:
+            case TSDB_DATA_TYPE_FLOAT:
+            case TSDB_DATA_TYPE_DOUBLE: {
+                return source;
             }
             case TSDB_DATA_TYPE_USMALLINT: {
                 short val = (short) source;
-                if (NullType.isUnsignedSmallIntNull(val)) {
-                    return null;
-                }
                 return val & 0xFFFF;
-            }
-            case TSDB_DATA_TYPE_INT: {
-                int val = (int) source;
-                if (NullType.isIntNull(val)) {
-                    return null;
-                }
-                return val;
             }
             case TSDB_DATA_TYPE_UINT: {
                 int val = (int) source;
-                if (NullType.isUnsignedIntNull(val)) {
-                    return null;
-                }
                 return val & 0xFFFFFFFFL;
-            }
-            case TSDB_DATA_TYPE_BIGINT: {
-                long val = (long) source;
-                if (NullType.isBigIntNull(val)) {
-                    return null;
-                }
-                return val;
             }
             case TSDB_DATA_TYPE_TIMESTAMP: {
                 long val = (long) source;
-                if (NullType.isBigIntNull(val)) {
-                    return null;
-                }
                 return parseTimestampColumnData(val);
             }
             case TSDB_DATA_TYPE_UBIGINT: {
                 long val = (long) source;
-                if (NullType.isUnsignedBigIntNull(val)) {
-                    return null;
-                }
                 BigDecimal tmp = new BigDecimal(val >>> 1).multiply(new BigDecimal(2));
                 return (val & 0x1) == 0x1 ? tmp.add(new BigDecimal(1)) : tmp;
             }
-            case TSDB_DATA_TYPE_FLOAT: {
-                float val = (float) source;
-                if (NullType.isFloatNull(val)) {
-                    return null;
-                }
-                return val;
-            }
-            case TSDB_DATA_TYPE_DOUBLE: {
-                double val = (double) source;
-                if (NullType.isDoubleNull(val)) {
-                    return null;
-                }
-                return val;
-            }
-            case TSDB_DATA_TYPE_BINARY: {
+            case TSDB_DATA_TYPE_BINARY:
+            case TSDB_DATA_TYPE_JSON: {
                 return source;
             }
-            case TSDB_DATA_TYPE_NCHAR:
-            case TSDB_DATA_TYPE_JSON: {
-                String charset = TaosGlobalConfig.getCharset();
-                try {
-                    return new String((byte[]) source, charset);
-                } catch (UnsupportedEncodingException e) {
-                    throw new RuntimeException(e.getMessage());
-                }
+            case TSDB_DATA_TYPE_NCHAR: {
+                int[] tmp = (int[]) source;
+                return new String(tmp, 0, tmp.length);
             }
             default:
                 // unknown type, do nothing
@@ -282,7 +247,6 @@ public class BlockResultSet extends AbstractWSResultSet {
         Object value = parseValue(columnIndex);
         if (value == null) {
             wasNull = true;
-//            return new NullType().toString();
             return null;
         }
         if (value instanceof String)
@@ -334,8 +298,7 @@ public class BlockResultSet extends AbstractWSResultSet {
                 return (((double) value) == 0) ? Boolean.FALSE : Boolean.TRUE;
             }
 
-            case TSDB_DATA_TYPE_NCHAR:
-            case TSDB_DATA_TYPE_JSON: {
+            case TSDB_DATA_TYPE_NCHAR: {
                 if ("TRUE".compareToIgnoreCase((String) value) == 0) {
                     return Boolean.TRUE;
                 } else if ("FALSE".compareToIgnoreCase((String) value) == 0) {
@@ -344,6 +307,7 @@ public class BlockResultSet extends AbstractWSResultSet {
                     throw new SQLDataException();
                 }
             }
+            case TSDB_DATA_TYPE_JSON:
             case TSDB_DATA_TYPE_BINARY: {
                 String charset = TaosGlobalConfig.getCharset();
                 String tmp;
@@ -424,8 +388,8 @@ public class BlockResultSet extends AbstractWSResultSet {
             }
 
             case TSDB_DATA_TYPE_NCHAR:
-            case TSDB_DATA_TYPE_JSON:
                 return Byte.parseByte((String) value);
+            case TSDB_DATA_TYPE_JSON:
             case TSDB_DATA_TYPE_BINARY: {
                 String charset = TaosGlobalConfig.getCharset();
                 String tmp;
@@ -499,8 +463,8 @@ public class BlockResultSet extends AbstractWSResultSet {
             }
 
             case TSDB_DATA_TYPE_NCHAR:
-            case TSDB_DATA_TYPE_JSON:
                 return Short.parseShort((String) value);
+            case TSDB_DATA_TYPE_JSON:
             case TSDB_DATA_TYPE_BINARY: {
                 String charset = TaosGlobalConfig.getCharset();
                 String tmp;
@@ -567,8 +531,8 @@ public class BlockResultSet extends AbstractWSResultSet {
             }
 
             case TSDB_DATA_TYPE_NCHAR:
-            case TSDB_DATA_TYPE_JSON:
                 return Integer.parseInt((String) value);
+            case TSDB_DATA_TYPE_JSON:
             case TSDB_DATA_TYPE_BINARY: {
                 String charset = TaosGlobalConfig.getCharset();
                 String tmp;
@@ -645,8 +609,8 @@ public class BlockResultSet extends AbstractWSResultSet {
             }
 
             case TSDB_DATA_TYPE_NCHAR:
-            case TSDB_DATA_TYPE_JSON:
                 return Long.parseLong((String) value);
+            case TSDB_DATA_TYPE_JSON:
             case TSDB_DATA_TYPE_BINARY: {
                 String charset = TaosGlobalConfig.getCharset();
                 String tmp;
@@ -703,8 +667,8 @@ public class BlockResultSet extends AbstractWSResultSet {
             }
 
             case TSDB_DATA_TYPE_NCHAR:
-            case TSDB_DATA_TYPE_JSON:
                 return Float.parseFloat(value.toString());
+            case TSDB_DATA_TYPE_JSON:
             case TSDB_DATA_TYPE_BINARY: {
                 String charset = TaosGlobalConfig.getCharset();
                 String tmp;
@@ -757,8 +721,8 @@ public class BlockResultSet extends AbstractWSResultSet {
             }
 
             case TSDB_DATA_TYPE_NCHAR:
-            case TSDB_DATA_TYPE_JSON:
                 return Double.parseDouble(value.toString());
+            case TSDB_DATA_TYPE_JSON:
             case TSDB_DATA_TYPE_BINARY: {
                 String charset = TaosGlobalConfig.getCharset();
                 String tmp;
@@ -913,8 +877,8 @@ public class BlockResultSet extends AbstractWSResultSet {
             case TSDB_DATA_TYPE_TIMESTAMP:
                 return new BigDecimal(((Timestamp) value).getTime());
             case TSDB_DATA_TYPE_NCHAR:
-            case TSDB_DATA_TYPE_JSON:
                 return new BigDecimal(value.toString());
+            case TSDB_DATA_TYPE_JSON:
             case TSDB_DATA_TYPE_BINARY: {
                 String charset = TaosGlobalConfig.getCharset();
                 String tmp;
@@ -1073,6 +1037,6 @@ public class BlockResultSet extends AbstractWSResultSet {
     private boolean isNull(byte[] c, int n) {
         int position = n >>> 3;
         int index = n & 0x7;
-        return (c[position] & 1 << index) == 0;
+        return (c[position] & 1 << index) == 1;
     }
 }
