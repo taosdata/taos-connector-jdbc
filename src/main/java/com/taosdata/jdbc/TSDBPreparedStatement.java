@@ -669,17 +669,17 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
             ByteBuffer typeList = ByteBuffer.allocate(tagSize);
             typeList.order(ByteOrder.LITTLE_ENDIAN);
 
-            ByteBuffer lengthList = ByteBuffer.allocate(tagSize * Long.BYTES);
+            ByteBuffer lengthList = ByteBuffer.allocate(tagSize * Integer.BYTES);
             lengthList.order(ByteOrder.LITTLE_ENDIAN);
 
-            ByteBuffer isNullList = ByteBuffer.allocate(tagSize * Integer.BYTES);
+            ByteBuffer isNullList = ByteBuffer.allocate(tagSize * Byte.BYTES);
             isNullList.order(ByteOrder.LITTLE_ENDIAN);
 
             for (TableTagInfo tag : this.tableTags) {
                 if (tag.isNull) {
                     typeList.put((byte) tag.type);
-                    isNullList.putInt(1);
-                    lengthList.putLong(0);
+                    isNullList.put((byte) 1);
+                    lengthList.putInt(0);
                     continue;
                 }
 
@@ -687,44 +687,44 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
                     case TSDBConstants.TSDB_DATA_TYPE_INT: {
                         Integer val = (Integer) tag.value;
                         tagDataList.putInt(val);
-                        lengthList.putLong(Integer.BYTES);
+                        lengthList.putInt(Integer.BYTES);
                         break;
                     }
                     case TSDBConstants.TSDB_DATA_TYPE_TINYINT: {
                         Byte val = (Byte) tag.value;
                         tagDataList.put(val);
-                        lengthList.putLong(Byte.BYTES);
+                        lengthList.putInt(Byte.BYTES);
                         break;
                     }
                     case TSDBConstants.TSDB_DATA_TYPE_BOOL: {
                         Boolean val = (Boolean) tag.value;
                         tagDataList.put((byte) (val ? 1 : 0));
-                        lengthList.putLong(Byte.BYTES);
+                        lengthList.putInt(Byte.BYTES);
                         break;
                     }
                     case TSDBConstants.TSDB_DATA_TYPE_SMALLINT: {
                         Short val = (Short) tag.value;
                         tagDataList.putShort(val);
-                        lengthList.putLong(Short.BYTES);
+                        lengthList.putInt(Short.BYTES);
                         break;
                     }
                     case TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP:
                     case TSDBConstants.TSDB_DATA_TYPE_BIGINT: {
                         Long val = (Long) tag.value;
                         tagDataList.putLong(val == null ? 0 : val);
-                        lengthList.putLong(Long.BYTES);
+                        lengthList.putInt(Long.BYTES);
                         break;
                     }
                     case TSDBConstants.TSDB_DATA_TYPE_FLOAT: {
                         Float val = (Float) tag.value;
                         tagDataList.putFloat(val == null ? 0 : val);
-                        lengthList.putLong(Float.BYTES);
+                        lengthList.putInt(Float.BYTES);
                         break;
                     }
                     case TSDBConstants.TSDB_DATA_TYPE_DOUBLE: {
                         Double val = (Double) tag.value;
                         tagDataList.putDouble(val == null ? 0 : val);
-                        lengthList.putLong(Double.BYTES);
+                        lengthList.putInt(Double.BYTES);
                         break;
                     }
                     case TSDBConstants.TSDB_DATA_TYPE_NCHAR:
@@ -743,7 +743,7 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
                             throw new RuntimeException(e.getMessage());
                         }
                         tagDataList.put(b);
-                        lengthList.putLong(b.length);
+                        lengthList.putInt(b.length);
                         break;
                     }
                     case TSDBConstants.TSDB_DATA_TYPE_UTINYINT:
@@ -754,7 +754,7 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
                     }
                 }
                 typeList.put((byte) tag.type);
-                isNullList.putInt(tag.isNull ? 1 : 0);
+                isNullList.put(tag.isNull ? (byte) 1 : (byte)0);
             }
 
             connector.setBindTableNameAndTags(this.nativeStmtHandle, this.tableName, this.tableTags.size(),
