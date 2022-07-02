@@ -22,7 +22,7 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
 
     private boolean auth;
     private int reqId;
-    private ConcurrentHashMap<Transport, Integer> transports = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Transport, Integer> transports = new ConcurrentHashMap<>();
 
     public void removeTransports(Transport transport) {
         transports.remove(transport);
