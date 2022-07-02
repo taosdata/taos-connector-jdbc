@@ -18,29 +18,21 @@ import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.DoubleBuffer;
-import java.nio.FloatBuffer;
-import java.nio.IntBuffer;
-import java.nio.LongBuffer;
-import java.nio.ShortBuffer;
 import java.sql.SQLDataException;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
 import com.taosdata.jdbc.enums.TimestampPrecision;
-import com.taosdata.jdbc.utils.NullType;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
 
 public class TSDBResultSetBlockData {
-    private static final int BINARY_LENGTH_OFFSET = 2;
     private int numOfRows = 0;
     private int rowIndex = 0;
 
@@ -85,7 +77,6 @@ public class TSDBResultSetBlockData {
 
     public void setNumOfCols(int numOfCols) {
         this.colData = new ArrayList<>(numOfCols);
-        this.colData.addAll(Collections.nCopies(numOfCols, null));
     }
 
     public boolean hasMore() {
@@ -108,6 +99,8 @@ public class TSDBResultSetBlockData {
         ByteBuffer buffer = ByteBuffer.wrap(value);
         buffer.order(ByteOrder.LITTLE_ENDIAN);
         int bitMapOffset = BitmapLen(numOfRows);
+        int pHeader = 12 + columnMetaDataList.size() * 10;
+        buffer.position(pHeader);
         for (int i = 0; i < columnMetaDataList.size(); i++) {
             List<Object> col = new ArrayList<>(numOfRows);
             int type = columnMetaDataList.get(i).getColType();
@@ -230,7 +223,6 @@ public class TSDBResultSetBlockData {
         }
     }
 
-
     /**
      * The original type may not be a string type, but will be converted to by
      * calling this method
@@ -272,7 +264,7 @@ public class TSDBResultSetBlockData {
         if (obj instanceof Short)
             return Shorts.toByteArray((short) obj);
         if (obj instanceof Byte)
-            return new byte[]{(byte) obj};
+            return new byte[] { (byte) obj };
 
         return obj.toString().getBytes();
     }
@@ -493,7 +485,7 @@ public class TSDBResultSetBlockData {
             case TSDB_DATA_TYPE_BIGINT:
             case TSDB_DATA_TYPE_FLOAT:
             case TSDB_DATA_TYPE_DOUBLE:
-            case TSDB_DATA_TYPE_NCHAR:{
+            case TSDB_DATA_TYPE_NCHAR: {
                 return source;
             }
 
@@ -507,7 +499,7 @@ public class TSDBResultSetBlockData {
             }
 
             case TSDB_DATA_TYPE_TIMESTAMP: {
-                long val = (long)source;
+                long val = (long) source;
 
                 return parseTimestampColumnData(val);
             }
@@ -540,7 +532,7 @@ public class TSDBResultSetBlockData {
         return null;
     }
 
-    //    ceil(numOfRows/8.0)
+    // ceil(numOfRows/8.0)
     private int BitmapLen(int n) {
         return (n + 0x7) >> 3;
     }
