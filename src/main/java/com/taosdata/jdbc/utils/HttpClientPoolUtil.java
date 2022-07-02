@@ -10,7 +10,6 @@ import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.*;
 import org.apache.http.client.protocol.HttpClientContext;
-import org.apache.http.conn.ClientConnectionManager;
 import org.apache.http.conn.ConnectionKeepAliveStrategy;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -25,7 +24,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.Properties;
-import java.util.concurrent.TimeUnit;
 
 public class HttpClientPoolUtil {
 
@@ -55,7 +53,7 @@ public class HttpClientPoolUtil {
         return DEFAULT_HTTP_KEEP_TIME * 1000;
     };
 
-    private static CloseableHttpClient httpClient;
+    private static volatile CloseableHttpClient httpClient;
     private static int connectTimeout = 0;
     private static int socketTimeout = 0;
 
@@ -118,7 +116,7 @@ public class HttpClientPoolUtil {
         HttpContext context = HttpClientContext.create();
 
         HttpEntity httpEntity = null;
-        String responseBody = "";
+        String responseBody;
         try (CloseableHttpResponse httpResponse = httpClient.execute(method, context)) {
             httpEntity = httpResponse.getEntity();
             if (httpEntity == null) {
@@ -159,14 +157,5 @@ public class HttpClientPoolUtil {
         method.addHeader("Accept", DEFAULT_CONTENT_TYPE);
         method.setConfig(requestConfig);
         return method;
-    }
-
-
-    public static void reset() {
-        synchronized (HttpClientPoolUtil.class) {
-            ClientConnectionManager cm = httpClient.getConnectionManager();
-            cm.closeExpiredConnections();
-            cm.closeIdleConnections(100, TimeUnit.MILLISECONDS);
-        }
     }
 }

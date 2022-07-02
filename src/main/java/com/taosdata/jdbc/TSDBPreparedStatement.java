@@ -27,8 +27,6 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /*
  * TDengine only supports a subset of the standard SQL, thus this implementation of the

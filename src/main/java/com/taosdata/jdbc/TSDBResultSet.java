@@ -24,7 +24,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
-public class TSDBResultSet extends AbstractResultSet implements ResultSet {
+public class TSDBResultSet extends AbstractResultSet {
     private final TSDBJNIConnector jniConnector;
     private final TSDBStatement statement;
     private final long resultSetPointer;

@@ -7,7 +7,6 @@ import com.taosdata.jdbc.AbstractStatement;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
-import com.taosdata.jdbc.enums.TimestampFormat;
 import com.taosdata.jdbc.utils.HttpClientPoolUtil;
 import com.taosdata.jdbc.utils.SqlSyntaxValidator;
 

@@ -5,7 +5,6 @@ import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
 import com.taosdata.jdbc.*;
 import com.taosdata.jdbc.enums.TimestampPrecision;
-import com.taosdata.jdbc.utils.NullType;
 import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.entity.*;
 
@@ -16,7 +15,6 @@ import java.sql.*;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;

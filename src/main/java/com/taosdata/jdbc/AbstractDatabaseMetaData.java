@@ -4,7 +4,6 @@ import com.taosdata.jdbc.utils.StringUtils;
 
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public abstract class AbstractDatabaseMetaData extends WrapperImpl implements DatabaseMetaData {

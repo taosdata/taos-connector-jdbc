@@ -465,8 +465,6 @@ public class TSDBResultSetBlockData {
     }
 
     public Object get(int col) {
-        int fieldSize = this.columnMetaDataList.get(col).getColSize();
-
         List<Object> bb = this.colData.get(col);
 
         Object source = bb.get(this.rowIndex);
