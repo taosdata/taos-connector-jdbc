@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class RestfulResultSet extends AbstractResultSet implements ResultSet {
+public class RestfulResultSet extends AbstractResultSet {
 
     public static DateTimeFormatter rfc3339Parser = new DateTimeFormatterBuilder()
             .parseCaseInsensitive()
@@ -71,21 +71,13 @@ public class RestfulResultSet extends AbstractResultSet implements ResultSet {
     public RestfulResultSet(String database, Statement statement, JSONObject resultJson) throws SQLException {
         this.statement = statement;
 
-        // get head
-        JSONArray head = resultJson.getJSONArray("head");
         // get column metadata
         JSONArray columnMeta = resultJson.getJSONArray("column_meta");
         // get row data
         JSONArray data = resultJson.getJSONArray("data");
-        // get rows
-        Integer rows = resultJson.getInteger("rows");
 
         // parse column_meta
-        if (columnMeta != null) {
-            parseColumnMeta_new(columnMeta);
-        } else {
-            parseColumnMeta_old(head, data, rows);
-        }
+        parseColumnMeta_new(columnMeta);
         this.metaData = new RestfulResultSetMetaData(database, columns, this);
 
         if (data == null || data.isEmpty())
@@ -115,48 +107,6 @@ public class RestfulResultSet extends AbstractResultSet implements ResultSet {
             int col_type = TSDBConstants.taosType2JdbcType(taos_type);
             int col_length = col.getInteger(2);
             columnNames.add(col_name);
-            columns.add(new Field(col_name, col_type, col_length, "", taos_type));
-        }
-    }
-
-    /**
-     * use this method before TDengine-2.0.18.0 to parse column meta
-     */
-    private void parseColumnMeta_old(JSONArray head, JSONArray data, int rows) {
-        columnNames.clear();
-        columns.clear();
-        for (int colIndex = 0; colIndex < head.size(); colIndex++) {
-            String col_name = head.getString(colIndex);
-            columnNames.add(col_name);
-
-            int col_type = Types.NULL;
-            int col_length = 0;
-            int taos_type = TSDBConstants.TSDB_DATA_TYPE_NULL;
-
-            JSONArray row0Json = data.getJSONArray(0);
-            if (colIndex < row0Json.size()) {
-                Object value = row0Json.get(colIndex);
-                if (value instanceof Boolean) {
-                    col_type = Types.BOOLEAN;
-                    col_length = 1;
-                    taos_type = TSDBConstants.TSDB_DATA_TYPE_BOOL;
-                }
-                if (value instanceof Byte || value instanceof Short || value instanceof Integer || value instanceof Long) {
-                    col_type = Types.BIGINT;
-                    col_length = 8;
-                    taos_type = TSDBConstants.TSDB_DATA_TYPE_BIGINT;
-                }
-                if (value instanceof Float || value instanceof Double || value instanceof BigDecimal) {
-                    col_type = Types.DOUBLE;
-                    col_length = 8;
-                    taos_type = TSDBConstants.TSDB_DATA_TYPE_DOUBLE;
-                }
-                if (value instanceof String) {
-                    col_type = Types.NCHAR;
-                    col_length = ((String) value).length();
-                    taos_type = TSDBConstants.TSDB_DATA_TYPE_NCHAR;
-                }
-            }
             columns.add(new Field(col_name, col_type, col_length, "", taos_type));
         }
     }
@@ -203,7 +153,7 @@ public class RestfulResultSet extends AbstractResultSet implements ResultSet {
         switch (timestampFormat) {
             case TIMESTAMP: {
                 Long value = row.getLong(colIndex);
-                //TODO: this implementation has bug if the timestamp bigger than 9999_9999_9999_9
+                // TODO: this implementation has bug if the timestamp bigger than 9999_9999_9999_9
                 if (value < 1_0000_0000_0000_0L) {
                     this.timestampPrecision = TimestampPrecision.MS;
                     return new Timestamp(value);
@@ -710,7 +660,7 @@ public class RestfulResultSet extends AbstractResultSet implements ResultSet {
 
     @Override
     public Timestamp getTimestamp(int columnIndex, Calendar cal) throws SQLException {
-        //TODO：did not use the specified timezone in cal
+        // TODO：did not use the specified timezone in cal
         return getTimestamp(columnIndex);
     }
 

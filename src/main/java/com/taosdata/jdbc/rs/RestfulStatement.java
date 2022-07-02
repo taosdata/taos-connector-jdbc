@@ -60,7 +60,7 @@ public class RestfulStatement extends AbstractStatement {
         if (isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
 
-        //如果执行了use操作应该将当前Statement的catalog设置为新的database
+        // 如果执行了use操作应该将当前Statement的catalog设置为新的database
         boolean result = true;
 
         String response = HttpClientPoolUtil.execute(getUrl(), sql, this.conn.getAuth());
@@ -68,7 +68,7 @@ public class RestfulStatement extends AbstractStatement {
         if (null == jsonObject) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "sql: " + sql);
         }
-        if (jsonObject.getString("status").equals("error")) {
+        if (jsonObject.getIntValue("code") != 0) {
             throw TSDBError.createSQLException(jsonObject.getInteger("code"), "sql: " + sql + ", desc: " + jsonObject.getString("desc"));
         }
 
@@ -78,7 +78,7 @@ public class RestfulStatement extends AbstractStatement {
             this.conn.setClientInfo(TSDBDriver.PROPERTY_KEY_DBNAME, this.database);
             result = false;
         } else {
-            JSONArray head = jsonObject.getJSONArray("head");
+            JSONArray head = jsonObject.getJSONArray("affected_rows");
             Integer rows = jsonObject.getInteger("rows");
             if (head.size() == 1 && ROW_NAME.equals(head.getString(0)) && rows == 1) {
                 this.resultSet = null;
@@ -104,19 +104,8 @@ public class RestfulStatement extends AbstractStatement {
         } else {
             dbname = "/" + dbname.toLowerCase();
         }
-        TimestampFormat timestampFormat = TimestampFormat.valueOf(conn.getClientInfo(TSDBDriver.PROPERTY_KEY_TIMESTAMP_FORMAT).trim().toUpperCase());
-        String url;
+        String url = protocol + "://" + conn.getHost() + ":" + conn.getPort() + "/rest/sql" + dbname;
 
-        switch (timestampFormat) {
-            case TIMESTAMP:
-                url = protocol + "://" + conn.getHost() + ":" + conn.getPort() + "/rest/sqlt" + dbname;
-                break;
-            case UTC:
-                url = protocol + "://" + conn.getHost() + ":" + conn.getPort() + "/rest/sqlutc" + dbname;
-                break;
-            default:
-                url = protocol + "://" + conn.getHost() + ":" + conn.getPort() + "/rest/sql" + dbname;
-        }
         if (this.conn.getToken() != null && !"".equals(this.conn.getToken().trim())) {
             url = url + "?token=" + this.conn.getToken();
         }
