@@ -195,18 +195,18 @@ public class BlockResultSet extends AbstractWSResultSet {
                 byte val = (byte) source;
                 return (val == 0x0) ? Boolean.FALSE : Boolean.TRUE;
             }
-            case TSDB_DATA_TYPE_TINYINT: {
-                return source;
-            }
             case TSDB_DATA_TYPE_UTINYINT: {
                 byte val = (byte) source;
                 return (short) val & 0xFF;
             }
+            case TSDB_DATA_TYPE_TINYINT:
             case TSDB_DATA_TYPE_SMALLINT:
             case TSDB_DATA_TYPE_INT:
             case TSDB_DATA_TYPE_BIGINT:
             case TSDB_DATA_TYPE_FLOAT:
-            case TSDB_DATA_TYPE_DOUBLE: {
+            case TSDB_DATA_TYPE_DOUBLE:
+            case TSDB_DATA_TYPE_BINARY:
+            case TSDB_DATA_TYPE_JSON:{
                 return source;
             }
             case TSDB_DATA_TYPE_USMALLINT: {
@@ -225,10 +225,6 @@ public class BlockResultSet extends AbstractWSResultSet {
                 long val = (long) source;
                 BigDecimal tmp = new BigDecimal(val >>> 1).multiply(new BigDecimal(2));
                 return (val & 0x1) == 0x1 ? tmp.add(new BigDecimal(1)) : tmp;
-            }
-            case TSDB_DATA_TYPE_BINARY:
-            case TSDB_DATA_TYPE_JSON: {
-                return source;
             }
             case TSDB_DATA_TYPE_NCHAR: {
                 int[] tmp = (int[]) source;
