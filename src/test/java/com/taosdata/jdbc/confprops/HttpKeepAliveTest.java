@@ -1,9 +1,7 @@
 package com.taosdata.jdbc.confprops;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
-import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.*;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -20,6 +18,7 @@ public class HttpKeepAliveTest {
 
     private static final String host = "127.0.0.1";
     private static final String db_name = "test_db";
+    private static Connection connection;
 
     @Test
     public void test() throws SQLException {
@@ -28,14 +27,6 @@ public class HttpKeepAliveTest {
         AtomicInteger exceptionCount = new AtomicInteger();
 
         // when
-        Properties props = new Properties();
-        props.setProperty("httpKeepAlive", "false");
-        props.setProperty("httpPoolSize", "20");
-        String url = SpecifyAddress.getInstance().getRestUrl();
-        if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
-        }
-        Connection connection = DriverManager.getConnection(url, props);
         try (Statement statement = connection.createStatement()) {
             statement.executeUpdate("create database if not exists " + db_name);
         }
@@ -63,4 +54,25 @@ public class HttpKeepAliveTest {
         Assert.assertEquals(multi, exceptionCount.get());
     }
 
+    @BeforeClass
+    public static void beforeClass() throws SQLException {
+        Properties props = new Properties();
+        props.setProperty("httpKeepAlive", "false");
+        props.setProperty("httpPoolSize", "20");
+
+        String url = SpecifyAddress.getInstance().getRestUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+        }
+        connection = DriverManager.getConnection(url, props);
+    }
+
+    @AfterClass
+    public static void afterClass() {
+        try (Statement statement = connection.createStatement()){
+            statement.executeUpdate("drop database if exists " + db_name);
+        } catch (SQLException e) {
+            // do nothing
+        }
+    }
 }

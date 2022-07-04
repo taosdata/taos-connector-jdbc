@@ -49,8 +49,8 @@ public class RestfulConnectionTest {
 
     @Test
     public void nativeSQL() throws SQLException {
-        String nativeSQL = conn.nativeSQL("select * from log.log");
-        assertEquals("select * from log.log", nativeSQL);
+        String nativeSQL = conn.nativeSQL("select * from test_db");
+        Assert.assertEquals("select * from test_db", nativeSQL);
     }
 
     @Test
