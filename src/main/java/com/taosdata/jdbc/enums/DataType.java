@@ -29,13 +29,13 @@ public enum DataType {
     ;
 
     private final String typeName;
-    private final int taosTypeValue;
     private final int jdbcTypeValue;
+    private final int taosTypeValue;
 
-    DataType(String typeName, int taosTypeValue, int jdbcTypeValue) {
+    DataType(String typeName, int jdbcTypeValue, int taosTypeValue) {
         this.typeName = typeName;
-        this.taosTypeValue = taosTypeValue;
         this.jdbcTypeValue = jdbcTypeValue;
+        this.taosTypeValue = taosTypeValue;
     }
 
     public String getTypeName() {
