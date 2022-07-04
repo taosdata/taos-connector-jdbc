@@ -1282,8 +1282,8 @@ public class JsonTagTest {
         resultSet.close();
         resultSet = statement.executeQuery("select jtag->'tag2' from batch_test");
         resultSet.next();
-        long l = resultSet.getLong(1);
-        Assert.assertEquals(5, l);
+        Double d = resultSet.getDouble(1);
+        Assert.assertEquals(5.0, d, 0);
         resultSet.close();
     }
 

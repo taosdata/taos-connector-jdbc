@@ -6,7 +6,6 @@ import org.junit.*;
 
 import java.sql.*;
 import java.time.Instant;
-import java.util.Calendar;
 import java.util.Properties;
 
 public class TimestampFormatTest {
