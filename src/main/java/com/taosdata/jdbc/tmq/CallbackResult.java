@@ -2,11 +2,11 @@ package com.taosdata.jdbc.tmq;
 
 import java.util.List;
 
-public class CallbackResult<V> {
+public class CallbackResult {
     private final int code;
-    private final List<V> recordList;
+    private final List<?> recordList;
 
-    public CallbackResult(int code, List<V> recordList) {
+    public CallbackResult(int code, List<?> recordList) {
         this.code = code;
         this.recordList = recordList;
     }
@@ -15,7 +15,7 @@ public class CallbackResult<V> {
         return code;
     }
 
-    public List<V> getRecordList() {
+    public List<?> getRecordList() {
         return recordList;
     }
 }
