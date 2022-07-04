@@ -2,6 +2,7 @@ package com.taosdata.jdbc.rs;
 
 import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.WrapperImpl;
+import com.taosdata.jdbc.enums.DataType;
 
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -139,7 +140,7 @@ public class RestfulResultSetMetaData extends WrapperImpl implements ResultSetMe
     @Override
     public String getColumnTypeName(int column) throws SQLException {
         int taosType = fields.get(column - 1).taos_type;
-        return TSDBConstants.taosType2JdbcTypeName(taosType);
+        return DataType.convertTaosType2DataType(taosType).getTypeName();
     }
 
     @Override

@@ -1,5 +1,6 @@
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.enums.DataType;
 import com.taosdata.jdbc.utils.StringUtils;
 
 import java.sql.*;
@@ -691,7 +692,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                 rowData.setStringValue(4, rs.getString("Field"));
                 // set DATA_TYPE
                 String typeName = rs.getString("Type");
-                rowData.setIntValue(5, TSDBConstants.typeName2JdbcType(typeName));
+                rowData.setIntValue(5, DataType.getDataType(typeName).getJdbcTypeValue());
                 // set TYPE_NAME
                 rowData.setStringValue(6, typeName);
                 // set COLUMN_SIZE

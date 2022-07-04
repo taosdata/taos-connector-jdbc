@@ -8,6 +8,7 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
 import com.taosdata.jdbc.*;
+import com.taosdata.jdbc.enums.DataType;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.enums.TimestampFormat;
 import com.taosdata.jdbc.utils.Utils;
@@ -97,17 +98,18 @@ public class RestfulResultSet extends AbstractResultSet {
      * use this method after TDengine-2.0.18.0 to parse column meta, restful add column_meta in resultSet
      * @Param columnMeta
      */
-    private void parseColumnMeta_new(JSONArray columnMeta) throws SQLException {
+    private void parseColumnMeta_new(JSONArray columnMeta) {
         columnNames.clear();
         columns.clear();
         for (int colIndex = 0; colIndex < columnMeta.size(); colIndex++) {
             JSONArray col = columnMeta.getJSONArray(colIndex);
             String col_name = col.getString(0);
-            int taos_type = col.getInteger(1);
-            int col_type = TSDBConstants.taosType2JdbcType(taos_type);
+            String typeName = col.getString(1);
+            DataType type = DataType.getDataType(typeName);
+            int col_type = type.getJdbcTypeValue();
             int col_length = col.getInteger(2);
             columnNames.add(col_name);
-            columns.add(new Field(col_name, col_type, col_length, "", taos_type));
+            columns.add(new Field(col_name, col_type, col_length, "", type.getTaosTypeValue()));
         }
     }
 

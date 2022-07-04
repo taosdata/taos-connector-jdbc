@@ -77,7 +77,7 @@ public class RestfulStatement extends AbstractStatement {
             this.conn.setClientInfo(TSDBDriver.PROPERTY_KEY_DBNAME, this.database);
             result = false;
         } else {
-            JSONArray head = jsonObject.getJSONArray("affected_rows");
+            JSONArray head = jsonObject.getJSONArray("column_meta");
             Integer rows = jsonObject.getInteger("rows");
             if (head.size() == 1 && ROW_NAME.equals(head.getString(0)) && rows == 1) {
                 this.resultSet = null;

@@ -19,14 +19,15 @@ import java.util.stream.IntStream;
 public class HttpKeepAliveTest {
 
     private static final String host = "127.0.0.1";
+    private static final String db_name = "test_db";
 
     @Test
     public void test() throws SQLException {
-        //given
+        // given
         int multi = 4000;
         AtomicInteger exceptionCount = new AtomicInteger();
 
-        //when
+        // when
         Properties props = new Properties();
         props.setProperty("httpKeepAlive", "false");
         props.setProperty("httpPoolSize", "20");
@@ -35,17 +36,18 @@ public class HttpKeepAliveTest {
             url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
         }
         Connection connection = DriverManager.getConnection(url, props);
-
+        try (Statement statement = connection.createStatement()) {
+            statement.executeUpdate("create database if not exists " + db_name);
+        }
         List<Thread> threads = IntStream.range(0, multi).mapToObj(i -> new Thread(
                 () -> {
                     try (Statement stmt = connection.createStatement()) {
-                        stmt.execute("insert into log.tb_not_exists values(now, 1)");
-                        stmt.execute("select last(*) from log.dn");
+                        stmt.execute("insert into " + db_name + ".tb_not_exists values(now, 1)");
+                        stmt.execute("select last(*) from " + db_name + ".dn");
                     } catch (SQLException throwables) {
                         exceptionCount.getAndIncrement();
                     }
-                }
-        )).collect(Collectors.toList());
+                })).collect(Collectors.toList());
 
         threads.forEach(Thread::start);
 
@@ -57,7 +59,7 @@ public class HttpKeepAliveTest {
             }
         }
 
-        //then
+        // then
         Assert.assertEquals(multi, exceptionCount.get());
     }
 
