@@ -11,6 +11,7 @@ import java.util.Properties;
 import static org.junit.Assert.assertEquals;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@Ignore // TODO 3.0
 public class ImportTest {
     private static Connection connection;
     static String dbName = "test_import";

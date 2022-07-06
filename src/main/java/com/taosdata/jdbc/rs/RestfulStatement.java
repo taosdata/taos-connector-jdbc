@@ -79,7 +79,7 @@ public class RestfulStatement extends AbstractStatement {
         } else {
             JSONArray head = jsonObject.getJSONArray("column_meta");
             Integer rows = jsonObject.getInteger("rows");
-            if (head.size() == 1 && ROW_NAME.equals(head.getString(0)) && rows == 1) {
+            if (head.size() == 1 && ROW_NAME.equals(head.getJSONArray(0).getString(0)) && rows == 1) {
                 this.resultSet = null;
                 this.affectedRows = getAffectedRows(jsonObject);
                 return false;
@@ -112,8 +112,8 @@ public class RestfulStatement extends AbstractStatement {
     }
 
     private int getAffectedRows(JSONObject jsonObject) throws SQLException {
-        JSONArray head = jsonObject.getJSONArray("head");
-        if (head.size() != 1 || !"affected_rows".equals(head.getString(0)))
+        JSONArray head = jsonObject.getJSONArray("column_meta");
+        if (head.size() != 1 || !"affected_rows".equals(head.getJSONArray(0).getString(0)))
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid variable: [" + head.toJSONString() + "]");
         JSONArray data = jsonObject.getJSONArray("data");
         if (data != null) {

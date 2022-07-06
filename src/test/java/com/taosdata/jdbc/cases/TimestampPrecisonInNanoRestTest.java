@@ -3,17 +3,14 @@ package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.*;
 
 import java.sql.*;
 import java.util.Properties;
 import java.text.Format;
 import java.text.SimpleDateFormat;
 
+@Ignore // TODO 3.0
 public class TimestampPrecisonInNanoRestTest {
 
     private static final String host = "127.0.0.1";

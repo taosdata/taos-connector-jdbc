@@ -14,7 +14,7 @@ public class InsertDbwithoutUseDbTest {
     private static final String host = "127.0.0.1";
     private static Properties properties;
     private static final Random random = new Random(System.currentTimeMillis());
-    private static final String dbname = "inWithoutDb";
+    private static final String dbname = "inwithoutdb";
 
     @Test
     public void case001() throws SQLException {

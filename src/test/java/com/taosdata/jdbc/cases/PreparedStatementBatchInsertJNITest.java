@@ -1,10 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.*;
 
 import java.sql.*;
 import java.util.List;
@@ -12,6 +9,7 @@ import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+@Ignore // TODO 3.0
 public class PreparedStatementBatchInsertJNITest {
 
     private static final String host = "127.0.0.1";

@@ -10,9 +10,9 @@ import java.util.List;
 public abstract class AbstractDatabaseMetaData extends WrapperImpl implements DatabaseMetaData {
 
     private final static String PRODUCT_NAME = "TDengine";
-    private final static String PRODUCT_VESION = "2.0.x.x";
-    private final static String DRIVER_VERSION = "2.0.x";
-    private final static int DRIVER_MAJAR_VERSION = 2;
+    private final static String PRODUCT_VESION = "3.0.x";
+    private final static String DRIVER_VERSION = "3.0.x";
+    private final static int DRIVER_MAJAR_VERSION = 3;
     private final static int DRIVER_MINOR_VERSION = 0;
 
     private String precision = TSDBConstants.DEFAULT_PRECISION;
@@ -614,7 +614,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                     TSDBResultSetRowData rowData = new TSDBResultSetRowData(10);
                     rowData.setStringValue(1, catalog);                                  //TABLE_CAT
                     rowData.setStringValue(2, null);                              //TABLE_SCHEM
-                    rowData.setStringValue(3, stables.getString("name"));    //TABLE_NAME
+                    rowData.setStringValue(3, stables.getString("stable_name"));    //TABLE_NAME
                     rowData.setStringValue(4, "TABLE");                           //TABLE_TYPE
                     rowData.setStringValue(5, "STABLE");                          //REMARKS
                     rowDataList.add(rowData);
@@ -689,14 +689,14 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                 // set TABLE_NAME
                 rowData.setStringValue(3, tableNamePattern);
                 // set COLUMN_NAME
-                rowData.setStringValue(4, rs.getString("Field"));
+                rowData.setStringValue(4, rs.getString("field"));
                 // set DATA_TYPE
-                String typeName = rs.getString("Type");
+                String typeName = rs.getString("type");
                 rowData.setIntValue(5, DataType.getDataType(typeName).getJdbcTypeValue());
                 // set TYPE_NAME
                 rowData.setStringValue(6, typeName);
                 // set COLUMN_SIZE
-                int length = rs.getInt("Length");
+                int length = rs.getInt("length");
                 rowData.setIntValue(7, calculateColumnSize(typeName, precision, length));
                 // set BUFFER LENGTH
                 rowData.setStringValue(8, null);
@@ -712,7 +712,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                 // set NULLABLE
                 rowData.setIntValue(11, isNullable(rowIndex, typeName));
                 // set REMARKS
-                String note = rs.getString("Note");
+                String note = rs.getString("note");
                 rowData.setStringValue(12, note.trim().isEmpty() ? null : note);
                 rowDataList.add(rowData);
                 rowIndex++;
@@ -1125,7 +1125,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
     }
 
     public int getSQLStateType() throws SQLException {
-        return 0;
+        return DatabaseMetaData.sqlStateSQL99;
     }
 
     public boolean locatorsUpdateCopy() throws SQLException {

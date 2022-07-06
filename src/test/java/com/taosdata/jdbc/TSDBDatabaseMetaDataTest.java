@@ -1,6 +1,5 @@
 package com.taosdata.jdbc;
 
-import com.taosdata.jdbc.utils.RuntimeUtils;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.StringUtils;
 import org.junit.*;
@@ -13,7 +12,7 @@ public class TSDBDatabaseMetaDataTest {
     private static String url;
     private static Connection connection;
     private static TSDBDatabaseMetaData metaData;
-
+    private static String db_name = "log";
 
     @Test
     public void unwrap() throws SQLException {
@@ -1100,28 +1099,36 @@ public class TSDBDatabaseMetaDataTest {
     }
 
     @BeforeClass
-    public static void beforeClass() {
-        try {
-            Properties properties = new Properties();
-            properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
-            properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "en_US.UTF-8");
-            properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
-            url = SpecifyAddress.getInstance().getJniUrl();
-            if (url == null) {
-                url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
-            }
-            connection = DriverManager.getConnection(url, properties);
-            metaData = connection.getMetaData().unwrap(TSDBDatabaseMetaData.class);
-        } catch (SQLException e) {
-            e.printStackTrace();
+    public static void beforeClass() throws SQLException {
+        Properties properties = new Properties();
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "en_US.UTF-8");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
+        url = SpecifyAddress.getInstance().getJniUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
         }
+        connection = DriverManager.getConnection(url, properties);
+        try (Statement statement = connection.createStatement()) {
+            statement.executeUpdate("create database if not exists " + db_name);
+            statement.executeUpdate("use " + db_name);
+            statement.executeUpdate(
+                    "create table if not exists dn (ts timestamp, cpu_taosd float, cpu_system float, cpu_cores int," +
+                            " mem_taosd float, mem_system float, mem_total int, disk_used float, disk_total int," +
+                            " band_speed float, io_read float, io_write float, req_http bigint, req_select bigint," +
+                            " req_insert bigint) tags (dnodeid int, fqdn binary(128))");
+        }
+        metaData = connection.getMetaData().unwrap(TSDBDatabaseMetaData.class);
     }
 
     @AfterClass
     public static void afterClass() {
         try {
             if (connection != null)
-                connection.close();
+                try (Statement statement = connection.createStatement()) {
+                    statement.executeUpdate("drop database if exists " + db_name);
+                }
+            connection.close();
         } catch (SQLException e) {
             e.printStackTrace();
         }

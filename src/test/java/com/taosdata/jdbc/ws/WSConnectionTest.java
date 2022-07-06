@@ -6,13 +6,11 @@ import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.sql.*;
 import java.util.Properties;
-import java.util.concurrent.TimeUnit;
 
 /**
  * You need to start taosadapter before testing this method
@@ -24,11 +22,12 @@ public class WSConnectionTest {
     private static String host = "127.0.0.1";
     private static String port = "6041";
     private Connection connection;
+    private String db_name = "information_schema";
 
     @Test
     @Description("normal test with websocket server")
-    public void normalConection() throws SQLException {
-        String url = "jdbc:TAOS-RS://" + host + ":" + port + "/log?user=root&password=taosdata";
+    public void normalConnection() throws SQLException {
+        String url = "jdbc:TAOS-RS://" + host + ":" + port + "/" + db_name + "?user=root&password=taosdata";
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
         connection = DriverManager.getConnection(url, properties);
@@ -36,7 +35,7 @@ public class WSConnectionTest {
 
     @Test
     @Description("url has no db")
-    public void withoutDBConection() throws SQLException {
+    public void withoutDBConnection() throws SQLException {
         String url = "jdbc:TAOS-RS://" + host + ":" + port + "/?user=root&password=taosdata";
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");

@@ -3,11 +3,13 @@ package com.taosdata.jdbc;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.sql.*;
 import java.util.Properties;
 
+@Ignore // TODO 3.0
 public class TSDBConnectionTest {
 
     private static final String host = "127.0.0.1";

@@ -15,6 +15,7 @@ import java.util.Properties;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "JsonTag", author = "huolibo", version = "2.0.38")
+@Ignore // TODO 3.0
 public class WSJsonTagTest {
     private static String host = "127.0.0.1";
     private static final String dbName = "json_tag_test";

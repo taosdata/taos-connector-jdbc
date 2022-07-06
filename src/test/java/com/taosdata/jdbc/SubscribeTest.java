@@ -1,10 +1,7 @@
 package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.*;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -13,6 +10,7 @@ import java.sql.Statement;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
+@Ignore // TODO 3.0
 public class SubscribeTest {
 
     Connection connection;

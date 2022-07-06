@@ -1,6 +1,5 @@
 package com.taosdata.jdbc.rs;
 
-import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.WrapperImpl;
 import com.taosdata.jdbc.enums.DataType;
 

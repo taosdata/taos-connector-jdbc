@@ -3,6 +3,7 @@ package com.taosdata.jdbc.cases;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.sql.*;
@@ -10,6 +11,7 @@ import java.sql.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+@Ignore // TODO 3.0
 public class UseNowInsertTimestampTest {
     private static String url ;
 

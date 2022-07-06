@@ -4,10 +4,7 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
 import com.taosdata.jdbc.utils.SpecifyAddress;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 
 import java.io.InputStream;
 import java.io.Reader;
@@ -18,6 +15,7 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Properties;
 
+@Ignore // TODO 3.0
 public class TSDBResultSetTest {
 
     private static final String host = "127.0.0.1";
