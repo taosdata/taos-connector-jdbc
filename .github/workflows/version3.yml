@@ -28,32 +28,25 @@ jobs:
       - name: checkout TDengine
         uses: actions/checkout@v3
         with:
-          fetch-depth: 1
           repository: 'taosdata/TDengine'
           path: 'TDengine'
           ref: '3.0'
           submodules: 'recursive'
 
       - name: install TDengine
-        run: cd TDengine && mkdir debug && cd debug && cmake .. && make && sudo make install
+        run: cd TDengine && git submodule update --init --recursive && mkdir debug && cd debug && cmake .. -DBUILD_JDBC=false -DBUILD_TOOLS=false -DBUILD_HTTP=false && make && sudo make install
 
-      - name: start taosd
-        run: nohup sudo taosd &
+      - name: shell
+        run: |
+          cat >start.sh<<EOF 
+          ulimit -n 65535 && taosd 
+          EOF
 
-      - name: checkout taosAdapter
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 1
-          repository: 'taosdata/taosadapter'
-          ref: '3.0'
-
-      - name: Set up Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: '1.17'
+      - name: taosd
+        run: nohup sudo sh ./start.sh &
 
       - name: start taosadapter
-        run: go build && nohup sudo ./taosadapter &
+        run: sudo taosadapter &
 
       - name: checkout
         uses: actions/checkout@v3
