@@ -15,59 +15,47 @@ public class TSDBDriverTest {
     private Connection conn;
 
     @Test
-    public void connectWithJdbcURL() {
+    public void connectWithJdbcURL() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS://localhost:6030/log?user=root&password=taosdata";
+            url = "jdbc:TAOS://localhost:6030/?user=root&password=taosdata";
         } else {
-            url += "log?user=root&password=taosdata";
+            url += "?user=root&password=taosdata";
         }
-        try {
-            conn = DriverManager.getConnection(url);
-            assertNotNull("failure - connection should not be null", conn);
-        } catch (SQLException e) {
-            fail("failure - should not throw Exception");
-        }
+        conn = DriverManager.getConnection(url);
+        assertNotNull("failure - connection should not be null", conn);
     }
 
     @Test
-    public void connectWithProperties() {
+    public void connectWithProperties() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS://localhost:6030/log?user=root&password=taosdata";
+            url = "jdbc:TAOS://localhost:6030/?user=root&password=taosdata";
         } else {
-            url += "log?user=root&password=taosdata";
+            url += "?user=root&password=taosdata";
         }
         Properties connProps = new Properties();
         connProps.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
         connProps.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "en_US.UTF-8");
         connProps.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
-        try {
-            conn = DriverManager.getConnection(url, connProps);
-            assertNotNull("failure - connection should not be null", conn);
-        } catch (SQLException e) {
-            fail("failure - should not throw Exception");
-        }
+        conn = DriverManager.getConnection(url, connProps);
+        assertNotNull("failure - connection should not be null", conn);
     }
 
     @Test
-    public void connectWithConfigFile() {
+    public void connectWithConfigFile() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS://:/log?user=root&password=taosdata";
-        }else {
-            url += "log?user=root&password=taosdata";
+            url = "jdbc:TAOS://:/?user=root&password=taosdata";
+        } else {
+            url += "?user=root&password=taosdata";
         }
         Properties connProps = new Properties();
         connProps.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
         connProps.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "en_US.UTF-8");
         connProps.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
-        try {
-            conn = DriverManager.getConnection(url, connProps);
-            assertNotNull("failure - connection should not be null", conn);
-        } catch (SQLException e) {
-            fail("failure - should not throw Exception");
-        }
+        conn = DriverManager.getConnection(url, connProps);
+        assertNotNull("failure - connection should not be null", conn);
     }
 
     @Test
@@ -163,9 +151,9 @@ public class TSDBDriverTest {
         Driver driver = new TSDBDriver();
         String url = SpecifyAddress.getInstance().getJniWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS://localhost:6030/log?user=root&password=taosdata";
+            url = "jdbc:TAOS://localhost:6030/information_schema?user=root&password=taosdata";
         } else {
-            url += "log?user=root&password=taosdata";
+            url += "information_schema?user=root&password=taosdata";
         }
         String host = SpecifyAddress.getInstance().getHost();
         if (host == null) {
@@ -183,7 +171,7 @@ public class TSDBDriverTest {
             if (info.name.equals(TSDBDriver.PROPERTY_KEY_PORT))
                 assertEquals("failure - port should be " + port, port, info.value);
             if (info.name.equals(TSDBDriver.PROPERTY_KEY_DBNAME))
-                assertEquals("failure - dbname should be test", "log", info.value);
+                assertEquals("failure - dbname should be information_schema", "information_schema", info.value);
             if (info.name.equals(TSDBDriver.PROPERTY_KEY_USER))
                 assertEquals("failure - user should be root", "root", info.value);
             if (info.name.equals(TSDBDriver.PROPERTY_KEY_PASSWORD))

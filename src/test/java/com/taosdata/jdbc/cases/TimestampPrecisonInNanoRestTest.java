@@ -140,11 +140,11 @@ public class TimestampPrecisonInNanoRestTest {
     }
 
     @Test
-    public void canImportTimestampAndQueryByEqualToInNumberTypeInBothFirstAndSecondCol() {
+    public void canImportTimestampAndQueryByEqualToInNumberTypeInBothFirstAndSecondCol() throws SQLException {
         try (Statement stmt = conn.createStatement()) {
             long timestamp4 = timestamp1 * 1000_000 + 123123;
             stmt.executeUpdate("import into " + ns_timestamp_db + ".weather(ts, ts2, f1) values(" + timestamp4 + ", " + timestamp4 + ", 127)");
-            ResultSet rs = stmt.executeQuery("select count(*) from " + ns_timestamp_db + ".weather where ts = '" + timestamp4 + "'");
+            ResultSet rs = stmt.executeQuery("select count(*) from " + ns_timestamp_db + ".weather where ts = " + timestamp4);
             checkCount(1l, rs);
             rs = stmt.executeQuery("select ts from " + ns_timestamp_db + ".weather where ts = " + timestamp4 );
             checkTime(timestamp4, rs);
@@ -152,8 +152,6 @@ public class TimestampPrecisonInNanoRestTest {
             checkCount(1l, rs);
             rs = stmt.executeQuery("select ts2 from " + ns_timestamp_db + ".weather where ts2 = " + timestamp4 );
             checkTime(timestamp4, rs);
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
     }
 
