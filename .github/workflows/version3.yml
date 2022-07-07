@@ -30,7 +30,7 @@ jobs:
         with:
           repository: 'taosdata/TDengine'
           path: 'TDengine'
-          ref: '3.0'
+          ref: 'fix/TD-17156'
           submodules: 'recursive'
 
       - name: install TDengine
