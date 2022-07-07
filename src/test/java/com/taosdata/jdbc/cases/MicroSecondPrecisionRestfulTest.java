@@ -8,7 +8,7 @@ import org.junit.*;
 import java.sql.*;
 import java.util.Properties;
 
-@Ignore // TODO 3.0
+@Ignore // TODO 3.0 core dumped
 public class MicroSecondPrecisionRestfulTest {
 
     private static final String host = "127.0.0.1";

@@ -7,7 +7,7 @@ import org.junit.*;
 
 import java.sql.*;
 import java.util.Properties;
-@Ignore // TODO 3.0
+
 public class MicroSecondPrecisionJNITest {
 
     private static final String host = "127.0.0.1";

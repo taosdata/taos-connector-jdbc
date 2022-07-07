@@ -10,7 +10,7 @@ import java.sql.Statement;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
-@Ignore // TODO 3.0
+@Ignore // TODO 3.0 subscribe
 public class SubscribeTest {
 
     Connection connection;

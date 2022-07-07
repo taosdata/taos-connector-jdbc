@@ -9,7 +9,6 @@ import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-@Ignore // TODO 3.0
 public class PreparedStatementBatchInsertJNITest {
 
     private static final String host = "127.0.0.1";

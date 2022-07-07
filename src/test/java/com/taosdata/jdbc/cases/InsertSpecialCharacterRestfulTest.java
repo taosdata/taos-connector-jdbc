@@ -5,7 +5,6 @@ import org.junit.*;
 
 import java.sql.*;
 
-@Ignore // TODO 3.0
 public class InsertSpecialCharacterRestfulTest {
 
     private static final String host = "127.0.0.1";

@@ -22,7 +22,7 @@ import java.util.Set;
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "JsonTag", author = "huolibo", version = "2.0.37")
 
-@Ignore // TODO 3.0
+@Ignore // TODO 3.0 json
 public class RestfulJsonTagTest {
     private static String host = "127.0.0.1";
     private static final String dbName = "json_tag_test";

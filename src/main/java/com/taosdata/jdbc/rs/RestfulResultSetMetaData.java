@@ -179,6 +179,7 @@ public class RestfulResultSetMetaData extends WrapperImpl implements ResultSetMe
                 return Timestamp.class.getName();
             case Types.BINARY:
             case Types.NCHAR:
+            case Types.VARCHAR:
                 return String.class.getName();
         }
         return columnClassName;

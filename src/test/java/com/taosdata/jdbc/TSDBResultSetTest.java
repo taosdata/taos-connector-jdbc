@@ -15,7 +15,6 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Properties;
 
-@Ignore // TODO 3.0
 public class TSDBResultSetTest {
 
     private static final String host = "127.0.0.1";

@@ -10,8 +10,8 @@ import java.util.List;
 public abstract class AbstractDatabaseMetaData extends WrapperImpl implements DatabaseMetaData {
 
     private final static String PRODUCT_NAME = "TDengine";
-    private final static String PRODUCT_VESION = "3.0.x";
-    private final static String DRIVER_VERSION = "3.0.x";
+    private final static String PRODUCT_VESION = "3.0.0.0";
+    private final static String DRIVER_VERSION = "3.0.0.0";
     private final static int DRIVER_MAJAR_VERSION = 3;
     private final static int DRIVER_MINOR_VERSION = 0;
 
@@ -728,7 +728,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
         return DatabaseMetaData.columnNullable;
     }
 
-    private Integer calculateColumnSize(String typeName, String precisionType, int length) {
+    private int calculateColumnSize(String typeName, String precisionType, int length) {
         switch (typeName) {
             case "TIMESTAMP":
                 return precisionType.equals("ms") ? TSDBConstants.TIMESTAMP_MS_PRECISION : TSDBConstants.TIMESTAMP_US_PRECISION;
@@ -748,9 +748,10 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                 return TSDBConstants.DOUBLE_PRECISION;
             case "NCHAR":
             case "BINARY":
+            case "VARCHAR":
                 return length;
             default:
-                return null;
+                return 0;
         }
     }
 
@@ -1217,7 +1218,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
             rowData.setStringValue(1, catalog);
             rowData.setStringValue(2, null);
             rowData.setStringValue(3, table);
-            String primaryKey = rs.getString("Field");
+            String primaryKey = rs.getString("field");
             rowData.setStringValue(4, primaryKey);
             rowData.setShortValue(5, (short) 1);
             rowData.setStringValue(6, primaryKey);

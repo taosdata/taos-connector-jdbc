@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.Properties;
 import java.util.Random;
 
-@Ignore // TODO 3.0
 public class TSDBPreparedStatementTest {
 
     private static final String host = "127.0.0.1";
@@ -301,6 +300,7 @@ public class TSDBPreparedStatementTest {
     }
 
     @Test
+    @Ignore // TODO 3.0 core dumped
     public void executeTest() throws SQLException {
         Statement stmt = conn.createStatement();
 
@@ -413,6 +413,7 @@ public class TSDBPreparedStatementTest {
     }
 
     @Test
+    @Ignore // TODO 3.0 core dumped
     public void bindDataSelectColumnTest() throws SQLException {
         Statement stmt = conn.createStatement();
 

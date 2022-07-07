@@ -13,12 +13,12 @@ public enum DataType {
     NULL("NULL", Types.NULL, TSDB_DATA_TYPE_NULL),
     BOOL("BOOL", Types.BOOLEAN, TSDB_DATA_TYPE_BOOL),
     TINYINT("TINYINT", Types.TINYINT, TSDB_DATA_TYPE_TINYINT),
-    UTINYINT("UTINYINT", Types.TINYINT, TSDB_DATA_TYPE_UTINYINT),
-    USMALLINT("USMALLINT", Types.SMALLINT, TSDB_DATA_TYPE_USMALLINT),
+    UTINYINT("TINYINT UNSIGNED", Types.TINYINT, TSDB_DATA_TYPE_UTINYINT),
+    USMALLINT("SMALLINT UNSIGNED", Types.SMALLINT, TSDB_DATA_TYPE_USMALLINT),
     SMALLINT("SMALLINT", Types.SMALLINT, TSDB_DATA_TYPE_SMALLINT),
-    UINT("UINT", Types.INTEGER, TSDB_DATA_TYPE_UINT),
+    UINT("INT UNSIGNED", Types.INTEGER, TSDB_DATA_TYPE_UINT),
     INT("INT", Types.INTEGER, TSDB_DATA_TYPE_INT),
-    UBIGINT("UBIGINT", Types.BIGINT, TSDB_DATA_TYPE_UBIGINT),
+    UBIGINT("BIGINT UNSIGNED", Types.BIGINT, TSDB_DATA_TYPE_UBIGINT),
     BIGINT("BIGINT", Types.BIGINT, TSDB_DATA_TYPE_BIGINT),
     FLOAT("FLOAT", Types.FLOAT, TSDB_DATA_TYPE_FLOAT),
     DOUBLE("DOUBLE", Types.DOUBLE, TSDB_DATA_TYPE_DOUBLE),
@@ -74,6 +74,9 @@ public enum DataType {
     }
 
     public static DataType convertTaosType2DataType(int taosType) throws SQLException {
+        if (taosType == TSDB_DATA_TYPE_BINARY) {
+            return BINARY;
+        }
         for (DataType type : DataType.values()) {
             if (taosType == type.getTaosTypeValue()) {
                 return type;

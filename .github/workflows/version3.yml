@@ -1,4 +1,4 @@
-name: CI
+name: version3
 
 on:
   push:
@@ -31,11 +31,11 @@ jobs:
           fetch-depth: 1
           repository: 'taosdata/TDengine'
           path: 'TDengine'
-          ref: 'develop'
+          ref: '3.0'
           submodules: 'recursive'
 
       - name: install TDengine
-        run: cd TDengine && git submodule update --init --recursive && mkdir debug && cd debug && cmake .. -DBUILD_JDBC=false -DBUILD_TOOLS=false -DBUILD_HTTP=false && make && sudo make install
+        run: cd TDengine && mkdir debug && cd debug && cmake .. && make && sudo make install
 
       - name: start taosd
         run: nohup sudo taosd &

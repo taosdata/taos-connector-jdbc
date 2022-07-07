@@ -7,7 +7,6 @@ import java.sql.*;
 import java.util.Properties;
 import java.util.UUID;
 
-@Ignore // TODO 3.0
 public class TSDBStatementTest {
     private static final String host = "127.0.0.1";
     private static Connection conn;

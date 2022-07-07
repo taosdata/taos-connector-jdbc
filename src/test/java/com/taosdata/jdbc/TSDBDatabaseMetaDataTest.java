@@ -103,12 +103,12 @@ public class TSDBDatabaseMetaDataTest {
 
     @Test
     public void getDriverVersion() throws SQLException {
-        Assert.assertEquals("2.0.x", metaData.getDriverVersion());
+        Assert.assertEquals("3.0.x", metaData.getDriverVersion());
     }
 
     @Test
     public void getDriverMajorVersion() {
-        Assert.assertEquals(2, metaData.getDriverMajorVersion());
+        Assert.assertEquals(3, metaData.getDriverMajorVersion());
     }
 
     @Test
@@ -1045,7 +1045,7 @@ public class TSDBDatabaseMetaDataTest {
 
     @Test
     public void getSQLStateType() throws SQLException {
-        Assert.assertEquals(0, metaData.getSQLStateType());
+        Assert.assertEquals(DatabaseMetaData.sqlStateSQL99, metaData.getSQLStateType());
     }
 
     @Test
@@ -1110,7 +1110,7 @@ public class TSDBDatabaseMetaDataTest {
         }
         connection = DriverManager.getConnection(url, properties);
         try (Statement statement = connection.createStatement()) {
-            statement.executeUpdate("create database if not exists " + db_name);
+            statement.executeUpdate("create database if not exists " + db_name + " precision 'ns'");
             statement.executeUpdate("use " + db_name);
             statement.executeUpdate(
                     "create table if not exists dn (ts timestamp, cpu_taosd float, cpu_system float, cpu_cores int," +

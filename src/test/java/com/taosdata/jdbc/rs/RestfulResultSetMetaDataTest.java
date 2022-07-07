@@ -118,14 +118,13 @@ public class RestfulResultSetMetaDataTest {
     }
 
     @Test
-    @Ignore // TODO 3.0
     public void getColumnType() throws SQLException {
         Assert.assertEquals(Types.TIMESTAMP, meta.getColumnType(1));
         Assert.assertEquals(Types.INTEGER, meta.getColumnType(2));
         Assert.assertEquals(Types.BIGINT, meta.getColumnType(3));
         Assert.assertEquals(Types.FLOAT, meta.getColumnType(4));
         Assert.assertEquals(Types.DOUBLE, meta.getColumnType(5));
-        Assert.assertEquals(Types.BINARY, meta.getColumnType(6));
+        Assert.assertEquals(Types.VARCHAR, meta.getColumnType(6));
         Assert.assertEquals(Types.SMALLINT, meta.getColumnType(7));
         Assert.assertEquals(Types.TINYINT, meta.getColumnType(8));
         Assert.assertEquals(Types.BOOLEAN, meta.getColumnType(9));
@@ -133,7 +132,6 @@ public class RestfulResultSetMetaDataTest {
     }
 
     @Test
-    @Ignore // TODO 3.0
     public void getColumnTypeName() throws SQLException {
         Assert.assertEquals("TIMESTAMP", meta.getColumnTypeName(1));
         Assert.assertEquals("INT", meta.getColumnTypeName(2));
@@ -163,7 +161,6 @@ public class RestfulResultSetMetaDataTest {
     }
 
     @Test
-    @Ignore // TODO 3.0
     public void getColumnClassName() throws SQLException {
         Assert.assertEquals(Timestamp.class.getName(), meta.getColumnClassName(1));
         Assert.assertEquals(Integer.class.getName(), meta.getColumnClassName(2));

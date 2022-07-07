@@ -8,7 +8,7 @@ import java.sql.*;
 import java.util.Random;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-@Ignore // TODO 3.0
+@Ignore // TODO 3.0 unknown
 public class BatchFetchTest {
 
     private static String host = "127.0.0.1";

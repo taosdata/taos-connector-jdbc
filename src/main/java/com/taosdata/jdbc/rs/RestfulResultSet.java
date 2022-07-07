@@ -7,10 +7,12 @@ import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
-import com.taosdata.jdbc.*;
+import com.taosdata.jdbc.AbstractResultSet;
+import com.taosdata.jdbc.TSDBConstants;
+import com.taosdata.jdbc.TSDBError;
+import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.enums.DataType;
 import com.taosdata.jdbc.enums.TimestampPrecision;
-import com.taosdata.jdbc.enums.TimestampFormat;
 import com.taosdata.jdbc.utils.Utils;
 
 import java.math.BigDecimal;
@@ -150,77 +152,29 @@ public class RestfulResultSet extends AbstractResultSet {
     private Timestamp parseTimestampColumnData(JSONArray row, int colIndex) throws SQLException {
         if (row.get(colIndex) == null)
             return null;
-        String tsFormatUpperCase = this.statement.getConnection().getClientInfo(TSDBDriver.PROPERTY_KEY_TIMESTAMP_FORMAT).toUpperCase();
-        TimestampFormat timestampFormat = TimestampFormat.valueOf(tsFormatUpperCase);
-        switch (timestampFormat) {
-            case TIMESTAMP: {
-                Long value = row.getLong(colIndex);
-                // TODO: this implementation has bug if the timestamp bigger than 9999_9999_9999_9
-                if (value < 1_0000_0000_0000_0L) {
-                    this.timestampPrecision = TimestampPrecision.MS;
-                    return new Timestamp(value);
-                }
-                if (value >= 1_0000_0000_0000_0L && value < 1_000_000_000_000_000_0l) {
-                    this.timestampPrecision = TimestampPrecision.US;
-                    long epochSec = value / 1000_000L;
-                    long nanoAdjustment = value % 1000_000L * 1000L;
-                    return Timestamp.from(Instant.ofEpochSecond(epochSec, nanoAdjustment));
-                }
-                if (value >= 1_000_000_000_000_000_0l) {
-                    this.timestampPrecision = TimestampPrecision.NS;
-                    long epochSec = value / 1000_000_000L;
-                    long nanoAdjustment = value % 1000_000_000L;
-                    return Timestamp.from(Instant.ofEpochSecond(epochSec, nanoAdjustment));
-                }
-            }
-            case UTC: {
-                String value = row.getString(colIndex);
-                int index = value.lastIndexOf(":");
-                // ns timestamp: yyyy-MM-ddTHH:mm:ss.SSSSSSSSS+0x:00
-                if (index > 19) {
-                    // ns timestamp: yyyy-MM-ddTHH:mm:ss.SSSSSSSSS+0x00
-                    value = value.substring(0, index) + value.substring(index + 1);
-                }
-                ZonedDateTime parse = ZonedDateTime.parse(value, rfc3339Parser);
-                Matcher matcher = pattern.matcher(value);
-                int len = 0;
-                if (matcher.find()) {
-                    len = matcher.group(1).length();
-                }
-                if (len > 6) {
-                    this.timestampPrecision = TimestampPrecision.NS;
-                } else if (len > 3) {
-                    this.timestampPrecision = TimestampPrecision.US;
-                } else {
-                    this.timestampPrecision = TimestampPrecision.MS;
-                }
-                return Timestamp.from(parse.toInstant());
-            }
-            case STRING:
-            default: {
-                String value = row.getString(colIndex);
-                int precision = Utils.guessTimestampPrecision(value);
-                this.timestampPrecision = precision;
 
-                if (precision == TimestampPrecision.MS) {
-                    // ms timestamp: yyyy-MM-dd HH:mm:ss.SSS
-                    return (Timestamp) row.getTimestamp(colIndex);
-                }
-                if (precision == TimestampPrecision.US) {
-                    // us timestamp: yyyy-MM-dd HH:mm:ss.SSSSSS
-                    long epochSec = Timestamp.valueOf(value.substring(0, 19)).getTime() / 1000;
-                    long nanoAdjustment = Integer.parseInt(value.substring(20)) * 1000L;
-                    return Timestamp.from(Instant.ofEpochSecond(epochSec, nanoAdjustment));
-                }
-                if (precision == TimestampPrecision.NS) {
-                    // ms timestamp: yyyy-MM-dd HH:mm:ss.SSSSSSSSS
-                    long epochSec = Timestamp.valueOf(value.substring(0, 19)).getTime() / 1000;
-                    long nanoAdjustment = Integer.parseInt(value.substring(20));
-                    return Timestamp.from(Instant.ofEpochSecond(epochSec, nanoAdjustment));
-                }
-                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN_TIMESTAMP_PRECISION);
-            }
+        String value = row.getString(colIndex);
+        int index = value.lastIndexOf(":");
+        // ns timestamp: yyyy-MM-ddTHH:mm:ss.SSSSSSSSS+0x:00
+        if (index > 19) {
+            // ns timestamp: yyyy-MM-ddTHH:mm:ss.SSSSSSSSS+0x00
+            value = value.substring(0, index) + value.substring(index + 1);
         }
+        ZonedDateTime parse = ZonedDateTime.parse(value, rfc3339Parser);
+        Matcher matcher = pattern.matcher(value);
+        int len = 0;
+        if (matcher.find()) {
+            len = matcher.group(1).length();
+        }
+        if (len > 6) {
+            this.timestampPrecision = TimestampPrecision.NS;
+        } else if (len > 3) {
+            this.timestampPrecision = TimestampPrecision.US;
+        } else {
+            this.timestampPrecision = TimestampPrecision.MS;
+        }
+        return Timestamp.from(parse.toInstant());
+
     }
 
     public static class Field {

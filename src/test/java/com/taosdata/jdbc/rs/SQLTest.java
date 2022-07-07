@@ -279,8 +279,7 @@ public class SQLTest {
     @Test
     public void testCase024() {
         // given
-//        String sql = "import into restful_test.t5 using weather tags('石家庄') values('2020-01-01 00:01:00.000', 22.22)";
-        String sql = "insert into restful_test.t5 using weather tags('石家庄') values('2020-01-01 00:01:00.000', 22.22)";
+        String sql = "import into restful_test.t5 using weather tags('石家庄') values('2020-01-01 00:01:00.000', 22.22)";
         // when
         int affectedRows = executeUpdate(connection, sql);
         // then
@@ -290,8 +289,7 @@ public class SQLTest {
     @Test
     public void testCase025() {
         // given
-//        String sql = "import into restful_test.t6 using weather tags('沈阳') values('2020-01-01 00:01:00.000', 22.22),('2020-01-01 00:02:00.000', 22.22)";
-        String sql = "insert into restful_test.t6 using weather tags('沈阳') values('2020-01-01 00:01:00.000', 22.22),('2020-01-01 00:02:00.000', 22.22)";
+        String sql = "import into restful_test.t6 using weather tags('沈阳') values('2020-01-01 00:01:00.000', 22.22),('2020-01-01 00:02:00.000', 22.22)";
         // when
         int affectedRows = executeUpdate(connection, sql);
         // then
@@ -301,8 +299,7 @@ public class SQLTest {
     @Test
     public void testCase026() {
         // given
-//        String sql = "import into restful_test.t7 using weather tags('长沙') values('2020-01-01 00:01:00.000', 22.22) restful_test.t8 using weather tags('吉林') values('2020-01-01 00:01:00.000', 22.22)";
-        String sql = "insert into restful_test.t7 using weather tags('长沙') values('2020-01-01 00:01:00.000', 22.22) restful_test.t8 using weather tags('吉林') values('2020-01-01 00:01:00.000', 22.22)";
+        String sql = "import into restful_test.t7 using weather tags('长沙') values('2020-01-01 00:01:00.000', 22.22) restful_test.t8 using weather tags('吉林') values('2020-01-01 00:01:00.000', 22.22)";
 
         // when
         int affectedRows = executeUpdate(connection, sql);
@@ -313,8 +310,7 @@ public class SQLTest {
     @Test
     public void testCase027() {
         // given
-//        String sql = "import into restful_test.t9 using weather tags('武汉') values('2020-01-01 00:01:00.000', 22.22) ,('2020-01-02 00:01:00.000', 22.22) restful_test.t10 using weather tags('哈尔滨') values('2020-01-01 00:01:00.000', 22.22),('2020-01-02 00:01:00.000', 22.22)";
-        String sql = "insert into restful_test.t9 using weather tags('武汉') values('2020-01-01 00:01:00.000', 22.22) ,('2020-01-02 00:01:00.000', 22.22) restful_test.t10 using weather tags('哈尔滨') values('2020-01-01 00:01:00.000', 22.22),('2020-01-02 00:01:00.000', 22.22)";
+        String sql = "import into restful_test.t9 using weather tags('武汉') values('2020-01-01 00:01:00.000', 22.22) ,('2020-01-02 00:01:00.000', 22.22) restful_test.t10 using weather tags('哈尔滨') values('2020-01-01 00:01:00.000', 22.22),('2020-01-02 00:01:00.000', 22.22)";
         // when
         int affectedRows = executeUpdate(connection, sql);
         // then
@@ -386,7 +382,7 @@ public class SQLTest {
     }
 
     @Test
-    @Ignore // TODO 3.0
+    @Ignore // TODO 3.0 core dumped
     public void testCase035() {
         String sql = "select last_row(*) from restful_test.weather";
         // when
@@ -487,7 +483,7 @@ public class SQLTest {
     }
 
     @Test
-    @Ignore // TODO 3.0
+    @Ignore // TODO 3.0 core dumped
     public void testCase046() {
         String sql = "select last(*) from restful_test.weather where ts < now - 1h group by tbname order by tbname";
         // when
