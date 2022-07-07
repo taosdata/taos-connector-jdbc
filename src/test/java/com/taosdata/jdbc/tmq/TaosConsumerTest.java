@@ -87,6 +87,7 @@ public class TaosConsumerTest {
             }
         }, 0, 10, TimeUnit.MILLISECONDS);
 
+        TimeUnit.MILLISECONDS.sleep(11);
         String topic = "topic_ctb_column_with_bean";
         // create topic
         statement.executeUpdate("create topic if not exists " + topic + " as select ts, c1, c2, c3, c4, t1 from ct1");
@@ -129,7 +130,7 @@ public class TaosConsumerTest {
 
         try (TaosConsumer<ResultBean> consumer = new TaosConsumer<>(properties)) {
             consumer.subscribe(Collections.singletonList(topic));
-            for (int i = 0; i < 100; i++) {
+            for (int i = 0; i < 10; i++) {
                 for (ResultBean bean : consumer.poll(Duration.ofMillis(100))) {
                     TimeUnit.MILLISECONDS.sleep(100);
                 }
@@ -153,7 +154,7 @@ public class TaosConsumerTest {
 
         try (TaosConsumer<ResultBean> consumer = new TaosConsumer<>(properties)) {
             consumer.subscribe(Collections.singletonList(topic));
-            for (int i = 0; i < 100; i++) {
+            for (int i = 0; i < 10; i++) {
                 for (ResultBean bean : consumer.poll(Duration.ofMillis(100))) {
                     TimeUnit.MILLISECONDS.sleep(100);
                 }
@@ -179,7 +180,7 @@ public class TaosConsumerTest {
 
         try (TaosConsumer<ResultBean> consumer = new TaosConsumer<>(properties)) {
             consumer.subscribe(Collections.singletonList(topic));
-            for (int i = 0; i < 100; i++) {
+            for (int i = 0; i < 10; i++) {
                 for (ResultBean bean : consumer.poll(Duration.ofMillis(100))) {
                     TimeUnit.MILLISECONDS.sleep(100);
                 }
