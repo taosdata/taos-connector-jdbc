@@ -14,6 +14,11 @@
  *****************************************************************************/
 package com.taosdata.jdbc;
 
+import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
+import com.google.common.primitives.Shorts;
+import com.taosdata.jdbc.enums.TimestampPrecision;
+
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
@@ -24,11 +29,6 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-
-import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
-import com.google.common.primitives.Shorts;
-import com.taosdata.jdbc.enums.TimestampPrecision;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
 
@@ -264,7 +264,7 @@ public class TSDBResultSetBlockData {
         if (obj instanceof Short)
             return Shorts.toByteArray((short) obj);
         if (obj instanceof Byte)
-            return new byte[] { (byte) obj };
+            return new byte[]{(byte) obj};
 
         return obj.toString().getBytes();
     }
@@ -483,10 +483,15 @@ public class TSDBResultSetBlockData {
             case TSDB_DATA_TYPE_BIGINT:
             case TSDB_DATA_TYPE_FLOAT:
             case TSDB_DATA_TYPE_DOUBLE:
-            case TSDB_DATA_TYPE_NCHAR: {
+            case TSDB_DATA_TYPE_NCHAR:
+            case TSDB_DATA_TYPE_BINARY:
+            case TSDB_DATA_TYPE_JSON: {
                 return source;
             }
-
+            case TSDB_DATA_TYPE_UTINYINT: {
+                byte val = (byte) source;
+                return val & 0xFF;
+            }
             case TSDB_DATA_TYPE_USMALLINT: {
                 short val = (short) source;
                 return val & 0xFFFF;

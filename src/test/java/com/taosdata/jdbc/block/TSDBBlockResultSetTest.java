@@ -17,7 +17,6 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Properties;
 
-@Ignore // TODO 3.0 unknownq
 public class TSDBBlockResultSetTest {
 
     private static final String host = "127.0.0.1";
