@@ -234,10 +234,10 @@ public class TMQConnector extends TSDBJNIConnector {
     private native String tmqGetTableName(long res);
 
     public int fetchBlock(long resultSet, TSDBResultSetBlockData blockData, int flag, List<ColumnMetaData> columnMetaData) {
-        int ret = this.fetchBlockImp(this.taos, resultSet, blockData, flag, columnMetaData);
+        int ret = this.fetchRawBlockImp(this.taos, resultSet, blockData, flag, columnMetaData);
         columnMetaData.forEach(column -> column.setColIndex(column.getColIndex() + 1));
         return ret;
     }
 
-    private native int fetchBlockImp(long connection, long resultSet, TSDBResultSetBlockData blockData, int flag, List<ColumnMetaData> columnMetaData);
+    private native int fetchRawBlockImp(long connection, long resultSet, TSDBResultSetBlockData blockData, int flag, List<ColumnMetaData> columnMetaData);
 }
