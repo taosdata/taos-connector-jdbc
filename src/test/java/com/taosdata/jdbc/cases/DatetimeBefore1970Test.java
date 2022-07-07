@@ -12,6 +12,7 @@ import java.sql.*;
 
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "negative value convert to timestamp", author = "huolibo", version = "2.0.37")
+@Ignore // TODO 3.0 timestamp
 public class DatetimeBefore1970Test {
 
     private static final String host = "127.0.0.1";
