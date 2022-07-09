@@ -38,7 +38,8 @@ public abstract class TSDBConstants {
     public static final int TSDB_DATA_TYPE_BIGINT = 5;
     public static final int TSDB_DATA_TYPE_FLOAT = 6;
     public static final int TSDB_DATA_TYPE_DOUBLE = 7;
-    public static final int TSDB_DATA_TYPE_BINARY = 8;
+    public static final int TSDB_DATA_TYPE_VARCHAR = 8;
+    public static final int TSDB_DATA_TYPE_BINARY = TSDB_DATA_TYPE_VARCHAR;
     public static final int TSDB_DATA_TYPE_TIMESTAMP = 9;
     public static final int TSDB_DATA_TYPE_NCHAR = 10;
     /**

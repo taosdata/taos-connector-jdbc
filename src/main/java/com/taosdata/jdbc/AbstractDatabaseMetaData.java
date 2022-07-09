@@ -697,11 +697,16 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                 rowData.setStringValue(6, typeName);
                 // set COLUMN_SIZE
                 int length = rs.getInt("length");
-                rowData.setIntValue(7, calculateColumnSize(typeName, precision, length));
+                int size = DataType.calculateColumnSize(typeName, precision, length);
+                if (size != -1) {
+                    rowData.setIntValue(7, size);
+                } else {
+                    rowData.setString(7, null);
+                }
                 // set BUFFER LENGTH
                 rowData.setStringValue(8, null);
                 // set DECIMAL_DIGITS
-                Integer decimalDigits = calculateDecimalDigits(typeName);
+                Integer decimalDigits = DataType.calculateDecimalDigits(typeName);
                 if (decimalDigits != null) {
                     rowData.setIntValue(9, decimalDigits);
                 } else {
@@ -726,45 +731,6 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
         if (index == 0 && "TIMESTAMP".equals(typeName))
             return DatabaseMetaData.columnNoNulls;
         return DatabaseMetaData.columnNullable;
-    }
-
-    private int calculateColumnSize(String typeName, String precisionType, int length) {
-        switch (typeName) {
-            case "TIMESTAMP":
-                return precisionType.equals("ms") ? TSDBConstants.TIMESTAMP_MS_PRECISION : TSDBConstants.TIMESTAMP_US_PRECISION;
-            case "BOOL":
-                return TSDBConstants.BOOLEAN_PRECISION;
-            case "TINYINT":
-                return TSDBConstants.TINYINT_PRECISION;
-            case "SMALLINT":
-                return TSDBConstants.SMALLINT_PRECISION;
-            case "INT":
-                return TSDBConstants.INT_PRECISION;
-            case "BIGINT":
-                return TSDBConstants.BIGINT_PRECISION;
-            case "FLOAT":
-                return TSDBConstants.FLOAT_PRECISION;
-            case "DOUBLE":
-                return TSDBConstants.DOUBLE_PRECISION;
-            case "NCHAR":
-            case "BINARY":
-            case "VARCHAR":
-                return length;
-            default:
-                return 0;
-        }
-    }
-
-    private Integer calculateDecimalDigits(String typeName) {
-        switch (typeName) {
-            case "TINYINT":
-            case "SMALLINT":
-            case "INT":
-            case "BIGINT":
-                return 0;
-            default:
-                return null;
-        }
     }
 
     private ColumnMetaData buildTableCatalogMeta(int colIndex) {
