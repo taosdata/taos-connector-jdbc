@@ -21,7 +21,7 @@ public class ConsumerRecords<V> implements Iterable<V> {
     }
 
     @Override
-    public Iterator iterator() {
+    public Iterator<V> iterator() {
         return new Iterator<V>() {
             final Iterator<? extends Iterable<V>> iters = records.values().iterator();
             Iterator<V> current;

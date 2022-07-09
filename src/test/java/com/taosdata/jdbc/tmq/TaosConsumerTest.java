@@ -12,7 +12,6 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @FixMethodOrder
-@Ignore
 public class TaosConsumerTest {
     private static final String host = "127.0.0.1";
     private static final String dbName = "tmq_test";
@@ -88,6 +87,7 @@ public class TaosConsumerTest {
             }
         }, 0, 10, TimeUnit.MILLISECONDS);
 
+        TimeUnit.MILLISECONDS.sleep(11);
         String topic = "topic_ctb_column_with_bean";
         // create topic
         statement.executeUpdate("create topic if not exists " + topic + " as select ts, c1, c2, c3, c4, t1 from ct1");
@@ -120,16 +120,17 @@ public class TaosConsumerTest {
 
         String topic = "topic_sync";
         // create topic
-        statement.executeUpdate("create topic if not exists " + topic + " as select ts, c1 from ct1");
+        statement.executeUpdate("create topic if not exists " + topic + " as select ts, c1, c2, c3, c4, t1 from ct0");
 
         Properties properties = new Properties();
 //        properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "false");
         properties.setProperty(TMQConstants.GROUP_ID, "tg3");
+        properties.setProperty(TMQConstants.VALUE_DESERIALIZER, "com.taosdata.jdbc.tmq.ResultDeserializer");
 
         try (TaosConsumer<ResultBean> consumer = new TaosConsumer<>(properties)) {
             consumer.subscribe(Collections.singletonList(topic));
-            for (int i = 0; i < 100; i++) {
+            for (int i = 0; i < 10; i++) {
                 for (ResultBean bean : consumer.poll(Duration.ofMillis(100))) {
                     TimeUnit.MILLISECONDS.sleep(100);
                 }
@@ -144,15 +145,16 @@ public class TaosConsumerTest {
 
         String topic = "topic_async";
         // create topic
-        statement.executeUpdate("create topic if not exists " + topic + " as select ts, c1 from ct1");
+        statement.executeUpdate("create topic if not exists " + topic + " as select ts, c1, c2, c3, c4, t1 from ct0");
 
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.GROUP_ID, "tg4");
+        properties.setProperty(TMQConstants.VALUE_DESERIALIZER, "com.taosdata.jdbc.tmq.ResultDeserializer");
 
         try (TaosConsumer<ResultBean> consumer = new TaosConsumer<>(properties)) {
             consumer.subscribe(Collections.singletonList(topic));
-            for (int i = 0; i < 100; i++) {
+            for (int i = 0; i < 10; i++) {
                 for (ResultBean bean : consumer.poll(Duration.ofMillis(100))) {
                     TimeUnit.MILLISECONDS.sleep(100);
                 }
@@ -169,15 +171,16 @@ public class TaosConsumerTest {
 
         String topic = "topic_async_auto";
         // create topic
-        statement.executeUpdate("create topic if not exists " + topic + " as select ts, c1 from ct1");
+        statement.executeUpdate("create topic if not exists " + topic + " as select ts, c1, c2, c3, c4, t1 from ct0");
 
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.GROUP_ID, "tg5");
+        properties.setProperty(TMQConstants.VALUE_DESERIALIZER, "com.taosdata.jdbc.tmq.ResultDeserializer");
 
         try (TaosConsumer<ResultBean> consumer = new TaosConsumer<>(properties)) {
             consumer.subscribe(Collections.singletonList(topic));
-            for (int i = 0; i < 100; i++) {
+            for (int i = 0; i < 10; i++) {
                 for (ResultBean bean : consumer.poll(Duration.ofMillis(100))) {
                     TimeUnit.MILLISECONDS.sleep(100);
                 }

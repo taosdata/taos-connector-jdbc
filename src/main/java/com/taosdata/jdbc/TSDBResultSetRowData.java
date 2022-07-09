@@ -298,6 +298,8 @@ public class TSDBResultSetRowData {
             case TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP:
             case TSDBConstants.TSDB_DATA_TYPE_BIGINT:
                 return (Long) obj;
+            case TSDBConstants.TSDB_DATA_TYPE_JSON:
+                return (float) Double.parseDouble((String) obj);
             default:
                 return 0;
         }
@@ -338,6 +340,8 @@ public class TSDBResultSetRowData {
             case TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP:
             case TSDBConstants.TSDB_DATA_TYPE_BIGINT:
                 return (Long) obj;
+            case TSDBConstants.TSDB_DATA_TYPE_JSON:
+                return Double.parseDouble((String) obj);
             default:
                 return 0;
         }

@@ -4,8 +4,6 @@ import com.taosdata.jdbc.AbstractConnection;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
-import com.taosdata.jdbc.enums.TimestampFormat;
-import com.taosdata.jdbc.utils.HttpClientPoolUtil;
 
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
@@ -58,7 +56,7 @@ public class RestfulConnection extends AbstractConnection {
     public void close() throws SQLException {
         if (isClosed)
             return;
-        //TODO: release all resources
+        // TODO: release all resources
         isClosed = true;
     }
 

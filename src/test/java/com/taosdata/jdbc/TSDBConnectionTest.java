@@ -1,7 +1,6 @@
 package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
-import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -47,8 +46,8 @@ public class TSDBConnectionTest {
 
     @Test
     public void nativeSQL() throws SQLException {
-        String nativeSQL = conn.nativeSQL("select * from log.log");
-        Assert.assertEquals("select * from log.log", nativeSQL);
+        String nativeSQL = conn.nativeSQL("select * from test_db");
+        Assert.assertEquals("select * from test_db", nativeSQL);
     }
 
     @Test
@@ -374,25 +373,11 @@ public class TSDBConnectionTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
         String url = SpecifyAddress.getInstance().getJniWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/log?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + host + ":6030?user=root&password=taosdata";
         } else {
-            url += "log?user=root&password=taosdata";
+            url += "?user=root&password=taosdata";
         }
         conn = DriverManager.getConnection(url, properties);
-        // create test database for test cases
-        try (Statement stmt = conn.createStatement()) {
-            stmt.execute("create database if not exists test");
-        }
-    }
-
-    @AfterClass
-    public static void afterClass() throws SQLException {
-        if (conn != null) {
-            Statement statement = conn.createStatement();
-            statement.execute("drop database if exists test");
-            statement.close();
-            conn.close();
-        }
     }
 
 }

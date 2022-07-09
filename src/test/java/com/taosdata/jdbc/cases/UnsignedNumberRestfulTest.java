@@ -20,7 +20,7 @@ public class UnsignedNumberRestfulTest {
     @Test
     public void testCase001() throws SQLException {
         try (Statement stmt = conn.createStatement()) {
-            ResultSet rs = stmt.executeQuery("select * from us_table");
+            ResultSet rs = stmt.executeQuery("select * from " + dbname + ".us_table");
             ResultSetMetaData meta = rs.getMetaData();
             assertResultSetMetaData(meta);
             while (rs.next()) {

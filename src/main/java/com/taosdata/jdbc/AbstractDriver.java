@@ -5,7 +5,6 @@ import com.taosdata.jdbc.utils.StringUtils;
 import java.sql.Driver;
 import java.sql.DriverPropertyInfo;
 import java.util.Properties;
-import java.util.StringTokenizer;
 
 public abstract class AbstractDriver implements Driver {
 

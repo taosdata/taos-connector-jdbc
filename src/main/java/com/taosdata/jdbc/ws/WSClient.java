@@ -8,7 +8,6 @@ import org.java_websocket.handshake.ServerHandshake;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.*;
 
@@ -23,7 +22,7 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
 
     private boolean auth;
     private int reqId;
-    private ConcurrentHashMap<Transport, Integer> transports = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Transport, Integer> transports = new ConcurrentHashMap<>();
 
     public void removeTransports(Transport transport) {
         transports.remove(transport);

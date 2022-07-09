@@ -3,13 +3,18 @@ package com.taosdata.jdbc.utils;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.taosdata.jdbc.TSDBDriver;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.List;
 import java.util.Properties;
 import java.util.stream.Collectors;
@@ -20,7 +25,9 @@ public class HttpClientPoolUtilTest {
 
     String user = "root";
     String password = "taosdata";
-    String host = "127.0.0.1";
+    static String host = "127.0.0.1";
+    private static Connection connection;
+    private static String db_name = "http_test";
 
     @Test
     public void useLog() {
@@ -58,8 +65,8 @@ public class HttpClientPoolUtilTest {
             try {
 //                String token = "/KfeAzX/f9na8qdtNZmtONryp201ma04bEl8LcvLUd7a8qdtNZmtONryp201ma04";
                 String token = login(multi);
-                executeOneSql("insert into log.tb_not_exist values(now, 1)", token);
-                executeOneSql("select last(*) from log.dn", token);
+                executeOneSql("insert into " + db_name + ".tb_not_exist values(now, 1)", token);
+                executeOneSql("select last(*) from " + db_name + ".dn", token);
             } catch (SQLException | UnsupportedEncodingException e) {
                 e.printStackTrace();
             }
@@ -92,9 +99,8 @@ public class HttpClientPoolUtilTest {
         HttpClientPoolUtil.init(properties);
         String result = HttpClientPoolUtil.execute(loginUrl);
         JSONObject jsonResult = JSON.parseObject(result);
-        String status = jsonResult.getString("status");
         String token = jsonResult.getString("desc");
-        if (!status.equals("succ")) {
+        if (jsonResult.getIntValue("code") != 0) {
             throw new SQLException(jsonResult.getString("desc"));
         }
         return "Basic " + token;
@@ -111,7 +117,7 @@ public class HttpClientPoolUtilTest {
         }
         String result = HttpClientPoolUtil.execute(url, sql, token);
         JSONObject resultJson = JSON.parseObject(result);
-        if (resultJson.getString("status").equals("error")) {
+        if (resultJson.getIntValue("code") == 0) {
 //            HttpClientPoolUtil.reset();
 //            throw TSDBError.createSQLException(resultJson.getInteger("code"), resultJson.getString("desc"));
             return false;
@@ -119,5 +125,33 @@ public class HttpClientPoolUtilTest {
         return true;
     }
 
+
+    @BeforeClass
+    public static void beforeClass() throws SQLException {
+        Properties properties = new Properties();
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "en_US.UTF-8");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
+        String url = SpecifyAddress.getInstance().getRestUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+        }
+        connection = DriverManager.getConnection(url, properties);
+        // create test database for test cases
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute("create database if not exists " + db_name);
+        }
+
+    }
+
+    @AfterClass
+    public static void afterClass() throws SQLException {
+        if (connection != null) {
+            Statement statement = connection.createStatement();
+            statement.execute("drop database if exists " + db_name);
+            statement.close();
+            connection.close();
+        }
+    }
 
 }

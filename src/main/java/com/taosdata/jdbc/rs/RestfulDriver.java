@@ -89,8 +89,8 @@ public class RestfulDriver extends AbstractDriver {
             if (null != cloudToken) {
                 loginUrl = loginUrl + "?token=" + cloudToken;
             }
-            WSClient client;
-            Transport transport;
+            WSClient client = null;
+            Transport transport = null;
             try {
                 int timeout = Integer.parseInt(props.getProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, String.valueOf(Transport.DEFAULT_MESSAGE_WAIT_TIMEOUT)));
                 int maxRequest = Integer.parseInt(props.getProperty(TSDBDriver.HTTP_POOL_SIZE, HttpClientPoolUtil.DEFAULT_MAX_PER_ROUTE));
@@ -115,6 +115,13 @@ public class RestfulDriver extends AbstractDriver {
                 throw new SQLException("Websocket url parse error: " + loginUrl, e);
             } catch (InterruptedException e) {
                 throw new SQLException("create websocket connection has been Interrupted ", e);
+            } finally {
+                if (null != transport && transport.isClosed()){
+                    transport.close();
+                }
+                if (null != client && client.isClosed()){
+                    client.close();
+                }
             }
             props.setProperty(TSDBDriver.PROPERTY_KEY_TIMESTAMP_FORMAT, String.valueOf(TimestampFormat.TIMESTAMP));
             TaosGlobalConfig.setCharset(props.getProperty(TSDBDriver.PROPERTY_KEY_CHARSET));

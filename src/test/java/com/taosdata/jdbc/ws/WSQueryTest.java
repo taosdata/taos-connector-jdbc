@@ -11,8 +11,6 @@ import org.junit.runner.RunWith;
 import java.sql.*;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
 @RunWith(CatalogRunner.class)
@@ -21,24 +19,22 @@ import java.util.stream.IntStream;
 public class WSQueryTest {
     private static final String host = "127.0.0.1";
     private static final int port = 6041;
-    private static final String databaseName = "ws_query";
+    private static final String db_name = "ws_query";
     private static final String tableName = "wq";
     private Connection connection;
-    private long now;
 
     @Description("query")
     @Test
     public void queryBlock() throws InterruptedException {
-        CountDownLatch latch = new CountDownLatch(1000);
-        IntStream.range(1, 10000).limit(1000).parallel().forEach(x -> {
+        int num = 10;
+        CountDownLatch latch = new CountDownLatch(num);
+        IntStream.range(0, num).parallel().forEach(x -> {
             try (Statement statement = connection.createStatement()) {
-                statement.execute("insert into " + databaseName + "." + tableName + " values(now+100s, 100)");
+                statement.execute("insert into " + db_name + "." + tableName + " values(now+100s, 100)");
 
-                ResultSet resultSet = statement.executeQuery("select * from " + databaseName + "." + tableName);
+                ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + tableName);
                 resultSet.next();
                 Assert.assertEquals(100, resultSet.getInt(2));
-                statement.close();
-
             } catch (SQLException e) {
                 e.printStackTrace();
             } finally {
@@ -52,18 +48,30 @@ public class WSQueryTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":" + port + "/log?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + host + ":" + port + "/?user=root&password=taosdata";
         } else {
-            url += "log?user=root&password=taosdata";
+            url += "?user=root&password=taosdata";
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
         connection = DriverManager.getConnection(url, properties);
         Statement statement = connection.createStatement();
-        statement.execute("drop database if exists " + databaseName);
-        statement.execute("create database " + databaseName);
-        statement.execute("use " + databaseName);
-        statement.execute("create table if not exists " + databaseName + "." + tableName + "(ts timestamp, f int)");
+        statement.execute("drop database if exists " + db_name);
+        statement.execute("create database " + db_name);
+        statement.execute("use " + db_name);
+        statement.execute("create table if not exists " + db_name + "." + tableName + "(ts timestamp, f int)");
         statement.close();
+    }
+
+    @After
+    public void after() throws SQLException {
+        if (null != connection) {
+            try (Statement statement = connection.createStatement()) {
+                statement.executeUpdate("drop database if exists " + db_name);
+            } catch (SQLException e) {
+                // do nothing
+            }
+            connection.close();
+        }
     }
 }

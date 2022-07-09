@@ -7,7 +7,6 @@ import com.taosdata.jdbc.AbstractStatement;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
-import com.taosdata.jdbc.enums.TimestampFormat;
 import com.taosdata.jdbc.utils.HttpClientPoolUtil;
 import com.taosdata.jdbc.utils.SqlSyntaxValidator;
 
@@ -60,7 +59,7 @@ public class RestfulStatement extends AbstractStatement {
         if (isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
 
-        //如果执行了use操作应该将当前Statement的catalog设置为新的database
+        // 如果执行了use操作应该将当前Statement的catalog设置为新的database
         boolean result = true;
 
         String response = HttpClientPoolUtil.execute(getUrl(), sql, this.conn.getAuth());
@@ -68,7 +67,7 @@ public class RestfulStatement extends AbstractStatement {
         if (null == jsonObject) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "sql: " + sql);
         }
-        if (jsonObject.getString("status").equals("error")) {
+        if (jsonObject.getIntValue("code") != 0) {
             throw TSDBError.createSQLException(jsonObject.getInteger("code"), "sql: " + sql + ", desc: " + jsonObject.getString("desc"));
         }
 
@@ -78,9 +77,9 @@ public class RestfulStatement extends AbstractStatement {
             this.conn.setClientInfo(TSDBDriver.PROPERTY_KEY_DBNAME, this.database);
             result = false;
         } else {
-            JSONArray head = jsonObject.getJSONArray("head");
+            JSONArray head = jsonObject.getJSONArray("column_meta");
             Integer rows = jsonObject.getInteger("rows");
-            if (head.size() == 1 && ROW_NAME.equals(head.getString(0)) && rows == 1) {
+            if (head.size() == 1 && ROW_NAME.equals(head.getJSONArray(0).getString(0)) && rows == 1) {
                 this.resultSet = null;
                 this.affectedRows = getAffectedRows(jsonObject);
                 return false;
@@ -104,19 +103,8 @@ public class RestfulStatement extends AbstractStatement {
         } else {
             dbname = "/" + dbname.toLowerCase();
         }
-        TimestampFormat timestampFormat = TimestampFormat.valueOf(conn.getClientInfo(TSDBDriver.PROPERTY_KEY_TIMESTAMP_FORMAT).trim().toUpperCase());
-        String url;
+        String url = protocol + "://" + conn.getHost() + ":" + conn.getPort() + "/rest/sql" + dbname;
 
-        switch (timestampFormat) {
-            case TIMESTAMP:
-                url = protocol + "://" + conn.getHost() + ":" + conn.getPort() + "/rest/sqlt" + dbname;
-                break;
-            case UTC:
-                url = protocol + "://" + conn.getHost() + ":" + conn.getPort() + "/rest/sqlutc" + dbname;
-                break;
-            default:
-                url = protocol + "://" + conn.getHost() + ":" + conn.getPort() + "/rest/sql" + dbname;
-        }
         if (this.conn.getToken() != null && !"".equals(this.conn.getToken().trim())) {
             url = url + "?token=" + this.conn.getToken();
         }
@@ -124,8 +112,8 @@ public class RestfulStatement extends AbstractStatement {
     }
 
     private int getAffectedRows(JSONObject jsonObject) throws SQLException {
-        JSONArray head = jsonObject.getJSONArray("head");
-        if (head.size() != 1 || !"affected_rows".equals(head.getString(0)))
+        JSONArray head = jsonObject.getJSONArray("column_meta");
+        if (head.size() != 1 || !"affected_rows".equals(head.getJSONArray(0).getString(0)))
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid variable: [" + head.toJSONString() + "]");
         JSONArray data = jsonObject.getJSONArray("data");
         if (data != null) {

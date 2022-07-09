@@ -1,18 +1,15 @@
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.*;
+import com.taosdata.jdbc.enums.DataType;
 import com.taosdata.jdbc.rs.RestfulResultSet;
 import com.taosdata.jdbc.rs.RestfulResultSetMetaData;
 import com.taosdata.jdbc.ws.entity.*;
 
+import javax.xml.crypto.Data;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.time.chrono.IsoChronology;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
-import java.time.format.ResolverStyle;
-import java.time.temporal.ChronoField;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -48,7 +45,7 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
         for (int i = 0; i < response.getFieldsCount(); i++) {
             String colName = response.getFieldsNames()[i];
             int taosType = response.getFieldsTypes()[i];
-            int jdbcType = TSDBConstants.taosType2JdbcType(taosType);
+            int jdbcType = DataType.convertTaosType2DataType(taosType).getJdbcTypeValue();
             int length = response.getFieldsLengths()[i];
             fields.add(new RestfulResultSet.Field(colName, jdbcType, length, "", taosType));
         }

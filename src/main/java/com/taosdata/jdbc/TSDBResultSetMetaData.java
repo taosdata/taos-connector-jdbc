@@ -14,6 +14,8 @@
  *****************************************************************************/
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.enums.DataType;
+
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -148,12 +150,12 @@ public class TSDBResultSetMetaData extends WrapperImpl implements ResultSetMetaD
 
     public int getColumnType(int column) throws SQLException {
         ColumnMetaData meta = this.colMetaDataList.get(column - 1);
-        return TSDBConstants.taosType2JdbcType(meta.getColType());
+        return DataType.convertTaosType2DataType(meta.getColType()).getJdbcTypeValue();
     }
 
     public String getColumnTypeName(int column) throws SQLException {
         ColumnMetaData meta = this.colMetaDataList.get(column - 1);
-        return TSDBConstants.taosType2JdbcTypeName(meta.getColType());
+        return DataType.convertTaosType2DataType(meta.getColType()).getTypeName();
     }
 
     public boolean isReadOnly(int column) throws SQLException {

@@ -13,7 +13,7 @@ public class MapDeserializer implements Deserializer<Map<String, Object>> {
 
         try {
             ResultSetMetaData metaData = data.getMetaData();
-            for (int i = 0; i < metaData.getColumnCount(); i++) {
+            for (int i = 1; i <= metaData.getColumnCount(); i++) {
                 map.put(metaData.getColumnLabel(i), data.getObject(i));
             }
         } catch (SQLException e) {

@@ -78,7 +78,7 @@ public class TaosConsumer<V> implements TConsumer<V> {
     }
 
     public void commitCallbackHandler(int code) {
-        CallbackResult<V> r = new CallbackResult<>(code, list);
+        CallbackResult r = new CallbackResult(code, list);
         if (TMQConstants.TMQ_SUCCESS != code) {
             Exception exception = TSDBError.createSQLException(code, connector.getErrMsg(code));
             executor.submit(() -> callback.onComplete(r, exception));

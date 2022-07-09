@@ -234,7 +234,7 @@ public class TSDBDriver extends AbstractDriver {
         int indexOfSlash = url.indexOf("/");
         if (indexOfSlash != -1) {
             if (indexOfSlash + 1 < url.length()) {
-                urlProps.setProperty(TSDBDriver.PROPERTY_KEY_DBNAME, url.substring(indexOfSlash + 1));
+                urlProps.setProperty(TSDBDriver.PROPERTY_KEY_DBNAME, url.substring(indexOfSlash + 1).toLowerCase());
             }
             url = url.substring(0, indexOfSlash);
         }

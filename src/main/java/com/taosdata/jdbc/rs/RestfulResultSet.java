@@ -7,9 +7,12 @@ import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
-import com.taosdata.jdbc.*;
+import com.taosdata.jdbc.AbstractResultSet;
+import com.taosdata.jdbc.TSDBConstants;
+import com.taosdata.jdbc.TSDBError;
+import com.taosdata.jdbc.TSDBErrorNumbers;
+import com.taosdata.jdbc.enums.DataType;
 import com.taosdata.jdbc.enums.TimestampPrecision;
-import com.taosdata.jdbc.enums.TimestampFormat;
 import com.taosdata.jdbc.utils.Utils;
 
 import java.math.BigDecimal;
@@ -28,7 +31,7 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class RestfulResultSet extends AbstractResultSet implements ResultSet {
+public class RestfulResultSet extends AbstractResultSet {
 
     public static DateTimeFormatter rfc3339Parser = new DateTimeFormatterBuilder()
             .parseCaseInsensitive()
@@ -71,21 +74,13 @@ public class RestfulResultSet extends AbstractResultSet implements ResultSet {
     public RestfulResultSet(String database, Statement statement, JSONObject resultJson) throws SQLException {
         this.statement = statement;
 
-        // get head
-        JSONArray head = resultJson.getJSONArray("head");
         // get column metadata
         JSONArray columnMeta = resultJson.getJSONArray("column_meta");
         // get row data
         JSONArray data = resultJson.getJSONArray("data");
-        // get rows
-        Integer rows = resultJson.getInteger("rows");
 
         // parse column_meta
-        if (columnMeta != null) {
-            parseColumnMeta_new(columnMeta);
-        } else {
-            parseColumnMeta_old(head, data, rows);
-        }
+        parseColumnMeta_new(columnMeta);
         this.metaData = new RestfulResultSetMetaData(database, columns, this);
 
         if (data == null || data.isEmpty())
@@ -105,59 +100,18 @@ public class RestfulResultSet extends AbstractResultSet implements ResultSet {
      * use this method after TDengine-2.0.18.0 to parse column meta, restful add column_meta in resultSet
      * @Param columnMeta
      */
-    private void parseColumnMeta_new(JSONArray columnMeta) throws SQLException {
+    private void parseColumnMeta_new(JSONArray columnMeta) {
         columnNames.clear();
         columns.clear();
         for (int colIndex = 0; colIndex < columnMeta.size(); colIndex++) {
             JSONArray col = columnMeta.getJSONArray(colIndex);
             String col_name = col.getString(0);
-            int taos_type = col.getInteger(1);
-            int col_type = TSDBConstants.taosType2JdbcType(taos_type);
+            String typeName = col.getString(1);
+            DataType type = DataType.getDataType(typeName);
+            int col_type = type.getJdbcTypeValue();
             int col_length = col.getInteger(2);
             columnNames.add(col_name);
-            columns.add(new Field(col_name, col_type, col_length, "", taos_type));
-        }
-    }
-
-    /**
-     * use this method before TDengine-2.0.18.0 to parse column meta
-     */
-    private void parseColumnMeta_old(JSONArray head, JSONArray data, int rows) {
-        columnNames.clear();
-        columns.clear();
-        for (int colIndex = 0; colIndex < head.size(); colIndex++) {
-            String col_name = head.getString(colIndex);
-            columnNames.add(col_name);
-
-            int col_type = Types.NULL;
-            int col_length = 0;
-            int taos_type = TSDBConstants.TSDB_DATA_TYPE_NULL;
-
-            JSONArray row0Json = data.getJSONArray(0);
-            if (colIndex < row0Json.size()) {
-                Object value = row0Json.get(colIndex);
-                if (value instanceof Boolean) {
-                    col_type = Types.BOOLEAN;
-                    col_length = 1;
-                    taos_type = TSDBConstants.TSDB_DATA_TYPE_BOOL;
-                }
-                if (value instanceof Byte || value instanceof Short || value instanceof Integer || value instanceof Long) {
-                    col_type = Types.BIGINT;
-                    col_length = 8;
-                    taos_type = TSDBConstants.TSDB_DATA_TYPE_BIGINT;
-                }
-                if (value instanceof Float || value instanceof Double || value instanceof BigDecimal) {
-                    col_type = Types.DOUBLE;
-                    col_length = 8;
-                    taos_type = TSDBConstants.TSDB_DATA_TYPE_DOUBLE;
-                }
-                if (value instanceof String) {
-                    col_type = Types.NCHAR;
-                    col_length = ((String) value).length();
-                    taos_type = TSDBConstants.TSDB_DATA_TYPE_NCHAR;
-                }
-            }
-            columns.add(new Field(col_name, col_type, col_length, "", taos_type));
+            columns.add(new Field(col_name, col_type, col_length, "", type.getTaosTypeValue()));
         }
     }
 
@@ -198,77 +152,29 @@ public class RestfulResultSet extends AbstractResultSet implements ResultSet {
     private Timestamp parseTimestampColumnData(JSONArray row, int colIndex) throws SQLException {
         if (row.get(colIndex) == null)
             return null;
-        String tsFormatUpperCase = this.statement.getConnection().getClientInfo(TSDBDriver.PROPERTY_KEY_TIMESTAMP_FORMAT).toUpperCase();
-        TimestampFormat timestampFormat = TimestampFormat.valueOf(tsFormatUpperCase);
-        switch (timestampFormat) {
-            case TIMESTAMP: {
-                Long value = row.getLong(colIndex);
-                //TODO: this implementation has bug if the timestamp bigger than 9999_9999_9999_9
-                if (value < 1_0000_0000_0000_0L) {
-                    this.timestampPrecision = TimestampPrecision.MS;
-                    return new Timestamp(value);
-                }
-                if (value >= 1_0000_0000_0000_0L && value < 1_000_000_000_000_000_0l) {
-                    this.timestampPrecision = TimestampPrecision.US;
-                    long epochSec = value / 1000_000L;
-                    long nanoAdjustment = value % 1000_000L * 1000L;
-                    return Timestamp.from(Instant.ofEpochSecond(epochSec, nanoAdjustment));
-                }
-                if (value >= 1_000_000_000_000_000_0l) {
-                    this.timestampPrecision = TimestampPrecision.NS;
-                    long epochSec = value / 1000_000_000L;
-                    long nanoAdjustment = value % 1000_000_000L;
-                    return Timestamp.from(Instant.ofEpochSecond(epochSec, nanoAdjustment));
-                }
-            }
-            case UTC: {
-                String value = row.getString(colIndex);
-                int index = value.lastIndexOf(":");
-                // ns timestamp: yyyy-MM-ddTHH:mm:ss.SSSSSSSSS+0x:00
-                if (index > 19) {
-                    // ns timestamp: yyyy-MM-ddTHH:mm:ss.SSSSSSSSS+0x00
-                    value = value.substring(0, index) + value.substring(index + 1);
-                }
-                ZonedDateTime parse = ZonedDateTime.parse(value, rfc3339Parser);
-                Matcher matcher = pattern.matcher(value);
-                int len = 0;
-                if (matcher.find()) {
-                    len = matcher.group(1).length();
-                }
-                if (len > 6) {
-                    this.timestampPrecision = TimestampPrecision.NS;
-                } else if (len > 3) {
-                    this.timestampPrecision = TimestampPrecision.US;
-                } else {
-                    this.timestampPrecision = TimestampPrecision.MS;
-                }
-                return Timestamp.from(parse.toInstant());
-            }
-            case STRING:
-            default: {
-                String value = row.getString(colIndex);
-                int precision = Utils.guessTimestampPrecision(value);
-                this.timestampPrecision = precision;
 
-                if (precision == TimestampPrecision.MS) {
-                    // ms timestamp: yyyy-MM-dd HH:mm:ss.SSS
-                    return (Timestamp) row.getTimestamp(colIndex);
-                }
-                if (precision == TimestampPrecision.US) {
-                    // us timestamp: yyyy-MM-dd HH:mm:ss.SSSSSS
-                    long epochSec = Timestamp.valueOf(value.substring(0, 19)).getTime() / 1000;
-                    long nanoAdjustment = Integer.parseInt(value.substring(20)) * 1000L;
-                    return Timestamp.from(Instant.ofEpochSecond(epochSec, nanoAdjustment));
-                }
-                if (precision == TimestampPrecision.NS) {
-                    // ms timestamp: yyyy-MM-dd HH:mm:ss.SSSSSSSSS
-                    long epochSec = Timestamp.valueOf(value.substring(0, 19)).getTime() / 1000;
-                    long nanoAdjustment = Integer.parseInt(value.substring(20));
-                    return Timestamp.from(Instant.ofEpochSecond(epochSec, nanoAdjustment));
-                }
-                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN_TIMESTAMP_PRECISION);
-            }
+        String value = row.getString(colIndex);
+        int index = value.lastIndexOf(":");
+        // ns timestamp: yyyy-MM-ddTHH:mm:ss.SSSSSSSSS+0x:00
+        if (index > 19) {
+            // ns timestamp: yyyy-MM-ddTHH:mm:ss.SSSSSSSSS+0x00
+            value = value.substring(0, index) + value.substring(index + 1);
         }
+        ZonedDateTime parse = ZonedDateTime.parse(value, rfc3339Parser);
+        Matcher matcher = pattern.matcher(value);
+        int len = 0;
+        if (matcher.find()) {
+            len = matcher.group(1).length();
+        }
+        if (len > 6) {
+            this.timestampPrecision = TimestampPrecision.NS;
+        } else if (len > 3) {
+            this.timestampPrecision = TimestampPrecision.US;
+        } else {
+            this.timestampPrecision = TimestampPrecision.MS;
+        }
+        return Timestamp.from(parse.toInstant());
+
     }
 
     public static class Field {
@@ -710,7 +616,7 @@ public class RestfulResultSet extends AbstractResultSet implements ResultSet {
 
     @Override
     public Timestamp getTimestamp(int columnIndex, Calendar cal) throws SQLException {
-        //TODO：did not use the specified timezone in cal
+        // TODO：did not use the specified timezone in cal
         return getTimestamp(columnIndex);
     }
 

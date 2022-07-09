@@ -1,7 +1,9 @@
 package com.taosdata.jdbc.cases;
 
+import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.sql.*;
@@ -11,7 +13,9 @@ public class GetLongWithDifferentTimestampPrecision {
 
     private final String host = "127.0.0.1";
 
+    @Description("rest return value only for time, have no precision info")
     @Test
+    @Ignore
     public void testRestful() throws SQLException {
         // given
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();

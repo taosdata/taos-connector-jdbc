@@ -3,8 +3,8 @@ package com.taosdata.jdbc;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.utils.SpecifyAddress;
-import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
@@ -171,6 +171,7 @@ public class TSDBJNIConnectorTest {
     }
 
     @Test
+    @Ignore // TODO 3.0 stmt
     public void param_bind_multi_batch_multi_table() throws SQLException {
         TSDBJNIConnector connector = new TSDBJNIConnector();
         connector.connect(host, 6030, null, "root", "taosdata");
@@ -216,13 +217,13 @@ public class TSDBJNIConnectorTest {
         colDataList.order(ByteOrder.LITTLE_ENDIAN);
         IntStream.range(0, numOfRows).forEach(ind -> colDataList.putLong(ts_start + ind * 1000L));
 
-        ByteBuffer lengthList = ByteBuffer.allocate(numOfRows * Long.BYTES);
+        ByteBuffer lengthList = ByteBuffer.allocate(numOfRows * Integer.BYTES);
         lengthList.order(ByteOrder.LITTLE_ENDIAN);
-        IntStream.range(0, numOfRows).forEach(ind -> lengthList.putLong(Integer.BYTES));
+        IntStream.range(0, numOfRows).forEach(ind -> lengthList.putInt(Integer.BYTES));
 
-        ByteBuffer isNullList = ByteBuffer.allocate(numOfRows * Integer.BYTES);
+        ByteBuffer isNullList = ByteBuffer.allocate(numOfRows * Byte.BYTES);
         isNullList.order(ByteOrder.LITTLE_ENDIAN);
-        IntStream.range(0, numOfRows).forEach(ind -> isNullList.putInt(0));
+        IntStream.range(0, numOfRows).forEach(ind -> isNullList.put((byte) 0));
 
         connector.bindColumnDataArray(stmt, colDataList, lengthList, isNullList, TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP, Long.BYTES, numOfRows, 0);
     }
@@ -232,13 +233,13 @@ public class TSDBJNIConnectorTest {
         colDataList.order(ByteOrder.LITTLE_ENDIAN);
         IntStream.range(0, numOfRows).forEach(ind -> colDataList.putInt(new Random().nextInt(100)));
 
-        ByteBuffer lengthList = ByteBuffer.allocate(numOfRows * Long.BYTES);
+        ByteBuffer lengthList = ByteBuffer.allocate(numOfRows * Integer.BYTES);
         lengthList.order(ByteOrder.LITTLE_ENDIAN);
-        IntStream.range(0, numOfRows).forEach(ind -> lengthList.putLong(Integer.BYTES));
+        IntStream.range(0, numOfRows).forEach(ind -> lengthList.putInt(Integer.BYTES));
 
-        ByteBuffer isNullList = ByteBuffer.allocate(numOfRows * Integer.BYTES);
+        ByteBuffer isNullList = ByteBuffer.allocate(numOfRows * Byte.BYTES);
         isNullList.order(ByteOrder.LITTLE_ENDIAN);
-        IntStream.range(0, numOfRows).forEach(ind -> isNullList.putInt(0));
+        IntStream.range(0, numOfRows).forEach(ind -> isNullList.put((byte) 0));
 
         connector.bindColumnDataArray(stmt, colDataList, lengthList, isNullList, TSDBConstants.TSDB_DATA_TYPE_INT, Integer.BYTES, numOfRows, 1);
     }
@@ -252,15 +253,14 @@ public class TSDBJNIConnectorTest {
         typeList.order(ByteOrder.LITTLE_ENDIAN);
         typeList.put((byte) TSDBConstants.TSDB_DATA_TYPE_INT);
 
-        ByteBuffer lengthList = ByteBuffer.allocate(1 * Long.BYTES);
+        ByteBuffer lengthList = ByteBuffer.allocate(Integer.BYTES);
         lengthList.order(ByteOrder.LITTLE_ENDIAN);
-        lengthList.putLong(Integer.BYTES);
+        lengthList.putInt(Integer.BYTES);
 
-        ByteBuffer isNullList = ByteBuffer.allocate(1 * Integer.BYTES);
+        ByteBuffer isNullList = ByteBuffer.allocate(Byte.BYTES);
         isNullList.order(ByteOrder.LITTLE_ENDIAN);
-        isNullList.putInt(0);
+        isNullList.put((byte) 0);
 
         connector.setBindTableNameAndTags(stmt, tbname, 1, tagDataList, typeList, lengthList, isNullList);
     }
-
 }

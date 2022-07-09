@@ -1,18 +1,18 @@
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.enums.DataType;
 import com.taosdata.jdbc.utils.StringUtils;
 
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public abstract class AbstractDatabaseMetaData extends WrapperImpl implements DatabaseMetaData {
 
     private final static String PRODUCT_NAME = "TDengine";
-    private final static String PRODUCT_VESION = "2.0.x.x";
-    private final static String DRIVER_VERSION = "2.0.x";
-    private final static int DRIVER_MAJAR_VERSION = 2;
+    private final static String PRODUCT_VESION = "3.0.0.0";
+    private final static String DRIVER_VERSION = "3.0.0.0";
+    private final static int DRIVER_MAJAR_VERSION = 3;
     private final static int DRIVER_MINOR_VERSION = 0;
 
     private String precision = TSDBConstants.DEFAULT_PRECISION;
@@ -614,7 +614,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                     TSDBResultSetRowData rowData = new TSDBResultSetRowData(10);
                     rowData.setStringValue(1, catalog);                                  //TABLE_CAT
                     rowData.setStringValue(2, null);                              //TABLE_SCHEM
-                    rowData.setStringValue(3, stables.getString("name"));    //TABLE_NAME
+                    rowData.setStringValue(3, stables.getString("stable_name"));    //TABLE_NAME
                     rowData.setStringValue(4, "TABLE");                           //TABLE_TYPE
                     rowData.setStringValue(5, "STABLE");                          //REMARKS
                     rowDataList.add(rowData);
@@ -689,19 +689,24 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                 // set TABLE_NAME
                 rowData.setStringValue(3, tableNamePattern);
                 // set COLUMN_NAME
-                rowData.setStringValue(4, rs.getString("Field"));
+                rowData.setStringValue(4, rs.getString("field"));
                 // set DATA_TYPE
-                String typeName = rs.getString("Type");
-                rowData.setIntValue(5, TSDBConstants.typeName2JdbcType(typeName));
+                String typeName = rs.getString("type");
+                rowData.setIntValue(5, DataType.getDataType(typeName).getJdbcTypeValue());
                 // set TYPE_NAME
                 rowData.setStringValue(6, typeName);
                 // set COLUMN_SIZE
-                int length = rs.getInt("Length");
-                rowData.setIntValue(7, calculateColumnSize(typeName, precision, length));
+                int length = rs.getInt("length");
+                int size = DataType.calculateColumnSize(typeName, precision, length);
+                if (size != -1) {
+                    rowData.setIntValue(7, size);
+                } else {
+                    rowData.setString(7, null);
+                }
                 // set BUFFER LENGTH
                 rowData.setStringValue(8, null);
                 // set DECIMAL_DIGITS
-                Integer decimalDigits = calculateDecimalDigits(typeName);
+                Integer decimalDigits = DataType.calculateDecimalDigits(typeName);
                 if (decimalDigits != null) {
                     rowData.setIntValue(9, decimalDigits);
                 } else {
@@ -712,7 +717,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                 // set NULLABLE
                 rowData.setIntValue(11, isNullable(rowIndex, typeName));
                 // set REMARKS
-                String note = rs.getString("Note");
+                String note = rs.getString("note");
                 rowData.setStringValue(12, note.trim().isEmpty() ? null : note);
                 rowDataList.add(rowData);
                 rowIndex++;
@@ -726,44 +731,6 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
         if (index == 0 && "TIMESTAMP".equals(typeName))
             return DatabaseMetaData.columnNoNulls;
         return DatabaseMetaData.columnNullable;
-    }
-
-    private Integer calculateColumnSize(String typeName, String precisionType, int length) {
-        switch (typeName) {
-            case "TIMESTAMP":
-                return precisionType.equals("ms") ? TSDBConstants.TIMESTAMP_MS_PRECISION : TSDBConstants.TIMESTAMP_US_PRECISION;
-            case "BOOL":
-                return TSDBConstants.BOOLEAN_PRECISION;
-            case "TINYINT":
-                return TSDBConstants.TINYINT_PRECISION;
-            case "SMALLINT":
-                return TSDBConstants.SMALLINT_PRECISION;
-            case "INT":
-                return TSDBConstants.INT_PRECISION;
-            case "BIGINT":
-                return TSDBConstants.BIGINT_PRECISION;
-            case "FLOAT":
-                return TSDBConstants.FLOAT_PRECISION;
-            case "DOUBLE":
-                return TSDBConstants.DOUBLE_PRECISION;
-            case "NCHAR":
-            case "BINARY":
-                return length;
-            default:
-                return null;
-        }
-    }
-
-    private Integer calculateDecimalDigits(String typeName) {
-        switch (typeName) {
-            case "TINYINT":
-            case "SMALLINT":
-            case "INT":
-            case "BIGINT":
-                return 0;
-            default:
-                return null;
-        }
     }
 
     private ColumnMetaData buildTableCatalogMeta(int colIndex) {
@@ -1125,7 +1092,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
     }
 
     public int getSQLStateType() throws SQLException {
-        return 0;
+        return DatabaseMetaData.sqlStateSQL99;
     }
 
     public boolean locatorsUpdateCopy() throws SQLException {
@@ -1217,7 +1184,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
             rowData.setStringValue(1, catalog);
             rowData.setStringValue(2, null);
             rowData.setStringValue(3, table);
-            String primaryKey = rs.getString("Field");
+            String primaryKey = rs.getString("field");
             rowData.setStringValue(4, primaryKey);
             rowData.setShortValue(5, (short) 1);
             rowData.setStringValue(6, primaryKey);

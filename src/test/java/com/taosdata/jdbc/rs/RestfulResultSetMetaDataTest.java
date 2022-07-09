@@ -1,10 +1,7 @@
 package com.taosdata.jdbc.rs;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 
 import java.sql.*;
 
@@ -127,7 +124,7 @@ public class RestfulResultSetMetaDataTest {
         Assert.assertEquals(Types.BIGINT, meta.getColumnType(3));
         Assert.assertEquals(Types.FLOAT, meta.getColumnType(4));
         Assert.assertEquals(Types.DOUBLE, meta.getColumnType(5));
-        Assert.assertEquals(Types.BINARY, meta.getColumnType(6));
+        Assert.assertEquals(Types.VARCHAR, meta.getColumnType(6));
         Assert.assertEquals(Types.SMALLINT, meta.getColumnType(7));
         Assert.assertEquals(Types.TINYINT, meta.getColumnType(8));
         Assert.assertEquals(Types.BOOLEAN, meta.getColumnType(9));

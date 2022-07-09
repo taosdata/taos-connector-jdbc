@@ -14,35 +14,30 @@
  *****************************************************************************/
 package com.taosdata.jdbc;
 
+import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
+import com.google.common.primitives.Shorts;
+import com.taosdata.jdbc.enums.TimestampPrecision;
+
 import java.io.UnsupportedEncodingException;
+import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.DoubleBuffer;
-import java.nio.FloatBuffer;
-import java.nio.IntBuffer;
-import java.nio.LongBuffer;
-import java.nio.ShortBuffer;
 import java.sql.SQLDataException;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
-import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
-import com.google.common.primitives.Shorts;
-import com.taosdata.jdbc.enums.TimestampPrecision;
-import com.taosdata.jdbc.utils.NullType;
+import static com.taosdata.jdbc.TSDBConstants.*;
 
 public class TSDBResultSetBlockData {
-    private static final int BINARY_LENGTH_OFFSET = 2;
     private int numOfRows = 0;
     private int rowIndex = 0;
 
     private List<ColumnMetaData> columnMetaDataList;
-    private ArrayList<Object> colData;
+    private ArrayList<List<Object>> colData;
 
     private int timestampPrecision;
 
@@ -82,7 +77,6 @@ public class TSDBResultSetBlockData {
 
     public void setNumOfCols(int numOfCols) {
         this.colData = new ArrayList<>(numOfCols);
-        this.colData.addAll(Collections.nCopies(numOfCols, null));
     }
 
     public boolean hasMore() {
@@ -101,80 +95,133 @@ public class TSDBResultSetBlockData {
         this.rowIndex = 0;
     }
 
-    public void setBoolean(int col, boolean value) {
-        colData.set(col, value);
-    }
-
-    public void setByteArray(int col, int length, byte[] value) {
-        switch (this.columnMetaDataList.get(col).getColType()) {
-            case TSDBConstants.TSDB_DATA_TYPE_BOOL: {
-                ByteBuffer buf = ByteBuffer.wrap(value, 0, length);
-                buf.order(ByteOrder.LITTLE_ENDIAN).asCharBuffer();
-                this.colData.set(col, buf);
-                break;
+    public void setByteArray(byte[] value) {
+        ByteBuffer buffer = ByteBuffer.wrap(value);
+        buffer.order(ByteOrder.LITTLE_ENDIAN);
+        int bitMapOffset = BitmapLen(numOfRows);
+        int pHeader = 12 + columnMetaDataList.size() * 10;
+        buffer.position(pHeader);
+        for (int i = 0; i < columnMetaDataList.size(); i++) {
+            List<Object> col = new ArrayList<>(numOfRows);
+            int type = columnMetaDataList.get(i).getColType();
+            switch (type) {
+                case TSDB_DATA_TYPE_BOOL:
+                case TSDB_DATA_TYPE_TINYINT:
+                case TSDB_DATA_TYPE_UTINYINT: {
+                    byte[] tmp = new byte[bitMapOffset];
+                    buffer.get(tmp);
+                    for (int j = 0; j < numOfRows; j++) {
+                        if (isNull(tmp, j)) {
+                            col.add(null);
+                        }
+                        col.add(buffer.get());
+                    }
+                    break;
+                }
+                case TSDB_DATA_TYPE_SMALLINT:
+                case TSDB_DATA_TYPE_USMALLINT: {
+                    byte[] tmp = new byte[bitMapOffset];
+                    buffer.get(tmp);
+                    for (int j = 0; j < numOfRows; j++) {
+                        if (isNull(tmp, j)) {
+                            col.add(null);
+                        }
+                        col.add(buffer.getShort());
+                    }
+                    break;
+                }
+                case TSDB_DATA_TYPE_INT:
+                case TSDB_DATA_TYPE_UINT: {
+                    byte[] tmp = new byte[bitMapOffset];
+                    buffer.get(tmp);
+                    for (int j = 0; j < numOfRows; j++) {
+                        if (isNull(tmp, j)) {
+                            col.add(null);
+                        }
+                        col.add(buffer.getInt());
+                    }
+                    break;
+                }
+                case TSDB_DATA_TYPE_BIGINT:
+                case TSDB_DATA_TYPE_UBIGINT:
+                case TSDB_DATA_TYPE_TIMESTAMP: {
+                    byte[] tmp = new byte[bitMapOffset];
+                    buffer.get(tmp);
+                    for (int j = 0; j < numOfRows; j++) {
+                        if (isNull(tmp, j)) {
+                            col.add(null);
+                        }
+                        col.add(buffer.getLong());
+                    }
+                    break;
+                }
+                case TSDB_DATA_TYPE_FLOAT: {
+                    byte[] tmp = new byte[bitMapOffset];
+                    buffer.get(tmp);
+                    for (int j = 0; j < numOfRows; j++) {
+                        if (isNull(tmp, j)) {
+                            col.add(null);
+                        }
+                        col.add(buffer.getFloat());
+                    }
+                    break;
+                }
+                case TSDB_DATA_TYPE_DOUBLE: {
+                    byte[] tmp = new byte[bitMapOffset];
+                    buffer.get(tmp);
+                    for (int j = 0; j < numOfRows; j++) {
+                        if (isNull(tmp, j)) {
+                            col.add(null);
+                        }
+                        col.add(buffer.getDouble());
+                    }
+                    break;
+                }
+                case TSDB_DATA_TYPE_BINARY:
+                case TSDB_DATA_TYPE_JSON: {
+                    List<Integer> offset = new ArrayList<>(numOfRows);
+                    for (int m = 0; m < numOfRows; m++) {
+                        offset.add(buffer.getInt());
+                    }
+                    for (int m = 0; m < numOfRows; m++) {
+                        if (-1 == offset.get(m)) {
+                            col.add(null);
+                            continue;
+                        }
+                        short len = buffer.getShort();
+                        byte[] tmp = new byte[len];
+                        buffer.get(tmp);
+                        col.add(tmp);
+                    }
+                    break;
+                }
+                case TSDB_DATA_TYPE_NCHAR: {
+                    List<Integer> offset = new ArrayList<>(numOfRows);
+                    for (int m = 0; m < numOfRows; m++) {
+                        offset.add(buffer.getInt());
+                    }
+                    for (int m = 0; m < numOfRows; m++) {
+                        if (-1 == offset.get(m)) {
+                            col.add(null);
+                            continue;
+                        }
+                        int len = buffer.getShort() / 4;
+                        int[] tmp = new int[len];
+                        for (int n = 0; n < len; n++) {
+                            tmp[n] = buffer.getInt();
+                        }
+                        col.add(new String(tmp, 0, tmp.length));
+                    }
+                    break;
+                }
+                default:
+                    // unknown type, do nothing
+                    col.add(null);
+                    break;
             }
-            case TSDBConstants.TSDB_DATA_TYPE_UTINYINT:
-            case TSDBConstants.TSDB_DATA_TYPE_TINYINT: {
-                ByteBuffer buf = ByteBuffer.wrap(value, 0, length);
-                buf.order(ByteOrder.LITTLE_ENDIAN);
-                this.colData.set(col, buf);
-                break;
-            }
-            case TSDBConstants.TSDB_DATA_TYPE_USMALLINT:
-            case TSDBConstants.TSDB_DATA_TYPE_SMALLINT: {
-                ByteBuffer buf = ByteBuffer.wrap(value, 0, length);
-                ShortBuffer sb = buf.order(ByteOrder.LITTLE_ENDIAN).asShortBuffer();
-                this.colData.set(col, sb);
-                break;
-            }
-            case TSDBConstants.TSDB_DATA_TYPE_UINT:
-            case TSDBConstants.TSDB_DATA_TYPE_INT: {
-                ByteBuffer buf = ByteBuffer.wrap(value, 0, length);
-                IntBuffer ib = buf.order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
-                this.colData.set(col, ib);
-                break;
-            }
-            case TSDBConstants.TSDB_DATA_TYPE_UBIGINT:
-            case TSDBConstants.TSDB_DATA_TYPE_BIGINT: {
-                ByteBuffer buf = ByteBuffer.wrap(value, 0, length);
-                LongBuffer lb = buf.order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
-                this.colData.set(col, lb);
-                break;
-            }
-            case TSDBConstants.TSDB_DATA_TYPE_FLOAT: {
-                ByteBuffer buf = ByteBuffer.wrap(value, 0, length);
-                FloatBuffer fb = buf.order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer();
-                this.colData.set(col, fb);
-                break;
-            }
-            case TSDBConstants.TSDB_DATA_TYPE_DOUBLE: {
-                ByteBuffer buf = ByteBuffer.wrap(value, 0, length);
-                DoubleBuffer db = buf.order(ByteOrder.LITTLE_ENDIAN).asDoubleBuffer();
-                this.colData.set(col, db);
-                break;
-            }
-            case TSDBConstants.TSDB_DATA_TYPE_BINARY: {
-                ByteBuffer buf = ByteBuffer.wrap(value, 0, length);
-                buf.order(ByteOrder.LITTLE_ENDIAN);
-                this.colData.set(col, buf);
-                break;
-            }
-            case TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP: {
-                ByteBuffer buf = ByteBuffer.wrap(value, 0, length);
-                LongBuffer lb = buf.order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
-                this.colData.set(col, lb);
-                break;
-            }
-            case TSDBConstants.TSDB_DATA_TYPE_JSON:
-            case TSDBConstants.TSDB_DATA_TYPE_NCHAR: {
-                ByteBuffer buf = ByteBuffer.wrap(value, 0, length);
-                buf.order(ByteOrder.LITTLE_ENDIAN);
-                this.colData.set(col, buf);
-                break;
-            }
+            colData.add(col);
         }
     }
-
 
     /**
      * The original type may not be a string type, but will be converted to by
@@ -183,7 +230,6 @@ public class TSDBResultSetBlockData {
     public String getString(int col) throws SQLException {
         Object obj = get(col);
         if (obj == null) {
-//            return new NullType().toString();
             return null;
         }
 
@@ -419,124 +465,57 @@ public class TSDBResultSetBlockData {
     }
 
     public Object get(int col) {
-        int fieldSize = this.columnMetaDataList.get(col).getColSize();
+        List<Object> bb = this.colData.get(col);
 
+        Object source = bb.get(this.rowIndex);
+        if (null == source) {
+            return null;
+        }
         switch (this.columnMetaDataList.get(col).getColType()) {
-            case TSDBConstants.TSDB_DATA_TYPE_BOOL: {
-                ByteBuffer bb = (ByteBuffer) this.colData.get(col);
-
-                byte val = bb.get(this.rowIndex);
-                if (NullType.isBooleanNull(val)) {
-                    return null;
-                }
-
+            case TSDB_DATA_TYPE_BOOL: {
+                byte val = (byte) source;
                 return (val == 0x0) ? Boolean.FALSE : Boolean.TRUE;
             }
 
-            case TSDBConstants.TSDB_DATA_TYPE_TINYINT: {
-                ByteBuffer bb = (ByteBuffer) this.colData.get(col);
-
-                byte val = bb.get(this.rowIndex);
-                if (NullType.isTinyIntNull(val)) {
-                    return null;
-                }
-
-                return val;
+            case TSDB_DATA_TYPE_TINYINT:
+            case TSDB_DATA_TYPE_SMALLINT:
+            case TSDB_DATA_TYPE_INT:
+            case TSDB_DATA_TYPE_BIGINT:
+            case TSDB_DATA_TYPE_FLOAT:
+            case TSDB_DATA_TYPE_DOUBLE:
+            case TSDB_DATA_TYPE_NCHAR:
+            case TSDB_DATA_TYPE_BINARY:
+            case TSDB_DATA_TYPE_JSON: {
+                return source;
+            }
+            case TSDB_DATA_TYPE_UTINYINT: {
+                byte val = (byte) source;
+                return val & 0xFF;
+            }
+            case TSDB_DATA_TYPE_USMALLINT: {
+                short val = (short) source;
+                return val & 0xFFFF;
+            }
+            case TSDB_DATA_TYPE_UINT: {
+                int val = (int) source;
+                return val & 0xFFFFFFFFL;
             }
 
-            case TSDBConstants.TSDB_DATA_TYPE_SMALLINT: {
-                ShortBuffer sb = (ShortBuffer) this.colData.get(col);
-                short val = sb.get(this.rowIndex);
-                if (NullType.isSmallIntNull(val)) {
-                    return null;
-                }
-
-                return val;
-            }
-
-            case TSDBConstants.TSDB_DATA_TYPE_INT: {
-                IntBuffer ib = (IntBuffer) this.colData.get(col);
-                int val = ib.get(this.rowIndex);
-                if (NullType.isIntNull(val)) {
-                    return null;
-                }
-
-                return val;
-            }
-
-            case TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP: {
-                LongBuffer lb = (LongBuffer) this.colData.get(col);
-                long val = lb.get(this.rowIndex);
-                if (NullType.isBigIntNull(val)) {
-                    return null;
-                }
+            case TSDB_DATA_TYPE_TIMESTAMP: {
+                long val = (long) source;
 
                 return parseTimestampColumnData(val);
             }
-            case TSDBConstants.TSDB_DATA_TYPE_BIGINT: {
-                LongBuffer lb = (LongBuffer) this.colData.get(col);
-                long val = lb.get(this.rowIndex);
-                if (NullType.isBigIntNull(val)) {
-                    return null;
-                }
 
-                return val;
+            case TSDB_DATA_TYPE_UBIGINT: {
+                long val = (long) source;
+                BigDecimal tmp = new BigDecimal(val >>> 1).multiply(new BigDecimal(2));
+                return (val & 0x1) == 0x1 ? tmp.add(new BigDecimal(1)) : tmp;
             }
-
-            case TSDBConstants.TSDB_DATA_TYPE_FLOAT: {
-                FloatBuffer fb = (FloatBuffer) this.colData.get(col);
-                float val = fb.get(this.rowIndex);
-                if (NullType.isFloatNull(val)) {
-                    return null;
-                }
-
-                return val;
-            }
-
-            case TSDBConstants.TSDB_DATA_TYPE_DOUBLE: {
-                DoubleBuffer lb = (DoubleBuffer) this.colData.get(col);
-                double val = lb.get(this.rowIndex);
-                if (NullType.isDoubleNull(val)) {
-                    return null;
-                }
-
-                return val;
-            }
-
-            case TSDBConstants.TSDB_DATA_TYPE_BINARY: {
-                ByteBuffer bb = (ByteBuffer) this.colData.get(col);
-                bb.position((fieldSize + BINARY_LENGTH_OFFSET) * this.rowIndex);
-                int length = bb.getShort();
-                byte[] dest = new byte[length];
-                bb.get(dest, 0, length);
-                if (NullType.isBinaryNull(dest, length)) {
-                    return null;
-                }
-
-                return dest;
-            }
-
-            case TSDBConstants.TSDB_DATA_TYPE_JSON:
-            case TSDBConstants.TSDB_DATA_TYPE_NCHAR: {
-                ByteBuffer bb = (ByteBuffer) this.colData.get(col);
-//                bb.position((fieldSize * 4 + 2 + 1) * this.rowIndex);
-                bb.position(bb.capacity() / numOfRows * this.rowIndex);
-                int length = bb.getShort();
-                byte[] dest = new byte[length];
-                bb.get(dest, 0, length);
-                if (NullType.isNcharNull(dest, length)) {
-                    return null;
-                }
-                try {
-                    String charset = TaosGlobalConfig.getCharset();
-                    return new String(dest, charset);
-                } catch (UnsupportedEncodingException e) {
-                    throw new RuntimeException(e.getMessage());
-                }
-            }
+            default:
+                // unknown type, do nothing
+                return null;
         }
-
-        return 0;
     }
 
     private Timestamp parseTimestampColumnData(long value) {
@@ -554,5 +533,16 @@ public class TSDBResultSetBlockData {
             return Timestamp.from(Instant.ofEpochSecond(epochSec, nanoAdjustment));
         }
         return null;
+    }
+
+    // ceil(numOfRows/8.0)
+    private int BitmapLen(int n) {
+        return (n + 0x7) >> 3;
+    }
+
+    private boolean isNull(byte[] c, int n) {
+        int position = n >>> 3;
+        int index = n & 0x7;
+        return (c[position] & 1 << index) == 1;
     }
 }

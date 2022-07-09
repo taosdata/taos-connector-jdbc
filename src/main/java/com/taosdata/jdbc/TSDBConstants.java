@@ -38,7 +38,8 @@ public abstract class TSDBConstants {
     public static final int TSDB_DATA_TYPE_BIGINT = 5;
     public static final int TSDB_DATA_TYPE_FLOAT = 6;
     public static final int TSDB_DATA_TYPE_DOUBLE = 7;
-    public static final int TSDB_DATA_TYPE_BINARY = 8;
+    public static final int TSDB_DATA_TYPE_VARCHAR = 8;
+    public static final int TSDB_DATA_TYPE_BINARY = TSDB_DATA_TYPE_VARCHAR;
     public static final int TSDB_DATA_TYPE_TIMESTAMP = 9;
     public static final int TSDB_DATA_TYPE_NCHAR = 10;
     /**
@@ -75,125 +76,6 @@ public abstract class TSDBConstants {
     public static final String DEFAULT_PRECISION = "ms";
 
     public static final boolean DEFAULT_BATCH_ERROR_IGNORE = false;
-
-    public static int typeName2JdbcType(String type) {
-        switch (type.toUpperCase()) {
-            case "TIMESTAMP":
-                return Types.TIMESTAMP;
-            case "INT":
-                return Types.INTEGER;
-            case "BIGINT":
-                return Types.BIGINT;
-            case "FLOAT":
-                return Types.FLOAT;
-            case "DOUBLE":
-                return Types.DOUBLE;
-            case "BINARY":
-                return Types.BINARY;
-            case "SMALLINT":
-                return Types.SMALLINT;
-            case "TINYINT":
-                return Types.TINYINT;
-            case "BOOL":
-                return Types.BOOLEAN;
-            case "NCHAR":
-                return Types.NCHAR;
-            default:
-                return Types.NULL;
-        }
-    }
-
-    public static int taosType2JdbcType(int taosType) throws SQLException {
-        switch (taosType) {
-            case TSDBConstants.TSDB_DATA_TYPE_BOOL:
-                return Types.BOOLEAN;
-            case TSDBConstants.TSDB_DATA_TYPE_TINYINT:
-            case TSDBConstants.TSDB_DATA_TYPE_UTINYINT:
-                return Types.TINYINT;
-            case TSDBConstants.TSDB_DATA_TYPE_USMALLINT:
-            case TSDBConstants.TSDB_DATA_TYPE_SMALLINT:
-                return Types.SMALLINT;
-            case TSDBConstants.TSDB_DATA_TYPE_UINT:
-            case TSDBConstants.TSDB_DATA_TYPE_INT:
-                return Types.INTEGER;
-            case TSDBConstants.TSDB_DATA_TYPE_UBIGINT:
-            case TSDBConstants.TSDB_DATA_TYPE_BIGINT:
-                return Types.BIGINT;
-            case TSDBConstants.TSDB_DATA_TYPE_FLOAT:
-                return Types.FLOAT;
-            case TSDBConstants.TSDB_DATA_TYPE_DOUBLE:
-                return Types.DOUBLE;
-            case TSDBConstants.TSDB_DATA_TYPE_BINARY:
-                return Types.BINARY;
-            case TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP:
-                return Types.TIMESTAMP;
-            case TSDBConstants.TSDB_DATA_TYPE_NCHAR:
-                return Types.NCHAR;
-            case TSDBConstants.TSDB_DATA_TYPE_JSON:
-                return Types.OTHER;
-            default:
-                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN_TAOS_TYPE, "unknown taos type: " + taosType + " in tdengine");
-        }
-    }
-
-    public static String taosType2JdbcTypeName(int taosType) throws SQLException {
-        switch (taosType) {
-            case TSDBConstants.TSDB_DATA_TYPE_BOOL:
-                return "BOOL";
-            case TSDBConstants.TSDB_DATA_TYPE_UTINYINT:
-            case TSDBConstants.TSDB_DATA_TYPE_TINYINT:
-                return "TINYINT";
-            case TSDBConstants.TSDB_DATA_TYPE_USMALLINT:
-            case TSDBConstants.TSDB_DATA_TYPE_SMALLINT:
-                return "SMALLINT";
-            case TSDBConstants.TSDB_DATA_TYPE_UINT:
-            case TSDBConstants.TSDB_DATA_TYPE_INT:
-                return "INT";
-            case TSDBConstants.TSDB_DATA_TYPE_UBIGINT:
-            case TSDBConstants.TSDB_DATA_TYPE_BIGINT:
-                return "BIGINT";
-            case TSDBConstants.TSDB_DATA_TYPE_FLOAT:
-                return "FLOAT";
-            case TSDBConstants.TSDB_DATA_TYPE_DOUBLE:
-                return "DOUBLE";
-            case TSDBConstants.TSDB_DATA_TYPE_BINARY:
-                return "BINARY";
-            case TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP:
-                return "TIMESTAMP";
-            case TSDBConstants.TSDB_DATA_TYPE_NCHAR:
-                return "NCHAR";
-            case TSDBConstants.TSDB_DATA_TYPE_JSON:
-                return "JSON";
-            default:
-                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN_TAOS_TYPE, "unknown taos type: " + taosType + " in tdengine");
-        }
-    }
-
-    public static int jdbcType2TaosType(int jdbcType) throws SQLException {
-        switch (jdbcType) {
-            case Types.BOOLEAN:
-                return TSDBConstants.TSDB_DATA_TYPE_BOOL;
-            case Types.TINYINT:
-                return TSDBConstants.TSDB_DATA_TYPE_TINYINT;
-            case Types.SMALLINT:
-                return TSDBConstants.TSDB_DATA_TYPE_SMALLINT;
-            case Types.INTEGER:
-                return TSDBConstants.TSDB_DATA_TYPE_INT;
-            case Types.BIGINT:
-                return TSDBConstants.TSDB_DATA_TYPE_BIGINT;
-            case Types.FLOAT:
-                return TSDBConstants.TSDB_DATA_TYPE_FLOAT;
-            case Types.DOUBLE:
-                return TSDBConstants.TSDB_DATA_TYPE_DOUBLE;
-            case Types.BINARY:
-                return TSDBConstants.TSDB_DATA_TYPE_BINARY;
-            case Types.TIMESTAMP:
-                return TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP;
-            case Types.NCHAR:
-                return TSDBConstants.TSDB_DATA_TYPE_NCHAR;
-        }
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN_SQL_TYPE_IN_TDENGINE, "unknown sql type: " + jdbcType + " in tdengine");
-    }
 
     public static String jdbcType2TaosTypeName(int jdbcType) throws SQLException {
         switch (jdbcType) {
