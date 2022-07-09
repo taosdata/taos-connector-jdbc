@@ -791,10 +791,8 @@ public class TSDBDatabaseMetaDataTest {
             Assert.assertEquals(12, columns.getInt("COLUMN_SIZE"));
             // DECIMAL_DIGITS
             Assert.assertEquals("DECIMAL_DIGITS", meta.getColumnLabel(9));
-            Assert.assertEquals(0, columns.getInt(9));
-            Assert.assertEquals(0, columns.getInt("DECIMAL_DIGITS"));
-            Assert.assertEquals(null, columns.getString(9));
-            Assert.assertEquals(null, columns.getString("DECIMAL_DIGITS"));
+            Assert.assertEquals(5, columns.getInt(9));
+            Assert.assertEquals(5, columns.getInt("DECIMAL_DIGITS"));
             // NUM_PREC_RADIX
             Assert.assertEquals("NUM_PREC_RADIX", meta.getColumnLabel(10));
             Assert.assertEquals(10, columns.getInt(10));
