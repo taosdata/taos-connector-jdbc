@@ -28,11 +28,7 @@ public class TMQResultSet extends AbstractResultSet {
             return true;
 
         int code;
-        if (columnMetaDataList.size() < 1) {
-            code = this.jniConnector.fetchBlock(this.resultSetPointer, this.blockData, 1, this.columnMetaDataList);
-        } else {
-            code = this.jniConnector.fetchBlock(this.resultSetPointer, this.blockData, 0, this.columnMetaDataList);
-        }
+        code = this.jniConnector.fetchBlock(this.resultSetPointer, this.blockData, this.columnMetaDataList);
         if (code == TSDBConstants.JNI_CONNECTION_NULL) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_JNI_CONNECTION_NULL);
         } else if (code == TSDBConstants.JNI_RESULT_SET_NULL) {

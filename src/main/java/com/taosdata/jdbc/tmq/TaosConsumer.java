@@ -134,16 +134,23 @@ public class TaosConsumer<V> implements TConsumer<V> {
                 return ConsumerRecords.empty();
             }
 
-            String topic = connector.getTopicName(resultSet);
-            String dbName = connector.getDbName(resultSet);
-            int vgroupId = connector.getVgroupId(resultSet);
-            String tableName = connector.getTableName(resultSet);
-            TopicPartition partition = new TopicPartition(topic, dbName, vgroupId, tableName);
-
             int timestampPrecision = connector.getResultTimePrecision(resultSet);
 
+            Map<TopicPartition, List<V>> records = new HashMap<>();
+            TopicPartition partition = null;
             try (TMQResultSet rs = new TMQResultSet(connector, resultSet, timestampPrecision)) {
                 while (rs.next()) {
+                    String topic = connector.getTopicName(resultSet);
+                    String dbName = connector.getDbName(resultSet);
+                    int vgroupId = connector.getVgroupId(resultSet);
+                    String tableName = connector.getTableName(resultSet);
+                    TopicPartition tmp = new TopicPartition(topic, dbName, vgroupId, tableName);
+
+                    if (!tmp.equals(partition)) {
+                        records.put(partition, list);
+                        partition = tmp;
+                        list = new ArrayList<>();
+                    }
                     try {
                         V record = deserializer.deserialize(rs);
                         list.add(record);
@@ -152,7 +159,6 @@ public class TaosConsumer<V> implements TConsumer<V> {
                     }
                 }
             }
-            Map<TopicPartition, List<V>> records = new HashMap<>();
             records.put(partition, list);
             return new ConsumerRecords<>(records);
         } finally {
