@@ -1,15 +1,16 @@
 package com.taosdata.jdbc.tmq;
 
-import com.taosdata.jdbc.*;
+import com.taosdata.jdbc.TSDBConstants;
+import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.Utils;
 
-import java.beans.IntrospectionException;
-import java.lang.reflect.InvocationTargetException;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -154,8 +155,8 @@ public class TaosConsumer<V> implements TConsumer<V> {
                     try {
                         V record = deserializer.deserialize(rs);
                         list.add(record);
-                    } catch (IntrospectionException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
-                        throw new RuntimeException(e);
+                    } catch (Exception e) {
+                        throw new DeserializerException("Deserializer error", e);
                     }
                 }
             }
