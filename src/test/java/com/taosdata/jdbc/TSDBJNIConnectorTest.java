@@ -4,7 +4,6 @@ import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
@@ -171,7 +170,6 @@ public class TSDBJNIConnectorTest {
     }
 
     @Test
-    @Ignore // TODO 3.0 stmt
     public void param_bind_multi_batch_multi_table() throws SQLException {
         TSDBJNIConnector connector = new TSDBJNIConnector();
         connector.connect(host, 6030, null, "root", "taosdata");
