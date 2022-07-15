@@ -981,7 +981,6 @@ public class TSDBDatabaseMetaDataTest {
     }
 
     @Test
-    @Ignore // TODO 3.0 null result
     public void getSuperTables() throws SQLException {
         ResultSet rs = metaData.getSuperTables("log", "", "dn1");
         ResultSetMetaData meta = rs.getMetaData();

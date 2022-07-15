@@ -21,7 +21,6 @@ public class RestfulConnectionTest {
     }
 
     @Test
-    @Ignore // TODO 3.0 null result
     public void createStatement() throws SQLException {
         try (Statement stmt = conn.createStatement()) {
             ResultSet rs = stmt.executeQuery("select server_status()");
@@ -32,7 +31,6 @@ public class RestfulConnectionTest {
     }
 
     @Test
-    @Ignore // TODO 3.0 null result
     public void prepareStatement() throws SQLException {
         PreparedStatement pstmt = conn.prepareStatement("select server_status()");
         ResultSet rs = pstmt.executeQuery();
@@ -135,7 +133,6 @@ public class RestfulConnectionTest {
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
-    @Ignore // TODO 3.0 null result
     public void testCreateStatement() throws SQLException {
         Statement stmt = conn.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
         ResultSet rs = stmt.executeQuery("select server_status()");
@@ -147,7 +144,6 @@ public class RestfulConnectionTest {
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
-    @Ignore // TODO 3.0 null result
     public void testPrepareStatement() throws SQLException {
         PreparedStatement pstmt = conn.prepareStatement("select server_status()",
                 ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
@@ -207,7 +203,6 @@ public class RestfulConnectionTest {
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
-    @Ignore // TODO 3.0 null result
     public void testCreateStatement1() throws SQLException {
         Statement stmt = conn.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY, ResultSet.HOLD_CURSORS_OVER_COMMIT);
         ResultSet rs = stmt.executeQuery("select server_status()");
@@ -219,7 +214,6 @@ public class RestfulConnectionTest {
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
-    @Ignore // TODO 3.0 null result
     public void testPrepareStatement1() throws SQLException {
         PreparedStatement pstmt = conn.prepareStatement("select server_status()",
                 ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY, ResultSet.HOLD_CURSORS_OVER_COMMIT);
@@ -273,7 +267,6 @@ public class RestfulConnectionTest {
     }
 
     @Test(expected = SQLException.class)
-    @Ignore // TODO 3.0 null result
     public void isValid() throws SQLException {
         Assert.assertTrue(conn.isValid(10));
         Assert.assertTrue(conn.isValid(0));
