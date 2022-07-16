@@ -1,15 +1,16 @@
 package com.taosdata.jdbc.tmq;
 
-import com.taosdata.jdbc.*;
+import com.taosdata.jdbc.TSDBConstants;
+import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.Utils;
 
-import java.beans.IntrospectionException;
-import java.lang.reflect.InvocationTargetException;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -134,25 +135,31 @@ public class TaosConsumer<V> implements TConsumer<V> {
                 return ConsumerRecords.empty();
             }
 
-            String topic = connector.getTopicName(resultSet);
-            String dbName = connector.getDbName(resultSet);
-            int vgroupId = connector.getVgroupId(resultSet);
-            String tableName = connector.getTableName(resultSet);
-            TopicPartition partition = new TopicPartition(topic, dbName, vgroupId, tableName);
-
             int timestampPrecision = connector.getResultTimePrecision(resultSet);
 
+            Map<TopicPartition, List<V>> records = new HashMap<>();
+            TopicPartition partition = null;
             try (TMQResultSet rs = new TMQResultSet(connector, resultSet, timestampPrecision)) {
                 while (rs.next()) {
+                    String topic = connector.getTopicName(resultSet);
+                    String dbName = connector.getDbName(resultSet);
+                    int vgroupId = connector.getVgroupId(resultSet);
+                    String tableName = connector.getTableName(resultSet);
+                    TopicPartition tmp = new TopicPartition(topic, dbName, vgroupId, tableName);
+
+                    if (!tmp.equals(partition)) {
+                        records.put(partition, list);
+                        partition = tmp;
+                        list = new ArrayList<>();
+                    }
                     try {
                         V record = deserializer.deserialize(rs);
                         list.add(record);
-                    } catch (IntrospectionException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
-                        throw new RuntimeException(e);
+                    } catch (Exception e) {
+                        throw new DeserializerException("Deserializer error", e);
                     }
                 }
             }
-            Map<TopicPartition, List<V>> records = new HashMap<>();
             records.put(partition, list);
             return new ConsumerRecords<>(records);
         } finally {

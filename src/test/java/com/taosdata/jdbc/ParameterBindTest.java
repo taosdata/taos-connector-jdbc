@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
 
-@Ignore // TODO 3.0 stmt
 public class ParameterBindTest {
 
     private static final String host = "127.0.0.1";

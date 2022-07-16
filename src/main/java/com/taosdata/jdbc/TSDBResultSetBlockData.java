@@ -297,10 +297,17 @@ public class TSDBResultSetBlockData {
                 return ((Double) obj).intValue();
             }
 
-            case TSDBConstants.TSDB_DATA_TYPE_NCHAR:
+            case TSDBConstants.TSDB_DATA_TYPE_NCHAR: {
+                return Integer.parseInt((String) obj);
+            }
             case TSDBConstants.TSDB_DATA_TYPE_JSON:
             case TSDBConstants.TSDB_DATA_TYPE_BINARY: {
-                return Integer.parseInt((String) obj);
+                String charset = TaosGlobalConfig.getCharset();
+                try {
+                    return Integer.parseInt(new String((byte[]) obj, charset));
+                } catch (UnsupportedEncodingException e) {
+                    throw new RuntimeException(e.getMessage());
+                }
             }
         }
 
@@ -337,15 +344,27 @@ public class TSDBResultSetBlockData {
                 return (((double) obj) == 0) ? Boolean.FALSE : Boolean.TRUE;
             }
 
-            case TSDBConstants.TSDB_DATA_TYPE_NCHAR:
-            case TSDBConstants.TSDB_DATA_TYPE_JSON:
-            case TSDBConstants.TSDB_DATA_TYPE_BINARY: {
+            case TSDBConstants.TSDB_DATA_TYPE_NCHAR: {
                 if ("TRUE".compareToIgnoreCase((String) obj) == 0) {
                     return Boolean.TRUE;
                 } else if ("FALSE".compareToIgnoreCase((String) obj) == 0) {
                     return Boolean.TRUE;
                 } else {
                     throw new SQLDataException();
+                }
+            }
+            case TSDBConstants.TSDB_DATA_TYPE_JSON:
+            case TSDBConstants.TSDB_DATA_TYPE_BINARY: {
+                String charset = TaosGlobalConfig.getCharset();
+                try {
+                    String tmp = new String((byte[]) obj, charset);
+                    if ("TRUE".compareToIgnoreCase(tmp) == 0) {
+                        return Boolean.TRUE;
+                    } else if ("FALSE".compareToIgnoreCase(tmp) == 0) {
+                        return Boolean.FALSE;
+                    }
+                } catch (UnsupportedEncodingException e) {
+                    throw new RuntimeException(e.getMessage());
                 }
             }
         }
@@ -391,10 +410,17 @@ public class TSDBResultSetBlockData {
                 return ((Double) obj).longValue();
             }
 
-            case TSDBConstants.TSDB_DATA_TYPE_NCHAR:
+            case TSDBConstants.TSDB_DATA_TYPE_NCHAR: {
+                return Long.parseLong((String) obj);
+            }
             case TSDBConstants.TSDB_DATA_TYPE_JSON:
             case TSDBConstants.TSDB_DATA_TYPE_BINARY: {
-                return Long.parseLong((String) obj);
+                String charset = TaosGlobalConfig.getCharset();
+                try {
+                    return Long.parseLong(new String((byte[]) obj, charset));
+                } catch (UnsupportedEncodingException e) {
+                    throw new RuntimeException(e.getMessage());
+                }
             }
         }
 
@@ -454,10 +480,17 @@ public class TSDBResultSetBlockData {
                 return (double) obj;
             }
 
-            case TSDBConstants.TSDB_DATA_TYPE_NCHAR:
+            case TSDBConstants.TSDB_DATA_TYPE_NCHAR: {
+                return Double.parseDouble((String) obj);
+            }
             case TSDBConstants.TSDB_DATA_TYPE_JSON:
             case TSDBConstants.TSDB_DATA_TYPE_BINARY: {
-                return Double.parseDouble((String) obj);
+                String charset = TaosGlobalConfig.getCharset();
+                try {
+                    return Double.parseDouble(new String((byte[]) obj, charset));
+                } catch (UnsupportedEncodingException e) {
+                    throw new RuntimeException(e.getMessage());
+                }
             }
         }
 

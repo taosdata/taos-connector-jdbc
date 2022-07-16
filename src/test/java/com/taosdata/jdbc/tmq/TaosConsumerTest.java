@@ -116,6 +116,7 @@ public class TaosConsumerTest {
     }
 
     @Test
+    @Ignore
     public void JNI_03_SyncCommitTest() throws Exception {
 
         String topic = "topic_sync";
@@ -167,6 +168,7 @@ public class TaosConsumerTest {
     }
 
     @Test
+    @Ignore
     public void JNI_04_ASyncAutoCommitTest() throws Exception {
 
         String topic = "topic_async_auto";

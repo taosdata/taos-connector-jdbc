@@ -382,7 +382,6 @@ public class SQLTest {
     }
 
     @Test
-    @Ignore // TODO 3.0 core dumped
     public void testCase035() {
         String sql = "select last_row(*) from restful_test.weather";
         // when
@@ -483,7 +482,6 @@ public class SQLTest {
     }
 
     @Test
-    @Ignore // TODO 3.0 core dumped
     public void testCase046() {
         String sql = "select last(*) from restful_test.weather where ts < now - 1h group by tbname order by tbname";
         // when

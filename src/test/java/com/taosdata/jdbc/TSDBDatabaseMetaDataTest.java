@@ -12,7 +12,7 @@ public class TSDBDatabaseMetaDataTest {
     private static String url;
     private static Connection connection;
     private static TSDBDatabaseMetaData metaData;
-    private static String db_name = "log";
+    private static String db_name = "log_test";
 
     @Test
     public void unwrap() throws SQLException {
@@ -647,15 +647,15 @@ public class TSDBDatabaseMetaDataTest {
 
     @Test
     public void getTables() throws SQLException {
-        ResultSet rs = metaData.getTables("log", "", null, null);
+        ResultSet rs = metaData.getTables(db_name, "", null, null);
         ResultSetMetaData meta = rs.getMetaData();
         Assert.assertNotNull(rs);
         rs.next();
         {
             // TABLE_CAT
             Assert.assertEquals("TABLE_CAT", meta.getColumnLabel(1));
-            Assert.assertEquals("log", rs.getString(1));
-            Assert.assertEquals("log", rs.getString("TABLE_CAT"));
+            Assert.assertEquals(db_name, rs.getString(1));
+            Assert.assertEquals(db_name, rs.getString("TABLE_CAT"));
             // TABLE_SCHEM
             Assert.assertEquals("TABLE_SCHEM", meta.getColumnLabel(2));
             Assert.assertEquals(null, rs.getString(2));
@@ -713,7 +713,7 @@ public class TSDBDatabaseMetaDataTest {
     @Test
     public void getColumns() throws SQLException {
         // when
-        ResultSet columns = metaData.getColumns("log", "", "dn", "");
+        ResultSet columns = metaData.getColumns(db_name, "", "dn", "");
         // then
         ResultSetMetaData meta = columns.getMetaData();
         columns.next();
@@ -721,8 +721,8 @@ public class TSDBDatabaseMetaDataTest {
         {
             // TABLE_CAT
             Assert.assertEquals("TABLE_CAT", meta.getColumnLabel(1));
-            Assert.assertEquals("log", columns.getString(1));
-            Assert.assertEquals("log", columns.getString("TABLE_CAT"));
+            Assert.assertEquals(db_name, columns.getString(1));
+            Assert.assertEquals(db_name, columns.getString("TABLE_CAT"));
             // TABLE_NAME
             Assert.assertEquals("TABLE_NAME", meta.getColumnLabel(3));
             Assert.assertEquals("dn", columns.getString(3));
@@ -767,8 +767,8 @@ public class TSDBDatabaseMetaDataTest {
         {
             // TABLE_CAT
             Assert.assertEquals("TABLE_CAT", meta.getColumnLabel(1));
-            Assert.assertEquals("log", columns.getString(1));
-            Assert.assertEquals("log", columns.getString("TABLE_CAT"));
+            Assert.assertEquals(db_name, columns.getString(1));
+            Assert.assertEquals(db_name, columns.getString("TABLE_CAT"));
             // TABLE_NAME
             Assert.assertEquals("TABLE_NAME", meta.getColumnLabel(3));
             Assert.assertEquals("dn", columns.getString(3));
@@ -829,14 +829,14 @@ public class TSDBDatabaseMetaDataTest {
 
     @Test
     public void getPrimaryKeys() throws SQLException {
-        ResultSet rs = metaData.getPrimaryKeys("log", "", "dn1");
+        ResultSet rs = metaData.getPrimaryKeys(db_name, "", "dn1");
         ResultSetMetaData meta = rs.getMetaData();
         rs.next();
         {
             // TABLE_CAT
             Assert.assertEquals("TABLE_CAT", meta.getColumnLabel(1));
-            Assert.assertEquals("log", rs.getString(1));
-            Assert.assertEquals("log", rs.getString("TABLE_CAT"));
+            Assert.assertEquals(db_name, rs.getString(1));
+            Assert.assertEquals(db_name, rs.getString("TABLE_CAT"));
             // TABLE_SCHEM
             Assert.assertEquals("TABLE_SCHEM", meta.getColumnLabel(2));
             Assert.assertEquals(null, rs.getString(2));
@@ -981,16 +981,15 @@ public class TSDBDatabaseMetaDataTest {
     }
 
     @Test
-    @Ignore // TODO 3.0 null result
     public void getSuperTables() throws SQLException {
-        ResultSet rs = metaData.getSuperTables("log", "", "dn1");
+        ResultSet rs = metaData.getSuperTables(db_name, "", "dn1");
         ResultSetMetaData meta = rs.getMetaData();
         rs.next();
         {
             // TABLE_CAT
             Assert.assertEquals("TABLE_CAT", meta.getColumnLabel(1));
-            Assert.assertEquals("log", rs.getString(1));
-            Assert.assertEquals("log", rs.getString("TABLE_CAT"));
+            Assert.assertEquals(db_name, rs.getString(1));
+            Assert.assertEquals(db_name, rs.getString("TABLE_CAT"));
             // TABLE_CAT
             Assert.assertEquals("TABLE_SCHEM", meta.getColumnLabel(2));
             Assert.assertEquals(null, rs.getString(2));
