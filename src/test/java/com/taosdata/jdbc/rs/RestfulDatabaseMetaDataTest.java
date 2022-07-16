@@ -14,7 +14,7 @@ public class RestfulDatabaseMetaDataTest {
     private static String url;
     private static Connection connection;
     private static RestfulDatabaseMetaData metaData;
-    private static final String dbName = "log";
+    private static final String dbName = "log_test";
 
     @Test
     public void unwrap() throws SQLException {
@@ -649,15 +649,15 @@ public class RestfulDatabaseMetaDataTest {
 
     @Test
     public void getTables() throws SQLException {
-        ResultSet rs = metaData.getTables("log", "", null, null);
+        ResultSet rs = metaData.getTables(dbName, "", null, null);
         ResultSetMetaData meta = rs.getMetaData();
         Assert.assertNotNull(rs);
         rs.next();
         {
             // TABLE_CAT
             Assert.assertEquals("TABLE_CAT", meta.getColumnLabel(1));
-            Assert.assertEquals("log", rs.getString(1));
-            Assert.assertEquals("log", rs.getString("TABLE_CAT"));
+            Assert.assertEquals(dbName, rs.getString(1));
+            Assert.assertEquals(dbName, rs.getString("TABLE_CAT"));
             // TABLE_SCHEM
             Assert.assertEquals("TABLE_SCHEM", meta.getColumnLabel(2));
             Assert.assertEquals(null, rs.getString(2));
@@ -715,7 +715,7 @@ public class RestfulDatabaseMetaDataTest {
     @Test
     public void getColumns() throws SQLException {
         // when
-        ResultSet columns = metaData.getColumns("log", "", "dn", "");
+        ResultSet columns = metaData.getColumns(dbName, "", "dn", "");
         // then
         ResultSetMetaData meta = columns.getMetaData();
         columns.next();
@@ -723,8 +723,8 @@ public class RestfulDatabaseMetaDataTest {
         {
             // TABLE_CAT
             Assert.assertEquals("TABLE_CAT", meta.getColumnLabel(1));
-            Assert.assertEquals("log", columns.getString(1));
-            Assert.assertEquals("log", columns.getString("TABLE_CAT"));
+            Assert.assertEquals(dbName, columns.getString(1));
+            Assert.assertEquals(dbName, columns.getString("TABLE_CAT"));
             // TABLE_NAME
             Assert.assertEquals("TABLE_NAME", meta.getColumnLabel(3));
             Assert.assertEquals("dn", columns.getString(3));
@@ -769,8 +769,8 @@ public class RestfulDatabaseMetaDataTest {
         {
             // TABLE_CAT
             Assert.assertEquals("TABLE_CAT", meta.getColumnLabel(1));
-            Assert.assertEquals("log", columns.getString(1));
-            Assert.assertEquals("log", columns.getString("TABLE_CAT"));
+            Assert.assertEquals(dbName, columns.getString(1));
+            Assert.assertEquals(dbName, columns.getString("TABLE_CAT"));
             // TABLE_NAME
             Assert.assertEquals("TABLE_NAME", meta.getColumnLabel(3));
             Assert.assertEquals("dn", columns.getString(3));
@@ -831,14 +831,14 @@ public class RestfulDatabaseMetaDataTest {
 
     @Test
     public void getPrimaryKeys() throws SQLException {
-        ResultSet rs = metaData.getPrimaryKeys("log", "", "dn1");
+        ResultSet rs = metaData.getPrimaryKeys(dbName, "", "dn1");
         ResultSetMetaData meta = rs.getMetaData();
         rs.next();
         {
             // TABLE_CAT
             Assert.assertEquals("TABLE_CAT", meta.getColumnLabel(1));
-            Assert.assertEquals("log", rs.getString(1));
-            Assert.assertEquals("log", rs.getString("TABLE_CAT"));
+            Assert.assertEquals(dbName, rs.getString(1));
+            Assert.assertEquals(dbName, rs.getString("TABLE_CAT"));
             // TABLE_SCHEM
             Assert.assertEquals("TABLE_SCHEM", meta.getColumnLabel(2));
             Assert.assertEquals(null, rs.getString(2));
@@ -984,14 +984,14 @@ public class RestfulDatabaseMetaDataTest {
 
     @Test
     public void getSuperTables() throws SQLException {
-        ResultSet rs = metaData.getSuperTables("log", "", "dn1");
+        ResultSet rs = metaData.getSuperTables(dbName, "", "dn1");
         ResultSetMetaData meta = rs.getMetaData();
         rs.next();
         {
             // TABLE_CAT
             Assert.assertEquals("TABLE_CAT", meta.getColumnLabel(1));
-            Assert.assertEquals("log", rs.getString(1));
-            Assert.assertEquals("log", rs.getString("TABLE_CAT"));
+            Assert.assertEquals(dbName, rs.getString(1));
+            Assert.assertEquals(dbName, rs.getString("TABLE_CAT"));
             // TABLE_CAT
             Assert.assertEquals("TABLE_SCHEM", meta.getColumnLabel(2));
             Assert.assertEquals(null, rs.getString(2));

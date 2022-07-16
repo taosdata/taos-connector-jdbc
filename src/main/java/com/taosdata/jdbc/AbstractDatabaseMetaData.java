@@ -11,7 +11,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
 
     private final static String PRODUCT_NAME = "TDengine";
     private final static String PRODUCT_VESION = "3.0.0.0";
-    private final static String DRIVER_VERSION = "3.0.0.0";
+    private final static String DRIVER_VERSION = "3.0.0";
     private final static int DRIVER_MAJAR_VERSION = 3;
     private final static int DRIVER_MINOR_VERSION = 0;
 
@@ -1076,7 +1076,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
     }
 
     public int getDatabaseMajorVersion() throws SQLException {
-        return 2;
+        return 3;
     }
 
     public int getDatabaseMinorVersion() throws SQLException {
@@ -1084,7 +1084,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
     }
 
     public int getJDBCMajorVersion() throws SQLException {
-        return 2;
+        return 3;
     }
 
     public int getJDBCMinorVersion() throws SQLException {
