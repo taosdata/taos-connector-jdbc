@@ -105,7 +105,7 @@ public class RestfulDatabaseMetaDataTest {
 
     @Test
     public void getDriverVersion() throws SQLException {
-        Assert.assertEquals("3.0.0.0", metaData.getDriverVersion());
+        Assert.assertEquals("3.0.0", metaData.getDriverVersion());
     }
 
     @Test
@@ -1025,7 +1025,7 @@ public class RestfulDatabaseMetaDataTest {
 
     @Test
     public void getDatabaseMajorVersion() throws SQLException {
-        Assert.assertEquals(2, metaData.getDatabaseMajorVersion());
+        Assert.assertEquals(3, metaData.getDatabaseMajorVersion());
     }
 
     @Test
@@ -1035,7 +1035,7 @@ public class RestfulDatabaseMetaDataTest {
 
     @Test
     public void getJDBCMajorVersion() throws SQLException {
-        Assert.assertEquals(2, metaData.getJDBCMajorVersion());
+        Assert.assertEquals(3, metaData.getJDBCMajorVersion());
     }
 
     @Test
