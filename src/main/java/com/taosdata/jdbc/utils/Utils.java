@@ -3,10 +3,7 @@ package com.taosdata.jdbc.utils;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
-import com.taosdata.jdbc.TSDBError;
-import com.taosdata.jdbc.TSDBJNIConnector;
 import com.taosdata.jdbc.enums.TimestampPrecision;
-import com.taosdata.jdbc.tmq.TMQConstants;
 
 import java.nio.charset.StandardCharsets;
 import java.sql.Date;
