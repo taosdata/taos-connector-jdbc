@@ -19,7 +19,7 @@ import java.util.*;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "JsonTag", author = "huolibo", version = "2.0.38")
-@Ignore // TODO 3.0 fetch raw block
+@Ignore // TODO 3.0 json fetch raw block
 public class TSDBBlockJsonTagTest {
     private static String host = "127.0.0.1";
     private static final String dbName = "json_tag_test";
