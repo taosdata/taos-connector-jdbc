@@ -95,9 +95,9 @@ public class RestfulStatement extends AbstractStatement {
     private String getUrl() throws SQLException {
         String dbname = conn.getClientInfo(TSDBDriver.PROPERTY_KEY_DBNAME);
         String protocol = "http";
-//        if (conn.isUseSsl()) {
-//            protocol = "https";
-//        }
+        if (conn.isUseSsl()) {
+            protocol = "https";
+        }
         if (dbname == null || dbname.trim().isEmpty()) {
             dbname = "";
         } else {
