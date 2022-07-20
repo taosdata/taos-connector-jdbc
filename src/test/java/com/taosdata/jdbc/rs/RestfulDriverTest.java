@@ -38,7 +38,7 @@ public class RestfulDriverTest {
 
     @Test
     public void getMajorVersion() {
-        Assert.assertEquals(2, new RestfulDriver().getMajorVersion());
+        Assert.assertEquals(3, new RestfulDriver().getMajorVersion());
     }
 
     @Test

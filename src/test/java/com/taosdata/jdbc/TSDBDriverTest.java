@@ -181,7 +181,7 @@ public class TSDBDriverTest {
 
     @Test
     public void getMajorVersion() {
-        assertEquals(2, new TSDBDriver().getMajorVersion());
+        assertEquals(3, new TSDBDriver().getMajorVersion());
     }
 
     @Test
