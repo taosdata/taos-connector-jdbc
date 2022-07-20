@@ -9,21 +9,21 @@
   <packaging>jar</packaging>
 
   <name>JDBCDriver</name>
-  <url>https://github.com/taosdata/TDengine/tree/master/src/connector/jdbc</url>
+  <url>https://github.com/taosdata/taos-connector-jdbc</url>
   <description>TDengine JDBC Driver</description>
 
   <licenses>
     <license>
-      <name>GNU AFFERO GENERAL PUBLIC LICENSE Version 3</name>
-      <url>https://github.com/taosdata/TDengine/blob/master/LICENSE</url>
+      <name>MIT License</name>
+      <url>https://github.com/taosdata/taos-connector-jdbc/blob/main/LICENSE</url>
       <distribution>repo</distribution>
     </license>
   </licenses>
 
   <scm>
-    <connection>scm:git:git://github.com/taosdata/TDengine.git</connection>
-    <developerConnection>scm:git:git@github.com:taosdata/TDengine.git</developerConnection>
-    <url>https://github.com/taosdata/TDengine/tree/master/src/connector/jdbc</url>
+    <connection>scm:git:git://github.com/taosdata/taos-connector-jdbc.git</connection>
+    <developerConnection>scm:git:git@github.com:taosdata/taos-connector-jdbc.git</developerConnection>
+    <url>https://github.com/taosdata/taos-connector-jdbc</url>
     <tag>HEAD</tag>
   </scm>
 
