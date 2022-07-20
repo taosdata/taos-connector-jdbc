@@ -47,7 +47,9 @@ public class RestfulDriver extends AbstractDriver {
         Properties props = parseURL(url, info);
         String host = props.getProperty(TSDBDriver.PROPERTY_KEY_HOST);
         String port = props.getProperty(TSDBDriver.PROPERTY_KEY_PORT, "6041");
-        String database = props.containsKey(TSDBDriver.PROPERTY_KEY_DBNAME) ? props.getProperty(TSDBDriver.PROPERTY_KEY_DBNAME) : null;
+        String database = props.containsKey(TSDBDriver.PROPERTY_KEY_DBNAME)
+                ? props.getProperty(TSDBDriver.PROPERTY_KEY_DBNAME)
+                : null;
 
         String cloudToken = null;
         if (props.containsKey(TSDBDriver.PROPERTY_KEY_TOKEN)) {
@@ -72,9 +74,10 @@ public class RestfulDriver extends AbstractDriver {
                 password = URLEncoder.encode(password, StandardCharsets.UTF_8.displayName());
             }
         } catch (UnsupportedEncodingException e) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "unsupported UTF-8 concoding, user: " + props.getProperty(TSDBDriver.PROPERTY_KEY_USER) + ", password: " + props.getProperty(TSDBDriver.PROPERTY_KEY_PASSWORD));
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE,
+                    "unsupported UTF-8 concoding, user: " + props.getProperty(TSDBDriver.PROPERTY_KEY_USER)
+                            + ", password: " + props.getProperty(TSDBDriver.PROPERTY_KEY_PASSWORD));
         }
-
 
         boolean useSsl = Boolean.parseBoolean(props.getProperty(TSDBDriver.PROPERTY_KEY_USE_SSL, "false"));
         String loginUrl;
@@ -91,37 +94,42 @@ public class RestfulDriver extends AbstractDriver {
             }
             WSClient client = null;
             Transport transport = null;
-            try {
-                int timeout = Integer.parseInt(props.getProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, String.valueOf(Transport.DEFAULT_MESSAGE_WAIT_TIMEOUT)));
-                int maxRequest = Integer.parseInt(props.getProperty(TSDBDriver.HTTP_POOL_SIZE, HttpClientPoolUtil.DEFAULT_MAX_PER_ROUTE));
-                int connectTimeout = Integer.parseInt(props.getProperty(TSDBDriver.HTTP_CONNECT_TIMEOUT, HttpClientPoolUtil.DEFAULT_CONNECT_TIMEOUT));
 
-                InFlightRequest inFlightRequest = new InFlightRequest(timeout, maxRequest);
-                CountDownLatch latch = new CountDownLatch(1);
-                Map<String, String> httpHeaders = new HashMap<>();
-                client = new WSClient(new URI(loginUrl), user, password, database,
-                        inFlightRequest, httpHeaders, latch, maxRequest);
-                transport = new Transport(client, inFlightRequest);
+            int timeout = Integer.parseInt(props.getProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT,
+                    String.valueOf(Transport.DEFAULT_MESSAGE_WAIT_TIMEOUT)));
+            int maxRequest = Integer
+                    .parseInt(props.getProperty(TSDBDriver.HTTP_POOL_SIZE, HttpClientPoolUtil.DEFAULT_MAX_PER_ROUTE));
+            int connectTimeout = Integer.parseInt(
+                    props.getProperty(TSDBDriver.HTTP_CONNECT_TIMEOUT, HttpClientPoolUtil.DEFAULT_CONNECT_TIMEOUT));
+
+            InFlightRequest inFlightRequest = new InFlightRequest(timeout, maxRequest);
+            CountDownLatch latch = new CountDownLatch(1);
+            Map<String, String> httpHeaders = new HashMap<>();
+            URI urlPath = null;
+            try {
+                urlPath = new URI(loginUrl);
+            } catch (URISyntaxException e) {
+                throw new SQLException("Websocket url parse error: " + loginUrl, e);
+            }
+            client = new WSClient(urlPath, user, password, database,
+                    inFlightRequest, httpHeaders, latch, maxRequest);
+            transport = new Transport(client, inFlightRequest);
+            try {
                 if (!client.connectBlocking(connectTimeout, TimeUnit.MILLISECONDS)) {
+                    close(transport);
                     throw new SQLException("can't create connection with server");
                 }
                 if (!latch.await(timeout, TimeUnit.MILLISECONDS)) {
+                    close(transport);
                     throw new SQLException("auth timeout");
                 }
-                if (!client.isAuth()) {
-                    throw new SQLException("auth failure");
-                }
-            } catch (URISyntaxException e) {
-                throw new SQLException("Websocket url parse error: " + loginUrl, e);
             } catch (InterruptedException e) {
+                close(transport);
                 throw new SQLException("create websocket connection has been Interrupted ", e);
-            } finally {
-                if (null != transport && transport.isClosed()){
-                    transport.close();
-                }
-                if (null != client && client.isClosed()){
-                    client.close();
-                }
+            }
+            if (!client.isAuth()) {
+                close(transport);
+                throw new SQLException("auth failure");
             }
             props.setProperty(TSDBDriver.PROPERTY_KEY_TIMESTAMP_FORMAT, String.valueOf(TimestampFormat.TIMESTAMP));
             TaosGlobalConfig.setCharset(props.getProperty(TSDBDriver.PROPERTY_KEY_CHARSET));
@@ -165,7 +173,7 @@ public class RestfulDriver extends AbstractDriver {
 
     @Override
     public int getMajorVersion() {
-        return 2;
+        return 3;
     }
 
     @Override
@@ -180,7 +188,17 @@ public class RestfulDriver extends AbstractDriver {
 
     @Override
     public Logger getParentLogger() throws SQLFeatureNotSupportedException {
-        //TODO SQLFeatureNotSupportedException
+        // TODO SQLFeatureNotSupportedException
         throw new SQLFeatureNotSupportedException();
+    }
+
+    private void close(AutoCloseable closeable) {
+        if (closeable != null) {
+            try {
+                closeable.close();
+            } catch (Exception e) {
+                // handle exception
+            }
+        }
     }
 }

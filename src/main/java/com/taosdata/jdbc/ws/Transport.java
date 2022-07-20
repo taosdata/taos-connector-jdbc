@@ -19,7 +19,6 @@ public class Transport implements AutoCloseable {
 
     public Transport(WSClient client, InFlightRequest inFlightRequest) {
         this.client = client;
-        client.addTransport(this);
         this.inFlightRequest = inFlightRequest;
     }
 
@@ -45,8 +44,8 @@ public class Transport implements AutoCloseable {
 
     @Override
     public void close() {
-        client.removeTransports(this);
         inFlightRequest.close();
+        client.close();
     }
 
 }

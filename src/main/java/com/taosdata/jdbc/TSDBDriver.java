@@ -257,7 +257,7 @@ public class TSDBDriver extends AbstractDriver {
     }
 
     public int getMajorVersion() {
-        return 2;
+        return 3;
     }
 
     public int getMinorVersion() {
