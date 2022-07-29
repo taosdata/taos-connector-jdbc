@@ -444,7 +444,7 @@ public class TimestampPrecisionInNanoInJniTest {
         try (Statement stmt = conn.createStatement()) {
             stmt.executeUpdate("insert into " + ns_timestamp_db + ".weather(ts, ts2, f1) values(123456789012345678, 1234567890123456789, 127)");
         } catch (SQLException e) {
-            Assert.assertEquals("TDengine ERROR (8000060e): Timestamp data out of range", e.getMessage());
+            Assert.assertEquals("TDengine ERROR (8000060b): Timestamp data out of range", e.getMessage());
         }
     }
 
@@ -453,7 +453,7 @@ public class TimestampPrecisionInNanoInJniTest {
         try (Statement stmt = conn.createStatement()) {
             stmt.executeUpdate("insert into " + ns_timestamp_db + ".weather(ts, ts2, f1) values(1234567890123456789, 123456789012345678, 127)");
         } catch (SQLException e) {
-            Assert.assertEquals("TDengine ERROR (8000060e): Timestamp data out of range", e.getMessage());
+            Assert.assertEquals("TDengine ERROR (8000060b): Timestamp data out of range", e.getMessage());
         }
     }
 
