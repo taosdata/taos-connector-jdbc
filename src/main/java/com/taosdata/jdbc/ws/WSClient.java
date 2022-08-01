@@ -9,7 +9,10 @@ import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 public class WSClient extends WebSocketClient implements AutoCloseable {
     private final String user;
@@ -91,6 +94,7 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
     @Override
     public void onMessage(ByteBuffer bytes) {
         bytes.order(ByteOrder.LITTLE_ENDIAN);
+        bytes.position(8);
         long id = bytes.getLong();
         ResponseFuture remove = inFlightRequest.remove(Action.FETCH_BLOCK.getAction(), id);
         if (null != remove) {
