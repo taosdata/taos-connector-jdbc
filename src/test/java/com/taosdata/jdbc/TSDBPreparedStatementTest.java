@@ -1267,8 +1267,6 @@ public class TSDBPreparedStatementTest {
             TSDBPreparedStatement pst = (TSDBPreparedStatement) conn.prepareStatement(psql);
             pst.setTableName("omb_test");
             statement.close();
-            if (conn != null)
-                conn.close();
         } catch (SQLException e) {
             e.printStackTrace();
         }
