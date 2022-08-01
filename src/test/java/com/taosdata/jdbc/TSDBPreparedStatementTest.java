@@ -1256,7 +1256,7 @@ public class TSDBPreparedStatementTest {
 
 
     @Test
-    public static void testBindTableName() {
+    public void testBindTableName() {
         try {
             Statement statement = conn.createStatement();
             statement.execute("create database if not exists dbtest");
