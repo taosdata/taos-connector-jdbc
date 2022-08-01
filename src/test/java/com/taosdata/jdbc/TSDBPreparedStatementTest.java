@@ -1239,6 +1239,7 @@ public class TSDBPreparedStatementTest {
         }
     }
 
+
     @AfterClass
     public static void afterClass() {
         try {
@@ -1253,4 +1254,22 @@ public class TSDBPreparedStatementTest {
         }
     }
 
+
+    @Test
+    public static void testBindTableName() {
+        try {
+            Statement statement = conn.createStatement();
+            statement.execute("create database if not exists dbtest");
+            statement.execute("create stable if not exists omb(ts timestamp, payload binary(100)) tags(id bigint)");
+            statement.execute("create table omb_test using omb tags(1000)");
+            String psql = "INSERT INTO ? "  + "VALUES(?, ?)";
+            TSDBPreparedStatement pst = (TSDBPreparedStatement) conn.prepareStatement(psql);
+            pst.setTableName("omb_test");
+            statement.close();
+            if (conn != null)
+                conn.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
 }
