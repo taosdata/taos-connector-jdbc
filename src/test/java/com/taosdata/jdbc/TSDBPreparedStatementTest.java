@@ -1260,6 +1260,7 @@ public class TSDBPreparedStatementTest {
         try {
             Statement statement = conn.createStatement();
             statement.execute("create database if not exists dbtest");
+            statement.execute("use dbtest");
             statement.execute("create stable if not exists omb(ts timestamp, payload binary(100)) tags(id bigint)");
             statement.execute("create table omb_test using omb tags(1000)");
             String psql = "INSERT INTO ? "  + "VALUES(?, ?)";
