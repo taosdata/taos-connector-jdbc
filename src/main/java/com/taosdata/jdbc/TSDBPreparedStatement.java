@@ -646,10 +646,9 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
         }
 
         TSDBJNIConnector connector = ((TSDBConnection) this.getConnection()).getConnector();
-        if (this.tableName == null) {
+        if ((this.tableTags == null || this.tableTags.size() == 0) && this.tableName != null) {
             connector.setBindTableName(this.nativeStmtHandle, this.tableName);
-        }
-        if (this.tableTags != null) {
+        } else if (this.tableTags != null && this.tableTags.size() > 0) {
             int tagSize = this.tableTags.size();
             ByteBuffer tagDataList = ByteBuffer.allocate(this.tagValueLength);
             tagDataList.order(ByteOrder.LITTLE_ENDIAN);

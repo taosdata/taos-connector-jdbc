@@ -8,7 +8,10 @@ import org.junit.Test;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -208,6 +211,78 @@ public class TSDBJNIConnectorTest {
         connector.executeQuery("drop database if exists test");
 
         connector.closeConnection();
+    }
+
+    @Test
+    public void paramBindWithoutTableNameJNI() throws SQLException {
+        TSDBJNIConnector connector = new TSDBJNIConnector();
+        connector.connect(host, 6030, null, "root", "taosdata");
+        connector.executeQuery("drop database if exists test");
+        connector.executeQuery("create database if not exists test");
+        connector.executeQuery("use test");
+        connector.executeQuery("create table weather(ts timestamp, f1 int) tags(t1 int)");
+        connector.executeQuery("create table t1 using weather tags (1)");
+
+        // 1. init + prepare
+        long stmt = connector.prepareStmt("insert into t1 values(?, ?)");
+        for (int i = 0; i < 10; i++) {
+            long ts = System.currentTimeMillis();
+            bind_col_timestamp(connector, stmt, ts, 100);
+            // bind int
+            bind_col_integer(connector, stmt, 100);
+            // 4. add_batch
+            connector.addBatch(stmt);
+        }
+        connector.executeBatch(stmt);
+        connector.closeBatch(stmt);
+
+        connector.executeQuery("drop database if exists test");
+
+        connector.closeConnection();
+    }
+
+    @Test
+    public void paramBindWithoutTableName() throws SQLException {
+        String url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+        Connection connection = DriverManager.getConnection(url);
+        try (Statement statement = connection.createStatement()) {
+            statement.executeUpdate("drop database if exists test");
+            statement.executeUpdate("create database if not exists test");
+            statement.executeUpdate("use test");
+            statement.executeUpdate("create table weather(ts timestamp, f1 int, f2 nchar(30)) tags(t1 int)");
+            statement.executeUpdate("create table t1 using weather tags (2)");
+        }
+
+        String sql = "insert into t1 values(?, ?, ?)";
+        try (TSDBPreparedStatement statement = connection.prepareStatement(sql).unwrap(TSDBPreparedStatement.class)) {
+            Random random = new Random(System.currentTimeMillis());
+            for (int i = 0; i < 10; i++) {
+                long current = System.currentTimeMillis();
+                ArrayList<Long> tsList = new ArrayList<>();
+                for (int j = 0; j < 100; j++) {
+                    tsList.add(current + j);
+                }
+                statement.setTimestamp(0, tsList);
+
+                ArrayList<Integer> f1List = new ArrayList<>();
+                for (int j = 0; j < 100; j++) {
+                    f1List.add(random.nextInt(Integer.MAX_VALUE));
+                }
+                statement.setInt(1, f1List);
+
+                ArrayList<String> f2List = new ArrayList<>();
+                for (int j = 0; j < 100; j++) {
+                    f2List.add("California.LosAngeles");
+                }
+                statement.setNString(2, f2List, 30);
+
+                statement.addBatch();
+            }
+            statement.executeBatch();
+
+            statement.executeUpdate("drop database if exists test");
+        }
+        connection.close();
     }
 
     private void bind_col_timestamp(TSDBJNIConnector connector, long stmt, long ts_start, int numOfRows) throws SQLException {
