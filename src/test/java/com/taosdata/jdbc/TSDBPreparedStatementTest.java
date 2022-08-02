@@ -1259,13 +1259,15 @@ public class TSDBPreparedStatementTest {
     public void testBindTableName() {
         try {
             Statement statement = conn.createStatement();
-            statement.execute("create database if not exists dbtest");
-            statement.execute("use dbtest");
-            statement.execute("create stable if not exists omb(ts timestamp, payload binary(100)) tags(id bigint)");
-            statement.execute("create table omb_test using omb tags(1000)");
+            statement.execute("drop database if exists omb");
+            statement.execute("create database if not exists omb precision 'ns' vgroups 1 replica 1");
+            statement.execute("use omb");
+            statement.execute("create stable if not exists td_Yu3ARKk_0000(ts timestamp, payload binary(1024)) tags(id bigint)");
+            statement.execute("create topic `td-Yu3ARKk-0000` as stable td_Yu3ARKk_0000");
+            statement.execute("create table td_Yu3ARKk_0000_7279116981971086515 using td_Yu3ARKk_0000 tags(7279116981971086515)");
             String psql = "INSERT INTO ? "  + "VALUES(?, ?)";
             TSDBPreparedStatement pst = (TSDBPreparedStatement) conn.prepareStatement(psql);
-            pst.setTableName("omb_test");
+            pst.setTableName("td_Yu3ARKk_0000_7279116981971086515");
             statement.close();
         } catch (SQLException e) {
             e.printStackTrace();
