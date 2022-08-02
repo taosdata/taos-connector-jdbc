@@ -11,6 +11,7 @@ import com.taosdata.jdbc.ws.WSConnection;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
@@ -68,10 +69,10 @@ public class RestfulDriver extends AbstractDriver {
 
         try {
             if (user != null) {
-                user = URLEncoder.encode(user, StandardCharsets.UTF_8.displayName());
+                user = URLDecoder.decode(user, StandardCharsets.UTF_8.displayName());
             }
             if (password != null) {
-                password = URLEncoder.encode(password, StandardCharsets.UTF_8.displayName());
+                password = URLDecoder.decode(password, StandardCharsets.UTF_8.displayName());
             }
         } catch (UnsupportedEncodingException e) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE,
