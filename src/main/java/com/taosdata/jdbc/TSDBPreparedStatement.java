@@ -27,6 +27,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.PriorityQueue;
 
 /*
  * TDengine only supports a subset of the standard SQL, thus this implementation of the
@@ -42,7 +43,7 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
     private String tableName;
     private ArrayList<TableTagInfo> tableTags;
     private int tagValueLength;
-    private ArrayList<ColumnInfo> colData;
+    private PriorityQueue<ColumnInfo> queue = new PriorityQueue<>();
 
     TSDBPreparedStatement(TSDBConnection connection, String sql) throws SQLException {
         super(connection);
@@ -57,14 +58,11 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
         }
         parameters = new Object[parameterCnt];
         // for parameter-binding
-//        TSDBJNIConnector connector = ((TSDBConnection) this.getConnection()).getConnector();
-//        this.nativeStmtHandle = connector.prepareStmt(rawSql);
+        TSDBJNIConnector connector = ((TSDBConnection) this.getConnection()).getConnector();
+        this.nativeStmtHandle = connector.prepareStmt(rawSql);
 
-        if (parameterCnt > 1) {
-            // the table name is also a parameter, so ignore it.
-            this.colData = new ArrayList<>();
-            this.tableTags = new ArrayList<>();
-        }
+        // the table name is also a parameter, so ignore it.
+        this.tableTags = new ArrayList<>();
     }
 
     private void init(String sql) {
@@ -431,12 +429,13 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
     ///////////////////////////////////////////////////////////////////////
     // NOTE: the following APIs are not JDBC compatible
     // parameter binding
-    private static class ColumnInfo {
+    private static class ColumnInfo implements Comparable<ColumnInfo> {
         @SuppressWarnings("rawtypes")
         private ArrayList data;
         private int type;
         private int bytes;
         private boolean typeIsSet;
+        private int index;
 
         public ColumnInfo() {
             this.typeIsSet = false;
@@ -453,6 +452,11 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
 
         public boolean isTypeSet() {
             return this.typeIsSet;
+        }
+
+        @Override
+        public int compareTo(ColumnInfo c) {
+            return this.index > c.index ? 1 : -1;
         }
     }
 
@@ -578,23 +582,12 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
     }
 
     public <T> void setValueImpl(int columnIndex, ArrayList<T> list, int type, int bytes) throws SQLException {
-        if (this.colData.size() == 0) {
-            this.colData.addAll(Collections.nCopies(this.parameters.length - 1 - this.tableTags.size(), null));
-        }
-
-        ColumnInfo col = this.colData.get(columnIndex);
-        if (col == null) {
-            ColumnInfo p = new ColumnInfo();
-            p.setType(type);
-            p.bytes = bytes;
-            p.data = (ArrayList<?>) list.clone();
-            this.colData.set(columnIndex, p);
-        } else {
-            if (col.type != type) {
-                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "column data type mismatch");
-            }
-            col.data.addAll(list);
-        }
+        ColumnInfo p = new ColumnInfo();
+        p.setType(type);
+        p.bytes = bytes;
+        p.data = (ArrayList<?>) list.clone();
+        p.index = columnIndex;
+        queue.add(p);
     }
 
     public void setInt(int columnIndex, ArrayList<Integer> list) throws SQLException {
@@ -643,12 +636,8 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
         if (rawSql == null) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "sql statement not set yet");
         }
-        // table name is not set yet, abort
-        if (this.tableName == null) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "table name not set yet");
-        }
 
-        int numOfCols = this.colData.size();
+        int numOfCols = this.queue.size();
         if (numOfCols == 0) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "column data not bind");
         }
@@ -657,9 +646,10 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
         }
 
         TSDBJNIConnector connector = ((TSDBConnection) this.getConnection()).getConnector();
-        if (this.tableTags == null) {
+        if (this.tableName == null) {
             connector.setBindTableName(this.nativeStmtHandle, this.tableName);
-        } else {
+        }
+        if (this.tableTags != null) {
             int tagSize = this.tableTags.size();
             ByteBuffer tagDataList = ByteBuffer.allocate(this.tagValueLength);
             tagDataList.order(ByteOrder.LITTLE_ENDIAN);
@@ -752,21 +742,26 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
                     }
                 }
                 typeList.put((byte) tag.type);
-                isNullList.put(tag.isNull ? (byte) 1 : (byte)0);
+                isNullList.put(tag.isNull ? (byte) 1 : (byte) 0);
             }
 
             connector.setBindTableNameAndTags(this.nativeStmtHandle, this.tableName, this.tableTags.size(),
                     tagDataList, typeList, lengthList, isNullList);
         }
 
-        ColumnInfo colInfo = this.colData.get(0);
+        ArrayList<ColumnInfo> colData = new ArrayList<>();
+
+        for (int i = 0; i < numOfCols; i++) {
+            colData.add(queue.poll());
+        }
+        ColumnInfo colInfo = colData.get(0);
         if (colInfo == null) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "column data not bind");
         }
 
         int rows = colInfo.data.size();
         for (int i = 0; i < numOfCols; ++i) {
-            ColumnInfo col1 = this.colData.get(i);
+            ColumnInfo col1 = colData.get(i);
             if (col1 == null || !col1.isTypeSet()) {
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "column data not bind");
             }
@@ -916,8 +911,6 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
         if (this.tableTags != null)
             this.tableTags.clear();
         tagValueLength = 0;
-        if (this.colData != null)
-            this.colData.clear();
     }
 
     public void columnDataCloseBatch() throws SQLException {
