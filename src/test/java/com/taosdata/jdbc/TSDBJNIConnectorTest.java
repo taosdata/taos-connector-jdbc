@@ -276,9 +276,9 @@ public class TSDBJNIConnectorTest {
                 }
                 statement.setNString(2, f2List, 30);
 
-                statement.addBatch();
+                statement.columnDataAddBatch();
             }
-            statement.executeBatch();
+            statement.columnDataExecuteBatch();
 
             statement.executeUpdate("drop database if exists test");
         }
