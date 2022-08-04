@@ -654,7 +654,7 @@ public class BlockResultSet extends AbstractWSResultSet {
                 return tmp.floatValue();
             }
             case TSDB_DATA_TYPE_DOUBLE: {
-                Double tmp = (double) value;
+                Double tmp = (Double) value;
                 if (tmp < Float.MIN_VALUE || tmp > Float.MAX_VALUE)
                     throwRangeException(value.toString(), columnIndex, Types.FLOAT);
                 return Float.parseFloat(String.valueOf(tmp));
