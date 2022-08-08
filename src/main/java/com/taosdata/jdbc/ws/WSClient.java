@@ -94,7 +94,7 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
     @Override
     public void onMessage(ByteBuffer bytes) {
         bytes.order(ByteOrder.LITTLE_ENDIAN);
-//        bytes.position(8);
+        bytes.position(8);
         long id = bytes.getLong();
         ResponseFuture remove = inFlightRequest.remove(Action.FETCH_BLOCK.getAction(), id);
         if (null != remove) {
