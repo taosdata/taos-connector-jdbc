@@ -53,6 +53,7 @@ public class BlockResultSet extends AbstractWSResultSet {
                         for (int j = 0; j < numOfRows; j++) {
                             if (isNull(tmp, j)) {
                                 col.add(null);
+                                continue;
                             }
                             col.add(buffer.get());
                         }
@@ -65,6 +66,7 @@ public class BlockResultSet extends AbstractWSResultSet {
                         for (int j = 0; j < numOfRows; j++) {
                             if (isNull(tmp, j)) {
                                 col.add(null);
+                                continue;
                             }
                             col.add(buffer.getShort());
                         }
@@ -77,6 +79,7 @@ public class BlockResultSet extends AbstractWSResultSet {
                         for (int j = 0; j < numOfRows; j++) {
                             if (isNull(tmp, j)) {
                                 col.add(null);
+                                continue;
                             }
                             col.add(buffer.getInt());
                         }
@@ -90,6 +93,7 @@ public class BlockResultSet extends AbstractWSResultSet {
                         for (int j = 0; j < numOfRows; j++) {
                             if (isNull(tmp, j)) {
                                 col.add(null);
+                                continue;
                             }
                             col.add(buffer.getLong());
                         }
@@ -101,6 +105,7 @@ public class BlockResultSet extends AbstractWSResultSet {
                         for (int j = 0; j < numOfRows; j++) {
                             if (isNull(tmp, j)) {
                                 col.add(null);
+                                continue;
                             }
                             col.add(buffer.getFloat());
                         }
@@ -112,6 +117,7 @@ public class BlockResultSet extends AbstractWSResultSet {
                         for (int j = 0; j < numOfRows; j++) {
                             if (isNull(tmp, j)) {
                                 col.add(null);
+                                continue;
                             }
                             col.add(buffer.getDouble());
                         }
@@ -1031,6 +1037,6 @@ public class BlockResultSet extends AbstractWSResultSet {
     private boolean isNull(byte[] c, int n) {
         int position = n >>> 3;
         int index = n & 0x7;
-        return (c[position] & 1 << index) == 1;
+        return (c[position] & (1 << (7 - index))) == (1 << (7 - index));
     }
 }
