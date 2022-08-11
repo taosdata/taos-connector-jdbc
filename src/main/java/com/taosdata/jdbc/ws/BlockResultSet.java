@@ -39,7 +39,7 @@ public class BlockResultSet extends AbstractWSResultSet {
         if (resp.getBuffer() != null) {
             int bitMapOffset = BitmapLen(numOfRows);
             // 10 = 4 + 6
-            int pHeader = buffer.position() + 12 + fields.size() * 10;
+            int pHeader = buffer.position() + 28 + fields.size() * 9;
             buffer.position(pHeader);
             for (int i = 0; i < fields.size(); i++) {
                 List<Object> col = new ArrayList<>(numOfRows);

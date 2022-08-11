@@ -99,7 +99,7 @@ public class TSDBResultSetBlockData {
         ByteBuffer buffer = ByteBuffer.wrap(value);
         buffer.order(ByteOrder.LITTLE_ENDIAN);
         int bitMapOffset = BitmapLen(numOfRows);
-        int pHeader = 12 + columnMetaDataList.size() * 10;
+        int pHeader = 28 + columnMetaDataList.size() * 9;
         buffer.position(pHeader);
         for (int i = 0; i < columnMetaDataList.size(); i++) {
             List<Object> col = new ArrayList<>(numOfRows);

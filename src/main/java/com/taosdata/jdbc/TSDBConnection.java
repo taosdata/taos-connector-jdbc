@@ -24,7 +24,7 @@ public class TSDBConnection extends AbstractConnection {
                 info.getProperty(TSDBDriver.PROPERTY_KEY_USER),
                 info.getProperty(TSDBDriver.PROPERTY_KEY_PASSWORD));
 
-        String batchLoad = info.getProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD);
+        String batchLoad = info.getProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
         if (batchLoad != null) {
             this.batchFetch = Boolean.parseBoolean(batchLoad);
         }
@@ -86,6 +86,7 @@ public class TSDBConnection extends AbstractConnection {
     public void unregisterStatement(Statement stmt) {
         this.statements.remove(stmt);
     }
+
     public void registerStatement(Statement stmt) {
         this.statements.addIfAbsent(stmt);
     }
