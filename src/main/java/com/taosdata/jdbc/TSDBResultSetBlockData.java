@@ -112,11 +112,12 @@ public class TSDBResultSetBlockData {
                     byte[] tmp = new byte[bitMapOffset];
                     buffer.get(tmp);
                     for (int j = 0; j < numOfRows; j++) {
+                        byte b = buffer.get();
                         if (isNull(tmp, j)) {
                             col.add(null);
-                            continue;
+                        }else {
+                            col.add(b);
                         }
-                        col.add(buffer.get());
                     }
                     break;
                 }
@@ -125,11 +126,12 @@ public class TSDBResultSetBlockData {
                     byte[] tmp = new byte[bitMapOffset];
                     buffer.get(tmp);
                     for (int j = 0; j < numOfRows; j++) {
+                        short s = buffer.getShort();
                         if (isNull(tmp, j)) {
                             col.add(null);
-                            continue;
+                        }else {
+                            col.add(s);
                         }
-                        col.add(buffer.getShort());
                     }
                     break;
                 }
@@ -138,11 +140,12 @@ public class TSDBResultSetBlockData {
                     byte[] tmp = new byte[bitMapOffset];
                     buffer.get(tmp);
                     for (int j = 0; j < numOfRows; j++) {
+                        int in = buffer.getInt();
                         if (isNull(tmp, j)) {
                             col.add(null);
-                            continue;
+                        }else {
+                            col.add(in);
                         }
-                        col.add(buffer.getInt());
                     }
                     break;
                 }
@@ -152,11 +155,12 @@ public class TSDBResultSetBlockData {
                     byte[] tmp = new byte[bitMapOffset];
                     buffer.get(tmp);
                     for (int j = 0; j < numOfRows; j++) {
+                        long l = buffer.getLong();
                         if (isNull(tmp, j)) {
                             col.add(null);
-                            continue;
+                        }else {
+                            col.add(l);
                         }
-                        col.add(buffer.getLong());
                     }
                     break;
                 }
@@ -164,11 +168,12 @@ public class TSDBResultSetBlockData {
                     byte[] tmp = new byte[bitMapOffset];
                     buffer.get(tmp);
                     for (int j = 0; j < numOfRows; j++) {
+                        float f = buffer.getFloat();
                         if (isNull(tmp, j)) {
                             col.add(null);
-                            continue;
+                        }else {
+                            col.add(f);
                         }
-                        col.add(buffer.getFloat());
                     }
                     break;
                 }
@@ -176,11 +181,12 @@ public class TSDBResultSetBlockData {
                     byte[] tmp = new byte[bitMapOffset];
                     buffer.get(tmp);
                     for (int j = 0; j < numOfRows; j++) {
+                        double d = buffer.getDouble();
                         if (isNull(tmp, j)) {
                             col.add(null);
-                            continue;
+                        }else {
+                            col.add(d);
                         }
-                        col.add(buffer.getDouble());
                     }
                     break;
                 }
