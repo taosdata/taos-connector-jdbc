@@ -119,6 +119,9 @@ public class TSDBResultSet extends AbstractResultSet {
     }
 
     public boolean wasNull() throws SQLException {
+        if (this.getBatchFetch()) {
+            return this.blockData.wasNull;
+        }
         return this.lastWasNull;
     }
 

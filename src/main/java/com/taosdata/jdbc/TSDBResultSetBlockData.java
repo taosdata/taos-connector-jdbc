@@ -38,6 +38,7 @@ public class TSDBResultSetBlockData {
 
     private List<ColumnMetaData> columnMetaDataList;
     private ArrayList<List<Object>> colData;
+    protected boolean wasNull;
 
     private int timestampPrecision;
 
@@ -236,6 +237,7 @@ public class TSDBResultSetBlockData {
     public String getString(int col) throws SQLException {
         Object obj = get(col);
         if (obj == null) {
+            wasNull = true;
             return null;
         }
 
@@ -257,6 +259,7 @@ public class TSDBResultSetBlockData {
 
         Object obj = get(col);
         if (obj == null) {
+            wasNull = true;
             return null;
         }
         if (obj instanceof byte[])
@@ -278,6 +281,7 @@ public class TSDBResultSetBlockData {
     public int getInt(int col) {
         Object obj = get(col);
         if (obj == null) {
+            wasNull = true;
             return 0;
         }
 
@@ -323,6 +327,7 @@ public class TSDBResultSetBlockData {
     public boolean getBoolean(int col) throws SQLException {
         Object obj = get(col);
         if (obj == null) {
+            wasNull = true;
             return Boolean.FALSE;
         }
 
@@ -381,6 +386,7 @@ public class TSDBResultSetBlockData {
     public long getLong(int col) throws SQLException {
         Object obj = get(col);
         if (obj == null) {
+            wasNull = true;
             return 0;
         }
 
@@ -436,6 +442,7 @@ public class TSDBResultSetBlockData {
     public Timestamp getTimestamp(int col) throws SQLException {
         Object obj = get(col);
         if (obj == null) {
+            wasNull = true;
             return null;
         }
 
@@ -451,6 +458,7 @@ public class TSDBResultSetBlockData {
     public double getDouble(int col) {
         Object obj = get(col);
         if (obj == null) {
+            wasNull = true;
             return 0;
         }
 
@@ -508,6 +516,7 @@ public class TSDBResultSetBlockData {
 
         Object source = bb.get(this.rowIndex);
         if (null == source) {
+            wasNull = true;
             return null;
         }
         switch (this.columnMetaDataList.get(col).getColType()) {
