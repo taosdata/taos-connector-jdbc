@@ -1223,7 +1223,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
 
     private boolean isAvailableCatalog(Connection connection, String catalog) throws SQLException {
         try (Statement stmt = connection.createStatement();
-             ResultSet databases = stmt.executeQuery("show databases")) {
+             ResultSet databases = stmt.executeQuery("select name, `precision` as `precision` from information_schema.ins_databases")) {
             while (databases.next()) {
                 String dbname = databases.getString("name");
                 this.precision = databases.getString("precision");
@@ -1247,8 +1247,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
             // set up ColumnMetaDataList
             resultSet.setColumnMetaDataList(buildGetSuperTablesColumnMetaDataList());
             // set result set row data
-            stmt.execute("use " + catalog);
-            try (ResultSet rs = stmt.executeQuery("show tables like '" + tableNamePattern + "'")) {
+            try (ResultSet rs = stmt.executeQuery("select * from ins_tables where db_name='" + catalog + "' and table_name like '" + tableNamePattern + "'")) {
                 List<TSDBResultSetRowData> rowDataList = new ArrayList<>();
                 while (rs.next()) {
                     TSDBResultSetRowData rowData = new TSDBResultSetRowData(4);

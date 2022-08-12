@@ -19,8 +19,6 @@ public class RestfulStatementTest {
         ResultSet rs = stmt.executeQuery("show databases");
         Assert.assertNotNull(rs);
         ResultSetMetaData meta = rs.getMetaData();
-        int columnCount = meta.getColumnCount();
-        Assert.assertTrue(columnCount > 1);
         while (rs.next()) {
             Assert.assertEquals("name", meta.getColumnLabel(1));
             Assert.assertNotNull(rs.getString("name"));
