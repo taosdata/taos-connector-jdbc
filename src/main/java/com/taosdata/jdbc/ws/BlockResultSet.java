@@ -311,7 +311,7 @@ public class BlockResultSet extends AbstractWSResultSet {
                 if ("TRUE".compareToIgnoreCase((String) value) == 0) {
                     return Boolean.TRUE;
                 } else if ("FALSE".compareToIgnoreCase((String) value) == 0) {
-                    return Boolean.TRUE;
+                    return Boolean.FALSE;
                 } else {
                     throw new SQLDataException();
                 }
@@ -328,7 +328,7 @@ public class BlockResultSet extends AbstractWSResultSet {
                 if ("TRUE".compareToIgnoreCase(tmp) == 0) {
                     return Boolean.TRUE;
                 } else if ("FALSE".compareToIgnoreCase(tmp) == 0) {
-                    return Boolean.TRUE;
+                    return Boolean.FALSE;
                 } else {
                     throw new SQLDataException();
                 }
@@ -604,7 +604,7 @@ public class BlockResultSet extends AbstractWSResultSet {
                     throwRangeException(value.toString(), columnIndex, Types.BIGINT);
                 return tmp.longValue();
             }
-            case TSDB_DATA_TYPE_TIMESTAMP:{
+            case TSDB_DATA_TYPE_TIMESTAMP: {
                 Timestamp ts = (Timestamp) value;
                 switch (this.timestampPrecision) {
                     case TimestampPrecision.MS:

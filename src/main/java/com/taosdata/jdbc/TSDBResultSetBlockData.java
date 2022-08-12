@@ -382,7 +382,7 @@ public class TSDBResultSetBlockData {
                 if ("TRUE".compareToIgnoreCase((String) obj) == 0) {
                     return Boolean.TRUE;
                 } else if ("FALSE".compareToIgnoreCase((String) obj) == 0) {
-                    return Boolean.TRUE;
+                    return Boolean.FALSE;
                 } else {
                     throw new SQLDataException();
                 }
@@ -392,11 +392,7 @@ public class TSDBResultSetBlockData {
                 String charset = TaosGlobalConfig.getCharset();
                 try {
                     String tmp = new String((byte[]) obj, charset);
-                    if ("TRUE".compareToIgnoreCase(tmp) == 0) {
-                        return Boolean.TRUE;
-                    } else if ("FALSE".compareToIgnoreCase(tmp) == 0) {
-                        return Boolean.FALSE;
-                    }
+                    return "TRUE".compareToIgnoreCase(tmp) == 0;
                 } catch (UnsupportedEncodingException e) {
                     throw new RuntimeException(e.getMessage());
                 }
@@ -429,7 +425,7 @@ public class TSDBResultSetBlockData {
             case TSDB_DATA_TYPE_UINT:
             case TSDB_DATA_TYPE_BIGINT:
                 return (long) obj;
-            case TSDB_DATA_TYPE_UBIGINT:{
+            case TSDB_DATA_TYPE_UBIGINT: {
                 BigDecimal tmp = (BigDecimal) obj;
                 if (tmp.compareTo(new BigDecimal(Long.MIN_VALUE)) < 0 || tmp.compareTo(new BigDecimal(Long.MAX_VALUE)) > 0)
                     throwRangeException(obj.toString(), col, Types.BIGINT);
@@ -448,7 +444,7 @@ public class TSDBResultSetBlockData {
                 }
             }
 
-            case TSDBConstants.TSDB_DATA_TYPE_FLOAT:{
+            case TSDBConstants.TSDB_DATA_TYPE_FLOAT: {
                 float tmp = (float) obj;
                 if (tmp < Long.MIN_VALUE || tmp > Long.MAX_VALUE)
                     throwRangeException(obj.toString(), col, Types.BIGINT);

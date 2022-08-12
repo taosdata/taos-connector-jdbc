@@ -20,10 +20,12 @@ import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 
+import static com.taosdata.jdbc.TSDBConstants.*;
 import static com.taosdata.jdbc.utils.UnsignedDataUtils.*;
 
 public class TSDBResultSetRowData {
@@ -73,16 +75,25 @@ public class TSDBResultSetRowData {
                 return (Boolean) obj;
             case TSDBConstants.TSDB_DATA_TYPE_TINYINT:
                 return ((Byte) obj) == 1 ? Boolean.TRUE : Boolean.FALSE;
+            case TSDBConstants.TSDB_DATA_TYPE_UTINYINT:
+                return parseUTinyInt((byte) obj) == 1 ? Boolean.TRUE : Boolean.FALSE;
             case TSDBConstants.TSDB_DATA_TYPE_SMALLINT:
                 return ((Short) obj) == 1 ? Boolean.TRUE : Boolean.FALSE;
+            case TSDBConstants.TSDB_DATA_TYPE_USMALLINT:
+                return parseUSmallInt((short) obj) == 1 ? Boolean.TRUE : Boolean.FALSE;
             case TSDBConstants.TSDB_DATA_TYPE_INT:
                 return ((Integer) obj) == 1 ? Boolean.TRUE : Boolean.FALSE;
+            case TSDBConstants.TSDB_DATA_TYPE_UINT:
+                return parseUInteger((int) obj) == 1 ? Boolean.TRUE : Boolean.FALSE;
             case TSDBConstants.TSDB_DATA_TYPE_BIGINT:
                 return ((Long) obj) == 1L ? Boolean.TRUE : Boolean.FALSE;
+            case TSDBConstants.TSDB_DATA_TYPE_UBIGINT:
+                return parseUBigInt((long) obj).equals(new BigDecimal(0)) ? Boolean.FALSE : Boolean.TRUE;
             case TSDBConstants.TSDB_DATA_TYPE_BINARY:
             case TSDBConstants.TSDB_DATA_TYPE_JSON:
             case TSDBConstants.TSDB_DATA_TYPE_NCHAR: {
-                return obj.toString().contains("1");
+                String tmp = obj.toString();
+                return "1".equals(tmp) || "TRUE".equalsIgnoreCase(tmp);
             }
             default:
                 return false;
@@ -242,7 +253,7 @@ public class TSDBResultSetRowData {
         data.set(col, value);
     }
 
-    public float getFloat(int col, int nativeType) {
+    public float getFloat(int col, int nativeType) throws SQLException {
         Object obj = data.get(col - 1);
         if (obj == null)
             return 0;
@@ -256,18 +267,35 @@ public class TSDBResultSetRowData {
                 return ((Double) obj).floatValue();
             case TSDBConstants.TSDB_DATA_TYPE_TINYINT:
                 return (Byte) obj;
+            case TSDBConstants.TSDB_DATA_TYPE_UTINYINT:
+                return parseUTinyInt((byte) obj);
             case TSDBConstants.TSDB_DATA_TYPE_SMALLINT:
                 return (Short) obj;
+            case TSDBConstants.TSDB_DATA_TYPE_USMALLINT:
+                return parseUSmallInt((short) obj);
             case TSDBConstants.TSDB_DATA_TYPE_INT:
                 return (Integer) obj;
+            case TSDBConstants.TSDB_DATA_TYPE_UINT:
+                return parseUInteger((int) obj);
             case TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP:
             case TSDBConstants.TSDB_DATA_TYPE_BIGINT:
                 return (Long) obj;
+            case TSDBConstants.TSDB_DATA_TYPE_UBIGINT: {
+                BigDecimal tmp = (BigDecimal) obj;
+                if (tmp.compareTo(new BigDecimal(Long.MIN_VALUE)) < 0 || tmp.compareTo(new BigDecimal(Long.MAX_VALUE)) > 0)
+                    throwRangeException(obj.toString(), col, Types.BIGINT);
+                return tmp.longValue();
+            }
             case TSDBConstants.TSDB_DATA_TYPE_JSON:
                 return (float) Double.parseDouble((String) obj);
             default:
                 return 0;
         }
+    }
+
+    private void throwRangeException(String valueAsString, int columnIndex, int jdbcType) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_NUMERIC_VALUE_OUT_OF_RANGE,
+                "'" + valueAsString + "' in column '" + columnIndex + "' is outside valid range for the jdbcType " + jdbcType2TaosTypeName(jdbcType));
     }
 
     /**
@@ -284,7 +312,7 @@ public class TSDBResultSetRowData {
         data.set(col, value);
     }
 
-    public double getDouble(int col, int nativeType) {
+    public double getDouble(int col, int nativeType) throws SQLException {
         Object obj = data.get(col - 1);
         if (obj == null)
             return 0;
@@ -298,13 +326,25 @@ public class TSDBResultSetRowData {
                 return (Double) obj;
             case TSDBConstants.TSDB_DATA_TYPE_TINYINT:
                 return (Byte) obj;
+            case TSDB_DATA_TYPE_UTINYINT:
+                return parseUTinyInt((byte) obj);
             case TSDBConstants.TSDB_DATA_TYPE_SMALLINT:
                 return (Short) obj;
+            case TSDB_DATA_TYPE_USMALLINT:
+                return parseUSmallInt((short) obj);
             case TSDBConstants.TSDB_DATA_TYPE_INT:
                 return (Integer) obj;
+            case TSDB_DATA_TYPE_UINT:
+                return parseUInteger((int) obj);
             case TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP:
             case TSDBConstants.TSDB_DATA_TYPE_BIGINT:
                 return (Long) obj;
+            case TSDB_DATA_TYPE_UBIGINT: {
+                BigDecimal tmp = (BigDecimal) obj;
+                if (tmp.compareTo(new BigDecimal(Double.MIN_VALUE)) < 0 || tmp.compareTo(new BigDecimal(Double.MAX_VALUE)) > 0)
+                    throwRangeException(obj.toString(), col, Types.TIMESTAMP);
+                return tmp.floatValue();
+            }
             case TSDBConstants.TSDB_DATA_TYPE_JSON:
                 return Double.parseDouble((String) obj);
             default:
