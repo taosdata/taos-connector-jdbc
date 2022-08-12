@@ -438,7 +438,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             case TSDB_DATA_TYPE_TINYINT:
                 return (byte) value;
             case TSDB_DATA_TYPE_UTINYINT:
-                return parseUTinyInt((byte) value);
+                return (short) value;
             case TSDB_DATA_TYPE_USMALLINT:
             case TSDB_DATA_TYPE_INT: {
                 int tmp = (int) value;
@@ -509,11 +509,9 @@ public class BlockResultSet extends AbstractWSResultSet {
             case TSDB_DATA_TYPE_TINYINT:
                 return (byte) value;
             case TSDB_DATA_TYPE_UTINYINT:
-                return parseUTinyInt((byte) value);
             case TSDB_DATA_TYPE_SMALLINT:
                 return (short) value;
             case TSDB_DATA_TYPE_USMALLINT:
-                return parseUSmallInt((short) value);
             case TSDB_DATA_TYPE_INT:
                 return (int) value;
 
@@ -591,17 +589,14 @@ public class BlockResultSet extends AbstractWSResultSet {
             case TSDB_DATA_TYPE_TINYINT:
                 return (byte) value;
             case TSDB_DATA_TYPE_UTINYINT:
-                return parseUTinyInt((byte) value);
             case TSDB_DATA_TYPE_SMALLINT:
                 return (short) value;
             case TSDB_DATA_TYPE_USMALLINT:
-                return parseUSmallInt((short) value);
             case TSDB_DATA_TYPE_INT:
                 return (int) value;
+            case TSDB_DATA_TYPE_UINT:
             case TSDB_DATA_TYPE_BIGINT:
                 return (long) value;
-            case TSDB_DATA_TYPE_UINT:
-                return parseUInteger((int) value);
 
             case TSDB_DATA_TYPE_UBIGINT: {
                 BigDecimal tmp = (BigDecimal) value;
@@ -609,8 +604,18 @@ public class BlockResultSet extends AbstractWSResultSet {
                     throwRangeException(value.toString(), columnIndex, Types.BIGINT);
                 return tmp.longValue();
             }
-            case TSDB_DATA_TYPE_TIMESTAMP:
-                return ((Timestamp) value).getTime();
+            case TSDB_DATA_TYPE_TIMESTAMP:{
+                Timestamp ts = (Timestamp) value;
+                switch (this.timestampPrecision) {
+                    case TimestampPrecision.MS:
+                    default:
+                        return ts.getTime();
+                    case TimestampPrecision.US:
+                        return ts.getTime() * 1000 + ts.getNanos() / 1000 % 1000;
+                    case TimestampPrecision.NS:
+                        return ts.getTime() * 1000_000 + ts.getNanos() % 1000_000;
+                }
+            }
             case TSDB_DATA_TYPE_FLOAT: {
                 float tmp = (float) value;
                 if (tmp < Long.MIN_VALUE || tmp > Long.MAX_VALUE)
@@ -660,17 +665,14 @@ public class BlockResultSet extends AbstractWSResultSet {
             case TSDB_DATA_TYPE_TINYINT:
                 return (byte) value;
             case TSDB_DATA_TYPE_UTINYINT:
-                return parseUTinyInt((byte) value);
             case TSDB_DATA_TYPE_SMALLINT:
                 return (short) value;
             case TSDB_DATA_TYPE_USMALLINT:
-                return parseUSmallInt((short) value);
             case TSDB_DATA_TYPE_INT:
                 return (int) value;
+            case TSDB_DATA_TYPE_UINT:
             case TSDB_DATA_TYPE_BIGINT:
                 return (long) value;
-            case TSDB_DATA_TYPE_UINT:
-                return parseUInteger((int) value);
 
             case TSDB_DATA_TYPE_UBIGINT: {
                 BigDecimal tmp = (BigDecimal) value;
@@ -723,17 +725,14 @@ public class BlockResultSet extends AbstractWSResultSet {
             case TSDB_DATA_TYPE_TINYINT:
                 return (byte) value;
             case TSDB_DATA_TYPE_UTINYINT:
-                return parseUTinyInt((byte) value);
             case TSDB_DATA_TYPE_SMALLINT:
                 return (short) value;
             case TSDB_DATA_TYPE_USMALLINT:
-                return parseUSmallInt((short) value);
             case TSDB_DATA_TYPE_INT:
                 return (int) value;
+            case TSDB_DATA_TYPE_UINT:
             case TSDB_DATA_TYPE_BIGINT:
                 return (long) value;
-            case TSDB_DATA_TYPE_UINT:
-                return parseUInteger((int) value);
 
             case TSDB_DATA_TYPE_UBIGINT: {
                 BigDecimal tmp = (BigDecimal) value;
@@ -882,17 +881,14 @@ public class BlockResultSet extends AbstractWSResultSet {
             case TSDB_DATA_TYPE_TINYINT:
                 return new BigDecimal((byte) value);
             case TSDB_DATA_TYPE_UTINYINT:
-                return new BigDecimal(parseUTinyInt((byte) value));
             case TSDB_DATA_TYPE_SMALLINT:
                 return new BigDecimal((short) value);
             case TSDB_DATA_TYPE_USMALLINT:
-                return new BigDecimal(parseUSmallInt((short) value));
             case TSDB_DATA_TYPE_INT:
                 return new BigDecimal((int) value);
+            case TSDB_DATA_TYPE_UINT:
             case TSDB_DATA_TYPE_BIGINT:
                 return new BigDecimal((long) value);
-            case TSDB_DATA_TYPE_UINT:
-                return new BigDecimal(parseUInteger((int) value));
 
             case TSDB_DATA_TYPE_FLOAT:
                 return BigDecimal.valueOf((float) value);
