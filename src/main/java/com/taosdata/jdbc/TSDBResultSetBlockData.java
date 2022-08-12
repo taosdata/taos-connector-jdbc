@@ -26,11 +26,13 @@ import java.nio.ByteOrder;
 import java.sql.SQLDataException;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
+import static com.taosdata.jdbc.utils.UnsignedDataUtils.*;
 
 public class TSDBResultSetBlockData {
     private int numOfRows = 0;
@@ -115,7 +117,7 @@ public class TSDBResultSetBlockData {
                         byte b = buffer.get();
                         if (isNull(tmp, j)) {
                             col.add(null);
-                        }else {
+                        } else {
                             col.add(b);
                         }
                     }
@@ -129,7 +131,7 @@ public class TSDBResultSetBlockData {
                         short s = buffer.getShort();
                         if (isNull(tmp, j)) {
                             col.add(null);
-                        }else {
+                        } else {
                             col.add(s);
                         }
                     }
@@ -143,7 +145,7 @@ public class TSDBResultSetBlockData {
                         int in = buffer.getInt();
                         if (isNull(tmp, j)) {
                             col.add(null);
-                        }else {
+                        } else {
                             col.add(in);
                         }
                     }
@@ -158,7 +160,7 @@ public class TSDBResultSetBlockData {
                         long l = buffer.getLong();
                         if (isNull(tmp, j)) {
                             col.add(null);
-                        }else {
+                        } else {
                             col.add(l);
                         }
                     }
@@ -171,7 +173,7 @@ public class TSDBResultSetBlockData {
                         float f = buffer.getFloat();
                         if (isNull(tmp, j)) {
                             col.add(null);
-                        }else {
+                        } else {
                             col.add(f);
                         }
                     }
@@ -184,7 +186,7 @@ public class TSDBResultSetBlockData {
                         double d = buffer.getDouble();
                         if (isNull(tmp, j)) {
                             col.add(null);
-                        }else {
+                        } else {
                             col.add(d);
                         }
                     }
@@ -293,31 +295,39 @@ public class TSDBResultSetBlockData {
 
         int type = this.columnMetaDataList.get(col).getColType();
         switch (type) {
-            case TSDBConstants.TSDB_DATA_TYPE_BOOL:
+            case TSDB_DATA_TYPE_BOOL:
                 return (boolean) obj ? 1 : 0;
-            case TSDBConstants.TSDB_DATA_TYPE_TINYINT:
+            case TSDB_DATA_TYPE_UTINYINT:
+                return parseUTinyInt((byte) obj);
+            case TSDB_DATA_TYPE_TINYINT:
                 return (byte) obj;
-            case TSDBConstants.TSDB_DATA_TYPE_SMALLINT:
+            case TSDB_DATA_TYPE_SMALLINT:
                 return (short) obj;
-            case TSDBConstants.TSDB_DATA_TYPE_INT: {
+            case TSDB_DATA_TYPE_USMALLINT:
+                return parseUSmallInt((short) obj);
+            case TSDB_DATA_TYPE_INT: {
                 return (int) obj;
             }
-            case TSDBConstants.TSDB_DATA_TYPE_BIGINT:
+            case TSDB_DATA_TYPE_UINT:
+                return ((Long) parseUInteger((int) obj)).intValue();
+            case TSDB_DATA_TYPE_BIGINT:
                 return ((Long) obj).intValue();
-            case TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP: {
+            case TSDB_DATA_TYPE_UBIGINT:
+                return parseUBigInt((long) obj).intValue();
+            case TSDB_DATA_TYPE_TIMESTAMP: {
                 return ((Long) ((Timestamp) obj).getTime()).intValue();
             }
 
-            case TSDBConstants.TSDB_DATA_TYPE_FLOAT:
-            case TSDBConstants.TSDB_DATA_TYPE_DOUBLE: {
+            case TSDB_DATA_TYPE_FLOAT:
+            case TSDB_DATA_TYPE_DOUBLE: {
                 return ((Double) obj).intValue();
             }
 
-            case TSDBConstants.TSDB_DATA_TYPE_NCHAR: {
+            case TSDB_DATA_TYPE_NCHAR: {
                 return Integer.parseInt((String) obj);
             }
-            case TSDBConstants.TSDB_DATA_TYPE_JSON:
-            case TSDBConstants.TSDB_DATA_TYPE_BINARY: {
+            case TSDB_DATA_TYPE_JSON:
+            case TSDB_DATA_TYPE_BINARY: {
                 String charset = TaosGlobalConfig.getCharset();
                 try {
                     return Integer.parseInt(new String((byte[]) obj, charset));
@@ -339,29 +349,34 @@ public class TSDBResultSetBlockData {
 
         int type = this.columnMetaDataList.get(col).getColType();
         switch (type) {
-            case TSDBConstants.TSDB_DATA_TYPE_BOOL:
+            case TSDB_DATA_TYPE_BOOL:
                 return (boolean) obj;
-            case TSDBConstants.TSDB_DATA_TYPE_TINYINT:
+            case TSDB_DATA_TYPE_TINYINT:
                 return ((byte) obj == 0) ? Boolean.FALSE : Boolean.TRUE;
-            case TSDBConstants.TSDB_DATA_TYPE_SMALLINT:
+            case TSDB_DATA_TYPE_UTINYINT:
+            case TSDB_DATA_TYPE_SMALLINT:
                 return ((short) obj == 0) ? Boolean.FALSE : Boolean.TRUE;
-            case TSDBConstants.TSDB_DATA_TYPE_INT: {
+            case TSDB_DATA_TYPE_USMALLINT:
+            case TSDB_DATA_TYPE_INT: {
                 return ((int) obj == 0) ? Boolean.FALSE : Boolean.TRUE;
             }
-            case TSDBConstants.TSDB_DATA_TYPE_BIGINT:
+            case TSDB_DATA_TYPE_UINT:
+            case TSDB_DATA_TYPE_BIGINT:
                 return (((long) obj) == 0L) ? Boolean.FALSE : Boolean.TRUE;
 
-            case TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP: {
+            case TSDB_DATA_TYPE_TIMESTAMP: {
                 return ((Timestamp) obj).getTime() == 0L ? Boolean.FALSE : Boolean.TRUE;
             }
+            case TSDB_DATA_TYPE_UBIGINT:
+                return obj.equals(new BigDecimal(0)) ? Boolean.FALSE : Boolean.TRUE;
 
-            case TSDBConstants.TSDB_DATA_TYPE_FLOAT:
+            case TSDB_DATA_TYPE_FLOAT:
                 return (((float) obj) == 0f) ? Boolean.FALSE : Boolean.TRUE;
-            case TSDBConstants.TSDB_DATA_TYPE_DOUBLE: {
+            case TSDB_DATA_TYPE_DOUBLE: {
                 return (((double) obj) == 0) ? Boolean.FALSE : Boolean.TRUE;
             }
 
-            case TSDBConstants.TSDB_DATA_TYPE_NCHAR: {
+            case TSDB_DATA_TYPE_NCHAR: {
                 if ("TRUE".compareToIgnoreCase((String) obj) == 0) {
                     return Boolean.TRUE;
                 } else if ("FALSE".compareToIgnoreCase((String) obj) == 0) {
@@ -370,8 +385,8 @@ public class TSDBResultSetBlockData {
                     throw new SQLDataException();
                 }
             }
-            case TSDBConstants.TSDB_DATA_TYPE_JSON:
-            case TSDBConstants.TSDB_DATA_TYPE_BINARY: {
+            case TSDB_DATA_TYPE_JSON:
+            case TSDB_DATA_TYPE_BINARY: {
                 String charset = TaosGlobalConfig.getCharset();
                 try {
                     String tmp = new String((byte[]) obj, charset);
@@ -398,18 +413,31 @@ public class TSDBResultSetBlockData {
 
         int type = this.columnMetaDataList.get(col).getColType();
         switch (type) {
-            case TSDBConstants.TSDB_DATA_TYPE_BOOL:
+            case TSDB_DATA_TYPE_BOOL:
                 return (boolean) obj ? 1 : 0;
-            case TSDBConstants.TSDB_DATA_TYPE_TINYINT:
+            case TSDB_DATA_TYPE_TINYINT:
                 return (byte) obj;
-            case TSDBConstants.TSDB_DATA_TYPE_SMALLINT:
+            case TSDB_DATA_TYPE_UTINYINT:
+                return parseUTinyInt((byte) obj);
+            case TSDB_DATA_TYPE_SMALLINT:
                 return (short) obj;
-            case TSDBConstants.TSDB_DATA_TYPE_INT: {
+            case TSDB_DATA_TYPE_USMALLINT:
+                return parseUSmallInt((short) obj);
+            case TSDB_DATA_TYPE_INT: {
                 return (int) obj;
             }
-            case TSDBConstants.TSDB_DATA_TYPE_BIGINT:
+            case TSDB_DATA_TYPE_UINT:
+                return parseUInteger((int) obj);
+            case TSDB_DATA_TYPE_BIGINT:
                 return (long) obj;
-            case TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP: {
+            case TSDB_DATA_TYPE_UBIGINT:{
+                BigDecimal tmp = parseUBigInt((long) obj);
+                if (tmp.compareTo(new BigDecimal(Long.MIN_VALUE)) < 0 || tmp.compareTo(new BigDecimal(Long.MAX_VALUE)) > 0) {
+                    throwRangeException(tmp.toString(), col, Types.BIGINT);
+                }
+                return tmp.longValue();
+            }
+            case TSDB_DATA_TYPE_TIMESTAMP: {
                 Timestamp ts = (Timestamp) obj;
                 switch (this.timestampPrecision) {
                     case TimestampPrecision.MS:
@@ -422,10 +450,17 @@ public class TSDBResultSetBlockData {
                 }
             }
 
-            case TSDBConstants.TSDB_DATA_TYPE_FLOAT:
-                return ((Float) obj).longValue();
+            case TSDBConstants.TSDB_DATA_TYPE_FLOAT:{
+                float tmp = (float) obj;
+                if (tmp < Long.MIN_VALUE || tmp > Long.MAX_VALUE)
+                    throwRangeException(obj.toString(), col, Types.BIGINT);
+                return (long) tmp;
+            }
             case TSDBConstants.TSDB_DATA_TYPE_DOUBLE: {
-                return ((Double) obj).longValue();
+                double tmp = (Double) obj;
+                if (tmp < Long.MIN_VALUE || tmp > Long.MAX_VALUE)
+                    throwRangeException(obj.toString(), col, Types.BIGINT);
+                return (long) tmp;
             }
 
             case TSDBConstants.TSDB_DATA_TYPE_NCHAR: {
@@ -445,6 +480,11 @@ public class TSDBResultSetBlockData {
         return 0;
     }
 
+    private void throwRangeException(String valueAsString, int columnIndex, int jdbcType) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_NUMERIC_VALUE_OUT_OF_RANGE,
+                "'" + valueAsString + "' in column '" + columnIndex + "' is outside valid range for the jdbcType " + jdbcType2TaosTypeName(jdbcType));
+    }
+
     public Timestamp getTimestamp(int col) throws SQLException {
         Object obj = get(col);
         if (obj == null) {
@@ -453,15 +493,15 @@ public class TSDBResultSetBlockData {
         }
 
         int type = this.columnMetaDataList.get(col).getColType();
-        if (type == TSDBConstants.TSDB_DATA_TYPE_BIGINT)
+        if (type == TSDB_DATA_TYPE_BIGINT)
             return parseTimestampColumnData((long) obj);
-        if (type == TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP)
+        if (type == TSDB_DATA_TYPE_TIMESTAMP)
             return (Timestamp) obj;
 
         return new Timestamp(getLong(col));
     }
 
-    public double getDouble(int col) {
+    public double getDouble(int col) throws SQLException {
         Object obj = get(col);
         if (obj == null) {
             wasNull = true;
@@ -474,13 +514,25 @@ public class TSDBResultSetBlockData {
                 return (boolean) obj ? 1 : 0;
             case TSDBConstants.TSDB_DATA_TYPE_TINYINT:
                 return (byte) obj;
+            case TSDB_DATA_TYPE_UTINYINT:
+                return parseUTinyInt((byte) obj);
             case TSDBConstants.TSDB_DATA_TYPE_SMALLINT:
                 return (short) obj;
+            case TSDB_DATA_TYPE_USMALLINT:
+                return parseUSmallInt((short) obj);
             case TSDBConstants.TSDB_DATA_TYPE_INT: {
                 return (int) obj;
             }
+            case TSDB_DATA_TYPE_UINT:
+                return parseUInteger((int) obj);
             case TSDBConstants.TSDB_DATA_TYPE_BIGINT:
                 return (long) obj;
+            case TSDB_DATA_TYPE_UBIGINT: {
+                BigDecimal tmp = (BigDecimal) obj;
+                if (tmp.compareTo(new BigDecimal(Double.MIN_VALUE)) < 0 || tmp.compareTo(new BigDecimal(Double.MAX_VALUE)) > 0)
+                    throwRangeException(obj.toString(), col, Types.TIMESTAMP);
+                return tmp.floatValue();
+            }
             case TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP: {
                 Timestamp ts = (Timestamp) obj;
                 switch (this.timestampPrecision) {
@@ -544,15 +596,15 @@ public class TSDBResultSetBlockData {
             }
             case TSDB_DATA_TYPE_UTINYINT: {
                 byte val = (byte) source;
-                return val & 0xFF;
+                return parseUTinyInt(val);
             }
             case TSDB_DATA_TYPE_USMALLINT: {
                 short val = (short) source;
-                return val & 0xFFFF;
+                return parseUSmallInt(val);
             }
             case TSDB_DATA_TYPE_UINT: {
                 int val = (int) source;
-                return val & 0xFFFFFFFFL;
+                return parseUInteger(val);
             }
 
             case TSDB_DATA_TYPE_TIMESTAMP: {
@@ -563,8 +615,7 @@ public class TSDBResultSetBlockData {
 
             case TSDB_DATA_TYPE_UBIGINT: {
                 long val = (long) source;
-                BigDecimal tmp = new BigDecimal(val >>> 1).multiply(new BigDecimal(2));
-                return (val & 0x1) == 0x1 ? tmp.add(new BigDecimal(1)) : tmp;
+                return parseUBigInt(val);
             }
             default:
                 // unknown type, do nothing

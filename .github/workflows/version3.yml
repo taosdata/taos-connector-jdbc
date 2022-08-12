@@ -30,7 +30,7 @@ jobs:
         with:
           repository: 'taosdata/TDengine'
           path: 'TDengine'
-          ref: '3.0'
+          ref: 'main'
 
       - name: install TDengine
         run: cd TDengine && mkdir debug && cd debug && cmake .. -DBUILD_JDBC=false -DBUILD_TOOLS=false -DBUILD_HTTP=false && make && sudo make install
@@ -38,7 +38,7 @@ jobs:
       - name: shell
         run: |
           cat >start.sh<<EOF 
-          ulimit -n 65535 && taosd 
+          ulimit -n 65535 && TAOS_SUPPORT_VNODES=256 taosd
           EOF
 
       - name: taosd

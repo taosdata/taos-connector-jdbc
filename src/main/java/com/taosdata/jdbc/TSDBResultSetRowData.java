@@ -14,6 +14,8 @@
  *****************************************************************************/
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.utils.UnsignedDataUtils;
+
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.sql.SQLException;
@@ -21,6 +23,8 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
+
+import static com.taosdata.jdbc.utils.UnsignedDataUtils.*;
 
 public class TSDBResultSetRowData {
 
@@ -149,13 +153,15 @@ public class TSDBResultSetRowData {
             case TSDBConstants.TSDB_DATA_TYPE_JSON:
                 return Integer.parseInt((String) obj);
             case TSDBConstants.TSDB_DATA_TYPE_UTINYINT:
-                return parseUnsignedTinyIntToInt(obj);
+                return UnsignedDataUtils.parseUTinyInt((byte) obj);
             case TSDBConstants.TSDB_DATA_TYPE_USMALLINT:
-                return parseUnsignedSmallIntToInt(obj);
-            case TSDBConstants.TSDB_DATA_TYPE_UINT:
-                return parseUnsignedIntegerToInt(obj);
-            case TSDBConstants.TSDB_DATA_TYPE_UBIGINT:
-                return parseUnsignedBigIntToInt(obj);
+                return parseUSmallInt((short) obj);
+            case TSDBConstants.TSDB_DATA_TYPE_UINT: {
+                return ((Long) parseUInteger((int) obj)).intValue();
+            }
+            case TSDBConstants.TSDB_DATA_TYPE_UBIGINT: {
+                return parseUBigInt((long) obj).intValue();
+            }
             case TSDBConstants.TSDB_DATA_TYPE_FLOAT:
                 return ((Float) obj).intValue();
             case TSDBConstants.TSDB_DATA_TYPE_DOUBLE:
@@ -164,35 +170,6 @@ public class TSDBResultSetRowData {
                 return 0;
         }
     }
-
-    private byte parseUnsignedTinyIntToInt(Object obj) throws SQLException {
-        byte value = (byte) obj;
-        if (value < 0)
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_NUMERIC_VALUE_OUT_OF_RANGE);
-        return value;
-    }
-
-    private short parseUnsignedSmallIntToInt(Object obj) throws SQLException {
-        short value = (short) obj;
-        if (value < 0)
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_NUMERIC_VALUE_OUT_OF_RANGE);
-        return value;
-    }
-
-    private int parseUnsignedIntegerToInt(Object obj) throws SQLException {
-        int value = (int) obj;
-        if (value < 0)
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_NUMERIC_VALUE_OUT_OF_RANGE);
-        return value;
-    }
-
-    private int parseUnsignedBigIntToInt(Object obj) throws SQLException {
-        long value = (long) obj;
-        if (value < 0)
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_NUMERIC_VALUE_OUT_OF_RANGE);
-        return (int) value;
-    }
-
 
     /**
      * $$$ this method is invoked by databaseMetaDataResultSet and so on which use an index start from 1 in JDBC api
@@ -231,28 +208,16 @@ public class TSDBResultSetRowData {
             case TSDBConstants.TSDB_DATA_TYPE_JSON:
                 return Long.parseLong((String) obj);
             case TSDBConstants.TSDB_DATA_TYPE_UTINYINT: {
-                byte value = (byte) obj;
-                if (value < 0)
-                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_NUMERIC_VALUE_OUT_OF_RANGE);
-                return value;
+                return parseUTinyInt((byte) obj);
             }
             case TSDBConstants.TSDB_DATA_TYPE_USMALLINT: {
-                short value = (short) obj;
-                if (value < 0)
-                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_NUMERIC_VALUE_OUT_OF_RANGE);
-                return value;
+                return parseUSmallInt((short) obj);
             }
             case TSDBConstants.TSDB_DATA_TYPE_UINT: {
-                int value = (int) obj;
-                if (value < 0)
-                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_NUMERIC_VALUE_OUT_OF_RANGE);
-                return value;
+                return ((Long) parseUInteger((int) obj)).intValue();
             }
             case TSDBConstants.TSDB_DATA_TYPE_UBIGINT: {
-                long value = (long) obj;
-                if (value < 0)
-                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_NUMERIC_VALUE_OUT_OF_RANGE);
-                return value;
+                return parseUBigInt((long) obj).intValue();
             }
             case TSDBConstants.TSDB_DATA_TYPE_FLOAT:
                 return ((Float) obj).longValue();
