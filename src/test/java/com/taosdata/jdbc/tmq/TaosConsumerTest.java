@@ -115,83 +115,6 @@ public class TaosConsumerTest {
         scheduledExecutorService.shutdown();
     }
 
-    @Test
-    @Ignore
-    public void JNI_03_SyncCommitTest() throws Exception {
-
-        String topic = "topic_sync";
-        // create topic
-        statement.executeUpdate("create topic if not exists " + topic + " as select ts, c1, c2, c3, c4, t1 from ct0");
-
-        Properties properties = new Properties();
-//        properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
-        properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "false");
-        properties.setProperty(TMQConstants.GROUP_ID, "tg3");
-        properties.setProperty(TMQConstants.VALUE_DESERIALIZER, "com.taosdata.jdbc.tmq.ResultDeserializer");
-
-        try (TaosConsumer<ResultBean> consumer = new TaosConsumer<>(properties)) {
-            consumer.subscribe(Collections.singletonList(topic));
-            for (int i = 0; i < 10; i++) {
-                for (ResultBean bean : consumer.poll(Duration.ofMillis(100))) {
-                    TimeUnit.MILLISECONDS.sleep(100);
-                }
-                consumer.commitSync();
-            }
-            consumer.unsubscribe();
-        }
-    }
-
-    @Test
-    public void JNI_04_ASyncManualCommitTest() throws Exception {
-
-        String topic = "topic_async";
-        // create topic
-        statement.executeUpdate("create topic if not exists " + topic + " as select ts, c1, c2, c3, c4, t1 from ct0");
-
-        Properties properties = new Properties();
-        properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
-        properties.setProperty(TMQConstants.GROUP_ID, "tg4");
-        properties.setProperty(TMQConstants.VALUE_DESERIALIZER, "com.taosdata.jdbc.tmq.ResultDeserializer");
-
-        try (TaosConsumer<ResultBean> consumer = new TaosConsumer<>(properties)) {
-            consumer.subscribe(Collections.singletonList(topic));
-            for (int i = 0; i < 10; i++) {
-                for (ResultBean bean : consumer.poll(Duration.ofMillis(100))) {
-                    TimeUnit.MILLISECONDS.sleep(100);
-                }
-                consumer.commitAsync((result, exception) -> {
-                    // do nothing
-                });
-            }
-            consumer.unsubscribe();
-        }
-    }
-
-    @Test
-    @Ignore
-    public void JNI_04_ASyncAutoCommitTest() throws Exception {
-
-        String topic = "topic_async_auto";
-        // create topic
-        statement.executeUpdate("create topic if not exists " + topic + " as select ts, c1, c2, c3, c4, t1 from ct0");
-
-        Properties properties = new Properties();
-        properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
-        properties.setProperty(TMQConstants.GROUP_ID, "tg5");
-        properties.setProperty(TMQConstants.VALUE_DESERIALIZER, "com.taosdata.jdbc.tmq.ResultDeserializer");
-
-        try (TaosConsumer<ResultBean> consumer = new TaosConsumer<>(properties)) {
-            consumer.subscribe(Collections.singletonList(topic));
-            for (int i = 0; i < 10; i++) {
-                for (ResultBean bean : consumer.poll(Duration.ofMillis(100))) {
-                    TimeUnit.MILLISECONDS.sleep(100);
-                }
-                consumer.commitAsync();
-            }
-            consumer.unsubscribe();
-        }
-    }
-
     @BeforeClass
     public static void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
@@ -218,6 +141,8 @@ public class TaosConsumerTest {
         try {
             if (connection != null) {
                 if (statement != null) {
+                    statement.executeUpdate("drop topic topic_ctb_column");
+                    statement.executeUpdate("drop topic topic_ctb_column_with_bean");
                     statement.executeUpdate("drop database if exists " + dbName);
                     statement.close();
                 }

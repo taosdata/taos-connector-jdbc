@@ -3,7 +3,9 @@ package com.taosdata.jdbc.ws;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
-import com.taosdata.jdbc.*;
+import com.taosdata.jdbc.TSDBError;
+import com.taosdata.jdbc.TSDBErrorNumbers;
+import com.taosdata.jdbc.TaosGlobalConfig;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.entity.*;
@@ -21,6 +23,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
+import static com.taosdata.jdbc.utils.UnsignedDataUtils.*;
 
 public class BlockResultSet extends AbstractWSResultSet {
 
@@ -39,7 +42,7 @@ public class BlockResultSet extends AbstractWSResultSet {
         if (resp.getBuffer() != null) {
             int bitMapOffset = BitmapLen(numOfRows);
             // 10 = 4 + 6
-            int pHeader = buffer.position() + 12 + fields.size() * 10;
+            int pHeader = buffer.position() + 28 + fields.size() * 9;
             buffer.position(pHeader);
             for (int i = 0; i < fields.size(); i++) {
                 List<Object> col = new ArrayList<>(numOfRows);
@@ -51,10 +54,12 @@ public class BlockResultSet extends AbstractWSResultSet {
                         byte[] tmp = new byte[bitMapOffset];
                         buffer.get(tmp);
                         for (int j = 0; j < numOfRows; j++) {
+                            byte b = buffer.get();
                             if (isNull(tmp, j)) {
                                 col.add(null);
+                            } else {
+                                col.add(b);
                             }
-                            col.add(buffer.get());
                         }
                         break;
                     }
@@ -63,10 +68,12 @@ public class BlockResultSet extends AbstractWSResultSet {
                         byte[] tmp = new byte[bitMapOffset];
                         buffer.get(tmp);
                         for (int j = 0; j < numOfRows; j++) {
+                            short s = buffer.getShort();
                             if (isNull(tmp, j)) {
                                 col.add(null);
+                            } else {
+                                col.add(s);
                             }
-                            col.add(buffer.getShort());
                         }
                         break;
                     }
@@ -75,10 +82,12 @@ public class BlockResultSet extends AbstractWSResultSet {
                         byte[] tmp = new byte[bitMapOffset];
                         buffer.get(tmp);
                         for (int j = 0; j < numOfRows; j++) {
+                            int in = buffer.getInt();
                             if (isNull(tmp, j)) {
                                 col.add(null);
+                            } else {
+                                col.add(in);
                             }
-                            col.add(buffer.getInt());
                         }
                         break;
                     }
@@ -88,10 +97,12 @@ public class BlockResultSet extends AbstractWSResultSet {
                         byte[] tmp = new byte[bitMapOffset];
                         buffer.get(tmp);
                         for (int j = 0; j < numOfRows; j++) {
+                            long l = buffer.getLong();
                             if (isNull(tmp, j)) {
                                 col.add(null);
+                            } else {
+                                col.add(l);
                             }
-                            col.add(buffer.getLong());
                         }
                         break;
                     }
@@ -99,10 +110,12 @@ public class BlockResultSet extends AbstractWSResultSet {
                         byte[] tmp = new byte[bitMapOffset];
                         buffer.get(tmp);
                         for (int j = 0; j < numOfRows; j++) {
+                            float f = buffer.getFloat();
                             if (isNull(tmp, j)) {
                                 col.add(null);
+                            } else {
+                                col.add(f);
                             }
-                            col.add(buffer.getFloat());
                         }
                         break;
                     }
@@ -110,10 +123,12 @@ public class BlockResultSet extends AbstractWSResultSet {
                         byte[] tmp = new byte[bitMapOffset];
                         buffer.get(tmp);
                         for (int j = 0; j < numOfRows; j++) {
+                            double d = buffer.getDouble();
                             if (isNull(tmp, j)) {
                                 col.add(null);
+                            } else {
+                                col.add(d);
                             }
-                            col.add(buffer.getDouble());
                         }
                         break;
                     }
@@ -195,7 +210,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             }
             case TSDB_DATA_TYPE_UTINYINT: {
                 byte val = (byte) source;
-                return (short) val & 0xFF;
+                return parseUTinyInt(val);
             }
             case TSDB_DATA_TYPE_TINYINT:
             case TSDB_DATA_TYPE_SMALLINT:
@@ -204,16 +219,16 @@ public class BlockResultSet extends AbstractWSResultSet {
             case TSDB_DATA_TYPE_FLOAT:
             case TSDB_DATA_TYPE_DOUBLE:
             case TSDB_DATA_TYPE_BINARY:
-            case TSDB_DATA_TYPE_JSON:{
+            case TSDB_DATA_TYPE_JSON: {
                 return source;
             }
             case TSDB_DATA_TYPE_USMALLINT: {
                 short val = (short) source;
-                return val & 0xFFFF;
+                return parseUSmallInt(val);
             }
             case TSDB_DATA_TYPE_UINT: {
                 int val = (int) source;
-                return val & 0xFFFFFFFFL;
+                return parseUInteger(val);
             }
             case TSDB_DATA_TYPE_TIMESTAMP: {
                 long val = (long) source;
@@ -221,8 +236,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             }
             case TSDB_DATA_TYPE_UBIGINT: {
                 long val = (long) source;
-                BigDecimal tmp = new BigDecimal(val >>> 1).multiply(new BigDecimal(2));
-                return (val & 0x1) == 0x1 ? tmp.add(new BigDecimal(1)) : tmp;
+                return parseUBigInt(val);
             }
             case TSDB_DATA_TYPE_NCHAR: {
                 int[] tmp = (int[]) source;
@@ -281,8 +295,9 @@ public class BlockResultSet extends AbstractWSResultSet {
                 return ((int) value == 0) ? Boolean.FALSE : Boolean.TRUE;
             case TSDB_DATA_TYPE_UINT:
             case TSDB_DATA_TYPE_BIGINT:
-            case TSDB_DATA_TYPE_TIMESTAMP:
                 return (((long) value) == 0L) ? Boolean.FALSE : Boolean.TRUE;
+            case TSDB_DATA_TYPE_TIMESTAMP:
+                return ((Timestamp) value).getTime() == 0L ? Boolean.FALSE : Boolean.TRUE;
             case TSDB_DATA_TYPE_UBIGINT:
                 return value.equals(new BigDecimal(0)) ? Boolean.FALSE : Boolean.TRUE;
 
@@ -296,7 +311,7 @@ public class BlockResultSet extends AbstractWSResultSet {
                 if ("TRUE".compareToIgnoreCase((String) value) == 0) {
                     return Boolean.TRUE;
                 } else if ("FALSE".compareToIgnoreCase((String) value) == 0) {
-                    return Boolean.TRUE;
+                    return Boolean.FALSE;
                 } else {
                     throw new SQLDataException();
                 }
@@ -313,7 +328,7 @@ public class BlockResultSet extends AbstractWSResultSet {
                 if ("TRUE".compareToIgnoreCase(tmp) == 0) {
                     return Boolean.TRUE;
                 } else if ("FALSE".compareToIgnoreCase(tmp) == 0) {
-                    return Boolean.TRUE;
+                    return Boolean.FALSE;
                 } else {
                     throw new SQLDataException();
                 }
@@ -422,6 +437,8 @@ public class BlockResultSet extends AbstractWSResultSet {
                 return (boolean) value ? (short) 1 : (short) 0;
             case TSDB_DATA_TYPE_TINYINT:
                 return (byte) value;
+            case TSDB_DATA_TYPE_UTINYINT:
+                return (short) value;
             case TSDB_DATA_TYPE_USMALLINT:
             case TSDB_DATA_TYPE_INT: {
                 int tmp = (int) value;
@@ -577,8 +594,8 @@ public class BlockResultSet extends AbstractWSResultSet {
             case TSDB_DATA_TYPE_USMALLINT:
             case TSDB_DATA_TYPE_INT:
                 return (int) value;
-            case TSDB_DATA_TYPE_BIGINT:
             case TSDB_DATA_TYPE_UINT:
+            case TSDB_DATA_TYPE_BIGINT:
                 return (long) value;
 
             case TSDB_DATA_TYPE_UBIGINT: {
@@ -587,8 +604,18 @@ public class BlockResultSet extends AbstractWSResultSet {
                     throwRangeException(value.toString(), columnIndex, Types.BIGINT);
                 return tmp.longValue();
             }
-            case TSDB_DATA_TYPE_TIMESTAMP:
-                return ((Timestamp) value).getTime();
+            case TSDB_DATA_TYPE_TIMESTAMP: {
+                Timestamp ts = (Timestamp) value;
+                switch (this.timestampPrecision) {
+                    case TimestampPrecision.MS:
+                    default:
+                        return ts.getTime();
+                    case TimestampPrecision.US:
+                        return ts.getTime() * 1000 + ts.getNanos() / 1000 % 1000;
+                    case TimestampPrecision.NS:
+                        return ts.getTime() * 1000_000 + ts.getNanos() % 1000_000;
+                }
+            }
             case TSDB_DATA_TYPE_FLOAT: {
                 float tmp = (float) value;
                 if (tmp < Long.MIN_VALUE || tmp > Long.MAX_VALUE)
@@ -643,8 +670,8 @@ public class BlockResultSet extends AbstractWSResultSet {
             case TSDB_DATA_TYPE_USMALLINT:
             case TSDB_DATA_TYPE_INT:
                 return (int) value;
-            case TSDB_DATA_TYPE_BIGINT:
             case TSDB_DATA_TYPE_UINT:
+            case TSDB_DATA_TYPE_BIGINT:
                 return (long) value;
 
             case TSDB_DATA_TYPE_UBIGINT: {
@@ -703,8 +730,8 @@ public class BlockResultSet extends AbstractWSResultSet {
             case TSDB_DATA_TYPE_USMALLINT:
             case TSDB_DATA_TYPE_INT:
                 return (int) value;
-            case TSDB_DATA_TYPE_BIGINT:
             case TSDB_DATA_TYPE_UINT:
+            case TSDB_DATA_TYPE_BIGINT:
                 return (long) value;
 
             case TSDB_DATA_TYPE_UBIGINT: {
@@ -859,8 +886,8 @@ public class BlockResultSet extends AbstractWSResultSet {
             case TSDB_DATA_TYPE_USMALLINT:
             case TSDB_DATA_TYPE_INT:
                 return new BigDecimal((int) value);
-            case TSDB_DATA_TYPE_BIGINT:
             case TSDB_DATA_TYPE_UINT:
+            case TSDB_DATA_TYPE_BIGINT:
                 return new BigDecimal((long) value);
 
             case TSDB_DATA_TYPE_FLOAT:
@@ -1031,6 +1058,6 @@ public class BlockResultSet extends AbstractWSResultSet {
     private boolean isNull(byte[] c, int n) {
         int position = n >>> 3;
         int index = n & 0x7;
-        return (c[position] & 1 << index) == 1;
+        return (c[position] & (1 << (7 - index))) == (1 << (7 - index));
     }
 }
