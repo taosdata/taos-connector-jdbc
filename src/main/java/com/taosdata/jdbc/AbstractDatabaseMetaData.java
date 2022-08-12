@@ -1247,7 +1247,8 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
             // set up ColumnMetaDataList
             resultSet.setColumnMetaDataList(buildGetSuperTablesColumnMetaDataList());
             // set result set row data
-            try (ResultSet rs = stmt.executeQuery("select * from ins_tables where db_name='" + catalog + "' and table_name like '" + tableNamePattern + "'")) {
+            try (ResultSet rs = stmt.executeQuery("select * from information_schema.ins_tables where db_name='"
+                    + catalog + "' and table_name like '" + tableNamePattern + "'")) {
                 List<TSDBResultSetRowData> rowDataList = new ArrayList<>();
                 while (rs.next()) {
                     TSDBResultSetRowData rowData = new TSDBResultSetRowData(4);
