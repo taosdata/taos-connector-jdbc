@@ -128,11 +128,6 @@ public class RestfulJDBCTest {
         }
     }
 
-
-    private ResultSet executeQuery(Connection connection, String sql) throws SQLException {
-
-    }
-
     @BeforeClass
     public static void beforeClass() {
         try {
