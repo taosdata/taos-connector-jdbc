@@ -1,7 +1,5 @@
 package com.taosdata.jdbc;
 
-import com.taosdata.jdbc.enums.TimestampFormat;
-
 import java.sql.*;
 import java.util.Enumeration;
 import java.util.Map;
@@ -20,8 +18,6 @@ public abstract class AbstractConnection extends WrapperImpl implements Connecti
         for (String propName : propNames) {
             clientInfoProps.setProperty(propName, properties.getProperty(propName));
         }
-        String timestampFormat = properties.getProperty(TSDBDriver.PROPERTY_KEY_TIMESTAMP_FORMAT, String.valueOf(TimestampFormat.STRING));
-        clientInfoProps.setProperty(TSDBDriver.PROPERTY_KEY_TIMESTAMP_FORMAT, timestampFormat);
     }
 
     @Override
