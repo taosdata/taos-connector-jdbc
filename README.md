@@ -86,7 +86,7 @@ cd taos-connector-jdbc
 mvn clean install -Dmaven.test.skip=true
 ```
 
-After compilation, a jar package of taos-jdbcdriver-2.0.XX-dist .jar is generated in the target directory, and the compiled jar file is automatically placed in the local Maven repository.
+After compilation, a jar package of taos-jdbcdriver-3.0.0-dist .jar is generated in the target directory, and the compiled jar file is automatically placed in the local Maven repository.
 
 ## Establish a connection
 
@@ -181,7 +181,7 @@ The configuration parameters in the URL are as follows.
 
 - user: Login TDengine user name, default value 'root'.
 - password: user login password, default value 'taosdata'.
-- batchfetch: true: pull the result set in batch when executing the query; false: pull the result set row by row. The default value is true. batchfetch uses HTTP for data transfer. The JDBC REST connection supports bulk data pulling function in taos-jdbcdriver-2.0.38 and TDengine 2.4.0.12 and later versions. taos-jdbcdriver and TDengine transfer data via WebSocket connection. Compared with HTTP, WebSocket enables JDBC REST connection to support large data volume querying and improve query performance.
+- batchfetch: true: pull the result set in batch when executing the query; false: pull the result set row by row. The default value is true. batchfetch uses HTTP for data transfer. The JDBC REST connection supports bulk data pulling function. taos-jdbcdriver and TDengine transfer data via WebSocket connection. Compared with HTTP, WebSocket enables JDBC REST connection to support large data volume querying and improve query performance.
 - charset: specify the charset to parse the string, this parameter is valid only when set batchfetch to true.
 - batchErrorIgnore: true: when executing executeBatch of Statement, if one SQL execution fails in the middle, continue to execute the following SQL. false: no longer execute any statement after the failed SQL. The default value is: false.
 - httpConnectTimeout: REST connection timeout in milliseconds, the default value is 5000 ms.
@@ -197,7 +197,7 @@ The configuration parameters in the URL are as follows.
 INSERT INTO test.t1 USING test.weather (ts, temperature) TAGS('beijing') VALUES(now, 24.6);
 ```
 
-- Starting from taos-jdbcdriver-2.0.36 and TDengine 2.2.0.0, if dbname is specified in the URL, JDBC REST connections will use `/rest/sql/dbname` as the URL for REST requests by default, and there is no need to specify dbname in SQL. For example, if the URL is `jdbc:TAOS-RS://127.0.0.1:6041/test`, then the SQL can be executed: insert into t1 using weather(ts, temperature) tags('beijing') values(now, 24.6);
+- If dbname is specified in the URL, JDBC REST connections will use `/rest/sql/dbname` as the URL for REST requests by default, and there is no need to specify dbname in SQL. For example, if the URL is `jdbc:TAOS-RS://127.0.0.1:6041/test`, then the SQL can be executed: insert into t1 using weather(ts, temperature) tags('beijing') values(now, 24.6);
 
 ### Specify the URL and Properties to get the connection
 
@@ -206,7 +206,7 @@ In addition to getting the connection from the specified URL, you can use Proper
 **Note**:
 
 - The client parameter set in the application is process-level. If you want to update the parameters of the client, you need to restart the application. This is because the client parameter is a global parameter that takes effect only the first time the application is set.
-- The following sample code is based on taos-jdbcdriver-2.0.36.
+- The following sample code is based on taos-jdbcdriver-3.0.0.
 
 ```java
 public Connection getConn() throws Exception{
@@ -338,7 +338,7 @@ There are three types of error codes that the JDBC connector can report:
 For specific error codes, please refer to.
 
 - [TDengine Java Connector](https://github.com/taosdata/taos-connector-jdbc/blob/main/src/main/java/com/taosdata/jdbc/TSDBErrorNumbers.java)
-- [TDengine_ERROR_CODE](https://github.com/taosdata/TDengine/blob/develop/src/inc/taoserror.h)
+- [TDengine_ERROR_CODE](https://github.com/taosdata/TDengine/blob/main/include/util/taoserror.h)
 
 ### Writing data via parameter binding
 
