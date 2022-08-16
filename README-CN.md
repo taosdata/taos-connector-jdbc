@@ -183,7 +183,7 @@ url 中的配置参数如下：
 
 - user：登录 TDengine 用户名，默认值 'root'。
 - password：用户登录密码，默认值 'taosdata'。
-- batchfetch: true：在执行查询时批量拉取结果集；false：逐行拉取结果集。默认值为：true。逐行拉取结果集使用 HTTP 方式进行数据传输。从 taos-jdbcdriver-2.0.38 和 TDengine 2.4.0.12 版本开始，JDBC REST 连接增加批量拉取数据功能。taos-jdbcdriver 与 TDengine 之间通过 WebSocket 连接进行数据传输。相较于 HTTP，WebSocket 可以使 JDBC REST 连接支持大数据量查询，并提升查询性能。
+- batchfetch: true：在执行查询时批量拉取结果集；false：逐行拉取结果集。默认值为：true。逐行拉取结果集使用 HTTP 方式进行数据传输。JDBC REST 连接支持批量拉取数据功能。taos-jdbcdriver 与 TDengine 之间通过 WebSocket 连接进行数据传输。相较于 HTTP，WebSocket 可以使 JDBC REST 连接支持大数据量查询，并提升查询性能。
 - charset: 当开启批量拉取数据时，指定解析字符串数据的字符集。默认为系统字符集。
 - batchErrorIgnore：true：在执行 Statement 的 executeBatch 时，如果中间有一条 SQL 执行失败，继续执行下面的 SQL 了。false：不再执行失败 SQL 后的任何语句。默认值为：false。
 - httpConnectTimeout: 连接超时时间，单位 ms， 默认值为 5000。
@@ -199,7 +199,7 @@ url 中的配置参数如下：
 INSERT INTO test.t1 USING test.weather (ts, temperature) TAGS('beijing') VALUES (now, 24.6);
 ```
 
-- 从 taos-jdbcdriver-2.0.36 和 TDengine 2.2.0.0 版本开始，如果在 url 中指定了 dbname，那么，JDBC REST 连接会默认使用/rest/sql/dbname 作为 restful 请求的 url，在 SQL 中不需要指定 dbname。例如：url 为 jdbc:TAOS-RS://127.0.0.1:6041/test，那么，可以执行 sql：insert into t1 using weather(ts, temperature) tags('beijing') values(now, 24.6);
+- 如果在 url 中指定了 dbname，那么，JDBC REST 连接会默认使用/rest/sql/dbname 作为 restful 请求的 url，在 SQL 中不需要指定 dbname。例如：url 为 jdbc:TAOS-RS://127.0.0.1:6041/test，那么，可以执行 sql：insert into t1 using weather(ts, temperature) tags('beijing') values(now, 24.6);
 
 ### 指定 URL 和 Properties 获取连接
 
@@ -336,7 +336,7 @@ JDBC 连接器可能报错的错误码包括 3 种：JDBC driver 本身的报错
 具体的错误码请参考：
 
 - [TDengine Java Connector](https://github.com/taosdata/taos-connector-jdbc/blob/main/src/main/java/com/taosdata/jdbc/TSDBErrorNumbers.java)
-- [TDengine_ERROR_CODE](https://github.com/taosdata/TDengine/blob/develop/src/inc/taoserror.h)
+- [TDengine_ERROR_CODE](https://github.com/taosdata/TDengine/blob/main/include/util/taoserror.h)
 
 ### 通过参数绑定写入数据
 
@@ -644,7 +644,7 @@ public class SchemalessInsertTest {
 }
 ```
 
-### 订阅
+### 数据订阅
 
 TDengine Java 连接器支持订阅功能，应用 API 如下：
 
@@ -677,7 +677,7 @@ TaosConsumer consumer = new TaosConsumer<>(config);
 - enable.auto.commit: 是否允许自动提交。
 - group.id: consumer 所在的 group。
 - value.deserializer: 结果集反序列化方法，可以继承 `com.taosdata.jdbc.tmq.ReferenceDeserializer`，并指定结果集 bean，实现反序列化。也可以继承 `com.taosdata.jdbc.tmq.Deserializer`，根据 SQL 的 resultSet 自定义反序列化方式。
-- 其他参数请参考：[Consumer 参数列表](https://docs.taosdata.com/3.0-preview/develop/tmq/#创建-consumer-以及consumer-group)
+- 其他参数请参考：[Consumer 参数列表](https://docs.taosdata.com/develop/tmq/#创建消费者-consumer)
 
 #### 订阅消费数据
 
@@ -690,13 +690,18 @@ while(true) {
 }
 ```
 
-poll` 每次调用获取一个消息。请按需选择合理的调用 `poll` 的频率（如例子中的 `Duration.ofMillis(100)`），否则会给服务端造成不必要的压力。
+`poll` 每次调用获取一个消息。
 
 #### 关闭订阅
 
 ```java
+// 取消订阅
+consumer.unsubscribe();
+// 关闭消费
 consumer.close()
 ```
+
+详情请参考：[数据订阅](https://docs.taosdata.com/develop/tmq/)
 
 #### 使用示例如下：
 
@@ -712,7 +717,7 @@ public abstract class ConsumerLoop {
         config.setProperty("msg.with.table.name", "true");
         config.setProperty("enable.auto.commit", "true");
         config.setProperty("group.id", "group1");
-        config.setProperty("value.deserializer", "com.taosdata.jdbc.tmq.ConsumerTest.ResultDeserializer");
+        config.setProperty("value.deserializer", "com.taosdata.jdbc.tmq.ConsumerTest.ConsumerLoop$ResultDeserializer");
 
         this.consumer = new TaosConsumer<>(config);
         this.topics = Collections.singletonList("topic_speed");
