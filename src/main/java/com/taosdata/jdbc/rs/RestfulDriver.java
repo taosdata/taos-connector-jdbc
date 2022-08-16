@@ -1,7 +1,6 @@
 package com.taosdata.jdbc.rs;
 
 import com.taosdata.jdbc.*;
-import com.taosdata.jdbc.enums.TimestampFormat;
 import com.taosdata.jdbc.utils.HttpClientPoolUtil;
 import com.taosdata.jdbc.ws.InFlightRequest;
 import com.taosdata.jdbc.ws.Transport;
@@ -131,7 +130,6 @@ public class RestfulDriver extends AbstractDriver {
                 close(transport);
                 throw new SQLException("auth failure");
             }
-            props.setProperty(TSDBDriver.PROPERTY_KEY_TIMESTAMP_FORMAT, String.valueOf(TimestampFormat.TIMESTAMP));
             TaosGlobalConfig.setCharset(props.getProperty(TSDBDriver.PROPERTY_KEY_CHARSET));
             return new WSConnection(url, props, transport, database);
         }

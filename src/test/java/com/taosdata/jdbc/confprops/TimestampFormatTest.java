@@ -1,8 +1,10 @@
 package com.taosdata.jdbc.confprops;
 
-import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.sql.*;
 import java.time.Instant;
@@ -12,110 +14,6 @@ public class TimestampFormatTest {
     private static final String host = "127.0.0.1";
     private long ts = Instant.now().toEpochMilli();
     private Connection conn;
-
-    @Test
-    public void string() throws SQLException {
-        // given
-        String url = SpecifyAddress.getInstance().getRestUrl();
-        if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
-        }
-        // when
-        try (Connection conn = DriverManager.getConnection(url);
-             Statement stmt = conn.createStatement()) {
-            // then
-            String actual = conn.getClientInfo(TSDBDriver.PROPERTY_KEY_TIMESTAMP_FORMAT);
-            Assert.assertEquals("STRING", actual);
-
-            ResultSet rs = stmt.executeQuery("select * from test.weather");
-            while (rs.next()) {
-                String value = rs.getString("ts");
-                String expect = new Timestamp(ts).toString();
-                Assert.assertEquals(expect, value);
-            }
-        }
-    }
-
-    @Test
-    public void stringInProperties() throws SQLException {
-        // given
-        String url = SpecifyAddress.getInstance().getRestUrl();
-        if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
-        }
-        // when
-        String timestampFormat = "STRING";
-        Properties props = new Properties();
-        props.setProperty(TSDBDriver.PROPERTY_KEY_TIMESTAMP_FORMAT, timestampFormat);
-        try (Connection conn = DriverManager.getConnection(url, props);
-             Statement stmt = conn.createStatement()) {
-
-            // then
-            String actual = conn.getClientInfo(TSDBDriver.PROPERTY_KEY_TIMESTAMP_FORMAT);
-            Assert.assertEquals(timestampFormat, actual);
-
-            ResultSet rs = stmt.executeQuery("select * from test.weather");
-            while (rs.next()) {
-                String value = rs.getString("ts");
-                String expect = new Timestamp(ts).toString();
-                Assert.assertEquals(expect, value);
-            }
-        }
-    }
-
-    @Test
-    public void timestampInUrl() throws SQLException {
-        // given
-        String url = SpecifyAddress.getInstance().getRestUrl();
-        if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata&timestampFormat=";
-        } else {
-            url += "&timestampFormat=";
-        }
-        String timestampFormat = "TIMESTAMP";
-
-        // when
-        try (Connection conn = DriverManager.getConnection(url + timestampFormat);
-             Statement stmt = conn.createStatement()) {
-            // then
-            String actual = conn.getClientInfo(TSDBDriver.PROPERTY_KEY_TIMESTAMP_FORMAT);
-            Assert.assertEquals(timestampFormat, actual);
-
-            ResultSet rs = stmt.executeQuery("select * from test.weather");
-            while (rs.next()) {
-                Object value = rs.getObject("ts");
-                String expect = new Timestamp(ts).toString();
-                Assert.assertEquals(expect, value.toString());
-            }
-        }
-    }
-
-    @Test
-    public void timestampInProperties() throws SQLException {
-        // given
-        String url = SpecifyAddress.getInstance().getRestUrl();
-        if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
-        }
-        String timestampFormat = "TIMESTAMP";
-
-        // when
-        Properties props = new Properties();
-        props.setProperty(TSDBDriver.PROPERTY_KEY_TIMESTAMP_FORMAT, timestampFormat);
-        try (Connection conn = DriverManager.getConnection(url, props);
-             Statement stmt = conn.createStatement()) {
-            // then
-            String actual = conn.getClientInfo(TSDBDriver.PROPERTY_KEY_TIMESTAMP_FORMAT);
-            Assert.assertEquals(timestampFormat, actual);
-
-            ResultSet rs = stmt.executeQuery("select * from test.weather");
-            while (rs.next()) {
-                Object value = rs.getObject("ts");
-                String expect = new Timestamp(ts).toString();
-                Assert.assertEquals(expect, value.toString());
-            }
-        }
-    }
 
     @Test
     public void utcInUrl() throws SQLException {
@@ -130,8 +28,6 @@ public class TimestampFormatTest {
         // when & then
         try (Connection conn = DriverManager.getConnection(url);
              Statement stmt = conn.createStatement()) {
-            String actual = conn.getClientInfo(TSDBDriver.PROPERTY_KEY_TIMESTAMP_FORMAT);
-            Assert.assertEquals(timestampFormat, actual);
             ResultSet rs = stmt.executeQuery("select * from test.weather");
             while (rs.next()) {
                 Object value = rs.getObject("ts");
@@ -152,13 +48,10 @@ public class TimestampFormatTest {
         }
         // when
         Properties props = new Properties();
-        props.setProperty(TSDBDriver.PROPERTY_KEY_TIMESTAMP_FORMAT, timestampFormat);
         try (Connection conn = DriverManager.getConnection(url, props);
              Statement stmt = conn.createStatement()) {
 
             // then
-            String actual = conn.getClientInfo(TSDBDriver.PROPERTY_KEY_TIMESTAMP_FORMAT);
-            Assert.assertEquals(timestampFormat, actual);
             ResultSet rs = stmt.executeQuery("select * from test.weather");
             while (rs.next()) {
                 Object value = rs.getObject("ts");

@@ -86,17 +86,21 @@ public class RestfulJDBCTest {
         // given
         String sql = "select * from " + dbname + ".weather";
         // when
-        ResultSet rs = executeQuery(connection, sql);
-        ResultSetMetaData meta = rs.getMetaData();
 
-        // then
-        Assert.assertEquals(5, meta.getColumnCount());
+        try (Statement statement = connection.createStatement()) {
+            ResultSet rs = statement.executeQuery(sql);
 
-        while (rs.next()) {
-            Assert.assertNotNull(rs.getTimestamp("ts"));
-            Assert.assertNotNull(rs.getFloat("temperature"));
-            Assert.assertNotNull(rs.getInt("humidity"));
-            Assert.assertNotNull(rs.getString("location"));
+            ResultSetMetaData meta = rs.getMetaData();
+
+            // then
+            Assert.assertEquals(5, meta.getColumnCount());
+
+            while (rs.next()) {
+                Assert.assertNotNull(rs.getTimestamp("ts"));
+                Assert.assertNotNull(rs.getFloat("temperature"));
+                Assert.assertNotNull(rs.getInt("humidity"));
+                Assert.assertNotNull(rs.getString("location"));
+            }
         }
     }
 
@@ -121,13 +125,6 @@ public class RestfulJDBCTest {
     private boolean execute(Connection connection, String sql) throws SQLException {
         try (Statement stmt = connection.createStatement()) {
             return stmt.execute(sql);
-        }
-    }
-
-
-    private ResultSet executeQuery(Connection connection, String sql) throws SQLException {
-        try (Statement statement = connection.createStatement()) {
-            return statement.executeQuery(sql);
         }
     }
 
