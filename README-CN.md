@@ -644,7 +644,7 @@ public class SchemalessInsertTest {
 }
 ```
 
-### 订阅
+### 数据订阅
 
 TDengine Java 连接器支持订阅功能，应用 API 如下：
 
@@ -690,13 +690,18 @@ while(true) {
 }
 ```
 
-poll` 每次调用获取一个消息。请按需选择合理的调用 `poll` 的频率（如例子中的 `Duration.ofMillis(100)`），否则会给服务端造成不必要的压力。
+`poll` 每次调用获取一个消息。
 
 #### 关闭订阅
 
 ```java
+// 取消订阅
+consumer.unsubscribe();
+// 关闭消费
 consumer.close()
 ```
+
+详情请参考：[数据订阅](https://docs.taosdata.com/develop/tmq/)
 
 #### 使用示例如下：
 
@@ -712,7 +717,7 @@ public abstract class ConsumerLoop {
         config.setProperty("msg.with.table.name", "true");
         config.setProperty("enable.auto.commit", "true");
         config.setProperty("group.id", "group1");
-        config.setProperty("value.deserializer", "com.taosdata.jdbc.tmq.ConsumerTest.ResultDeserializer");
+        config.setProperty("value.deserializer", "com.taosdata.jdbc.tmq.ConsumerTest.ConsumerLoop$ResultDeserializer");
 
         this.consumer = new TaosConsumer<>(config);
         this.topics = Collections.singletonList("topic_speed");
