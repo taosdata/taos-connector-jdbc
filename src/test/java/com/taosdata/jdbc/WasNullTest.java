@@ -42,13 +42,13 @@ public class WasNullTest {
     public void nextWasNullString() throws SQLException {
         ResultSet resultSet = statement.executeQuery("select * from " + tableName);
         resultSet.next();
-        resultSet.getInt("c2");
+        resultSet.getString("c2");
         Assert.assertFalse(resultSet.wasNull());
         resultSet.next();
-        resultSet.getInt("c2");
+        resultSet.getString("c2");
         Assert.assertTrue(resultSet.wasNull());
         resultSet.next();
-        resultSet.getInt("c2");
+        resultSet.getString("c2");
         Assert.assertFalse(resultSet.wasNull());
     }
 
