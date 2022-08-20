@@ -248,7 +248,7 @@ public class TSDBResultSetBlockData {
             wasNull = true;
             return null;
         }
-
+        wasNull = false;
         if (obj instanceof String)
             return (String) obj;
 
@@ -270,6 +270,7 @@ public class TSDBResultSetBlockData {
             wasNull = true;
             return null;
         }
+        wasNull = false;
         if (obj instanceof byte[])
             return (byte[]) obj;
         if (obj instanceof String)
@@ -292,7 +293,7 @@ public class TSDBResultSetBlockData {
             wasNull = true;
             return 0;
         }
-
+        wasNull = false;
         int type = this.columnMetaDataList.get(col).getColType();
         switch (type) {
             case TSDB_DATA_TYPE_BOOL:
@@ -348,7 +349,7 @@ public class TSDBResultSetBlockData {
             wasNull = true;
             return Boolean.FALSE;
         }
-
+        wasNull = false;
         int type = this.columnMetaDataList.get(col).getColType();
         switch (type) {
             case TSDB_DATA_TYPE_BOOL:
@@ -408,7 +409,7 @@ public class TSDBResultSetBlockData {
             wasNull = true;
             return 0;
         }
-
+        wasNull = false;
         int type = this.columnMetaDataList.get(col).getColType();
         switch (type) {
             case TSDB_DATA_TYPE_BOOL:
@@ -485,7 +486,7 @@ public class TSDBResultSetBlockData {
             wasNull = true;
             return null;
         }
-
+        wasNull = false;
         int type = this.columnMetaDataList.get(col).getColType();
         if (type == TSDB_DATA_TYPE_BIGINT)
             return parseTimestampColumnData((long) obj);
@@ -501,7 +502,7 @@ public class TSDBResultSetBlockData {
             wasNull = true;
             return 0;
         }
-
+        wasNull = false;
         int type = this.columnMetaDataList.get(col).getColType();
         switch (type) {
             case TSDBConstants.TSDB_DATA_TYPE_BOOL:
@@ -568,6 +569,7 @@ public class TSDBResultSetBlockData {
             wasNull = true;
             return null;
         }
+        wasNull = false;
         switch (this.columnMetaDataList.get(col).getColType()) {
             case TSDB_DATA_TYPE_BOOL: {
                 byte val = (byte) source;

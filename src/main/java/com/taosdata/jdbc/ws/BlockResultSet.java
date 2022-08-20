@@ -257,6 +257,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             wasNull = true;
             return null;
         }
+        wasNull = false;
         if (value instanceof String)
             return (String) value;
 
@@ -280,6 +281,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             wasNull = true;
             return false;
         }
+        wasNull = false;
         if (value instanceof Boolean)
             return (boolean) value;
 
@@ -347,6 +349,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             wasNull = true;
             return 0;
         }
+        wasNull = false;
         if (value instanceof Byte)
             return (byte) value;
 
@@ -428,6 +431,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             wasNull = true;
             return 0;
         }
+        wasNull = false;
         if (value instanceof Short)
             return (short) value;
 
@@ -499,6 +503,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             wasNull = true;
             return 0;
         }
+        wasNull = false;
         if (value instanceof Integer)
             return (int) value;
 
@@ -567,6 +572,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             wasNull = true;
             return 0;
         }
+        wasNull = false;
         if (value instanceof Long)
             return (long) value;
         if (value instanceof Timestamp) {
@@ -655,6 +661,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             wasNull = true;
             return 0;
         }
+        wasNull = false;
         if (value instanceof Float)
             return (float) value;
 
@@ -713,6 +720,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             wasNull = true;
             return 0;
         }
+        wasNull = false;
         if (value instanceof Double)
             return (double) value;
         if (value instanceof Float)
@@ -767,6 +775,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             wasNull = true;
             return null;
         }
+        wasNull = false;
         if (value instanceof byte[])
             return (byte[]) value;
         if (value instanceof String)
@@ -792,6 +801,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             wasNull = true;
             return null;
         }
+        wasNull = false;
         if (value instanceof Timestamp)
             return new Date(((Timestamp) value).getTime());
         return Utils.parseDate(value.toString());
@@ -806,6 +816,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             wasNull = true;
             return null;
         }
+        wasNull = false;
         if (value instanceof Timestamp)
             return new Time(((Timestamp) value).getTime());
         Time time = null;
@@ -826,6 +837,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             wasNull = true;
             return null;
         }
+        wasNull = false;
         if (value instanceof Timestamp)
             return (Timestamp) value;
         if (value instanceof Long) {
@@ -870,6 +882,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             wasNull = true;
             return null;
         }
+        wasNull = false;
         if (value instanceof BigDecimal)
             return (BigDecimal) value;
 

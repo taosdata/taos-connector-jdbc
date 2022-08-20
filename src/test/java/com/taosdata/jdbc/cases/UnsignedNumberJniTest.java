@@ -87,7 +87,7 @@ public class UnsignedNumberJniTest {
         }
     }
 
-    @Test(expected = SQLException.class)
+    @Test
     public void testCase005() throws SQLException {
         try (Statement stmt = conn.createStatement()) {
             long now = System.currentTimeMillis();
@@ -107,7 +107,7 @@ public class UnsignedNumberJniTest {
         }
     }
 
-    @Test(expected = SQLException.class)
+    @Test
     public void testCase006() throws SQLException {
         try (Statement stmt = conn.createStatement()) {
             long now = System.currentTimeMillis();
