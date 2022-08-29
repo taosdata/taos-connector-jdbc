@@ -28,6 +28,7 @@ public class TMQResultSet extends AbstractResultSet {
             return true;
 
         int code;
+        this.columnMetaDataList.clear();
         code = this.jniConnector.fetchBlock(this.resultSetPointer, this.blockData, this.columnMetaDataList);
         if (code == TSDBConstants.JNI_CONNECTION_NULL) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_JNI_CONNECTION_NULL);
