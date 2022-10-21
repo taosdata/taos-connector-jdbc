@@ -7,7 +7,7 @@ import org.junit.Test;
 
 import java.sql.*;
 
-public class GroupByFetchBlockTest {
+public class GroupByFetchBlockJNITest {
     private static Connection connection;
     private static Statement statement;
 
@@ -29,7 +29,7 @@ public class GroupByFetchBlockTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata&batchfetch=true";
+            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
         }
         connection = DriverManager.getConnection(url);
         statement = connection.createStatement();
