@@ -131,7 +131,8 @@ public class TSDBStatement extends AbstractStatement {
     }
 
     @Override
-    public void setQueryTimeout(int queryTimeout) {
+    public void setQueryTimeout(int queryTimeout) throws SQLException {
+        super.setQueryTimeout(queryTimeout);
         this.queryTimeout = queryTimeout;
     }
 
