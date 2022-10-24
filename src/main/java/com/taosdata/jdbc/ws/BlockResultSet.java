@@ -138,11 +138,13 @@ public class BlockResultSet extends AbstractWSResultSet {
                         for (int m = 0; m < numOfRows; m++) {
                             offset.add(buffer.getInt());
                         }
+                        int start = buffer.position();
                         for (int m = 0; m < numOfRows; m++) {
                             if (-1 == offset.get(m)) {
                                 col.add(null);
                                 continue;
                             }
+                            buffer.position(start + offset.get(m));
                             short len = buffer.getShort();
                             byte[] tmp = new byte[len];
                             buffer.get(tmp);
@@ -155,11 +157,13 @@ public class BlockResultSet extends AbstractWSResultSet {
                         for (int m = 0; m < numOfRows; m++) {
                             offset.add(buffer.getInt());
                         }
+                        int start = buffer.position();
                         for (int m = 0; m < numOfRows; m++) {
                             if (-1 == offset.get(m)) {
                                 col.add(null);
                                 continue;
                             }
+                            buffer.position(start + offset.get(m));
                             int len = buffer.getShort() / 4;
                             int[] tmp = new int[len];
                             for (int n = 0; n < len; n++) {
