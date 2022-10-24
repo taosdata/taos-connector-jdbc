@@ -17,6 +17,8 @@ package com.taosdata.jdbc;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLTimeoutException;
+import java.util.concurrent.*;
 
 public class TSDBStatement extends AbstractStatement {
     /**
@@ -26,12 +28,38 @@ public class TSDBStatement extends AbstractStatement {
     private TSDBConnection connection;
     private TSDBResultSet resultSet;
 
+    private int queryTimeout;
+
     TSDBStatement(TSDBConnection connection) {
         this.connection = connection;
         connection.registerStatement(this);
     }
 
     public ResultSet executeQuery(String sql) throws SQLException {
+        if (queryTimeout > 0) {
+            ExecutorService executor = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
+                    new ArrayBlockingQueue<>(1), Executors.defaultThreadFactory(), new ThreadPoolExecutor.CallerRunsPolicy());
+            Future<ResultSet> f = executor.submit(() -> executeQueryImpl(sql));
+
+            try {
+                return f.get(this.queryTimeout, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                throw new SQLException("failed to execute sql: " + sql + ", cause: " + e.getMessage(), e);
+            } catch (ExecutionException e) {
+                throw new SQLException("failed to execute sql: " + sql + ", cause: " + e.getMessage(), e);
+            } catch (TimeoutException e) {
+                f.cancel(true);
+                throw new SQLTimeoutException("failed to execute sql: " + sql + ", cause: the execution time exceeds timeout: " + this.queryTimeout + " seconds");
+            } finally {
+                executor.shutdownNow();
+            }
+        } else {
+            return executeQueryImpl(sql);
+        }
+    }
+
+    private ResultSet executeQueryImpl(String sql) throws SQLException {
         synchronized (this) {
             if (isClosed()) {
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
@@ -58,6 +86,32 @@ public class TSDBStatement extends AbstractStatement {
     }
 
     public int executeUpdate(String sql) throws SQLException {
+        if (queryTimeout > 0) {
+            ExecutorService executor = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
+                    new ArrayBlockingQueue<>(1), Executors.defaultThreadFactory(), new ThreadPoolExecutor.CallerRunsPolicy());
+
+            Future<Integer> f = executor.submit(() -> executeUpdateImpl(sql));
+
+            try {
+                return f.get(this.queryTimeout, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                throw new SQLException("failed to execute sql: " + sql + ", cause: " + e.getMessage(), e);
+            } catch (ExecutionException e) {
+                throw new SQLException("failed to execute sql: " + sql + ", cause: " + e.getMessage(), e);
+            } catch (TimeoutException e) {
+                f.cancel(true);
+                throw new SQLTimeoutException("failed to execute sql: " + sql + ", cause: the execution time exceeds timeout: " + this.queryTimeout + " seconds");
+            } finally {
+                executor.shutdownNow();
+            }
+        } else {
+            return executeUpdateImpl(sql);
+        }
+    }
+
+    private int executeUpdateImpl(String sql) throws SQLException {
+
         synchronized (this) {
             if (isClosed())
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
@@ -76,6 +130,17 @@ public class TSDBStatement extends AbstractStatement {
         }
     }
 
+    @Override
+    public void setQueryTimeout(int queryTimeout) {
+        this.queryTimeout = queryTimeout;
+    }
+
+    @Override
+    public int getQueryTimeout() throws SQLException {
+        super.getQueryTimeout();
+        return this.queryTimeout;
+    }
+
     public void close() throws SQLException {
         if (isClosed)
             return;
@@ -86,6 +151,31 @@ public class TSDBStatement extends AbstractStatement {
     }
 
     public boolean execute(String sql) throws SQLException {
+        if (queryTimeout > 0) {
+            ExecutorService executor = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
+                    new ArrayBlockingQueue<>(1), Executors.defaultThreadFactory(), new ThreadPoolExecutor.CallerRunsPolicy());
+
+            Future<Boolean> f = executor.submit(() -> executeImpl(sql));
+
+            try {
+                return f.get(this.queryTimeout, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                throw new SQLException("failed to execute sql: " + sql + ", cause: " + e.getMessage(), e);
+            } catch (ExecutionException e) {
+                throw new SQLException("failed to execute sql: " + sql + ", cause: " + e.getMessage(), e);
+            } catch (TimeoutException e) {
+                f.cancel(true);
+                throw new SQLTimeoutException("failed to execute sql: " + sql + ", cause: the execution time exceeds timeout: " + this.queryTimeout + " seconds");
+            } finally {
+                executor.shutdownNow();
+            }
+        } else {
+            return executeImpl(sql);
+        }
+    }
+
+    public boolean executeImpl(String sql) throws SQLException {
         synchronized (this) {
             // check if closed
             if (isClosed()) {
