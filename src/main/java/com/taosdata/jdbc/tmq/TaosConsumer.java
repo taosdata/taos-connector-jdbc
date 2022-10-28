@@ -3,11 +3,19 @@ package com.taosdata.jdbc.tmq;
 import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.utils.StringUtils;
-import com.taosdata.jdbc.utils.Utils;
 
+import java.beans.IntrospectionException;
 import java.sql.SQLException;
 import java.time.Duration;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.ConcurrentModificationException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -45,7 +53,7 @@ public class TaosConsumer<V> implements TConsumer<V> {
      * it to avoid resource leaks.
      */
     @SuppressWarnings("unchecked")
-    public TaosConsumer(Properties properties) throws SQLException {
+    public TaosConsumer(Properties properties) throws SQLException, IntrospectionException, ClassNotFoundException {
         connector = new TMQConnector();
         if (null == properties)
             throw TSDBError.createSQLException(TMQConstants.TMQ_CONF_NULL, "consumer properties must not be null!");
@@ -61,15 +69,14 @@ public class TaosConsumer<V> implements TConsumer<V> {
                     });
         }
 
-        String s = properties.getProperty(TMQConstants.VALUE_DESERIALIZER);
+        String s = properties.getProperty(TMQConstants.VALUE_CLASS);
         if (!StringUtils.isEmpty(s)) {
-            deserializer = (Deserializer<V>) Utils.newInstance(Utils.parseClassType(s));
+            deserializer = (Deserializer<V>) new ReferenceDeserializer<>(Class.forName(s));
         } else {
             deserializer = (Deserializer<V>) new MapDeserializer();
         }
 
         deserializer.configure(properties);
-
         long config = connector.createConfig(properties);
         try {
             connector.createConsumer(config);

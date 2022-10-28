@@ -12,37 +12,46 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.*;
 
+import static com.taosdata.jdbc.utils.StringUtils.toSymbolCase;
+
 public class ReferenceDeserializer<V> implements Deserializer<V> {
+
+    private final Class<V> clazz;
     private Param[] params;
 
-    @Override
-    public void configure(Map<?, ?> configs) {
-        Object encodingValue = configs.get(TMQConstants.VALUE_DESERIALIZER_ENCODING);
-        if (encodingValue instanceof String)
-            TaosGlobalConfig.setCharset(((String) encodingValue).trim());
+    public ReferenceDeserializer(Class<V> clazz) {
+        this.clazz = clazz;
     }
 
     @Override
-    public V deserialize(ResultSet data) throws InstantiationException, IllegalAccessException, IntrospectionException, SQLException, InvocationTargetException {
-        Class<V> clazz = getGenericType();
-        V t = clazz.newInstance();
-
+    public void configure(Map<?, ?> configs) throws IntrospectionException {
+        Object encodingValue = configs.get(TMQConstants.VALUE_DESERIALIZER_ENCODING);
+        if (encodingValue instanceof String)
+            TaosGlobalConfig.setCharset(((String) encodingValue).trim());
         if (params == null) {
             List<Param> lists = new ArrayList<>();
             BeanInfo beanInfo = Introspector.getBeanInfo(clazz);
+            Object mapUserScoreToCamelCaseObj = configs.get(TMQConstants.VALUE_MAP_UNDER_SCORE_TO_CAMEL_CASE);
+            boolean mapUnderscoreToCamelCase = mapUserScoreToCamelCaseObj != null
+                    && Boolean.parseBoolean(mapUserScoreToCamelCaseObj.toString());
             for (PropertyDescriptor property : beanInfo.getPropertyDescriptors()) {
                 String name = property.getName();
                 if ("class".equals(name))
                     continue;
                 Method method = property.getWriteMethod();
                 Param param = new Param();
-                param.name = name;
+                param.name = mapUnderscoreToCamelCase ? toSymbolCase(name, '_'): name;
                 param.method = method;
                 param.clazz = method.getParameterTypes()[0];
                 lists.add(param);
             }
             params = lists.toArray(new Param[0]);
         }
+    }
+
+    @Override
+    public V deserialize(ResultSet data) throws InstantiationException, IllegalAccessException, IntrospectionException, SQLException, InvocationTargetException {
+        V t = clazz.newInstance();
 
         for (Param param : params) {
             if (param.clazz.isAssignableFrom(String.class)) {
@@ -81,15 +90,6 @@ public class ReferenceDeserializer<V> implements Deserializer<V> {
             }
         }
         return t;
-    }
-
-    private Class<V> getGenericType() {
-        Type type = getClass().getGenericSuperclass();
-        if (type instanceof ParameterizedType) {
-            ParameterizedType parameterizedType = (ParameterizedType) type;
-            return (Class<V>) parameterizedType.getActualTypeArguments()[0];
-        }
-        throw new RuntimeException();
     }
 
     private static class Param {

@@ -36,9 +36,9 @@ public class TMQConstants {
     public static final String BOOTSTRAP_SERVERS = "bootstrap.servers";
 
     /**
-     * deserializer Bean
+     * value Class
      */
-    public static final String VALUE_DESERIALIZER = "value.deserializer";
+    public static final String VALUE_CLASS = "value.class";
 
     /**
      * encode for deserializer String value
@@ -69,6 +69,11 @@ public class TMQConstants {
      * databaseName option
      */
     public static final String CONNECT_DB = "td.connect.db";
+
+    /**
+     * column map_under_score_to_camel_case
+     */
+    public static final String VALUE_MAP_UNDER_SCORE_TO_CAMEL_CASE = "value.mapUnderscoreToCamelCase";
 
     static {
         configSet.add(GROUP_ID);
