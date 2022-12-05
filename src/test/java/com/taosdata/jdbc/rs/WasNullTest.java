@@ -44,8 +44,10 @@ public class WasNullTest {
     public void testGetObject() throws SQLException {
         try (Statement stmt = conn.createStatement()) {
             stmt.execute("drop table if exists weather");
-            stmt.execute("create table if not exists weather(f1 timestamp, f2 int, f3 bigint, f4 float, f5 double, f6 binary(64), f7 smallint, f8 tinyint, f9 bool, f10 nchar(64))");
-            stmt.execute("insert into restful_test.weather values('2021-01-01 00:00:00.000', 1, 100, 3.1415, 3.1415926, NULL, 10, 10, true, '涛思数据')");
+            stmt.execute("create table if not exists weather(f1 timestamp, f2 int, f3 bigint, f4 float, f5 double, " +
+                    "f6 binary(64), f7 smallint, f8 tinyint, f9 bool, f10 nchar(64), f11 varchar(64));");
+            stmt.execute("insert into restful_test.weather values('2021-01-01 00:00:00.000', 1, 100, 3.1415, 3.1415926, " +
+                    "NULL, 10, 10, true, '涛思数据', '涛思')");
 
             ResultSet rs = stmt.executeQuery("select * from restful_test.weather");
             ResultSetMetaData meta = rs.getMetaData();
@@ -59,6 +61,10 @@ public class WasNullTest {
                     } else {
                         Assert.assertNotNull(value);
                         Assert.assertFalse(wasNull);
+                    }
+                    if (i == 11) {
+                        Assert.assertTrue(value instanceof String);
+                        Assert.assertEquals("涛思", value);
                     }
                 }
             }

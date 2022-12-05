@@ -18,11 +18,15 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
 
+import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+
+import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_BINARY;
+import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_JSON;
 
 public class TSDBResultSet extends AbstractResultSet {
     private final TSDBJNIConnector jniConnector;
@@ -320,9 +324,19 @@ public class TSDBResultSet extends AbstractResultSet {
         checkAvailability(columnIndex, this.columnMetaDataList.size());
 
         Object res = null;
-        if (this.getBatchFetch())
-            return this.blockData.get(columnIndex - 1);
-
+        if (Boolean.TRUE.equals(this.getBatchFetch())) {
+            Object obj = this.blockData.get(columnIndex - 1);
+            int type = this.columnMetaDataList.get(columnIndex).getColType();
+            if (type == TSDB_DATA_TYPE_JSON || type == TSDB_DATA_TYPE_BINARY) {
+                String charset = TaosGlobalConfig.getCharset();
+                try {
+                    return new String((byte[]) obj, charset);
+                } catch (UnsupportedEncodingException e) {
+                    throw new RuntimeException(e.getMessage());
+                }
+            }
+            return obj;
+        }
         this.lastWasNull = this.rowData.wasNull(columnIndex);
         if (!lastWasNull) {
             res = this.rowData.getObject(columnIndex);
