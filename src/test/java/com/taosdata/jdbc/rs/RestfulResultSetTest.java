@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.rs;
 
+import com.alibaba.fastjson.JSONArray;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
@@ -12,6 +13,8 @@ import java.math.BigDecimal;
 import java.sql.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.List;
 
 public class RestfulResultSetTest {
 
@@ -673,6 +676,15 @@ public class RestfulResultSetTest {
     @Test
     public void isWrapperFor() throws SQLException {
         Assert.assertTrue(rs.isWrapperFor(RestfulResultSet.class));
+    }
+
+    @Test
+    public void parseTimestampColumnDataTest() throws SQLException {
+        List<Object> list = new ArrayList<>();
+        list.add("2022-08-09T02:36:44.5Z");
+        JSONArray array = new JSONArray(list);
+        Timestamp timestamp = ((RestfulResultSet) rs).parseTimestampColumnData(array, 0);
+        Assert.assertEquals(1660012604500L, timestamp.getTime());
     }
 
     @AfterClass

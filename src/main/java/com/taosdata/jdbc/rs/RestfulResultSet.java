@@ -149,7 +149,7 @@ public class RestfulResultSet extends AbstractResultSet {
         }
     }
 
-    private Timestamp parseTimestampColumnData(JSONArray row, int colIndex) throws SQLException {
+    public Timestamp parseTimestampColumnData(JSONArray row, int colIndex) throws SQLException {
         if (row.get(colIndex) == null)
             return null;
 
