@@ -2,6 +2,7 @@ package com.taosdata.jdbc.rs;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONException;
 import com.alibaba.fastjson.JSONObject;
 import com.taosdata.jdbc.AbstractStatement;
 import com.taosdata.jdbc.TSDBDriver;
@@ -63,7 +64,12 @@ public class RestfulStatement extends AbstractStatement {
         boolean result = true;
 
         String response = HttpClientPoolUtil.execute(getUrl(), sql, this.conn.getAuth());
-        JSONObject jsonObject = JSON.parseObject(response);
+        JSONObject jsonObject = null;
+        try {
+            jsonObject = JSON.parseObject(response);
+        } catch (JSONException e) {
+            throw new JSONException(String.format("execute sql response: %s, can not cast to JSONObject.", response), e);
+        }
         if (null == jsonObject) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "sql: " + sql);
         }
