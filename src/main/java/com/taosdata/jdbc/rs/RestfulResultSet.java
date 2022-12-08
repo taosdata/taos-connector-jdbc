@@ -47,7 +47,7 @@ public class RestfulResultSet extends AbstractResultSet {
             .appendLiteral(':')
             .appendValue(ChronoField.SECOND_OF_MINUTE, 2)
             .optionalStart()
-            .appendFraction(ChronoField.NANO_OF_SECOND, 2, 9, true)
+            .appendFraction(ChronoField.NANO_OF_SECOND, 0, 9, true)
             .optionalEnd()
             .appendOffset("+HHMM", "Z").toFormatter()
             .withResolverStyle(ResolverStyle.STRICT)
@@ -149,7 +149,7 @@ public class RestfulResultSet extends AbstractResultSet {
         }
     }
 
-    private Timestamp parseTimestampColumnData(JSONArray row, int colIndex) throws SQLException {
+    public Timestamp parseTimestampColumnData(JSONArray row, int colIndex) throws SQLException {
         if (row.get(colIndex) == null)
             return null;
 
