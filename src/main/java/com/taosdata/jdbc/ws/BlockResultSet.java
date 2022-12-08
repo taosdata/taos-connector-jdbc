@@ -258,6 +258,7 @@ public class BlockResultSet extends AbstractWSResultSet {
 //            return new NullType().toString();
             return null;
         }
+        wasNull = false;
         if (value instanceof String)
             return (String) value;
 
@@ -281,6 +282,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             wasNull = true;
             return false;
         }
+        wasNull = false;
         if (value instanceof Boolean)
             return (boolean) value;
 
@@ -312,7 +314,7 @@ public class BlockResultSet extends AbstractWSResultSet {
                 if ("TRUE".compareToIgnoreCase((String) value) == 0) {
                     return Boolean.TRUE;
                 } else if ("FALSE".compareToIgnoreCase((String) value) == 0) {
-                    return Boolean.TRUE;
+                    return Boolean.FALSE;
                 } else {
                     throw new SQLDataException();
                 }
@@ -328,7 +330,7 @@ public class BlockResultSet extends AbstractWSResultSet {
                 if ("TRUE".compareToIgnoreCase(tmp) == 0) {
                     return Boolean.TRUE;
                 } else if ("FALSE".compareToIgnoreCase(tmp) == 0) {
-                    return Boolean.TRUE;
+                    return Boolean.FALSE;
                 } else {
                     throw new SQLDataException();
                 }
@@ -347,6 +349,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             wasNull = true;
             return 0;
         }
+        wasNull = false;
         if (value instanceof Byte)
             return (byte) value;
 
@@ -428,6 +431,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             wasNull = true;
             return 0;
         }
+        wasNull = false;
         if (value instanceof Short)
             return (short) value;
 
@@ -437,6 +441,8 @@ public class BlockResultSet extends AbstractWSResultSet {
                 return (boolean) value ? (short) 1 : (short) 0;
             case TSDB_DATA_TYPE_TINYINT:
                 return (byte) value;
+            case TSDB_DATA_TYPE_UTINYINT:
+                return (short) value;
             case TSDB_DATA_TYPE_USMALLINT:
             case TSDB_DATA_TYPE_INT: {
                 int tmp = (int) value;
@@ -497,6 +503,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             wasNull = true;
             return 0;
         }
+        wasNull = false;
         if (value instanceof Integer)
             return (int) value;
 
@@ -565,6 +572,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             wasNull = true;
             return 0;
         }
+        wasNull = false;
         if (value instanceof Long)
             return (long) value;
         if (value instanceof Timestamp) {
@@ -643,6 +651,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             wasNull = true;
             return 0;
         }
+        wasNull = false;
         if (value instanceof Float)
             return (float) value;
 
@@ -701,6 +710,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             wasNull = true;
             return 0;
         }
+        wasNull = false;
         if (value instanceof Double)
             return (double) value;
         if (value instanceof Float)
@@ -755,6 +765,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             wasNull = true;
             return null;
         }
+        wasNull = false;
         if (value instanceof byte[])
             return (byte[]) value;
         if (value instanceof String)
@@ -780,6 +791,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             wasNull = true;
             return null;
         }
+        wasNull = false;
         if (value instanceof Timestamp)
             return new Date(((Timestamp) value).getTime());
         return Utils.parseDate(value.toString());
@@ -794,6 +806,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             wasNull = true;
             return null;
         }
+        wasNull = false;
         if (value instanceof Timestamp)
             return new Time(((Timestamp) value).getTime());
         Time time = null;
@@ -814,6 +827,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             wasNull = true;
             return null;
         }
+        wasNull = false;
         if (value instanceof Timestamp)
             return (Timestamp) value;
         if (value instanceof Long) {
@@ -858,6 +872,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             wasNull = true;
             return null;
         }
+        wasNull = false;
         if (value instanceof BigDecimal)
             return (BigDecimal) value;
 
