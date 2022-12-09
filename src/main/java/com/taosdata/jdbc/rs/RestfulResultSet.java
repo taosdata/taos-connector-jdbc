@@ -441,8 +441,11 @@ public class RestfulResultSet extends AbstractResultSet implements ResultSet {
         if (value == null) {
             return 0;
         }
-        if (value instanceof Double || value instanceof Float)
+        if (value instanceof Double)
             return (double) value;
+        if (value instanceof Float) {
+            return (float) value;
+        }
         return Double.parseDouble(value.toString());
     }
 
