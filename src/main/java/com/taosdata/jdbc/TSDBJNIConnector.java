@@ -300,19 +300,16 @@ public class TSDBJNIConnector {
     public void setBindTableName(long stmt, String tableName) throws SQLException {
         int code = setBindTableNameImp(stmt, tableName, this.taos);
         if (code != TSDBConstants.JNI_SUCCESS) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN,
-                    "failed to set table name, reason: " + stmtErrorMsgImp(stmt, this.taos));
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "failed to set table name, reason: " + stmtErrorMsgImp(stmt, this.taos));
         }
     }
 
     private native int setBindTableNameImp(long stmt, String name, long conn);
 
-    public void setBindTableNameAndTags(long stmt, String tableName, int numOfTags, ByteBuffer tags,
-                                        ByteBuffer typeList, ByteBuffer lengthList, ByteBuffer nullList) throws SQLException {
+    public void setBindTableNameAndTags(long stmt, String tableName, int numOfTags, ByteBuffer tags, ByteBuffer typeList, ByteBuffer lengthList, ByteBuffer nullList) throws SQLException {
         int code = setTableNameTagsImp(stmt, tableName, numOfTags, tags.array(), typeList.array(), lengthList.array(), nullList.array(), this.taos);
         if (code != TSDBConstants.JNI_SUCCESS) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN,
-                    "failed to bind table name and corresponding tags, reason: " + stmtErrorMsgImp(stmt, this.taos));
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "failed to bind table name and corresponding tags, reason: " + stmtErrorMsgImp(stmt, this.taos));
         }
     }
 
@@ -321,8 +318,7 @@ public class TSDBJNIConnector {
     public void bindColumnDataArray(long stmt, ByteBuffer colDataList, ByteBuffer lengthList, ByteBuffer isNullList, int type, int bytes, int numOfRows, int columnIndex) throws SQLException {
         int code = bindColDataImp(stmt, colDataList.array(), lengthList.array(), isNullList.array(), type, bytes, numOfRows, columnIndex, this.taos);
         if (code != TSDBConstants.JNI_SUCCESS) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN,
-                    "failed to bind column data, reason: " + stmtErrorMsgImp(stmt, this.taos));
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "failed to bind column data, reason: " + stmtErrorMsgImp(stmt, this.taos));
         }
     }
 
@@ -331,8 +327,7 @@ public class TSDBJNIConnector {
     public void executeBatch(long stmt) throws SQLException {
         int code = executeBatchImp(stmt, this.taos);
         if (code != TSDBConstants.JNI_SUCCESS) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN,
-                    "failed to execute batch bind, reason: " + stmtErrorMsgImp(stmt, this.taos));
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "failed to execute batch bind, reason: " + stmtErrorMsgImp(stmt, this.taos));
         }
     }
 
@@ -381,4 +376,14 @@ public class TSDBJNIConnector {
     }
 
     private native long schemalessInsertImp(String[] lines, long conn, int type, int precision);
+
+    public int getTableVGroupID(String db, String table) throws SQLException {
+        VGroupIDResp resp = getTableVgID(this.taos, db, table, new VGroupIDResp());
+        if (resp.getCode() != 0) {
+            throw TSDBError.createSQLException(resp.getCode(), "get table vGroup id fail");
+        }
+        return resp.getVgID();
+    }
+
+    private native VGroupIDResp getTableVgID(long conn, String db, String table, VGroupIDResp resp);
 }
