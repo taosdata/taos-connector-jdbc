@@ -46,13 +46,7 @@ public class TSDBJNIConnectorTest {
         connector.connect(host, 6030, null, "root", "taosdata");
 
         // setup
-        String setupSqlStrs[] = {"create database if not exists d precision \"us\"",
-                "create table if not exists d.t(ts timestamp, f int)",
-                "create database if not exists d2",
-                "create table if not exists d2.t2(ts timestamp, f int)",
-                "insert into d.t values(now+100s, 100)",
-                "insert into d2.t2 values(now+200s, 200)"
-        };
+        String setupSqlStrs[] = {"create database if not exists d precision \"us\"", "create table if not exists d.t(ts timestamp, f int)", "create database if not exists d2", "create table if not exists d2.t2(ts timestamp, f int)", "insert into d.t values(now+100s, 100)", "insert into d2.t2 values(now+200s, 200)"};
         for (String setupSqlStr : setupSqlStrs) {
             long setupSql = connector.executeQuery(setupSqlStr);
 
@@ -116,9 +110,7 @@ public class TSDBJNIConnectorTest {
         }
         // close statement
         connector.executeQuery("use d");
-        String[] lines = new String[]{
-                "st,t1=3i64,t2=4f64,t3=\"t3\" c1=3i64,c3=L\"passit\",c2=false,c4=4f64 1626006833639000000",
-                "st,t1=4i64,t3=\"t4\",t2=5f64,t4=5f64 c1=3i64,c3=L\"passitagin\",c2=true,c4=5f64,c5=5f64 1626006833640000000"};
+        String[] lines = new String[]{"st,t1=3i64,t2=4f64,t3=\"t3\" c1=3i64,c3=L\"passit\",c2=false,c4=4f64 1626006833639000000", "st,t1=4i64,t3=\"t4\",t2=5f64,t4=5f64 c1=3i64,c3=L\"passitagin\",c2=true,c4=5f64,c5=5f64 1626006833640000000"};
         connector.insertLines(lines, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS);
 
         // close connection
@@ -128,8 +120,7 @@ public class TSDBJNIConnectorTest {
     }
 
     private static boolean next(TSDBJNIConnector connector, long pSql) throws SQLException {
-        if (rowData != null)
-            rowData.clear();
+        if (rowData != null) rowData.clear();
 
         int code = connector.fetchRow(pSql, rowData);
         if (code == TSDBConstants.JNI_CONNECTION_NULL) {
@@ -283,6 +274,21 @@ public class TSDBJNIConnectorTest {
             statement.executeUpdate("drop database if exists test");
         }
         connection.close();
+    }
+
+    @Test
+    public void getTableVgID() throws SQLException {
+        TSDBJNIConnector conn = new TSDBJNIConnector();
+        conn.connect("localhost", 6030, null, "root", "taosdata");
+
+        conn.executeQuery("drop database if exists test_get_table_vgroup_id");
+        conn.executeQuery("create database if not exists test_get_table_vgroup_id");
+        conn.executeQuery("use test_get_table_vgroup_id");
+        conn.executeQuery("create table weather(ts timestamp, f1 int, f2 nchar(30)) tags(t1 int)");
+        conn.executeQuery("create table t1 using weather tags (2)");
+
+        int vgID = conn.getTableVGroupID("test_get_table_vgroup_id", "t1");
+        System.out.println(vgID);
     }
 
     private void bind_col_timestamp(TSDBJNIConnector connector, long stmt, long ts_start, int numOfRows) throws SQLException {
