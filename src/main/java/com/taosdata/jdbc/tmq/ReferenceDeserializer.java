@@ -70,9 +70,7 @@ public class ReferenceDeserializer<V> implements Deserializer<V> {
                 param.method.invoke(t, data.getLong(param.name));
             } else if (param.clazz.isAssignableFrom(Boolean.class)
                     || param.clazz.isAssignableFrom(boolean.class)) {
-                param.method.invoke(t, data.getLong(param.name));
-            } else if (param.clazz.isAssignableFrom(String.class)) {
-                param.method.invoke(t, data.getString(param.name));
+                param.method.invoke(t, data.getBoolean(param.name));
             } else if (param.clazz.isAssignableFrom(Timestamp.class)) {
                 param.method.invoke(t, data.getTimestamp(param.name));
             } else if (param.clazz.isAssignableFrom(Byte[].class)
