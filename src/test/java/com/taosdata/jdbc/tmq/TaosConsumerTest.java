@@ -30,9 +30,9 @@ public class TaosConsumerTest {
         scheduledExecutorService.scheduleWithFixedDelay(() -> {
             try {
                 statement.executeUpdate(
-                        "insert into ct0 values(now, " + a.getAndIncrement() + ", 0.2, 'a','一')" +
-                                "(now+1s," + a.getAndIncrement() + ",0.4,'b','二')" +
-                                "(now+2s," + a.getAndIncrement() + ",0.6,'c','三')");
+                        "insert into ct0 values(now, " + a.getAndIncrement() + ", 0.2, 'a','一', true)" +
+                                "(now+1s," + a.getAndIncrement() + ",0.4,'b','二', false)" +
+                                "(now+2s," + a.getAndIncrement() + ",0.6,'c','三', false)");
             } catch (SQLException e) {
                 // ignore
             }
