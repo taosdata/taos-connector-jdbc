@@ -79,9 +79,9 @@ public class TaosConsumerTest {
         scheduledExecutorService.scheduleWithFixedDelay(() -> {
             try {
                 statement.executeUpdate(
-                        "insert into ct1 values(now, " + a.getAndIncrement() + ", 0.2, 'a','一')" +
-                                "(now+1s," + a.getAndIncrement() + ",0.4,'b','二')" +
-                                "(now+2s," + a.getAndIncrement() + ",0.6,'c','三')");
+                        "insert into ct1 values(now, " + a.getAndIncrement() + ", 0.2, 'a','一', true)" +
+                                "(now+1s," + a.getAndIncrement() + ",0.4,'b','二', false)" +
+                                "(now+2s," + a.getAndIncrement() + ",0.6,'c','三', false)");
             } catch (SQLException e) {
                 // ignore
             }
@@ -90,7 +90,7 @@ public class TaosConsumerTest {
         TimeUnit.MILLISECONDS.sleep(11);
         String topic = "topic_ctb_column_with_bean";
         // create topic
-        statement.executeUpdate("create topic if not exists " + topic + " as select ts, c1, c2, c3, c4, t1 from ct1");
+        statement.executeUpdate("create topic if not exists " + topic + " as select ts, c1, c2, c3, c4, c5, t1 from ct1");
 
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
@@ -131,7 +131,7 @@ public class TaosConsumerTest {
         statement.execute("create database if not exists " + dbName);
         statement.execute("use " + dbName);
         statement.execute("create stable if not exists " + superTable
-                + " (ts timestamp, c1 int, c2 float, c3 nchar(10), c4 binary(10)) tags(t1 int)");
+                + " (ts timestamp, c1 int, c2 float, c3 nchar(10), c4 binary(10), c5 bool) tags(t1 int)");
         statement.execute("create table if not exists ct0 using " + superTable + " tags(1000)");
         statement.execute("create table if not exists ct1 using " + superTable + " tags(2000)");
     }

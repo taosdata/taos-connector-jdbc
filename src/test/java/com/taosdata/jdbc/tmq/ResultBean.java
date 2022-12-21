@@ -9,6 +9,7 @@ public class ResultBean {
     private String c3;
     private byte[] c4;
     private Integer t1;
+    private boolean c5;
 
     public Timestamp getTs() {
         return ts;
@@ -56,5 +57,13 @@ public class ResultBean {
 
     public void setT1(Integer t1) {
         this.t1 = t1;
+    }
+
+    public boolean isC5() {
+        return c5;
+    }
+
+    public void setC5(boolean c5) {
+        this.c5 = c5;
     }
 }
