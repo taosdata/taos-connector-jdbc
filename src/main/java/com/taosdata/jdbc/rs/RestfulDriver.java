@@ -45,7 +45,7 @@ public class RestfulDriver extends AbstractDriver {
 
         Properties props = parseURL(url, info);
         String host = props.getProperty(TSDBDriver.PROPERTY_KEY_HOST);
-        String port = props.getProperty(TSDBDriver.PROPERTY_KEY_PORT, "6041");
+        String port = props.getProperty(TSDBDriver.PROPERTY_KEY_PORT);
         String database = props.containsKey(TSDBDriver.PROPERTY_KEY_DBNAME)
                 ? props.getProperty(TSDBDriver.PROPERTY_KEY_DBNAME)
                 : null;
@@ -77,6 +77,8 @@ public class RestfulDriver extends AbstractDriver {
                     "unsupported UTF-8 concoding, user: " + props.getProperty(TSDBDriver.PROPERTY_KEY_USER)
                             + ", password: " + props.getProperty(TSDBDriver.PROPERTY_KEY_PASSWORD));
         }
+
+        String tz = props.getProperty(TSDBDriver.HTTP_TIME_ZONE);
 
         boolean useSsl = Boolean.parseBoolean(props.getProperty(TSDBDriver.PROPERTY_KEY_USE_SSL, "false"));
         String loginUrl;
@@ -142,7 +144,7 @@ public class RestfulDriver extends AbstractDriver {
                     (user + ":" + password).getBytes(StandardCharsets.UTF_8));
         }
 
-        RestfulConnection conn = new RestfulConnection(host, port, props, database, url, auth, useSsl, cloudToken);
+        RestfulConnection conn = new RestfulConnection(host, port, props, database, url, auth, useSsl, cloudToken, tz);
         if (database != null && !database.trim().replaceAll("\\s", "").isEmpty()) {
             try (Statement stmt = conn.createStatement()) {
                 stmt.execute("use " + database);

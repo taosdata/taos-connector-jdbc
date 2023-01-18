@@ -84,6 +84,9 @@ public class RestfulStatement extends AbstractStatement {
             result = false;
         } else {
             JSONArray head = jsonObject.getJSONArray("column_meta");
+            if (null == head) {
+                throw TSDBError.createSQLException(jsonObject.getInteger("code"), "sql: " + sql + ", desc: " + jsonObject.getString("desc") + ", head meta is null.");
+            }
             Integer rows = jsonObject.getInteger("rows");
             if (head.size() == 1 && ROW_NAME.equals(head.getJSONArray(0).getString(0)) && rows == 1) {
                 this.resultSet = null;
@@ -109,10 +112,17 @@ public class RestfulStatement extends AbstractStatement {
         } else {
             dbname = "/" + dbname.toLowerCase();
         }
-        String url = protocol + "://" + conn.getHost() + ":" + conn.getPort() + "/rest/sql" + dbname;
 
+        String url;
         if (this.conn.getToken() != null && !"".equals(this.conn.getToken().trim())) {
-            url = url + "?token=" + this.conn.getToken();
+            String port = null != conn.getPort() ? ":" + conn.getPort() : "";
+
+            String tz = (null == conn.getTz() || "".equals(conn.getTz().trim())) ? "" : "&tz=" + conn.getTz().trim();
+            url = protocol + "://" + conn.getHost() + port + "/rest/sql" + dbname + "?token=" + this.conn.getToken() + tz;
+        } else {
+            String tz = (null == conn.getTz() || "".equals(conn.getTz().trim())) ? "" : "?tz=" + conn.getTz().trim();
+            String port = null != conn.getPort() ? ":" + conn.getPort() : "6041";
+            url = protocol + "://" + conn.getHost() + port + "/rest/sql" + dbname + tz;
         }
         return url;
     }

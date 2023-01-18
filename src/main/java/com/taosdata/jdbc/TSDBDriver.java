@@ -129,6 +129,8 @@ public class TSDBDriver extends AbstractDriver {
      */
     public static final String HTTP_SOCKET_TIMEOUT = "httpSocketTimeout";
 
+    public static final String HTTP_TIME_ZONE= "tz";
+
     private TSDBDatabaseMetaData dbMetaData = null;
 
     static {
