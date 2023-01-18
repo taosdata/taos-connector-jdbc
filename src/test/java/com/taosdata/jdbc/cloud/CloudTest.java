@@ -18,7 +18,7 @@ public class CloudTest {
 
         String url = System.getenv("TDENGINE_CLOUD_URL");
         System.out.println("cloud url:" + url);
-        if (url == null) {
+        if (url == null || "".equals(url.trim())) {
             System.out.println("Environment variable for CloudTest not set properly");
             return;
         }
