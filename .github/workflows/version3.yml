@@ -60,5 +60,5 @@ jobs:
 
       - name: Test
         env:
-          TDENGINE_CLOUD_URL:${{ vars.TDENGINE_CLOUD_URL }}
+          TDENGINE_CLOUD_URL: ${{ secrets.TDENGINE_CLOUD_URL }}
         run: mvn -B clean test --file pom.xml
