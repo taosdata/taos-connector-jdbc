@@ -16,13 +16,13 @@ public class CloudTest {
     @Test
     public void connectCloudService() throws Exception {
 
-//        export TDENGINE_JDBC_URL="jdbc:TAOS-RS://gw.us-east-1.aws.cloud.tdengine.com?usessl=true&token=6363827614de80e382473d2b2febd642b0bae37e"
-        String jdbcUrl = System.getenv("TDENGINE_JDBC_URL");
-        if (jdbcUrl == null) {
-            jdbcUrl = "jdbc:TAOS-RS://gw.us-east-1.aws.cloud.tdengine.com?usessl=true&token=6363827614de80e382473d2b2febd642b0bae37e";
+        String url = System.getenv("TDENGINE_CLOUD_URL");
+        if (url == null) {
+            System.out.println("Environment variable for CloudTest not set properly");
+            return;
         }
 
-        Connection conn = DriverManager.getConnection(jdbcUrl);
+        Connection conn = DriverManager.getConnection(url);
         Statement stmt = conn.createStatement();
         ResultSet rs = stmt.executeQuery("select server_version()");
         rs.next();
