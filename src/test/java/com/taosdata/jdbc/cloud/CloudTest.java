@@ -17,6 +17,7 @@ public class CloudTest {
     public void connectCloudService() throws Exception {
 
         String url = System.getenv("TDENGINE_CLOUD_URL");
+        System.out.println("cloud url:" + url);
         if (url == null) {
             System.out.println("Environment variable for CloudTest not set properly");
             return;
