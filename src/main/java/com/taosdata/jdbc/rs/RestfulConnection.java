@@ -14,25 +14,27 @@ import java.util.Properties;
 public class RestfulConnection extends AbstractConnection {
 
     private final String host;
-    private final int port;
+    private final String port;
     private final String url;
     private final String database;
     private final String auth;
     private final boolean useSsl;
     private final String token;
+    private final String tz;
 
     private boolean isClosed;
     private final DatabaseMetaData metadata;
 
-    public RestfulConnection(String host, String port, Properties props, String database, String url, String auth, boolean useSsl, String token) {
+    public RestfulConnection(String host, String port, Properties props, String database, String url, String auth, boolean useSsl, String token, String tz) {
         super(props);
         this.host = host;
-        this.port = Integer.parseInt(port);
+        this.port = port;
         this.database = database;
         this.url = url;
         this.auth = auth == null ? null : "Basic " + auth;
         this.useSsl = useSsl;
         this.token = token;
+        this.tz = tz;
         this.metadata = new RestfulDatabaseMetaData(url, props.getProperty(TSDBDriver.PROPERTY_KEY_USER), this);
     }
 
@@ -78,7 +80,7 @@ public class RestfulConnection extends AbstractConnection {
         return host;
     }
 
-    public int getPort() {
+    public String getPort() {
         return port;
     }
 
@@ -100,5 +102,9 @@ public class RestfulConnection extends AbstractConnection {
 
     public boolean isUseSsl() {
         return useSsl;
+    }
+
+    public String getTz() {
+        return tz;
     }
 }
