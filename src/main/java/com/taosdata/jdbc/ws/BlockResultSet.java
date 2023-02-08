@@ -8,7 +8,10 @@ import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.TaosGlobalConfig;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.utils.Utils;
-import com.taosdata.jdbc.ws.entity.*;
+import com.taosdata.jdbc.ws.entity.FetchBlockResp;
+import com.taosdata.jdbc.ws.entity.QueryResp;
+import com.taosdata.jdbc.ws.entity.Request;
+import com.taosdata.jdbc.ws.entity.RequestFactory;
 
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
@@ -19,8 +22,6 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
 import static com.taosdata.jdbc.utils.UnsignedDataUtils.*;
@@ -33,10 +34,9 @@ public class BlockResultSet extends AbstractWSResultSet {
     }
 
     @Override
-    public List<List<Object>> fetchJsonData() throws ExecutionException, InterruptedException {
+    public List<List<Object>> fetchJsonData() throws SQLException {
         Request blockRequest = factory.generateFetchBlock(queryId);
-        CompletableFuture<Response> fetchFuture = transport.send(blockRequest);
-        FetchBlockResp resp = (FetchBlockResp) fetchFuture.get();
+        FetchBlockResp resp = (FetchBlockResp) transport.send(blockRequest);
         ByteBuffer buffer = resp.getBuffer();
         List<List<Object>> list = new ArrayList<>();
         if (resp.getBuffer() != null) {

@@ -114,7 +114,7 @@ public class RestfulDriver extends AbstractDriver {
             }
             client = new WSClient(urlPath, user, password, database,
                     inFlightRequest, httpHeaders, latch, maxRequest);
-            transport = new Transport(client, inFlightRequest);
+            transport = new Transport(client, inFlightRequest, timeout);
             try {
                 if (!client.connectBlocking(connectTimeout, TimeUnit.MILLISECONDS)) {
                     close(transport);

@@ -77,7 +77,7 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
                     latch.countDown();
                 } else {
                     Response response = parseMessage(jsonObject);
-                    ResponseFuture remove = inFlightRequest.remove(response.getAction(), response.getReqId());
+                    FutureResponse remove = inFlightRequest.remove(response.getAction(), response.getReqId());
                     if (null != remove) {
                         remove.getFuture().complete(response);
                     }
@@ -96,7 +96,7 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
         bytes.order(ByteOrder.LITTLE_ENDIAN);
         bytes.position(8);
         long id = bytes.getLong();
-        ResponseFuture remove = inFlightRequest.remove(Action.FETCH_BLOCK.getAction(), id);
+        FutureResponse remove = inFlightRequest.remove(Action.FETCH_BLOCK.getAction(), id);
         if (null != remove) {
             FetchBlockResp fetchBlockResp = new FetchBlockResp(id, bytes);
             remove.getFuture().complete(fetchBlockResp);

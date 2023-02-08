@@ -10,8 +10,6 @@ import com.taosdata.jdbc.ws.entity.*;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 public class WSStatement extends AbstractStatement {
     private final Transport transport;
@@ -63,31 +61,25 @@ public class WSStatement extends AbstractStatement {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
 
         Request request = factory.generateQuery(sql);
-        CompletableFuture<Response> send = transport.send(request);
+        Response response = transport.send(request);
 
-        Response response;
-        try {
-            response = send.get();
-            QueryResp queryResp = (QueryResp) response;
-            if (Code.SUCCESS.getCode() != queryResp.getCode()) {
-                throw TSDBError.createSQLException(queryResp.getCode(), queryResp.getMessage());
-            }
-            if (SqlSyntaxValidator.isUseSql(sql)) {
-                this.database = sql.trim().replace("use", "").trim();
-                this.connection.setCatalog(this.database);
-                this.connection.setClientInfo(TSDBDriver.PROPERTY_KEY_DBNAME, this.database);
-            }
-            if (queryResp.isUpdate()) {
-                this.resultSet = null;
-                this.affectedRows = queryResp.getAffectedRows();
-                return false;
-            } else {
-                this.resultSet = new BlockResultSet(this, this.transport, this.factory, queryResp, this.database);
-                this.affectedRows = -1;
-                return true;
-            }
-        } catch (InterruptedException | ExecutionException e) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_WITH_EXECUTEQUERY, e.getMessage());
+        QueryResp queryResp = (QueryResp) response;
+        if (Code.SUCCESS.getCode() != queryResp.getCode()) {
+            throw TSDBError.createSQLException(queryResp.getCode(), queryResp.getMessage());
+        }
+        if (SqlSyntaxValidator.isUseSql(sql)) {
+            this.database = sql.trim().replace("use", "").trim();
+            this.connection.setCatalog(this.database);
+            this.connection.setClientInfo(TSDBDriver.PROPERTY_KEY_DBNAME, this.database);
+        }
+        if (queryResp.isUpdate()) {
+            this.resultSet = null;
+            this.affectedRows = queryResp.getAffectedRows();
+            return false;
+        } else {
+            this.resultSet = new BlockResultSet(this, this.transport, this.factory, queryResp, this.database);
+            this.affectedRows = -1;
+            return true;
         }
     }
 
