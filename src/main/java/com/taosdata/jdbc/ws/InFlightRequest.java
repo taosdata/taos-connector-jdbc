@@ -29,7 +29,7 @@ public class InFlightRequest {
         if (semaphore.tryAcquire(timeout, TimeUnit.MILLISECONDS)) {
             futureMap.get(rf.getAction()).put(rf.getId(), rf);
         } else {
-            throw new TimeoutException("websocket connection meet the max request");
+            throw new TimeoutException("websocket connection reached the max number of concurrent requests");
         }
     }
 

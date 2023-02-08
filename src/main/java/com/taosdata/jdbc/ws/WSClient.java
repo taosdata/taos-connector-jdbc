@@ -1,33 +1,38 @@
 package com.taosdata.jdbc.ws;
 
-import com.alibaba.fastjson.JSONObject;
-import com.taosdata.jdbc.ws.entity.*;
+import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.ws.entity.Action;
+import com.taosdata.jdbc.ws.entity.Payload;
+import com.taosdata.jdbc.ws.entity.Request;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.Map;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.CountDownLatch;
+import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 public class WSClient extends WebSocketClient implements AutoCloseable {
     private final String user;
     private final String password;
     private final String database;
-    private final CountDownLatch latch;
 
-    private final InFlightRequest inFlightRequest;
     ThreadPoolExecutor executor;
-
-    private boolean auth;
     private int reqId;
 
-    public boolean isAuth() {
-        return auth;
+    private Consumer<String> textMessageHandler;
+    private Consumer<ByteBuffer> binaryMessageHandler;
+
+    public void setTextMessageHandler(Consumer<String> textMessageHandler) {
+        this.textMessageHandler = textMessageHandler;
+    }
+    public void setBinaryMessageHandler(Consumer<ByteBuffer> binaryMessageHandler) {
+        this.binaryMessageHandler = binaryMessageHandler;
     }
 
     /**
@@ -38,16 +43,14 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
      * @param password  database password
      * @param database  connection database
      */
-    public WSClient(URI serverUri, String user, String password, String database, InFlightRequest inFlightRequest, Map<String, String> httpHeaders, CountDownLatch latch, int maxRequest) {
-        super(serverUri, httpHeaders);
+    public WSClient(URI serverUri, String user, String password, String database) {
+        super(serverUri, new HashMap<>());
         this.user = user;
         this.password = password;
         this.database = database;
-        this.inFlightRequest = inFlightRequest;
-        this.latch = latch;
         executor = new ThreadPoolExecutor(1, 1,
                 0L, TimeUnit.MILLISECONDS,
-                new ArrayBlockingQueue<>(maxRequest),
+                new LinkedBlockingDeque<>(),
                 r -> {
                     Thread t = new Thread(r);
                     t.setName("parse-message-" + t.getId());
@@ -67,40 +70,14 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
     public void onMessage(String message) {
         if (!"".equals(message)) {
             executor.submit(() -> {
-                JSONObject jsonObject = JSONObject.parseObject(message);
-                if (Action.CONN.getAction().equals(jsonObject.getString("action"))) {
-                    if (Code.SUCCESS.getCode() != jsonObject.getInteger("code")) {
-                        this.close();
-                    } else {
-                        auth = true;
-                    }
-                    latch.countDown();
-                } else {
-                    Response response = parseMessage(jsonObject);
-                    FutureResponse remove = inFlightRequest.remove(response.getAction(), response.getReqId());
-                    if (null != remove) {
-                        remove.getFuture().complete(response);
-                    }
-                }
+                textMessageHandler.accept(message);
             });
         }
     }
 
-    private Response parseMessage(JSONObject message) {
-        Action action = Action.of(message.getString("action"));
-        return message.toJavaObject(action.getResponseClazz());
-    }
-
     @Override
     public void onMessage(ByteBuffer bytes) {
-        bytes.order(ByteOrder.LITTLE_ENDIAN);
-        bytes.position(8);
-        long id = bytes.getLong();
-        FutureResponse remove = inFlightRequest.remove(Action.FETCH_BLOCK.getAction(), id);
-        if (null != remove) {
-            FetchBlockResp fetchBlockResp = new FetchBlockResp(id, bytes);
-            remove.getFuture().complete(fetchBlockResp);
-        }
+        binaryMessageHandler.accept(bytes);
     }
 
     @Override
@@ -158,5 +135,24 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
         public void setDb(String db) {
             this.db = db;
         }
+    }
+
+    public static WSClient getInstance(ConnectionParam params) throws SQLException {
+        String protocol = "ws";
+        if (params.isUseSsl()) {
+            protocol = "wss";
+        }
+        String loginUrl = protocol + "://" + params.getHost() + ":" + params.getPort() + "/rest/ws";
+        if (null != params.getCloudToken()) {
+            loginUrl = loginUrl + "?token=" + params.getCloudToken();
+        }
+
+        URI urlPath = null;
+        try {
+            urlPath = new URI(loginUrl);
+        } catch (URISyntaxException e) {
+            throw new SQLException("Websocket url parse error: " + loginUrl, e);
+        }
+        return new WSClient(urlPath, params.getUser(), params.getPassword(), params.getDatabase());
     }
 }

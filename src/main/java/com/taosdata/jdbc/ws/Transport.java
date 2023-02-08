@@ -2,15 +2,15 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
+import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.CompletableFutureTimeout;
 import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.entity.Response;
 
+import java.nio.ByteBuffer;
 import java.sql.SQLException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
+import java.util.function.Consumer;
 
 /**
  * send message
@@ -22,11 +22,28 @@ public class Transport implements AutoCloseable {
     private final WSClient client;
     private final InFlightRequest inFlightRequest;
     private final int timeout;
+    private boolean auth;
 
-    public Transport(WSClient client, InFlightRequest inFlightRequest, int timeout) {
-        this.client = client;
+    public Transport(ConnectionParam param, InFlightRequest inFlightRequest) throws SQLException {
+        this.client = WSClient.getInstance(param);
         this.inFlightRequest = inFlightRequest;
-        this.timeout = timeout;
+        this.timeout = param.getRequestTimeout();
+    }
+
+    public void setHandleTextMessage(Consumer<String> textMessageHandler) {
+        client.setTextMessageHandler(textMessageHandler);
+    }
+
+    public void setHandleBinaryMessage(Consumer<ByteBuffer> binaryMessageHandler) {
+        client.setBinaryMessageHandler(binaryMessageHandler);
+    }
+
+    public boolean isAuth() {
+        return auth;
+    }
+
+    public void setAuth(boolean auth) {
+        this.auth = auth;
     }
 
     public Response send(Request request) throws SQLException {
@@ -63,4 +80,23 @@ public class Transport implements AutoCloseable {
         client.close();
     }
 
+    public static void checkConnection(Transport transport, CountDownLatch latch, int connectTimeout,int requestTimeout) throws SQLException {
+        try {
+            if (!transport.client.connectBlocking(connectTimeout, TimeUnit.MILLISECONDS)) {
+                transport.close();
+                throw new SQLException("can't create connection with server");
+            }
+            if (!latch.await(requestTimeout, TimeUnit.MILLISECONDS)) {
+                transport.close();
+                throw new SQLException("auth timeout");
+            }
+        } catch (InterruptedException e) {
+            transport.close();
+            throw new SQLException("create websocket connection has been Interrupted ", e);
+        }
+        if (!transport.isAuth()) {
+            transport.close();
+            throw new SQLException("auth failure");
+        }
+    }
 }
