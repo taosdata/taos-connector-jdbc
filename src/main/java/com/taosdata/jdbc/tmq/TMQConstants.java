@@ -70,6 +70,11 @@ public class TMQConstants {
      */
     public static final String CONNECT_DB = "td.connect.db";
 
+    /**
+     * connect type websocket or jni, default is jni
+     */
+    public static final String CONNECT_TYPE = "td.connect.type";
+
     static {
         configSet.add(GROUP_ID);
         configSet.add(CLIENT_ID);

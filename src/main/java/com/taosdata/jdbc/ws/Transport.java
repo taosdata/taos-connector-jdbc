@@ -2,6 +2,7 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
+import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.CompletableFutureTimeout;
 import com.taosdata.jdbc.ws.entity.Request;
@@ -17,24 +18,24 @@ import java.util.function.Consumer;
  */
 public class Transport implements AutoCloseable {
 
-    public static final int DEFAULT_MESSAGE_WAIT_TIMEOUT = 3_000;
+    public static final int DEFAULT_MESSAGE_WAIT_TIMEOUT = 5_000;
 
     private final WSClient client;
     private final InFlightRequest inFlightRequest;
     private final int timeout;
     private boolean auth;
 
-    public Transport(ConnectionParam param, InFlightRequest inFlightRequest) throws SQLException {
-        this.client = WSClient.getInstance(param);
+    public Transport(WSFunction function, ConnectionParam param, InFlightRequest inFlightRequest) throws SQLException {
+        this.client = WSClient.getInstance(param, function);
         this.inFlightRequest = inFlightRequest;
         this.timeout = param.getRequestTimeout();
     }
 
-    public void setHandleTextMessage(Consumer<String> textMessageHandler) {
+    public void setTextMessageHandler(Consumer<String> textMessageHandler) {
         client.setTextMessageHandler(textMessageHandler);
     }
 
-    public void setHandleBinaryMessage(Consumer<ByteBuffer> binaryMessageHandler) {
+    public void setBinaryMessageHandler(Consumer<ByteBuffer> binaryMessageHandler) {
         client.setBinaryMessageHandler(binaryMessageHandler);
     }
 
@@ -46,6 +47,7 @@ public class Transport implements AutoCloseable {
         this.auth = auth;
     }
 
+    @SuppressWarnings("all")
     public Response send(Request request) throws SQLException {
 
         Response response = null;
@@ -70,7 +72,7 @@ public class Transport implements AutoCloseable {
         client.send(request.toString());
     }
 
-    public boolean isClosed() throws SQLException {
+    public boolean isClosed() {
         return client.isClosed();
     }
 
@@ -80,17 +82,27 @@ public class Transport implements AutoCloseable {
         client.close();
     }
 
-    public static void checkConnection(Transport transport, CountDownLatch latch, int connectTimeout,int requestTimeout) throws SQLException {
+    public static void checkConnection(Transport transport, int connectTimeout) throws SQLException {
         try {
             if (!transport.client.connectBlocking(connectTimeout, TimeUnit.MILLISECONDS)) {
                 transport.close();
                 throw new SQLException("can't create connection with server");
             }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            transport.close();
+            throw new SQLException("create websocket connection has been Interrupted ", e);
+        }
+    }
+
+    public static void checkoutAuth(Transport transport, CountDownLatch latch, int requestTimeout) throws SQLException {
+        try {
             if (!latch.await(requestTimeout, TimeUnit.MILLISECONDS)) {
                 transport.close();
                 throw new SQLException("auth timeout");
             }
         } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             transport.close();
             throw new SQLException("create websocket connection has been Interrupted ", e);
         }

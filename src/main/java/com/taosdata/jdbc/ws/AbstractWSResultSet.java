@@ -34,7 +34,7 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
     protected int rowIndex = 0;
     private boolean isCompleted;
 
-    public AbstractWSResultSet(Statement statement, Transport transport, RequestFactory factory,
+    protected AbstractWSResultSet(Statement statement, Transport transport, RequestFactory factory,
                                QueryResp response, String database) throws SQLException {
         this.statement = statement;
         this.transport = transport;
@@ -75,10 +75,8 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
         }
 
         Request request = factory.generateFetch(queryId);
-        Response response = transport.send(request);
-        FetchResp fetchResp = (FetchResp) response;
+        FetchResp fetchResp = (FetchResp)transport.send(request);
         if (Code.SUCCESS.getCode() != fetchResp.getCode()) {
-//                TODO reWrite error type
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, fetchResp.getMessage());
         }
         this.reset();
@@ -100,8 +98,10 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
             if (!this.isClosed) {
                 this.isClosed = true;
                 if (result != null && !result.isEmpty() && !isCompleted) {
-                    FetchReq fetchReq = new FetchReq(queryId, queryId);
-                    transport.sendWithoutRep(new Request(Action.FREE_RESULT.getAction(), fetchReq));
+                    FetchReq closeReq = new FetchReq();
+                    closeReq.setReqId(queryId);
+                    closeReq.setId(queryId);
+                    transport.sendWithoutRep(new Request(Action.FREE_RESULT.getAction(), closeReq));
                 }
             }
         }

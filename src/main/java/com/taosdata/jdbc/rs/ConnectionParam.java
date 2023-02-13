@@ -13,8 +13,8 @@ import java.sql.SQLException;
 import java.util.Properties;
 
 public class ConnectionParam {
-    private final String host;
-    private final String port;
+    private String host;
+    private String port;
     private String database;
     private String cloudToken;
     private String user;
@@ -24,11 +24,6 @@ public class ConnectionParam {
     private int maxRequest;
     private int connectTimeout;
     private int requestTimeout;
-
-    private ConnectionParam(String host, String port) {
-        this.host = host;
-        this.port = port;
-    }
 
     private ConnectionParam(Builder builder) {
         this.host = builder.host;
@@ -48,44 +43,88 @@ public class ConnectionParam {
         return host;
     }
 
+    public void setHost(String host) {
+        this.host = host;
+    }
+
     public String getPort() {
         return port;
+    }
+
+    public void setPort(String port) {
+        this.port = port;
     }
 
     public String getDatabase() {
         return database;
     }
 
+    public void setDatabase(String database) {
+        this.database = database;
+    }
+
     public String getCloudToken() {
         return cloudToken;
+    }
+
+    public void setCloudToken(String cloudToken) {
+        this.cloudToken = cloudToken;
     }
 
     public String getUser() {
         return user;
     }
 
+    public void setUser(String user) {
+        this.user = user;
+    }
+
     public String getPassword() {
         return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     public String getTz() {
         return tz;
     }
 
+    public void setTz(String tz) {
+        this.tz = tz;
+    }
+
     public boolean isUseSsl() {
         return useSsl;
+    }
+
+    public void setUseSsl(boolean useSsl) {
+        this.useSsl = useSsl;
     }
 
     public int getMaxRequest() {
         return maxRequest;
     }
 
+    public void setMaxRequest(int maxRequest) {
+        this.maxRequest = maxRequest;
+    }
+
     public int getConnectTimeout() {
         return connectTimeout;
     }
 
+    public void setConnectTimeout(int connectTimeout) {
+        this.connectTimeout = connectTimeout;
+    }
+
     public int getRequestTimeout() {
         return requestTimeout;
+    }
+
+    public void setRequestTimeout(int requestTimeout) {
+        this.requestTimeout = requestTimeout;
     }
 
     public static ConnectionParam getParam(Properties properties) throws SQLException {

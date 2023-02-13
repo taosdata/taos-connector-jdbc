@@ -4,7 +4,7 @@ import java.util.*;
 
 public class ConsumerRecords<V> implements Iterable<V> {
 
-    public static final ConsumerRecords<?> EMPTY = new ConsumerRecords(Collections.EMPTY_MAP);
+    public static final ConsumerRecords<?> EMPTY = new ConsumerRecords<>(Collections.emptyMap());
 
     private final Map<TopicPartition, List<V>> records;
 
@@ -48,7 +48,7 @@ public class ConsumerRecords<V> implements Iterable<V> {
         return records.isEmpty();
     }
 
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings("all")
     public static ConsumerRecords empty() {
         return EMPTY;
     }

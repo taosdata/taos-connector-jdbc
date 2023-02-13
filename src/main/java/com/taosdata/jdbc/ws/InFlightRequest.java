@@ -1,10 +1,14 @@
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.ws.entity.Action;
+import com.taosdata.jdbc.ws.tmq.TMQAction;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Unfinished execution
@@ -19,8 +23,10 @@ public class InFlightRequest {
         this.semaphore = new Semaphore(concurrentNum);
         for (Action value : Action.values()) {
             String action = value.getAction();
-            if (Action.CONN.getAction().equals(action))
-                continue;
+            futureMap.put(action, new ConcurrentHashMap<>());
+        }
+        for (TMQAction value : TMQAction.values()) {
+            String action = value.getAction();
             futureMap.put(action, new ConcurrentHashMap<>());
         }
     }
@@ -49,8 +55,6 @@ public class InFlightRequest {
                     return futures.values().stream();
                 })
                 .parallel().map(FutureResponse::getFuture)
-                .forEach(e -> {
-                    e.completeExceptionally(new Exception("close all inFlightRequest"));
-                });
+                .forEach(e -> e.completeExceptionally(new Exception("close all inFlightRequest")));
     }
 }

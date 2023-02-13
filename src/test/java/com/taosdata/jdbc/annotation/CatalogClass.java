@@ -47,14 +47,15 @@ public class CatalogClass {
     @Override
     public String toString() {
         if (methods.size() < 1)
-            return null;
+            return "";
         StringBuilder sb = new StringBuilder();
         sb.append("ClassName: ").append(name);
         String msg = trim(alias);
-        if (null != msg)
+        if (null != msg) {
             sb.append("\tAlias:").append(alias);
             sb.append("\tTotal:").append(total)
                     .append("\tFailure:").append(failure).append("\n");
+        }
         for (CatalogMethod method : methods) {
             sb.append("\t").append(method.getName());
             sb.append("\t").append(method.isSuccess());
