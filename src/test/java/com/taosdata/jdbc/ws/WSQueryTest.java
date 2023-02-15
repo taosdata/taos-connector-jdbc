@@ -14,7 +14,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.stream.IntStream;
 
 @RunWith(CatalogRunner.class)
-@TestTarget(alias = "query test", author = "huolibo", version = "2.0.38")
+@TestTarget(alias = "websocket query test", author = "huolibo", version = "2.0.38")
 @FixMethodOrder
 public class WSQueryTest {
     private static final String host = "127.0.0.1";
@@ -48,7 +48,7 @@ public class WSQueryTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":" + port + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + host + ":" + port + "/?user=root&password=taosdata&batchfetch=true";
         } else {
             url += "?user=root&password=taosdata";
         }

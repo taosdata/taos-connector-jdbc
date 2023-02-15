@@ -84,6 +84,7 @@ public class WSTMQResultSet extends AbstractResultSet {
         }
         fieldLength = Arrays.asList(fetchResp.getFieldsCount());
         columnNames = Arrays.asList(fetchResp.getFieldsNames());
+        fields.clear();
         for (int i = 0; i < fetchResp.getFieldsCount(); i++) {
             String colName = fetchResp.getFieldsNames()[i];
             int taosType = fetchResp.getFieldsTypes()[i];
@@ -93,15 +94,15 @@ public class WSTMQResultSet extends AbstractResultSet {
         }
         this.metaData = new RestfulResultSetMetaData(database, fields, null);
         this.numOfRows = fetchResp.getRows();
-        this.result = fetchBlockData();
+        this.result = fetchBlockData(request.id());
         return true;
         // TODO
 //        String tableName = fetchResp.getTableName();
 //        int precision = fetchResp.getPrecision();
     }
 
-    public List<List<Object>> fetchBlockData() throws SQLException {
-        Request blockRequest = factory.generateFetchBlock(messageId);
+    public List<List<Object>> fetchBlockData(long fetchRequestId) throws SQLException {
+        Request blockRequest = factory.generateFetchBlock(fetchRequestId,messageId);
         FetchBlockResp resp = (FetchBlockResp) transport.send(blockRequest);
         ByteBuffer buffer = resp.getBuffer();
         List<List<Object>> list = new ArrayList<>();

@@ -55,10 +55,9 @@ public class TMQRequestFactory {
         return new Request(TMQAction.FETCH.getAction(), fetchReq);
     }
 
-    public Request generateFetchBlock(long messageId) {
-        long reqId = this.getId(TMQAction.FETCH_BLOCK.getAction());
+    public Request generateFetchBlock(long fetchRequestId,long messageId) {
         FetchBlockReq fetchBlockReq = new FetchBlockReq();
-        fetchBlockReq.setReqId(reqId);
+        fetchBlockReq.setReqId(fetchRequestId);
         fetchBlockReq.setMessageId(messageId);
         return new Request(TMQAction.FETCH_BLOCK.getAction(), fetchBlockReq);
     }
