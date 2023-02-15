@@ -56,10 +56,10 @@ public class TMQRequestFactoryTest {
     @Test
     @Description("Generate Fetch Block")
     public void testGenerateFetchBlock() {
-        Request request = factory.generateFetchBlock(1000);
+        Request request = factory.generateFetchBlock(10,1000);
         JSONObject jsonObject = JSONObject.parseObject(request.toString());
         FetchBlockReq req = JSON.toJavaObject((JSON) JSON.toJSON(jsonObject.get("args")), FetchBlockReq.class);
-        Assert.assertEquals(1, req.getReqId());
+        Assert.assertEquals(10, req.getReqId());
         Assert.assertEquals(1000, req.getMessageId());
     }
 
