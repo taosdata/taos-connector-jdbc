@@ -29,6 +29,17 @@ public abstract class TSDBConstants {
     public static final int JNI_SQL_NULL = -5;
     public static final int JNI_FETCH_END = -6;
     public static final int JNI_OUT_OF_MEMORY = -7;
+
+    // TMQ
+    public static final int TMQ_SUCCESS = JNI_SUCCESS;
+    public static final int TMQ_CONF_NULL = -100;
+    public static final int TMQ_CONF_KEY_NULL = -101;
+    public static final int TMQ_CONF_VALUE_NULL = -102;
+    public static final int TMQ_TOPIC_NULL = -110;
+    public static final int TMQ_TOPIC_NAME_NULL = -111;
+    public static final int TMQ_CONSUMER_NULL = -120;
+    public static final int TMQ_CONSUMER_CREATE_ERROR = -121;
+
     // TSDB Data Types
     public static final int TSDB_DATA_TYPE_NULL = 0;
     public static final int TSDB_DATA_TYPE_BOOL = 1;
