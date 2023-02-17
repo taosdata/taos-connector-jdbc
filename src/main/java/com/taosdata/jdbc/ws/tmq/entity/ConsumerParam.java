@@ -12,6 +12,7 @@ public class ConsumerParam {
     private String groupId;
     private String clientId;
     private String offsetRest;
+    private final boolean autoCommit;
 
     public ConsumerParam(Properties properties) throws SQLException {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, properties.getProperty(TMQConstants.CONNECT_USER, "root"));
@@ -22,6 +23,7 @@ public class ConsumerParam {
             properties.setProperty(TSDBDriver.PROPERTY_KEY_PORT, properties.getProperty(TMQConstants.CONNECT_PORT));
         if (null != properties.getProperty(TMQConstants.CONNECT_DB))
             properties.setProperty(TSDBDriver.PROPERTY_KEY_PORT, properties.getProperty(TMQConstants.CONNECT_DB));
+        autoCommit = Boolean.parseBoolean(properties.getProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true"));
         connectionParam = ConnectionParam.getParam(properties);
         groupId = properties.getProperty(TMQConstants.GROUP_ID);
         clientId = properties.getProperty(TMQConstants.CLIENT_ID);
@@ -58,5 +60,9 @@ public class ConsumerParam {
 
     public void setOffsetRest(String offsetRest) {
         this.offsetRest = offsetRest;
+    }
+
+    public boolean isAutoCommit() {
+        return autoCommit;
     }
 }

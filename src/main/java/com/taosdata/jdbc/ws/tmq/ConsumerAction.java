@@ -6,7 +6,7 @@ import com.taosdata.jdbc.ws.tmq.entity.*;
 import java.util.HashMap;
 import java.util.Map;
 
-public enum TMQAction {
+public enum ConsumerAction {
     // subscribe
     SUBSCRIBE("subscribe", SubscribeResp.class),
     POLL("poll", PollResp.class),
@@ -18,7 +18,7 @@ public enum TMQAction {
     private final String action;
     private final Class<? extends Response> clazz;
 
-    TMQAction(String action, Class<? extends Response> clazz) {
+    ConsumerAction(String action, Class<? extends Response> clazz) {
         this.action = action;
         this.clazz = clazz;
     }
@@ -31,15 +31,15 @@ public enum TMQAction {
         return clazz;
     }
 
-    private static final Map<String, TMQAction> actions = new HashMap<>();
+    private static final Map<String, ConsumerAction> actions = new HashMap<>();
 
     static {
-        for (TMQAction value : TMQAction.values()) {
+        for (ConsumerAction value : ConsumerAction.values()) {
             actions.put(value.action, value);
         }
     }
 
-    public static TMQAction of(String action) {
+    public static ConsumerAction of(String action) {
         if (null == action || action.equals("")) {
             return null;
         }

@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.tmq;
 
 import com.taosdata.jdbc.TSDBError;
+import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.common.Consumer;
 import com.taosdata.jdbc.common.ConsumerManager;
 import com.taosdata.jdbc.utils.StringUtils;
@@ -25,8 +26,6 @@ public class TaosConsumer<V> implements AutoCloseable {
     private final Consumer<V> consumer;
     private final Deserializer<V> deserializer;
 
-    private OffsetCommitCallback callback;
-
     /**
      * Note: after creating a {@link TaosConsumer} you must always {@link #close()}
      * it to avoid resource leaks.
@@ -34,7 +33,7 @@ public class TaosConsumer<V> implements AutoCloseable {
     @SuppressWarnings("unchecked")
     public TaosConsumer(Properties properties) throws SQLException {
         if (null == properties)
-            throw TSDBError.createSQLException(TMQConstants.TMQ_CONF_NULL, "consumer properties must not be null!");
+            throw TSDBError.createSQLException(TSDBErrorNumbers.TMQ_CONF_NULL, "consumer properties must not be null!");
 
         String servers = properties.getProperty(TMQConstants.BOOTSTRAP_SERVERS);
         if (!StringUtils.isEmpty(servers)) {
@@ -42,7 +41,9 @@ public class TaosConsumer<V> implements AutoCloseable {
                     .findFirst().ifPresent(s -> {
                         String[] host = s.split(":");
                         properties.setProperty(TMQConstants.CONNECT_IP, host[0]);
-                        properties.setProperty(TMQConstants.CONNECT_PORT, host[1]);
+                        if (host.length > 1) {
+                            properties.setProperty(TMQConstants.CONNECT_PORT, host[1]);
+                        }
                     });
         }
 
@@ -57,11 +58,6 @@ public class TaosConsumer<V> implements AutoCloseable {
         String type = properties.getProperty(TMQConstants.CONNECT_TYPE);
         consumer = ConsumerManager.getConsumer(type);
         consumer.create(properties);
-    }
-
-    @SuppressWarnings("all")
-    public void commitCallbackHandler(int code) {
-        consumer.commitCallbackHandler(code, callback);
     }
 
     public void subscribe(Collection<String> topics) throws SQLException {
@@ -100,17 +96,23 @@ public class TaosConsumer<V> implements AutoCloseable {
         }
     }
 
+    /**
+     * jni consumer will call back whit error code when commit async
+     *
+     * @param code error code
+     */
+    @Deprecated
+    public void commitCallbackHandler(int code) {
+    }
+
     @SuppressWarnings("unused")
     public void commitAsync() {
-        // currently offset is zero
-        consumer.commitAsync(this);
+        consumer.commitAsync((r,e)->{});
     }
 
     @SuppressWarnings("unused")
     public void commitAsync(OffsetCommitCallback callback) {
-        // currently offset is zero
-        this.callback = callback;
-        consumer.commitAsync(this);
+        consumer.commitAsync(callback);
     }
 
     @SuppressWarnings("unused")

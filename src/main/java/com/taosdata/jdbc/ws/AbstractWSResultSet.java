@@ -48,7 +48,7 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
             int length = response.getFieldsLengths()[i];
             fields.add(new RestfulResultSet.Field(colName, jdbcType, length, "", taosType));
         }
-        this.metaData = new RestfulResultSetMetaData(database, fields, null);
+        this.metaData = new RestfulResultSetMetaData(database, fields);
         this.timestampPrecision = response.getPrecision();
     }
 

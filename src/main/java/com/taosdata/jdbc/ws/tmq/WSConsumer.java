@@ -14,10 +14,7 @@ import com.taosdata.jdbc.ws.entity.Code;
 import com.taosdata.jdbc.ws.entity.FetchBlockResp;
 import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.entity.Response;
-import com.taosdata.jdbc.ws.tmq.entity.ConsumerParam;
-import com.taosdata.jdbc.ws.tmq.entity.PollResp;
-import com.taosdata.jdbc.ws.tmq.entity.SubscribeResp;
-import com.taosdata.jdbc.ws.tmq.entity.TMQRequestFactory;
+import com.taosdata.jdbc.ws.tmq.entity.*;
 
 import java.nio.ByteOrder;
 import java.sql.SQLException;
@@ -28,7 +25,7 @@ public class WSConsumer<V> implements Consumer<V> {
     private Transport transport;
     private ConsumerParam param;
     private TMQRequestFactory factory;
-    private List<V> list = new ArrayList<>();
+    private long offset = 0L;
 
     @Override
     public void create(Properties properties) throws SQLException {
@@ -40,7 +37,7 @@ public class WSConsumer<V> implements Consumer<V> {
 
         transport.setTextMessageHandler(message -> {
             JSONObject jsonObject = JSON.parseObject(message);
-            TMQAction action = TMQAction.of(jsonObject.getString("action"));
+            ConsumerAction action = ConsumerAction.of(jsonObject.getString("action"));
             Response response = jsonObject.toJavaObject(action.getResponseClazz());
             FutureResponse remove = inFlightRequest.remove(response.getAction(), response.getReqId());
             if (null != remove) {
@@ -53,7 +50,7 @@ public class WSConsumer<V> implements Consumer<V> {
             // request_id
             long id = byteBuffer.getLong();
             byteBuffer.position(24);
-            FutureResponse remove = inFlightRequest.remove(TMQAction.FETCH_BLOCK.getAction(), id);
+            FutureResponse remove = inFlightRequest.remove(ConsumerAction.FETCH_BLOCK.getAction(), id);
             if (null != remove) {
                 FetchBlockResp fetchBlockResp = new FetchBlockResp(id, byteBuffer);
                 remove.getFuture().complete(fetchBlockResp);
@@ -74,7 +71,7 @@ public class WSConsumer<V> implements Consumer<V> {
                 , topics.toArray(new String[0]));
         SubscribeResp response = (SubscribeResp) transport.send(request);
         if (Code.SUCCESS.getCode() != response.getCode()) {
-            throw new SQLException("subscribe topic error: " + response.getMessage());
+            throw new SQLException("subscribe topic error, code: " + response.getCode() + ", message: " + response.getMessage());
         }
     }
 
@@ -93,56 +90,48 @@ public class WSConsumer<V> implements Consumer<V> {
         Request request = factory.generatePoll(timeout.toMillis());
         PollResp pollResp = (PollResp) transport.send(request);
         if (Code.SUCCESS.getCode() != pollResp.getCode()) {
-            throw new SQLException("consumer poll error: " + pollResp.getMessage());
+            throw new SQLException("consumer poll error, code: " + pollResp.getCode() + ", message: " + pollResp.getMessage());
         }
-        if (!pollResp.isHaveMessage()) {
-            return ConsumerRecords.empty();
-        }
-        String topic = pollResp.getTopic();
-        String dbName = pollResp.getDatabase();
-        int vGroupId = pollResp.getVgroupId();
-        TopicPartition tmp = new TopicPartition(topic, dbName, vGroupId);
+        if (!pollResp.isHaveMessage())
+            return ConsumerRecords.emptyRecord();
 
-        Map<TopicPartition, List<V>> records = new HashMap<>();
-        TopicPartition partition = null;
-        try (WSTMQResultSet rs = new WSTMQResultSet(transport, factory, pollResp.getMessageId(), dbName)) {
+        offset = pollResp.getMessageId();
+        ConsumerRecords<V> records = new ConsumerRecords<>(pollResp.getMessageId());
+        try (WSConsumerResultSet rs = new WSConsumerResultSet(transport, factory, pollResp.getMessageId(), pollResp.getDatabase())) {
             while (rs.next()) {
-                if (!tmp.equals(partition)) {
-                    records.put(partition, list);
-                    partition = tmp;
-                    list = new ArrayList<>();
-                }
-                try {
-                    V record = deserializer.deserialize(rs);
-                    list.add(record);
-                } catch (Exception e) {
-                    throw new DeserializerException("Deserializer error", e);
-                }
+                String topic = pollResp.getTopic();
+                String dbName = pollResp.getDatabase();
+                int vGroupId = pollResp.getVgroupId();
+                TopicPartition tp = new TopicPartition(topic, dbName, vGroupId);
+
+                V v = deserializer.deserialize(rs);
+                records.put(tp, v);
             }
         }
-        records.put(partition, list);
-        return new ConsumerRecords<>(records);
+
+        if (param.isAutoCommit()) {
+            this.commitSync();
+        }
+        return records;
     }
 
     @Override
-    public void commitSync() throws SQLException {
-
+    public synchronized void commitSync() throws SQLException {
+        if (0 != offset) {
+            CommitResp commitResp = (CommitResp) transport.send(factory.generateCommit(offset));
+            if (Code.SUCCESS.getCode() != commitResp.getCode())
+                throw new SQLException("consumer commit error. code: " + commitResp.getCode() + ", message: " + commitResp.getMessage());
+            offset = 0;
+        }
     }
 
     @Override
     public void close() throws SQLException {
-
+        transport.close();
     }
 
     @Override
-    public void commitCallbackHandler(int code, OffsetCommitCallback callback) {
-
+    public void commitAsync(OffsetCommitCallback callback) {
+        // nothing to do
     }
-
-    @Override
-    public void commitAsync(TaosConsumer<?> consumer) {
-
-    }
-
-
 }

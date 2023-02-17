@@ -23,60 +23,72 @@ public class ReferenceDeserializer<V> implements Deserializer<V> {
     }
 
     @Override
-    public V deserialize(ResultSet data) throws InstantiationException, IllegalAccessException, IntrospectionException, SQLException, InvocationTargetException {
+    public V deserialize(ResultSet data) throws DeserializerException, SQLException {
+
         Class<V> clazz = getGenericType();
-        V t = clazz.newInstance();
-
-        if (params == null) {
-            List<Param> lists = new ArrayList<>();
-            BeanInfo beanInfo = Introspector.getBeanInfo(clazz);
-            for (PropertyDescriptor property : beanInfo.getPropertyDescriptors()) {
-                String name = property.getName();
-                if ("class".equals(name))
-                    continue;
-                Method method = property.getWriteMethod();
-                Param param = new Param();
-                param.name = name;
-                param.method = method;
-                param.clazz = method.getParameterTypes()[0];
-                lists.add(param);
+        V t = null;
+        try {
+            t = clazz.newInstance();
+            if (params == null) {
+                List<Param> lists = new ArrayList<>();
+                BeanInfo beanInfo = Introspector.getBeanInfo(clazz);
+                for (PropertyDescriptor property : beanInfo.getPropertyDescriptors()) {
+                    String name = property.getName();
+                    if ("class".equals(name))
+                        continue;
+                    Method method = property.getWriteMethod();
+                    if (null != method) {
+                        Param param = new Param();
+                        param.name = name;
+                        param.method = method;
+                        param.clazz = method.getParameterTypes()[0];
+                        lists.add(param);
+                    } else {
+                        String propertyName = property.getName();
+                        Field declaredField = clazz.getDeclaredField(propertyName);
+                        method = clazz.getDeclaredMethod("set" + propertyName.substring(0, 1).toUpperCase() + propertyName.substring(1), new Class[]{declaredField.getType()});
+                    }
+                }
+                params = lists.toArray(new Param[0]);
             }
-            params = lists.toArray(new Param[0]);
-        }
 
-        for (Param param : params) {
-            if (param.clazz.isAssignableFrom(String.class)) {
-                param.method.invoke(t, data.getString(param.name));
-            } else if (param.clazz.isAssignableFrom(Integer.class)
-                    || param.clazz.isAssignableFrom(int.class)) {
-                param.method.invoke(t, data.getInt(param.name));
-            } else if (param.clazz.isAssignableFrom(Short.class)
-                    || param.clazz.isAssignableFrom(short.class)) {
-                param.method.invoke(t, data.getShort(param.name));
-            } else if (param.clazz.isAssignableFrom(Byte.class)
-                    || param.clazz.isAssignableFrom(byte.class)) {
-                param.method.invoke(t, data.getByte(param.name));
-            } else if (param.clazz.isAssignableFrom(Character.class)
-                    || param.clazz.isAssignableFrom(char.class)) {
-                param.method.invoke(t, (char) data.getByte(param.name));
-            } else if (param.clazz.isAssignableFrom(Float.class)
-                    || param.clazz.isAssignableFrom(float.class)) {
-                param.method.invoke(t, data.getFloat(param.name));
-            } else if (param.clazz.isAssignableFrom(Double.class)
-                    || param.clazz.isAssignableFrom(double.class)) {
-                param.method.invoke(t, data.getDouble(param.name));
-            } else if (param.clazz.isAssignableFrom(Long.class)
-                    || param.clazz.isAssignableFrom(long.class)) {
-                param.method.invoke(t, data.getLong(param.name));
-            } else if (param.clazz.isAssignableFrom(Boolean.class)
-                    || param.clazz.isAssignableFrom(boolean.class)) {
-                param.method.invoke(t, data.getBoolean(param.name));
-            } else if (param.clazz.isAssignableFrom(Timestamp.class)) {
-                param.method.invoke(t, data.getTimestamp(param.name));
-            } else if (param.clazz.isAssignableFrom(Byte[].class)
-                    || param.clazz.isAssignableFrom(byte[].class)) {
-                param.method.invoke(t, data.getBytes(param.name));
+            for (Param param : params) {
+                if (param.clazz.isAssignableFrom(String.class)) {
+                    param.method.invoke(t, data.getString(param.name));
+                } else if (param.clazz.isAssignableFrom(Integer.class)
+                        || param.clazz.isAssignableFrom(int.class)) {
+                    param.method.invoke(t, data.getInt(param.name));
+                } else if (param.clazz.isAssignableFrom(Short.class)
+                        || param.clazz.isAssignableFrom(short.class)) {
+                    param.method.invoke(t, data.getShort(param.name));
+                } else if (param.clazz.isAssignableFrom(Byte.class)
+                        || param.clazz.isAssignableFrom(byte.class)) {
+                    param.method.invoke(t, data.getByte(param.name));
+                } else if (param.clazz.isAssignableFrom(Character.class)
+                        || param.clazz.isAssignableFrom(char.class)) {
+                    param.method.invoke(t, (char) data.getByte(param.name));
+                } else if (param.clazz.isAssignableFrom(Float.class)
+                        || param.clazz.isAssignableFrom(float.class)) {
+                    param.method.invoke(t, data.getFloat(param.name));
+                } else if (param.clazz.isAssignableFrom(Double.class)
+                        || param.clazz.isAssignableFrom(double.class)) {
+                    param.method.invoke(t, data.getDouble(param.name));
+                } else if (param.clazz.isAssignableFrom(Long.class)
+                        || param.clazz.isAssignableFrom(long.class)) {
+                    param.method.invoke(t, data.getLong(param.name));
+                } else if (param.clazz.isAssignableFrom(Boolean.class)
+                        || param.clazz.isAssignableFrom(boolean.class)) {
+                    param.method.invoke(t, data.getBoolean(param.name));
+                } else if (param.clazz.isAssignableFrom(Timestamp.class)) {
+                    param.method.invoke(t, data.getTimestamp(param.name));
+                } else if (param.clazz.isAssignableFrom(Byte[].class)
+                        || param.clazz.isAssignableFrom(byte[].class)) {
+                    param.method.invoke(t, data.getBytes(param.name));
+                }
             }
+        } catch (IllegalAccessException | IntrospectionException | InvocationTargetException
+                | NoSuchFieldException | InstantiationException | NoSuchMethodException e) {
+            throw new SQLException();
         }
         return t;
     }

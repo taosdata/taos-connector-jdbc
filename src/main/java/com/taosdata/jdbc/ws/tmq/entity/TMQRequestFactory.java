@@ -1,7 +1,7 @@
 package com.taosdata.jdbc.ws.tmq.entity;
 
 import com.taosdata.jdbc.ws.entity.Request;
-import com.taosdata.jdbc.ws.tmq.TMQAction;
+import com.taosdata.jdbc.ws.tmq.ConsumerAction;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -18,14 +18,14 @@ public class TMQRequestFactory {
     }
 
     public TMQRequestFactory() {
-        for (TMQAction value : TMQAction.values()) {
+        for (ConsumerAction value : ConsumerAction.values()) {
             ids.put(value.getAction(), new AtomicLong(0));
         }
     }
 
     public Request generateSubscribe(String user, String password, String db, String groupId,
                                      String clientId, String offsetRest, String[] topics) {
-        long reqId = this.getId(TMQAction.SUBSCRIBE.getAction());
+        long reqId = this.getId(ConsumerAction.SUBSCRIBE.getAction());
 
         SubscribeReq subscribeReq = new SubscribeReq();
         subscribeReq.setReqId(reqId);
@@ -36,37 +36,37 @@ public class TMQRequestFactory {
         subscribeReq.setClientId(clientId);
         subscribeReq.setOffsetRest(offsetRest);
         subscribeReq.setTopics(topics);
-        return new Request(TMQAction.SUBSCRIBE.getAction(), subscribeReq);
+        return new Request(ConsumerAction.SUBSCRIBE.getAction(), subscribeReq);
     }
 
     public Request generatePoll(long blockingTime) {
-        long reqId = this.getId(TMQAction.POLL.getAction());
+        long reqId = this.getId(ConsumerAction.POLL.getAction());
         PollReq pollReq = new PollReq();
         pollReq.setReqId(reqId);
         pollReq.setBlockingTime(blockingTime);
-        return new Request(TMQAction.POLL.getAction(), pollReq);
+        return new Request(ConsumerAction.POLL.getAction(), pollReq);
     }
 
     public Request generateFetch(long messageId) {
-        long reqId = this.getId(TMQAction.FETCH.getAction());
+        long reqId = this.getId(ConsumerAction.FETCH.getAction());
         FetchReq fetchReq = new FetchReq();
         fetchReq.setReqId(reqId);
         fetchReq.setMessageId(messageId);
-        return new Request(TMQAction.FETCH.getAction(), fetchReq);
+        return new Request(ConsumerAction.FETCH.getAction(), fetchReq);
     }
 
     public Request generateFetchBlock(long fetchRequestId,long messageId) {
         FetchBlockReq fetchBlockReq = new FetchBlockReq();
         fetchBlockReq.setReqId(fetchRequestId);
         fetchBlockReq.setMessageId(messageId);
-        return new Request(TMQAction.FETCH_BLOCK.getAction(), fetchBlockReq);
+        return new Request(ConsumerAction.FETCH_BLOCK.getAction(), fetchBlockReq);
     }
 
     public Request generateCommit(long messageId) {
-        long reqId = this.getId(TMQAction.COMMIT.getAction());
+        long reqId = this.getId(ConsumerAction.COMMIT.getAction());
         CommitReq commitReq = new CommitReq();
         commitReq.setReqId(reqId);
         commitReq.setMessageId(messageId);
-        return new Request(TMQAction.COMMIT.getAction(), commitReq);
+        return new Request(ConsumerAction.COMMIT.getAction(), commitReq);
     }
 }

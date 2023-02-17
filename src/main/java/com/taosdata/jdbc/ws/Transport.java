@@ -18,7 +18,7 @@ import java.util.function.Consumer;
  */
 public class Transport implements AutoCloseable {
 
-    public static final int DEFAULT_MESSAGE_WAIT_TIMEOUT = 30_000;
+    public static final int DEFAULT_MESSAGE_WAIT_TIMEOUT = 10_000;
 
     private final WSClient client;
     private final InFlightRequest inFlightRequest;

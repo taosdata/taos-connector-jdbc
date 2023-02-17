@@ -1,5 +1,7 @@
 package com.taosdata.jdbc.tmq;
 
+import com.taosdata.jdbc.TSDBDriver;
+
 import java.util.HashSet;
 import java.util.Set;
 
@@ -75,6 +77,13 @@ public class TMQConstants {
      */
     public static final String CONNECT_TYPE = "td.connect.type";
 
+    /**
+     * Key used to retrieve the token value from the properties instance passed to
+     * the driver.
+     * Just for Cloud Service
+     */
+    public static final String CONNECT_TOKEN = TSDBDriver.PROPERTY_KEY_TOKEN;
+
     static {
         configSet.add(GROUP_ID);
         configSet.add(CLIENT_ID);
@@ -88,19 +97,4 @@ public class TMQConstants {
         configSet.add(CONNECT_PORT);
         configSet.add(CONNECT_DB);
     }
-
-    /*---- error code ----*/
-    public static final int TMQ_SUCCESS = 0;
-    public static final int TMQ_CONF_NULL = -100;
-    public static final int TMQ_CONF_KEY_NULL = -101;
-    public static final int TMQ_CONF_VALUE_NULL = -102;
-    public static final int TMQ_CONF_ERROR = -103;
-
-    public static final int TMQ_TOPIC_NULL = -110;
-    public static final int TMQ_TOPIC_NAME_NULL = -111;
-
-    public static final int TMQ_CONSUMER_NULL = -120;
-    public static final int TMQ_CONSUMER_CREATE_ERROR = -121;
-
-    public static final int TMQ_UNKNOWN_ERROR = -999;
 }

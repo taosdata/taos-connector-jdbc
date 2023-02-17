@@ -1,7 +1,7 @@
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.ws.entity.Action;
-import com.taosdata.jdbc.ws.tmq.TMQAction;
+import com.taosdata.jdbc.ws.tmq.ConsumerAction;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -25,7 +25,7 @@ public class InFlightRequest {
             String action = value.getAction();
             futureMap.put(action, new ConcurrentHashMap<>());
         }
-        for (TMQAction value : TMQAction.values()) {
+        for (ConsumerAction value : ConsumerAction.values()) {
             String action = value.getAction();
             futureMap.put(action, new ConcurrentHashMap<>());
         }

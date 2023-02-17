@@ -30,7 +30,7 @@ public class CloudTest {
         String version = rs.getString(1);
         assertNotEquals(version, null);
 //        stmt.execute("create database if not exists cloudtest");
-        stmt.execute("create table if not exists cloudtest.t0(ts timestamp, c0 binary(20))");
+//        stmt.execute("create table if not exists cloudtest.t0(ts timestamp, c0 binary(20))");
         stmt.execute("insert into cloudtest.t0 values(now, 'abc')(now+1s, '涛思数据')");
         rs = stmt.executeQuery("select * from cloudtest.t0");
         ResultSetMetaData meta = rs.getMetaData();

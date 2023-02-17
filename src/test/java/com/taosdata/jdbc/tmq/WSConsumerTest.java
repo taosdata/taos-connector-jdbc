@@ -3,6 +3,7 @@ package com.taosdata.jdbc.tmq;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -11,30 +12,48 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.Duration;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Properties;
-import java.util.stream.Collectors;
+import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class WSConsumerTest {
-    private static final String host = "192.168.64.3";
+    private static final String host = "127.0.0.1";
     private static final String dbName = "tmq_ws_test";
     private static final String superTable = "st";
     private static Connection connection;
     private static Statement statement;
-    private static String[] topics = {"topic_ws_map"};
+    private static String[] topics = {"topic_ws_map", "topic_ws_bean"};
 
     @Test
     public void testWSMap() throws Exception {
+        AtomicInteger a = new AtomicInteger(1);
+        ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r);
+            t.setName("topic-thread-" + t.getId());
+            return t;
+        });
+        scheduledExecutorService.scheduleWithFixedDelay(() -> {
+            try {
+                statement.executeUpdate(
+                        "insert into ct0 values(now, " + a.getAndIncrement() + ", 0.2, 'a','一', true)" +
+                                "(now+1s," + a.getAndIncrement() + ",0.4,'b','二', false)" +
+                                "(now+2s," + a.getAndIncrement() + ",0.6,'c','三', false)");
+            } catch (SQLException e) {
+                // ignore
+            }
+        }, 0, 10, TimeUnit.MILLISECONDS);
+        TimeUnit.MILLISECONDS.sleep(11);
 
         String topic = topics[0];
         // create topic
         statement.executeUpdate("create topic if not exists " + topic + " as select ts, c1, c2, c3, c4, c5, t1 from ct0");
 
         Properties properties = new Properties();
-        properties.setProperty(TMQConstants.CONNECT_USER, "root");
-        properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
-        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, "192.168.64.3:6041");
+//        properties.setProperty(TMQConstants.CONNECT_USER, "root");
+//        properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
+        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, "127.0.0.1:6041");
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
         properties.setProperty(TMQConstants.GROUP_ID, "ws_map");
@@ -45,25 +64,42 @@ public class WSConsumerTest {
             for (int i = 0; i < 10; i++) {
                 ConsumerRecords<Map<String, Object>> consumerRecords = consumer.poll(Duration.ofMillis(100));
                 for (Map<String, Object> map : consumerRecords) {
-                    System.out.println("keys: " + String.join(",", map.keySet()));
-                    System.out.println("values: " + String.join(",", map.values().stream().map(String::valueOf).collect(Collectors.toList())));
+                    Assert.assertEquals(7, map.size());
                 }
             }
             consumer.unsubscribe();
         }
+        scheduledExecutorService.shutdown();
     }
 
     @Test
     public void testWSBeanObject() throws Exception {
-
-        String topic = topics[0];
+        AtomicInteger a = new AtomicInteger(1);
+        List<String> strings = Arrays.asList("a", "b", "c");
+        ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r);
+            t.setName("topic-thread-" + t.getId());
+            return t;
+        });
+        scheduledExecutorService.scheduleWithFixedDelay(() -> {
+            try {
+                statement.executeUpdate(
+                        "insert into ct1 values(now, " + a.getAndIncrement() + ", 0.2, 'a','一', true)" +
+                                "(now+1s," + a.getAndIncrement() + ",0.4,'b','二', false)" +
+                                "(now+2s," + a.getAndIncrement() + ",0.6,'c','三', false)");
+            } catch (SQLException e) {
+                // ignore
+            }
+        }, 0, 10, TimeUnit.MILLISECONDS);
+        TimeUnit.MILLISECONDS.sleep(11);
+        String topic = topics[1];
         // create topic
-        statement.executeUpdate("create topic if not exists " + topic + " as select ts, c1, c2, c3, c4, c5, t1 from ct0");
+        statement.executeUpdate("create topic if not exists " + topic + " as select ts, c1, c2, c3, c4, c5, t1 from ct1");
 
         Properties properties = new Properties();
-//        properties.setProperty(TMQConstants.CONNECT_USER, "root");
-//        properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
-        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, "192.168.64.3:6041");
+        properties.setProperty(TMQConstants.CONNECT_USER, "root");
+        properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
+        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, "127.0.0.1:6041");
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
         properties.setProperty(TMQConstants.GROUP_ID, "ws_bean");
@@ -75,11 +111,12 @@ public class WSConsumerTest {
             for (int i = 0; i < 10; i++) {
                 ConsumerRecords<ResultBean> consumerRecords = consumer.poll(Duration.ofMillis(100));
                 for (ResultBean bean : consumerRecords) {
-                    System.out.println(bean);
+                    Assert.assertTrue(strings.contains(bean.getC3()));
                 }
             }
             consumer.unsubscribe();
         }
+        scheduledExecutorService.shutdown();
     }
 
 
@@ -101,7 +138,7 @@ public class WSConsumerTest {
         statement.execute("create stable if not exists " + superTable
                 + " (ts timestamp, c1 int, c2 float, c3 nchar(10), c4 binary(10), c5 bool) tags(t1 int)");
         statement.execute("create table if not exists ct0 using " + superTable + " tags(1000)");
-        statement.execute("insert into ct0 values (now, 1, 1.1, 'nchar', 'binary', false)");
+        statement.execute("create table if not exists ct1 using " + superTable + " tags(2000)");
     }
 
     @AfterClass

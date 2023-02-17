@@ -47,14 +47,6 @@ public class TMQResultSet extends AbstractResultSet {
     public void close() throws SQLException {
         if (isClosed)
             return;
-        if (this.jniConnector != null) {
-            int code = this.jniConnector.freeResultSet(this.resultSetPointer);
-            if (code == TSDBConstants.JNI_CONNECTION_NULL) {
-                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_JNI_CONNECTION_NULL);
-            } else if (code == TSDBConstants.JNI_RESULT_SET_NULL) {
-                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_JNI_RESULT_SET_NULL);
-            }
-        }
         isClosed = true;
     }
 

@@ -3,14 +3,18 @@ package com.taosdata.jdbc.ws.tmq;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
-import com.taosdata.jdbc.*;
+import com.taosdata.jdbc.AbstractResultSet;
+import com.taosdata.jdbc.TSDBError;
+import com.taosdata.jdbc.TSDBErrorNumbers;
+import com.taosdata.jdbc.TaosGlobalConfig;
 import com.taosdata.jdbc.enums.DataType;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.rs.RestfulResultSet;
-import com.taosdata.jdbc.rs.RestfulResultSetMetaData;
 import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.Transport;
-import com.taosdata.jdbc.ws.entity.*;
+import com.taosdata.jdbc.ws.entity.Code;
+import com.taosdata.jdbc.ws.entity.FetchBlockResp;
+import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.tmq.entity.FetchResp;
 import com.taosdata.jdbc.ws.tmq.entity.TMQRequestFactory;
 
@@ -26,9 +30,8 @@ import java.util.List;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
 import static com.taosdata.jdbc.utils.UnsignedDataUtils.*;
-import static com.taosdata.jdbc.utils.UnsignedDataUtils.parseUBigInt;
 
-public class WSTMQResultSet extends AbstractResultSet {
+public class WSConsumerResultSet extends AbstractResultSet {
     private final Transport transport;
     private final TMQRequestFactory factory;
     private final long messageId;
@@ -36,17 +39,16 @@ public class WSTMQResultSet extends AbstractResultSet {
 
     protected volatile boolean isClosed;
     // meta
-    protected ResultSetMetaData metaData;
+    protected WSConsumerResultSetMetaData metaData;
     protected final List<RestfulResultSet.Field> fields = new ArrayList<>();
     protected List<String> columnNames;
-    protected List<Integer> fieldLength;
     // data
     protected List<List<Object>> result = new ArrayList<>();
 
     protected int numOfRows = 0;
     protected int rowIndex = 0;
 
-    public WSTMQResultSet(Transport transport, TMQRequestFactory factory, long messageId, String database) {
+    public WSConsumerResultSet(Transport transport, TMQRequestFactory factory, long messageId, String database) {
         this.transport = transport;
         this.factory = factory;
         this.messageId = messageId;
@@ -79,10 +81,9 @@ public class WSTMQResultSet extends AbstractResultSet {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, fetchResp.getMessage());
 
         this.reset();
-        if (fetchResp.isCompleted() || fetchResp.getRows() == 0) {
+        if (fetchResp.isCompleted() || fetchResp.getRows() == 0)
             return false;
-        }
-        fieldLength = Arrays.asList(fetchResp.getFieldsCount());
+
         columnNames = Arrays.asList(fetchResp.getFieldsNames());
         fields.clear();
         for (int i = 0; i < fetchResp.getFieldsCount(); i++) {
@@ -92,23 +93,21 @@ public class WSTMQResultSet extends AbstractResultSet {
             int length = (int) fetchResp.getFieldsLengths()[i];
             fields.add(new RestfulResultSet.Field(colName, jdbcType, length, "", taosType));
         }
-        this.metaData = new RestfulResultSetMetaData(database, fields, null);
+        this.metaData = new WSConsumerResultSetMetaData(database, fields, fetchResp.getTableName());
         this.numOfRows = fetchResp.getRows();
         this.result = fetchBlockData(request.id());
+        this.timestampPrecision = fetchResp.getPrecision();
         return true;
-        // TODO
-//        String tableName = fetchResp.getTableName();
-//        int precision = fetchResp.getPrecision();
     }
 
     public List<List<Object>> fetchBlockData(long fetchRequestId) throws SQLException {
-        Request blockRequest = factory.generateFetchBlock(fetchRequestId,messageId);
+        Request blockRequest = factory.generateFetchBlock(fetchRequestId, messageId);
         FetchBlockResp resp = (FetchBlockResp) transport.send(blockRequest);
         ByteBuffer buffer = resp.getBuffer();
         List<List<Object>> list = new ArrayList<>();
         if (resp.getBuffer() != null) {
             int bitMapOffset = BitmapLen(numOfRows);
-            int pHeader = buffer.position()  + 28 + fields.size() * 9;
+            int pHeader = buffer.position() + 28 + fields.size() * 9;
             buffer.position(pHeader);
             for (int i = 0; i < fields.size(); i++) {
                 List<Object> col = new ArrayList<>(numOfRows);
@@ -251,11 +250,9 @@ public class WSTMQResultSet extends AbstractResultSet {
     }
 
     @Override
-    public void close() throws SQLException {
-        synchronized (this) {
-            if (!this.isClosed) {
-                this.isClosed = true;
-            }
+    public synchronized void close() throws SQLException {
+        if (!this.isClosed) {
+            this.isClosed = true;
         }
     }
 

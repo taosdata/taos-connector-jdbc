@@ -129,7 +129,7 @@ public class TMQConnector extends TSDBJNIConnector {
     public Set<String> subscription() throws SQLException {
         int code = tmqSubscriptionImp(taos, this);
         if (code == TMQ_CONSUMER_NULL) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.TMQ_CONSUMER_NULL,"get subscription error, consumer reference has been destroyed");
+            throw TSDBError.createSQLException(TSDBErrorNumbers.TMQ_CONSUMER_NULL, "get subscription error, consumer reference has been destroyed");
         }
         if (code != TMQ_SUCCESS) {
             throw TSDBError.createSQLException(code, getErrMsg(code));
@@ -147,7 +147,7 @@ public class TMQConnector extends TSDBJNIConnector {
     public void syncCommit(long offsets) throws SQLException {
         int code = tmqCommitSync(taos, offsets);
         if (code == TMQ_CONSUMER_NULL) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.TMQ_CONSUMER_NULL,"sync commit offset error, consumer reference has been destroyed");
+            throw TSDBError.createSQLException(TSDBErrorNumbers.TMQ_CONSUMER_NULL, "sync commit offset error, consumer reference has been destroyed");
         }
         if (code != TMQ_SUCCESS) {
             throw TSDBError.createSQLException(code, createConsumerErrorMsg);
@@ -162,7 +162,10 @@ public class TMQConnector extends TSDBJNIConnector {
     }
 
     // DLL_EXPORT void tmq_commit_async(tmq_t *tmq, const TAOS_RES *msg, tmq_commit_cb *cb, void *param);
-    private native void tmqCommitAsync(long tmq, long offsets, TaosConsumer consumer);
+    private native void tmqCommitAsync(long tmq, long offsets, ConsumerRecords<?> records);
+
+    @Deprecated
+    private native void tmqCommitAsync(long tmq, long offsets, TaosConsumer<?> consumer);
 
     public void unsubscribe() throws SQLException {
         int code = tmqUnsubscribeImp(taos);
