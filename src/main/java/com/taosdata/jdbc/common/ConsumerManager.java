@@ -20,11 +20,11 @@ public class ConsumerManager {
     private static PrintWriter logWriter = null;
 
     static {
-        loadConsumerFactorys();
+        loadConsumerFactories();
     }
 
     @SuppressWarnings("all")
-    private static void loadConsumerFactorys() {
+    private static void loadConsumerFactories() {
         AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
             ServiceLoader<ConsumerFactory> consumerFactoryLoader = ServiceLoader.load(ConsumerFactory.class);
             Iterator<ConsumerFactory> iterator = consumerFactoryLoader.iterator();

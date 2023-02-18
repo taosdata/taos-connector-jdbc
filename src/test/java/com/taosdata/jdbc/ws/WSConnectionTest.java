@@ -46,7 +46,7 @@ public class WSConnectionTest {
 
     @Test
     @Description("user and password in property")
-    public void propertyUserPassConection() throws SQLException {
+    public void propertyUserPassConnection() throws SQLException {
         String url = "jdbc:TAOS-RS://" + host + ":" + port + "/";
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
@@ -57,7 +57,7 @@ public class WSConnectionTest {
 
     @Test(expected = SQLException.class)
     @Description("wrong password or user")
-    public void wrongUserOrPasswordConection() throws SQLException {
+    public void wrongUserOrPasswordConnection() throws SQLException {
         String url = "jdbc:TAOS-RS://" + host + ":" + port + "/log?user=abc&password=taosdata";
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");

@@ -10,7 +10,7 @@ import java.util.Properties;
 import java.text.Format;
 import java.text.SimpleDateFormat;
 
-public class TimestampPrecisonInNanoRestTest {
+public class TimestampPrecisionInNanoRestTest {
 
     private static final String host = "127.0.0.1";
     private static final String ns_timestamp_db = "ns_precision_test";
