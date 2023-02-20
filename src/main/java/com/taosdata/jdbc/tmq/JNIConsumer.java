@@ -12,7 +12,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import static com.taosdata.jdbc.TSDBErrorNumbers.TMQ_CONSUMER_NULL;
+import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_TMQ_CONSUMER_NULL;
 
 public class JNIConsumer<V> implements Consumer<V> {
 
@@ -73,7 +73,7 @@ public class JNIConsumer<V> implements Consumer<V> {
     public ConsumerRecords<V> poll(Duration timeout, Deserializer<V> deserializer) throws SQLException {
         long resultSet = connector.poll(timeout.toMillis());
         // when tmq pointer is null or result set is null
-        if (resultSet == 0 || resultSet == TMQ_CONSUMER_NULL) {
+        if (resultSet == 0 || resultSet == ERROR_TMQ_CONSUMER_NULL) {
             return ConsumerRecords.emptyRecord();
         }
 

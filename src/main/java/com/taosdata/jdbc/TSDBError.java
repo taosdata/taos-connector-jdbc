@@ -50,14 +50,14 @@ public class TSDBError {
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_JNI_OUT_OF_MEMORY, "JNI alloc memory failed, please see taoslog for more details");
 
         // consumer
-        TSDBErrorMap.put(TSDBErrorNumbers.TMQ_CONF_NULL, "consumer config reference has been destroyed");
-        TSDBErrorMap.put(TSDBErrorNumbers.TMQ_CONF_KEY_NULL, "configs contain empty key, failed to set consumer property");
-        TSDBErrorMap.put(TSDBErrorNumbers.TMQ_CONF_VALUE_NULL, "consumer configs contain empty value, failed to set consumer property");
-        TSDBErrorMap.put(TSDBErrorNumbers.TMQ_CONF_ERROR, "consumer config error");
-        TSDBErrorMap.put(TSDBErrorNumbers.TMQ_TOPIC_NULL, "topic reference has been destroyed");
-        TSDBErrorMap.put(TSDBErrorNumbers.TMQ_TOPIC_NAME_NULL, "failed to set consumer topic, topic name is empty");
-        TSDBErrorMap.put(TSDBErrorNumbers.TMQ_CONSUMER_NULL, "consumer reference has been destroyed");
-        TSDBErrorMap.put(TSDBErrorNumbers.TMQ_CONSUMER_CREATE_ERROR, "consumer create error");
+        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_CONF_NULL, "consumer config reference has been destroyed");
+        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_CONF_KEY_NULL, "configs contain empty key, failed to set consumer property");
+        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_CONF_VALUE_NULL, "consumer configs contain empty value, failed to set consumer property");
+        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_CONF_ERROR, "consumer config error");
+        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_TOPIC_NULL, "topic reference has been destroyed");
+        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_TOPIC_NAME_NULL, "failed to set consumer topic, topic name is empty");
+        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_CONSUMER_NULL, "consumer reference has been destroyed");
+        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_CONSUMER_CREATE_ERROR, "consumer create error");
     }
 
     public static SQLException createSQLException(int errorCode) {

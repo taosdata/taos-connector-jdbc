@@ -33,7 +33,7 @@ public class TaosConsumer<V> implements AutoCloseable {
     @SuppressWarnings("unchecked")
     public TaosConsumer(Properties properties) throws SQLException {
         if (null == properties)
-            throw TSDBError.createSQLException(TSDBErrorNumbers.TMQ_CONF_NULL, "consumer properties must not be null!");
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TMQ_CONF_NULL, "consumer properties must not be null!");
 
         String servers = properties.getProperty(TMQConstants.BOOTSTRAP_SERVERS);
         if (!StringUtils.isEmpty(servers)) {

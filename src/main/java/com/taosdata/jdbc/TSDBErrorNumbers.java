@@ -47,15 +47,15 @@ public class TSDBErrorNumbers {
     public static final int ERROR_JNI_FETCH_END = 0x2358;       // fetch to the end of resultSet
     public static final int ERROR_JNI_OUT_OF_MEMORY = 0x2359;   // JNI alloc memory failed
 
-    public static final int TMQ_CONF_NULL = 0x2371; // consumer config is null
-    public static final int TMQ_CONF_KEY_NULL = 0x2372; // consumer configs contain key is null
-    public static final int TMQ_CONF_VALUE_NULL = 0x2373; // consumer configs contain value is null
+    public static final int ERROR_TMQ_CONF_NULL = 0x2371; // consumer config reference has been destroyed
+    public static final int ERROR_TMQ_CONF_KEY_NULL = 0x2372; // configs contain empty key
+    public static final int ERROR_TMQ_CONF_VALUE_NULL = 0x2373; // consumer configs contain empty value
 
-    public static final int TMQ_CONF_ERROR = 0x2374; // consumer config error
-    public static final int TMQ_TOPIC_NULL = 0x2375; // consumer topic is null
-    public static final int TMQ_TOPIC_NAME_NULL =0x2376; // consumer topic's name is null
-    public static final int TMQ_CONSUMER_NULL = 0x2377; // consumer is null, maybe release by another thread
-    public static final int TMQ_CONSUMER_CREATE_ERROR = 0x2378; // consumer create error
+    public static final int ERROR_TMQ_CONF_ERROR = 0x2374; // consumer config error
+    public static final int ERROR_TMQ_TOPIC_NULL = 0x2375; // topic reference has been destroyed
+    public static final int ERROR_TMQ_TOPIC_NAME_NULL =0x2376; // consumer topic's name is empty
+    public static final int ERROR_TMQ_CONSUMER_NULL = 0x2377; // consumer is null, consumer reference has been destroyed
+    public static final int ERROR_TMQ_CONSUMER_CREATE_ERROR = 0x2378; // consumer create error
 
     private static final Set<Integer> errorNumbers = new HashSet<>();
 
@@ -98,14 +98,14 @@ public class TSDBErrorNumbers {
         errorNumbers.add(ERROR_JNI_SQL_NULL);
         errorNumbers.add(ERROR_JNI_FETCH_END);
         errorNumbers.add(ERROR_JNI_OUT_OF_MEMORY);
-        errorNumbers.add(TMQ_CONF_NULL);
-        errorNumbers.add(TMQ_CONF_KEY_NULL);
-        errorNumbers.add(TMQ_CONF_VALUE_NULL);
-        errorNumbers.add(TMQ_CONF_ERROR);
-        errorNumbers.add(TMQ_TOPIC_NULL);
-        errorNumbers.add(TMQ_TOPIC_NAME_NULL);
-        errorNumbers.add(TMQ_CONSUMER_NULL);
-        errorNumbers.add(TMQ_CONSUMER_CREATE_ERROR);
+        errorNumbers.add(ERROR_TMQ_CONF_NULL);
+        errorNumbers.add(ERROR_TMQ_CONF_KEY_NULL);
+        errorNumbers.add(ERROR_TMQ_CONF_VALUE_NULL);
+        errorNumbers.add(ERROR_TMQ_CONF_ERROR);
+        errorNumbers.add(ERROR_TMQ_TOPIC_NULL);
+        errorNumbers.add(ERROR_TMQ_TOPIC_NAME_NULL);
+        errorNumbers.add(ERROR_TMQ_CONSUMER_NULL);
+        errorNumbers.add(ERROR_TMQ_CONSUMER_CREATE_ERROR);
     }
 
     private TSDBErrorNumbers() {
