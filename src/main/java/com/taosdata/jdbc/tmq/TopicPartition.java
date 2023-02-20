@@ -5,14 +5,12 @@ import java.util.Objects;
 public class TopicPartition {
     private final String topic;
     private final String databaseName;
-    private final int vgroupId;
-    private final String tableName;
+    private final int vGroupId;
 
-    public TopicPartition(String topic, String databaseName, int vgroupId, String tableName) {
+    public TopicPartition(String topic, String databaseName, int vGroupId) {
         this.topic = topic;
         this.databaseName = databaseName;
-        this.vgroupId = vgroupId;
-        this.tableName = tableName;
+        this.vGroupId = vGroupId;
     }
 
     public String getTopic() {
@@ -23,12 +21,8 @@ public class TopicPartition {
         return databaseName;
     }
 
-    public int getVgroupId() {
-        return vgroupId;
-    }
-
-    public String getTableName() {
-        return tableName;
+    public int getVGroupId() {
+        return vGroupId;
     }
 
     @Override
@@ -36,11 +30,12 @@ public class TopicPartition {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         TopicPartition partition = (TopicPartition) o;
-        return vgroupId == partition.vgroupId && Objects.equals(topic, partition.topic) && Objects.equals(databaseName, partition.databaseName) && Objects.equals(tableName, partition.tableName);
+        return vGroupId == partition.vGroupId && Objects.equals(topic, partition.topic)
+                && Objects.equals(databaseName, partition.databaseName);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(topic, databaseName, vgroupId, tableName);
+        return Objects.hash(topic, databaseName, vGroupId);
     }
 }

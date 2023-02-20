@@ -1,20 +1,19 @@
 package com.taosdata.jdbc.ws;
 
-import com.taosdata.jdbc.*;
+import com.taosdata.jdbc.AbstractResultSet;
+import com.taosdata.jdbc.TSDBError;
+import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.enums.DataType;
 import com.taosdata.jdbc.rs.RestfulResultSet;
 import com.taosdata.jdbc.rs.RestfulResultSetMetaData;
 import com.taosdata.jdbc.ws.entity.*;
 
-import javax.xml.crypto.Data;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 public abstract class AbstractWSResultSet extends AbstractResultSet {
     protected final Statement statement;
@@ -35,7 +34,7 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
     protected int rowIndex = 0;
     private boolean isCompleted;
 
-    public AbstractWSResultSet(Statement statement, Transport transport, RequestFactory factory,
+    protected AbstractWSResultSet(Statement statement, Transport transport, RequestFactory factory,
                                QueryResp response, String database) throws SQLException {
         this.statement = statement;
         this.transport = transport;
@@ -49,7 +48,7 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
             int length = response.getFieldsLengths()[i];
             fields.add(new RestfulResultSet.Field(colName, jdbcType, length, "", taosType));
         }
-        this.metaData = new RestfulResultSetMetaData(database, fields, null);
+        this.metaData = new RestfulResultSetMetaData(database, fields);
         this.timestampPrecision = response.getPrecision();
     }
 
@@ -76,29 +75,22 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
         }
 
         Request request = factory.generateFetch(queryId);
-        CompletableFuture<Response> send = transport.send(request);
-        try {
-            Response response = send.get();
-            FetchResp fetchResp = (FetchResp) response;
-            if (Code.SUCCESS.getCode() != fetchResp.getCode()) {
-//                TODO reWrite error type
-                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, fetchResp.getMessage());
-            }
-            this.reset();
-            if (fetchResp.isCompleted() || fetchResp.getRows() == 0) {
-                this.isCompleted = true;
-                return false;
-            }
-            fieldLength = Arrays.asList(fetchResp.getLengths());
-            this.numOfRows = fetchResp.getRows();
-            this.result = fetchJsonData();
-            return true;
-        } catch (InterruptedException | ExecutionException e) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());
+        FetchResp fetchResp = (FetchResp)transport.send(request);
+        if (Code.SUCCESS.getCode() != fetchResp.getCode()) {
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, fetchResp.getMessage());
         }
+        this.reset();
+        if (fetchResp.isCompleted() || fetchResp.getRows() == 0) {
+            this.isCompleted = true;
+            return false;
+        }
+        fieldLength = Arrays.asList(fetchResp.getLengths());
+        this.numOfRows = fetchResp.getRows();
+        this.result = fetchJsonData();
+        return true;
     }
 
-    public abstract List<List<Object>> fetchJsonData() throws SQLException, ExecutionException, InterruptedException;
+    public abstract List<List<Object>> fetchJsonData() throws SQLException;
 
     @Override
     public void close() throws SQLException {
@@ -106,8 +98,10 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
             if (!this.isClosed) {
                 this.isClosed = true;
                 if (result != null && !result.isEmpty() && !isCompleted) {
-                    FetchReq fetchReq = new FetchReq(queryId, queryId);
-                    transport.sendWithoutRep(new Request(Action.FREE_RESULT.getAction(), fetchReq));
+                    FetchReq closeReq = new FetchReq();
+                    closeReq.setReqId(queryId);
+                    closeReq.setId(queryId);
+                    transport.sendWithoutRep(new Request(Action.FREE_RESULT.getAction(), closeReq));
                 }
             }
         }

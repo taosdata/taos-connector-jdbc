@@ -1,20 +1,19 @@
 package com.taosdata.jdbc.tmq;
 
-import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.TSDBError;
+import com.taosdata.jdbc.TSDBErrorNumbers;
+import com.taosdata.jdbc.common.Consumer;
+import com.taosdata.jdbc.common.ConsumerManager;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.Utils;
 
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class TaosConsumer<V> implements TConsumer<V> {
+public class TaosConsumer<V> implements AutoCloseable {
 
     private static final long NO_CURRENT_THREAD = -1L;
     // currentThread holds the threadId of the current thread accessing
@@ -24,21 +23,8 @@ public class TaosConsumer<V> implements TConsumer<V> {
     private final AtomicInteger refcount = new AtomicInteger(0);
     private volatile boolean closed = false;
 
-    private Deserializer<V> deserializer;
-
-    long resultSet;
-    private final TMQConnector connector;
-    private OffsetCommitCallback callback;
-    List<V> list = new ArrayList<>();
-    ThreadPoolExecutor executor = new ThreadPoolExecutor(1, 1,
-            0L, TimeUnit.MILLISECONDS,
-            new ArrayBlockingQueue<>(10),
-            r -> {
-                Thread t = new Thread(r);
-                t.setName("consumer-callback-" + t.getId());
-                return t;
-            },
-            new ThreadPoolExecutor.CallerRunsPolicy());
+    private final Consumer<V> consumer;
+    private final Deserializer<V> deserializer;
 
     /**
      * Note: after creating a {@link TaosConsumer} you must always {@link #close()}
@@ -46,18 +32,18 @@ public class TaosConsumer<V> implements TConsumer<V> {
      */
     @SuppressWarnings("unchecked")
     public TaosConsumer(Properties properties) throws SQLException {
-        connector = new TMQConnector();
         if (null == properties)
-            throw TSDBError.createSQLException(TMQConstants.TMQ_CONF_NULL, "consumer properties must not be null!");
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TMQ_CONF_NULL, "consumer properties must not be null!");
 
         String servers = properties.getProperty(TMQConstants.BOOTSTRAP_SERVERS);
         if (!StringUtils.isEmpty(servers)) {
-            // TODO HOW TO CONNECT WITH TDengine CLUSTER
             Arrays.stream(servers.split(",")).filter(s -> !StringUtils.isEmpty(s))
                     .findFirst().ifPresent(s -> {
                         String[] host = s.split(":");
                         properties.setProperty(TMQConstants.CONNECT_IP, host[0]);
-                        properties.setProperty(TMQConstants.CONNECT_PORT, host[1]);
+                        if (host.length > 1) {
+                            properties.setProperty(TMQConstants.CONNECT_PORT, host[1]);
+                        }
                     });
         }
 
@@ -69,122 +55,69 @@ public class TaosConsumer<V> implements TConsumer<V> {
         }
 
         deserializer.configure(properties);
-
-        long config = connector.createConfig(properties);
-        try {
-            connector.createConsumer(config);
-        } finally {
-            connector.destroyConf(config);
-        }
+        String type = properties.getProperty(TMQConstants.CONNECT_TYPE);
+        consumer = ConsumerManager.getConsumer(type);
+        consumer.create(properties);
     }
 
-    public void commitCallbackHandler(int code) {
-        CallbackResult r = new CallbackResult(code, list);
-        if (TMQConstants.TMQ_SUCCESS != code) {
-            Exception exception = TSDBError.createSQLException(code, connector.getErrMsg(code));
-            executor.submit(() -> callback.onComplete(r, exception));
-        } else {
-            executor.submit(() -> callback.onComplete(r, null));
-        }
-
-    }
-
-    @Override
     public void subscribe(Collection<String> topics) throws SQLException {
         acquireAndEnsureOpen();
-        long topicPointer = 0L;
         try {
-            topicPointer = connector.createTopic(topics);
-            connector.subscribe(topicPointer);
+            consumer.subscribe(topics);
         } finally {
-            if (topicPointer != TSDBConstants.JNI_NULL_POINTER) {
-                connector.destroyTopic(topicPointer);
-            }
             release();
         }
     }
 
-    @Override
     public void unsubscribe() throws SQLException {
         acquireAndEnsureOpen();
         try {
-            connector.unsubscribe();
+            consumer.unsubscribe();
         } finally {
             release();
         }
     }
 
-    @Override
     public Set<String> subscription() throws SQLException {
         acquireAndEnsureOpen();
         try {
-            return connector.subscription();
+            return consumer.subscription();
         } finally {
             release();
         }
     }
 
-    @Override
     public ConsumerRecords<V> poll(Duration timeout) throws SQLException {
         acquireAndEnsureOpen();
         try {
-            resultSet = connector.poll(timeout.toMillis());
-            list = new ArrayList<>();
-            // when tmq pointer is null or result set is null
-            if (resultSet == 0 || resultSet == TMQConstants.TMQ_CONSUMER_NULL) {
-                return ConsumerRecords.empty();
-            }
-
-            int timestampPrecision = connector.getResultTimePrecision(resultSet);
-
-            Map<TopicPartition, List<V>> records = new HashMap<>();
-            TopicPartition partition = null;
-            try (TMQResultSet rs = new TMQResultSet(connector, resultSet, timestampPrecision)) {
-                while (rs.next()) {
-                    String topic = connector.getTopicName(resultSet);
-                    String dbName = connector.getDbName(resultSet);
-                    int vgroupId = connector.getVgroupId(resultSet);
-                    String tableName = connector.getTableName(resultSet);
-                    TopicPartition tmp = new TopicPartition(topic, dbName, vgroupId, tableName);
-
-                    if (!tmp.equals(partition)) {
-                        records.put(partition, list);
-                        partition = tmp;
-                        list = new ArrayList<>();
-                    }
-                    try {
-                        V record = deserializer.deserialize(rs);
-                        list.add(record);
-                    } catch (Exception e) {
-                        throw new DeserializerException("Deserializer error", e);
-                    }
-                }
-            }
-            records.put(partition, list);
-            return new ConsumerRecords<>(records);
+            return consumer.poll(timeout, deserializer);
         } finally {
             release();
         }
     }
 
+    /**
+     * jni consumer will call back whit error code when commit async
+     *
+     * @param code error code
+     */
+    @Deprecated
+    public void commitCallbackHandler(int code) {
+    }
 
-    @Override
+    @SuppressWarnings("unused")
     public void commitAsync() {
-        // currently offset is zero
-        connector.asyncCommit(0, this);
+        consumer.commitAsync((r,e)->{});
     }
 
-    @Override
+    @SuppressWarnings("unused")
     public void commitAsync(OffsetCommitCallback callback) {
-        // currently offset is zero
-        this.callback = callback;
-        connector.asyncCommit(0, this);
+        consumer.commitAsync(callback);
     }
 
-
-    @Override
+    @SuppressWarnings("unused")
     public void commitSync() throws SQLException {
-        connector.syncCommit(0);
+        consumer.commitSync();
     }
 
     /**
@@ -226,8 +159,7 @@ public class TaosConsumer<V> implements TConsumer<V> {
     public void close() throws SQLException {
         acquire();
         try {
-            executor.shutdown();
-            connector.closeConsumer();
+            consumer.close();
         } finally {
             closed = true;
             release();

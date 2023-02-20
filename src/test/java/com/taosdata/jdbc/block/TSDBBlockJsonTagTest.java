@@ -348,7 +348,7 @@ public class TSDBBlockJsonTagTest {
     }
 
     @Test
-    @Description("select and where conditon '=' for string")
+    @Description("select and where condition '=' for string")
     public void case04_select20() throws SQLException {
         ResultSet resultSet = statement
                 .executeQuery("select dataint,tbname,jtag->'tag1',jtag from jsons1 where jtag->'tag2'='beijing'");

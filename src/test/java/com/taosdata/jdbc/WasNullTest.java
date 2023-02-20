@@ -22,7 +22,7 @@ public class WasNullTest {
     static Connection connection;
     static Statement statement;
 
-    @Description("when get a null value, the wasNull will retrun true. and then is next is not null, wasNull is not null. Int")
+    @Description("when get a null value, the wasNull will return true. and then is next is not null, wasNull is not null. Int")
     @Test
     public void nextWasNullInt() throws SQLException {
         ResultSet resultSet = statement.executeQuery("select * from " + tableName);
@@ -37,7 +37,7 @@ public class WasNullTest {
         Assert.assertFalse(resultSet.wasNull());
     }
 
-    @Description("when get a null value, the wasNull retrun true. and then is next is not null, wasNull is not null. String")
+    @Description("when get a null value, the wasNull return true. and then is next is not null, wasNull is not null. String")
     @Test
     public void nextWasNullString() throws SQLException {
         ResultSet resultSet = statement.executeQuery("select * from " + tableName);

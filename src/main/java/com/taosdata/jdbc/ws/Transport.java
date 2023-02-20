@@ -1,44 +1,78 @@
 package com.taosdata.jdbc.ws;
 
+import com.taosdata.jdbc.TSDBError;
+import com.taosdata.jdbc.TSDBErrorNumbers;
+import com.taosdata.jdbc.enums.WSFunction;
+import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.utils.CompletableFutureTimeout;
 import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.entity.Response;
 
+import java.nio.ByteBuffer;
 import java.sql.SQLException;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.*;
+import java.util.function.Consumer;
 
 /**
  * send message
  */
 public class Transport implements AutoCloseable {
 
-    public static final int DEFAULT_MAX_REQUEST = 100;
-    public static final int DEFAULT_MESSAGE_WAIT_TIMEOUT = 3_000;
+    public static final int DEFAULT_MESSAGE_WAIT_TIMEOUT = 10_000;
 
     private final WSClient client;
     private final InFlightRequest inFlightRequest;
+    private final int timeout;
+    private boolean auth;
 
-    public Transport(WSClient client, InFlightRequest inFlightRequest) {
-        this.client = client;
+    public Transport(WSFunction function, ConnectionParam param, InFlightRequest inFlightRequest) throws SQLException {
+        this.client = WSClient.getInstance(param, function);
         this.inFlightRequest = inFlightRequest;
+        this.timeout = param.getRequestTimeout();
     }
 
-    public CompletableFuture<Response> send(Request request) {
+    public void setTextMessageHandler(Consumer<String> textMessageHandler) {
+        client.setTextMessageHandler(textMessageHandler);
+    }
+
+    public void setBinaryMessageHandler(Consumer<ByteBuffer> binaryMessageHandler) {
+        client.setBinaryMessageHandler(binaryMessageHandler);
+    }
+
+    public boolean isAuth() {
+        return auth;
+    }
+
+    public void setAuth(boolean auth) {
+        this.auth = auth;
+    }
+
+    @SuppressWarnings("all")
+    public Response send(Request request) throws SQLException {
+
+        Response response = null;
         CompletableFuture<Response> completableFuture = new CompletableFuture<>();
         try {
-            inFlightRequest.put(new ResponseFuture(request.getAction(), request.id(), completableFuture));
+            inFlightRequest.put(new FutureResponse(request.getAction(), request.id(), completableFuture));
             client.send(request.toString());
-        } catch (Throwable t) {
-            inFlightRequest.remove(request.getAction(), request.id());
-            completableFuture.completeExceptionally(t);
+        } catch (InterruptedException | TimeoutException e) {
+            throw new SQLException(e);
         }
-        return completableFuture;
+        CompletableFuture<Response> responseFuture = CompletableFutureTimeout.orTimeout(completableFuture, timeout, TimeUnit.MILLISECONDS);
+        try {
+            response = responseFuture.get();
+        } catch (InterruptedException | ExecutionException e) {
+            inFlightRequest.remove(request.getAction(), request.id());
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());
+        }
+        return response;
     }
 
     public void sendWithoutRep(Request request) {
         client.send(request.toString());
     }
 
-    public boolean isClosed() throws SQLException {
+    public boolean isClosed() {
         return client.isClosed();
     }
 
@@ -48,4 +82,33 @@ public class Transport implements AutoCloseable {
         client.close();
     }
 
+    public static void checkConnection(Transport transport, int connectTimeout) throws SQLException {
+        try {
+            if (!transport.client.connectBlocking(connectTimeout, TimeUnit.MILLISECONDS)) {
+                transport.close();
+                throw new SQLException("can't create connection with server");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            transport.close();
+            throw new SQLException("create websocket connection has been Interrupted ", e);
+        }
+    }
+
+    public static void checkoutAuth(Transport transport, CountDownLatch latch, int requestTimeout) throws SQLException {
+        try {
+            if (!latch.await(requestTimeout, TimeUnit.MILLISECONDS)) {
+                transport.close();
+                throw new SQLException("auth timeout");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            transport.close();
+            throw new SQLException("create websocket connection has been Interrupted ", e);
+        }
+        if (!transport.isAuth()) {
+            transport.close();
+            throw new SQLException("auth failure");
+        }
+    }
 }

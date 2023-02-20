@@ -7,7 +7,7 @@ import java.sql.SQLException;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.taosdata.jdbc.tmq.TMQConstants.*;
+import static com.taosdata.jdbc.TSDBConstants.*;
 
 public class TMQConnector extends TSDBJNIConnector {
 
@@ -22,18 +22,18 @@ public class TMQConnector extends TSDBJNIConnector {
             String key = String.valueOf(entry.getKey());
             if (!StringUtils.isEmpty(key) && TMQConstants.configSet.contains(key)) {
                 int code = tmqConfSetImp(conf, key, String.valueOf(entry.getValue()));
-                if (code == TMQConstants.TMQ_CONF_KEY_NULL) {
+                if (code == TMQ_CONF_KEY_NULL) {
                     tmqConfDestroyImp(conf);
-                    throw TSDBError.createSQLException(code, "Failed to set tmq property. key is null");
+                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TMQ_CONF_KEY_NULL);
                 }
-                if (code == TMQConstants.TMQ_CONF_VALUE_NULL) {
+                if (code == TMQ_CONF_VALUE_NULL) {
                     tmqConfDestroyImp(conf);
-                    throw TSDBError.createSQLException(code, "Failed to set tmq property : " + key + ". value is null");
+                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TMQ_CONF_VALUE_NULL, "failed to set consumer property, " + key + "'s value is null");
                 }
-                if (code < 0) {
+                if (code < TMQ_SUCCESS) {
                     tmqConfDestroyImp(conf);
                     throw TSDBError.createSQLException(code,
-                            "Failed to set consumer config property : " + key + ". reason: " + getErrMsg(code));
+                            "failed to set consumer property, " + key + ":" + entry.getValue() + ", reason: " + getErrMsg(code));
                 }
             }
         }
@@ -57,10 +57,10 @@ public class TMQConnector extends TSDBJNIConnector {
     public void createConsumer(long conf) throws SQLException {
         taos = tmqConsumerNewImp(conf, this);
         if (taos == TMQ_CONF_NULL) {
-            throw TSDBError.createSQLException(TMQ_CONF_NULL, "consumer config reference has been destroyed");
+            throw TSDBError.createSQLException(TMQ_CONF_NULL);
         }
-        if (taos < 0) {
-            throw TSDBError.createSQLException(TMQConstants.TMQ_CONSUMER_CREATE_ERROR, createConsumerErrorMsg);
+        if (taos < TMQ_SUCCESS) {
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TMQ_CONSUMER_CREATE_ERROR, createConsumerErrorMsg);
         }
     }
 
@@ -75,23 +75,22 @@ public class TMQConnector extends TSDBJNIConnector {
     public long createTopic(Collection<String> topics) throws SQLException {
         long topic = tmqTopicNewImp(taos);
         if (topic < TMQ_SUCCESS) {
-            throw TSDBError.createSQLException(TMQ_CONSUMER_NULL, "Failed to create tmq topic, consumer reference is null");
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TMQ_CONSUMER_NULL);
         }
-        if (null != topics && topics.size() > 0) {
+        if (null != topics && !topics.isEmpty()) {
             for (String name : topics) {
                 int code = tmqTopicAppendImp(topic, name);
                 if (code == TMQ_TOPIC_NULL) {
                     destroyTopic(topic);
-                    throw TSDBError.createSQLException(TMQ_TOPIC_NULL, "Failed to set consumer topic");
+                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TMQ_TOPIC_NULL);
                 }
                 if (code == TMQ_TOPIC_NAME_NULL) {
                     destroyTopic(topic);
-                    throw TSDBError.createSQLException(TMQ_TOPIC_NAME_NULL,
-                            "Failed to set consumer topic, topic name is empty");
+                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TMQ_TOPIC_NAME_NULL);
                 }
                 if (code != TMQ_SUCCESS) {
                     destroyTopic(topic);
-                    throw TSDBError.createSQLException(TMQ_UNKNOWN_ERROR, "Failed to set consumer topic.");
+                    throw TSDBError.createSQLException(code, getErrMsg(code));
                 }
             }
         }
@@ -114,10 +113,10 @@ public class TMQConnector extends TSDBJNIConnector {
     public void subscribe(long topic) throws SQLException {
         int code = tmqSubscribeImp(taos, topic);
         if (code == TMQ_CONSUMER_NULL) {
-            throw TSDBError.createSQLException(TMQ_CONSUMER_NULL, "consumer reference has been destroyed");
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TMQ_CONSUMER_NULL, "failed to subscribe topic, consumer reference has been destroyed");
         }
         if (code == TMQ_TOPIC_NULL) {
-            throw TSDBError.createSQLException(TMQ_TOPIC_NULL, "topic reference has been destroyed");
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TMQ_TOPIC_NULL);
         }
         if (code != TMQ_SUCCESS) {
             throw TSDBError.createSQLException(code, getErrMsg(code));
@@ -130,7 +129,7 @@ public class TMQConnector extends TSDBJNIConnector {
     public Set<String> subscription() throws SQLException {
         int code = tmqSubscriptionImp(taos, this);
         if (code == TMQ_CONSUMER_NULL) {
-            throw TSDBError.createSQLException(TMQ_CONSUMER_NULL, "consumer reference has been destroyed");
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TMQ_CONSUMER_NULL, "get subscription error, consumer reference has been destroyed");
         }
         if (code != TMQ_SUCCESS) {
             throw TSDBError.createSQLException(code, getErrMsg(code));
@@ -148,7 +147,7 @@ public class TMQConnector extends TSDBJNIConnector {
     public void syncCommit(long offsets) throws SQLException {
         int code = tmqCommitSync(taos, offsets);
         if (code == TMQ_CONSUMER_NULL) {
-            throw TSDBError.createSQLException(TMQ_CONSUMER_NULL, "consumer reference has been destroyed");
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TMQ_CONSUMER_NULL, "sync commit offset error, consumer reference has been destroyed");
         }
         if (code != TMQ_SUCCESS) {
             throw TSDBError.createSQLException(code, createConsumerErrorMsg);
@@ -163,12 +162,15 @@ public class TMQConnector extends TSDBJNIConnector {
     }
 
     // DLL_EXPORT void tmq_commit_async(tmq_t *tmq, const TAOS_RES *msg, tmq_commit_cb *cb, void *param);
-    private native void tmqCommitAsync(long tmq, long offsets, TaosConsumer consumer);
+    private native void tmqCommitAsync(long tmq, long offsets, ConsumerRecords<?> records);
+
+    @Deprecated
+    private native void tmqCommitAsync(long tmq, long offsets, TaosConsumer<?> consumer);
 
     public void unsubscribe() throws SQLException {
         int code = tmqUnsubscribeImp(taos);
         if (code == TMQ_CONSUMER_NULL) {
-            throw TSDBError.createSQLException(TMQ_CONSUMER_NULL, "consumer reference has been destroyed");
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TMQ_CONSUMER_NULL, "unsubscribe error, consumer reference has been destroyed");
         }
         if (code != TMQ_SUCCESS) {
             throw TSDBError.createSQLException(code, getErrMsg(code));

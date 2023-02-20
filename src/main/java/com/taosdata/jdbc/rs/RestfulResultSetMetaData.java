@@ -15,7 +15,7 @@ public class RestfulResultSetMetaData extends WrapperImpl implements ResultSetMe
     private final String database;
     private final List<RestfulResultSet.Field> fields;
 
-    public RestfulResultSetMetaData(String database, List<RestfulResultSet.Field> fields, RestfulResultSet resultSet) {
+    public RestfulResultSetMetaData(String database, List<RestfulResultSet.Field> fields) {
         this.database = database;
         this.fields = fields == null ? Collections.emptyList() : fields;
     }

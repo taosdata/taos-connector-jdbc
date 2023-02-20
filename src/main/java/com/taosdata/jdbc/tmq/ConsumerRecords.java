@@ -4,15 +4,35 @@ import java.util.*;
 
 public class ConsumerRecords<V> implements Iterable<V> {
 
-    public static final ConsumerRecords<?> EMPTY = new ConsumerRecords(Collections.EMPTY_MAP);
+    public static final ConsumerRecords<?> EMPTY = new ConsumerRecords<>(Collections.emptyMap());
 
+    private long offset;
     private final Map<TopicPartition, List<V>> records;
 
     public ConsumerRecords(Map<TopicPartition, List<V>> records) {
         this.records = records;
     }
 
-    public List<V> records(TopicPartition partition) {
+    public ConsumerRecords(long offset) {
+        this.records = new HashMap<>();
+        this.offset = offset;
+    }
+
+    public long getOffset() {
+        return offset;
+    }
+
+    public void put(TopicPartition tp, V v) {
+        if (records.containsKey(tp)) {
+            records.get(tp).add(v);
+        } else {
+            ArrayList<V> list = new ArrayList<>();
+            list.add(v);
+            records.put(tp, list);
+        }
+    }
+
+    public List<V> get(TopicPartition partition) {
         List<V> recs = this.records.get(partition);
         if (recs == null)
             return Collections.emptyList();
@@ -48,8 +68,8 @@ public class ConsumerRecords<V> implements Iterable<V> {
         return records.isEmpty();
     }
 
-    @SuppressWarnings("rawtypes")
-    public static ConsumerRecords empty() {
-        return EMPTY;
+    @SuppressWarnings("unchecked")
+    public static <T> ConsumerRecords<T> emptyRecord() {
+        return (ConsumerRecords<T>) EMPTY;
     }
 }

@@ -365,14 +365,14 @@ public class InsertSpecialCharacterJniTest {
 
     @Test(expected = SQLException.class)
     public void testCase11() throws SQLException {
-        final String speicalCharacterStr = "?#sd@$f(((s[P)){]}f?s[]{}%vs^a&d*jhg)(j))(f@~!?$";
+        final String specialCharacterStr = "?#sd@$f(((s[P)){]}f?s[]{}%vs^a&d*jhg)(j))(f@~!?$";
         final long now = System.currentTimeMillis();
 
         final String sql = "insert into t? using " + tbname2 + " values(?, ?, 'abc?abc') ";
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, 1);
             pstmt.setTimestamp(2, new Timestamp(now));
-            pstmt.setBytes(3, speicalCharacterStr.getBytes());
+            pstmt.setBytes(3, specialCharacterStr.getBytes());
 
             int ret = pstmt.executeUpdate();
             Assert.assertEquals(1, ret);

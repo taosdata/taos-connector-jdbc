@@ -5,6 +5,7 @@ import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 
+import java.lang.reflect.Constructor;
 import java.nio.charset.StandardCharsets;
 import java.sql.Date;
 import java.sql.Time;
@@ -286,7 +287,9 @@ public class Utils {
         if (c == null)
             throw new RuntimeException("class cannot be null");
         try {
-            return c.getDeclaredConstructor().newInstance();
+            Constructor<T> declaredConstructor = c.getDeclaredConstructor();
+            declaredConstructor.setAccessible(true);
+            return declaredConstructor.newInstance();
         } catch (NoSuchMethodException e) {
             throw new RuntimeException("Could not find a public no-argument constructor for " + c.getName(), e);
         } catch (ReflectiveOperationException | RuntimeException e) {

@@ -44,6 +44,8 @@ public class TaosConsumerTest {
 //        statement.executeUpdate("create topic if not exists " + topic + " as database " + dbName);
 
         Properties properties = new Properties();
+        properties.setProperty(TMQConstants.CONNECT_USER,"root");
+        properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
         properties.setProperty(TMQConstants.GROUP_ID, "tg1");

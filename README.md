@@ -187,7 +187,7 @@ The configuration parameters in the URL are as follows.
 - httpConnectTimeout: REST connection timeout in milliseconds, the default value is 5000 ms.
 - httpSocketTimeout: socket timeout in milliseconds, the default value is 5000 ms. It only takes effect when batchfetch is false.
 - messageWaitTimeout: message transmission timeout in milliseconds, the default value is 3000 ms. It only takes effect when batchfetch is true.
-- useSSL: connecting Securely Using SSL. true: using SSL conneciton, false: not using SSL connection.
+- useSSL: connecting Securely Using SSL. true: using SSL connection, false: not using SSL connection.
 
 **Note**: Some configuration items (e.g., locale, timezone) do not work in the REST connection.
 
@@ -247,7 +247,7 @@ The configuration parameters in properties are as follows.
 - TSDBDriver.HTTP_CONNECT_TIMEOUT: REST connection timeout in milliseconds, the default value is 5000 ms. It only takes effect when using JDBC REST connection.
 - TSDBDriver.HTTP_SOCKET_TIMEOUT: socket timeout in milliseconds, the default value is 5000 ms. It only takes effect when using JDBC REST connection and batchfetch is false.
 - TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT: message transmission timeout in milliseconds, the default value is 3000 ms. It only takes effect when using JDBC REST connection and batchfetch is true.
-- TSDBDriver.PROPERTY_KEY_USE_SSL: connecting Securely Using SSL. true: using SSL conneciton, false: not using SSL connection. It only takes effect when using using JDBC REST connection.
+- TSDBDriver.PROPERTY_KEY_USE_SSL: connecting Securely Using SSL. true: using SSL connection, false: not using SSL connection. It only takes effect when using using JDBC REST connection.
   For JDBC native connections, you can specify other parameters, such as log level, SQL length, etc., by specifying URL and Properties. For more detailed configuration, please refer to [Client Configuration](https://docs.taosdata.com/reference/config/#Client-Only).
 
 ### Priority of configuration parameters

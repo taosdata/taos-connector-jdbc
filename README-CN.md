@@ -804,7 +804,7 @@ public abstract class ConsumerLoop {
     //query or insert
     // ...
 
-    connection.close(); // put back to conneciton pool
+    connection.close(); // put back to connection pool
 }
 ```
 
@@ -836,7 +836,7 @@ public static void main(String[] args) throws Exception {
     //query or insert
     // ...
 
-    connection.close(); // put back to conneciton pool
+    connection.close(); // put back to connection pool
 }
 ```
 

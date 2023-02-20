@@ -8,16 +8,12 @@ import java.util.Map;
 
 public class MapDeserializer implements Deserializer<Map<String, Object>> {
     @Override
-    public Map<String, Object> deserialize(ResultSet data) {
+    public Map<String, Object> deserialize(ResultSet data) throws SQLException {
         Map<String, Object> map = new HashMap<>();
 
-        try {
-            ResultSetMetaData metaData = data.getMetaData();
-            for (int i = 1; i <= metaData.getColumnCount(); i++) {
-                map.put(metaData.getColumnLabel(i), data.getObject(i));
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+        ResultSetMetaData metaData = data.getMetaData();
+        for (int i = 1; i <= metaData.getColumnCount(); i++) {
+            map.put(metaData.getColumnLabel(i), data.getObject(i));
         }
 
         return map;

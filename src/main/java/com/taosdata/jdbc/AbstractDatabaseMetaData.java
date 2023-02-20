@@ -10,7 +10,7 @@ import java.util.List;
 public abstract class AbstractDatabaseMetaData extends WrapperImpl implements DatabaseMetaData {
 
     private final static String PRODUCT_NAME = "TDengine";
-    private final static String PRODUCT_VESION = "3.0.0.0";
+    private final static String PRODUCT_VERSION = "3.0.0.0";
     private final static String DRIVER_VERSION = "3.0.0";
     private final static int DRIVER_MAJAR_VERSION = 3;
     private final static int DRIVER_MINOR_VERSION = 0;
@@ -69,7 +69,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
         }
 
         if (StringUtils.isEmpty(version)) {
-            return PRODUCT_VESION;
+            return PRODUCT_VERSION;
         } else {
             return version;
         }

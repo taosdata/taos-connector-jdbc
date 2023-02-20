@@ -4,9 +4,9 @@ import com.alibaba.fastjson.annotation.JSONField;
 
 public class Payload {
     @JSONField(name = "req_id")
-    private final long reqId;
+    private long reqId;
 
-    public Payload(long reqId) {
+    public void setReqId(long reqId) {
         this.reqId = reqId;
     }
 
