@@ -19,7 +19,6 @@ public class ConsumerTest {
     @Before
     public void before() throws SQLException {
         url = System.getenv("TDENGINE_CLOUD_URL");
-//        url = "jdbc:TAOS-RS://gw.us-central-1.gcp.cloud.tdengine.com?useSSL=true&token=bb28ba585ffd654f46926ab6897baaa9cf0aaed1";
         if (url == null || "".equals(url.trim())) {
             System.out.println("Environment variable for CloudTest not set properly");
             return;
@@ -60,7 +59,6 @@ public class ConsumerTest {
             for (int i = 0; i < 10; i++) {
                 ConsumerRecords<Bean> consumerRecords = consumer.poll(Duration.ofMillis(100));
                 for (Bean bean : consumerRecords) {
-                    System.out.println(bean);
                     Assert.assertEquals(1, bean.getC1());
                     Assert.assertEquals(1.1, bean.getC2(), 0.000001);
                     Assert.assertEquals("中国", bean.getC3());
