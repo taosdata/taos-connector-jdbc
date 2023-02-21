@@ -3,6 +3,7 @@ package com.taosdata.jdbc.ws.tmq.entity;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.tmq.TMQConstants;
+import com.taosdata.jdbc.utils.StringUtils;
 
 import java.sql.SQLException;
 import java.util.Properties;
@@ -15,6 +16,10 @@ public class ConsumerParam {
     private final boolean autoCommit;
 
     public ConsumerParam(Properties properties) throws SQLException {
+        if (null != properties.getProperty(TMQConstants.CONNECT_URL)){
+            String url = properties.getProperty(TMQConstants.CONNECT_URL);
+            StringUtils.parseUrl(url, properties);
+        }
         properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, properties.getProperty(TMQConstants.CONNECT_USER, "root"));
         properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, properties.getProperty(TMQConstants.CONNECT_PASS, "taosdata"));
         if (null != properties.getProperty(TMQConstants.CONNECT_IP))

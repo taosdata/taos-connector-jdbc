@@ -1,6 +1,10 @@
-package com.taosdata.jdbc.tmq;
+package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.tmq.ConsumerRecords;
+import com.taosdata.jdbc.tmq.ResultBean;
+import com.taosdata.jdbc.tmq.TMQConstants;
+import com.taosdata.jdbc.tmq.TaosConsumer;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -147,7 +151,6 @@ public class WSConsumerTest {
             if (connection != null) {
                 if (statement != null) {
                     for (String topic : topics) {
-                        System.out.println("drop topic " + topic);
                         statement.executeUpdate("drop topic " + topic);
                     }
                     statement.close();

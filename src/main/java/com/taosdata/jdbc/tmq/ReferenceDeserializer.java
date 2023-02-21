@@ -1,16 +1,22 @@
 package com.taosdata.jdbc.tmq;
 
 import com.taosdata.jdbc.TaosGlobalConfig;
+import com.taosdata.jdbc.utils.Utils;
 
 import java.beans.BeanInfo;
 import java.beans.IntrospectionException;
 import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
-import java.lang.reflect.*;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 public class ReferenceDeserializer<V> implements Deserializer<V> {
     private Param[] params;
@@ -28,7 +34,7 @@ public class ReferenceDeserializer<V> implements Deserializer<V> {
         Class<V> clazz = getGenericType();
         V t = null;
         try {
-            t = clazz.newInstance();
+            t = Utils.newInstance(clazz);
             if (params == null) {
                 List<Param> lists = new ArrayList<>();
                 BeanInfo beanInfo = Introspector.getBeanInfo(clazz);
@@ -38,15 +44,12 @@ public class ReferenceDeserializer<V> implements Deserializer<V> {
                         continue;
                     Method method = property.getWriteMethod();
                     if (null != method) {
+                        method.setAccessible(true);
                         Param param = new Param();
                         param.name = name;
                         param.method = method;
                         param.clazz = method.getParameterTypes()[0];
                         lists.add(param);
-                    } else {
-                        String propertyName = property.getName();
-                        Field declaredField = clazz.getDeclaredField(propertyName);
-                        method = clazz.getDeclaredMethod("set" + propertyName.substring(0, 1).toUpperCase() + propertyName.substring(1), new Class[]{declaredField.getType()});
                     }
                 }
                 params = lists.toArray(new Param[0]);
@@ -86,9 +89,8 @@ public class ReferenceDeserializer<V> implements Deserializer<V> {
                     param.method.invoke(t, data.getBytes(param.name));
                 }
             }
-        } catch (IllegalAccessException | IntrospectionException | InvocationTargetException
-                | NoSuchFieldException | InstantiationException | NoSuchMethodException e) {
-            throw new SQLException();
+        } catch (IllegalAccessException | IntrospectionException | InvocationTargetException  e) {
+            throw new SQLException(this.getClass().getSimpleName() + " resultSet get Data error: ", e);
         }
         return t;
     }

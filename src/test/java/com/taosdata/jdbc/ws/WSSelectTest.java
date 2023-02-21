@@ -68,7 +68,7 @@ public class WSSelectTest {
             url = "jdbc:TAOS-RS://" + host + ":" + port + "/?user=root&password=taosdata";
         }
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, "100000");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, "10000");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
         connection = DriverManager.getConnection(url, properties);
         Statement statement = connection.createStatement();

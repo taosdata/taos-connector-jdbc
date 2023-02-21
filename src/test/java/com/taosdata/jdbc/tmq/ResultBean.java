@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.tmq;
 
+import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 
 public class ResultBean {
@@ -65,5 +66,23 @@ public class ResultBean {
 
     public void setC5(boolean c5) {
         this.c5 = c5;
+    }
+
+    @Override
+    public String toString() {
+        final StringBuffer sb = new StringBuffer("ResultBean{");
+        sb.append("ts=").append(ts);
+        sb.append(", c1=").append(c1);
+        sb.append(", c2=").append(c2);
+        sb.append(", c3='").append(c3).append('\'');
+        sb.append(", c4=");
+        if (c4 == null) sb.append("null");
+        else {
+            sb.append("'").append(new String(c4, StandardCharsets.UTF_8)).append("'");
+        }
+        sb.append(", t1=").append(t1);
+        sb.append(", c5=").append(c5);
+        sb.append('}');
+        return sb.toString();
     }
 }

@@ -49,18 +49,6 @@ public class TSDBConnection extends AbstractConnection {
         return new TSDBStatement(this);
     }
 
-    public TSDBSubscribe subscribe(String topic, String sql, boolean restart) throws SQLException {
-        if (isClosed()) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
-        }
-
-        long id = this.connector.subscribe(topic, sql, restart);
-        if (id == 0) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_SUBSCRIBE_FAILED);
-        }
-        return new TSDBSubscribe(this.connector, id);
-    }
-
     public PreparedStatement prepareStatement(String sql) throws SQLException {
         if (isClosed()) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);

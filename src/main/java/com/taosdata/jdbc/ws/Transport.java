@@ -86,7 +86,7 @@ public class Transport implements AutoCloseable {
         try {
             if (!transport.client.connectBlocking(connectTimeout, TimeUnit.MILLISECONDS)) {
                 transport.close();
-                throw new SQLException("can't create connection with server");
+                throw new SQLException("can't create connection with server within: " + connectTimeout + " milliseconds");
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
