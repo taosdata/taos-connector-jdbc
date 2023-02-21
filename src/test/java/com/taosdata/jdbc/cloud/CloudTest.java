@@ -17,6 +17,7 @@ public class CloudTest {
     public void connectCloudService() throws Exception {
 
         String url = System.getenv("TDENGINE_CLOUD_URL");
+//        url = "jdbc:TAOS-RS://gw.us-central-1.gcp.cloud.tdengine.com?useSSL=true&token=bb28ba585ffd654f46926ab6897baaa9cf0aaed1";
         System.out.println("cloud url:" + url);
         if (url == null || "".equals(url.trim())) {
             System.out.println("Environment variable for CloudTest not set properly");

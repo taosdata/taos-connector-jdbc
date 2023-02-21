@@ -5,6 +5,8 @@ import com.taosdata.jdbc.TSDBDriver;
 import java.util.HashSet;
 import java.util.Set;
 
+import static com.taosdata.jdbc.TSDBDriver.*;
+
 public class TMQConstants {
     public static final Set<String> configSet = new HashSet<>();
 
@@ -83,6 +85,33 @@ public class TMQConstants {
      * Just for Cloud Service
      */
     public static final String CONNECT_TOKEN = TSDBDriver.PROPERTY_KEY_TOKEN;
+
+    /**
+     * Key used to retrieve the token value from the properties instance passed to
+     * the driver.
+     * Just for Cloud Service
+     */
+    public static final String CONNECT_URL = "url";
+
+    /**
+     * Use SSL (true/false) to communicate with the server. The default value is false.
+     * Just for Cloud Service
+     */
+    public static final String CONNECT_USE_SSL = PROPERTY_KEY_USE_SSL;
+
+    /**
+     * the timeout in milliseconds until a connection is established.
+     * zero is interpreted as an infinite timeout.
+     * only valid in websocket
+     */
+    public static final String CONNECT_TIMEOUT = HTTP_CONNECT_TIMEOUT;
+
+    /**
+     * message receive from server timeout. ms.
+     * only valid in websocket
+     */
+    public static final String CONNECT_MESSAGE_TIMEOUT = PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT;
+
 
     static {
         configSet.add(GROUP_ID);

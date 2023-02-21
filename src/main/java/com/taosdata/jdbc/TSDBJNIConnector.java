@@ -244,37 +244,7 @@ public class TSDBJNIConnector {
 
     private native int closeConnectionImp(long connection);
 
-    /*****************************************************************************************/
-    // NOTE: subscribe
-
-    /**
-     * Create a subscription
-     */
-    long subscribe(String topic, String sql, boolean restart) {
-        return subscribeImp(this.taos, restart, topic, sql, 0);
-    }
-
-    private native long subscribeImp(long connection, boolean restart, String topic, String sql, int period);
-
-    /**
-     * Consume a subscription
-     */
-    long consume(long subscription) {
-        return this.consumeImp(subscription);
-    }
-
-    private native long consumeImp(long subscription);
-
-    /**
-     * Unsubscribe, close a subscription
-     */
-    void unsubscribe(long subscription, boolean isKeep) {
-        unsubscribeImp(subscription, isKeep);
-    }
-
-    private native void unsubscribeImp(long subscription, boolean isKeep);
-
-    /******************************************************************************************************/
+ /******************************************************************************************************/
     // NOTE: parameter binding
     public long prepareStmt(String sql) throws SQLException {
         long stmt = prepareStmtImp(sql.getBytes(), this.taos);

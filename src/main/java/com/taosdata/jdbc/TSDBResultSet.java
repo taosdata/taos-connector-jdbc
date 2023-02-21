@@ -40,7 +40,7 @@ public class TSDBResultSet extends AbstractResultSet {
         this.batchFetch = batchFetch;
     }
 
-    public Boolean getBatchFetch() {
+    public boolean getBatchFetch() {
         return this.batchFetch;
     }
 
