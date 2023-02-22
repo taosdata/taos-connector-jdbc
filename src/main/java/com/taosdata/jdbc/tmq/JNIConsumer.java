@@ -20,6 +20,7 @@ public class JNIConsumer<V> implements Consumer<V> {
     // use in auto commit is false, include history offset
     private final List<ConsumerRecords<V>> offsetList = new ArrayList<>();
     private boolean autoCommit;
+    private final Map<Long, OffsetWaitCallback> callbacks = new HashMap<>();
 
     ThreadPoolExecutor executor = new ThreadPoolExecutor(1, 1,
             0L, TimeUnit.MILLISECONDS,
@@ -61,6 +62,12 @@ public class JNIConsumer<V> implements Consumer<V> {
 
     @Override
     public void unsubscribe() throws SQLException {
+        for (ConsumerRecords<V> cr : offsetList) {
+            this.releaseResultSet(cr.getOffset());
+        }
+        for (Long offset : callbacks.keySet()) {
+            this.releaseResultSet(offset);
+        }
         connector.unsubscribe();
     }
 
@@ -102,16 +109,19 @@ public class JNIConsumer<V> implements Consumer<V> {
 
     @Override
     public void commitAsync(OffsetCommitCallback callback) {
-//        for (ConsumerRecords<V> r : offsetList) {
-//            r.setCallback(callback);
-//            connector.asyncCommit(r.getOffset(), r);
-//        }
-//        offsetList.clear();
+        for (ConsumerRecords<V> r : offsetList) {
+            OffsetWaitCallback<V> offset = new OffsetWaitCallback<>(r, this, callback);
+
+            connector.asyncCommit(r.getOffset(), offset);
+            callbacks.put(r.getOffset(), offset);
+        }
+        offsetList.clear();
     }
 
     @Override
     public void commitSync() throws SQLException {
         for (ConsumerRecords<V> r : offsetList) {
+            connector.syncCommit(r.getOffset());
             this.releaseResultSet(r.getOffset());
         }
         offsetList.clear();
@@ -120,15 +130,30 @@ public class JNIConsumer<V> implements Consumer<V> {
     @Override
     public void close() throws SQLException {
         executor.shutdown();
+
+        for (ConsumerRecords<V> cr : offsetList) {
+            this.releaseResultSet(cr.getOffset());
+        }
+        for (Long offset : callbacks.keySet()) {
+            this.releaseResultSet(offset);
+        }
         connector.closeConsumer();
     }
 
-    private void releaseResultSet(long ptr) throws SQLException {
+    public void releaseResultSet(long ptr) throws SQLException {
         int code = this.connector.freeResultSet(ptr);
         if (code == TSDBConstants.JNI_CONNECTION_NULL) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_JNI_CONNECTION_NULL);
         } else if (code == TSDBConstants.JNI_RESULT_SET_NULL) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_JNI_RESULT_SET_NULL);
         }
+    }
+
+    public String getErrMsg(int code) {
+        return connector.getErrMsg(code);
+    }
+
+    public synchronized void closeOffset(long prt) {
+        callbacks.remove(prt);
     }
 }

@@ -111,7 +111,7 @@ public class TaosConsumer<V> implements AutoCloseable {
     }
 
     @SuppressWarnings("unused")
-    public void commitAsync(OffsetCommitCallback callback) {
+    public void commitAsync(OffsetCommitCallback<V> callback) {
         consumer.commitAsync(callback);
     }
 

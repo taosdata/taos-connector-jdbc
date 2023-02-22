@@ -1,7 +1,7 @@
 package com.taosdata.jdbc.tmq;
 
 @FunctionalInterface
-public interface OffsetCommitCallback {
+public interface OffsetCommitCallback<V> {
 
-    void onComplete(ConsumerRecords records, Exception exception);
+    void onComplete(ConsumerRecords<V> records, Exception exception);
 }
