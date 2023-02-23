@@ -131,7 +131,7 @@ public class WSConsumer<V> implements Consumer<V> {
     }
 
     @Override
-    public void commitAsync(OffsetCommitCallback callback) {
+    public void commitAsync(OffsetCommitCallback<V> callback) {
         // nothing to do
     }
 }

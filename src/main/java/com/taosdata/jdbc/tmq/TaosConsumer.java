@@ -56,7 +56,7 @@ public class TaosConsumer<V> implements AutoCloseable {
 
         deserializer.configure(properties);
         String type = properties.getProperty(TMQConstants.CONNECT_TYPE);
-        consumer = ConsumerManager.getConsumer(type);
+        consumer = (Consumer<V>) ConsumerManager.getConsumer(type);
         consumer.create(properties);
     }
 
@@ -111,7 +111,7 @@ public class TaosConsumer<V> implements AutoCloseable {
     }
 
     @SuppressWarnings("unused")
-    public void commitAsync(OffsetCommitCallback callback) {
+    public void commitAsync(OffsetCommitCallback<V> callback) {
         consumer.commitAsync(callback);
     }
 

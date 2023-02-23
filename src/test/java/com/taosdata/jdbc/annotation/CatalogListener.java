@@ -84,6 +84,8 @@ public class CatalogListener extends RunListener {
     public void testFailure(Failure failure) throws Exception {
         com.taosdata.jdbc.annotation.Description annotation
                 = failure.getDescription().getAnnotation(com.taosdata.jdbc.annotation.Description.class);
+        if (null == annotation)
+            return;
         CatalogMethod method = new CatalogMethod();
         method.setMessage(annotation.value());
         method.setAuthor(annotation.author());

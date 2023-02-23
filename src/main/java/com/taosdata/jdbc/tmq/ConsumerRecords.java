@@ -18,7 +18,7 @@ public class ConsumerRecords<V> implements Iterable<V> {
         this.offset = offset;
     }
 
-    public long getOffset() {
+    protected long getOffset() {
         return offset;
     }
 

@@ -50,11 +50,11 @@ public class ConsumerManager {
         println("registerConsumerFactory: " + factory);
     }
 
-    public static Consumer getConsumer(String type) throws SQLException {
+    public static Consumer<?> getConsumer(String type) throws SQLException {
         for (ConsumerFactory factory : registeredConsumers) {
             if (factory.acceptsType(type)) {
 
-                Consumer consumer = factory.getConsumer();
+                Consumer<?> consumer = factory.getConsumer();
                 if (consumer != null) {
                     // Success!
                     println("getConsumerFactory returning " + factory.getClass().getName());

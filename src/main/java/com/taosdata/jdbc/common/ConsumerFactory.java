@@ -5,5 +5,5 @@ public interface ConsumerFactory {
 
     boolean acceptsType(String type);
 
-    Consumer getConsumer();
+    Consumer<?> getConsumer();
 }
