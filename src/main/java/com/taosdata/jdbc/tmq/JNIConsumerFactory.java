@@ -18,7 +18,7 @@ public class JNIConsumerFactory implements ConsumerFactory {
     }
 
     @Override
-    public Consumer getConsumer() {
-        return new JNIConsumer();
+    public Consumer<?> getConsumer() {
+        return new JNIConsumer<>();
     }
 }

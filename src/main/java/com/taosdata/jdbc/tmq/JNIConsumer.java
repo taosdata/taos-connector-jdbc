@@ -20,7 +20,7 @@ public class JNIConsumer<V> implements Consumer<V> {
     // use in auto commit is false, include history offset
     private final List<ConsumerRecords<V>> offsetList = new ArrayList<>();
     private boolean autoCommit;
-    private final Map<Long, OffsetWaitCallback> callbacks = new HashMap<>();
+    private final Map<Long, OffsetWaitCallback<V>> callbacks = new HashMap<>();
 
     ThreadPoolExecutor executor = new ThreadPoolExecutor(1, 1,
             0L, TimeUnit.MILLISECONDS,
@@ -108,7 +108,7 @@ public class JNIConsumer<V> implements Consumer<V> {
     }
 
     @Override
-    public void commitAsync(OffsetCommitCallback callback) {
+    public void commitAsync(OffsetCommitCallback<V> callback) {
         for (ConsumerRecords<V> r : offsetList) {
             OffsetWaitCallback<V> offset = new OffsetWaitCallback<>(r, this, callback);
 

@@ -60,5 +60,5 @@ public interface Consumer<V> {
      */
     void close() throws SQLException;
 
-    void commitAsync(OffsetCommitCallback callback);
+    void commitAsync(OffsetCommitCallback<V> callback);
 }
