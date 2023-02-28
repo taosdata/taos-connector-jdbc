@@ -56,40 +56,80 @@ public class ReferenceDeserializer<V> implements Deserializer<V> {
             }
 
             for (Param param : params) {
+                    // string
                 if (param.clazz.isAssignableFrom(String.class)) {
-                    param.method.invoke(t, data.getString(param.name));
-                } else if (param.clazz.isAssignableFrom(Integer.class)
-                        || param.clazz.isAssignableFrom(int.class)) {
+                    String string = data.getString(param.name);
+                    param.method.invoke(t, data.wasNull() ? null : string);
+
+                    // int
+                } else if (param.clazz.isAssignableFrom(Integer.class)) {
+                    int i = data.getInt(param.name);
+                    param.method.invoke(t, data.wasNull() ? null : i);
+                } else if (param.clazz.isAssignableFrom(int.class)) {
                     param.method.invoke(t, data.getInt(param.name));
-                } else if (param.clazz.isAssignableFrom(Short.class)
-                        || param.clazz.isAssignableFrom(short.class)) {
+
+                    // short
+                } else if (param.clazz.isAssignableFrom(Short.class)) {
+                    short s = data.getShort(param.name);
+                    param.method.invoke(t, data.wasNull() ? null : s);
+                } else if (param.clazz.isAssignableFrom(short.class)) {
                     param.method.invoke(t, data.getShort(param.name));
-                } else if (param.clazz.isAssignableFrom(Byte.class)
-                        || param.clazz.isAssignableFrom(byte.class)) {
+
+                    // byte
+                } else if (param.clazz.isAssignableFrom(Byte.class)) {
+                    byte b = data.getByte(param.name);
+                    param.method.invoke(t, data.wasNull() ? null : b);
+                } else if (param.clazz.isAssignableFrom(byte.class)) {
                     param.method.invoke(t, data.getByte(param.name));
-                } else if (param.clazz.isAssignableFrom(Character.class)
-                        || param.clazz.isAssignableFrom(char.class)) {
+
+                    // char
+                } else if (param.clazz.isAssignableFrom(Character.class)) {
+                    char c = (char) data.getByte(param.name);
+                    param.method.invoke(t, data.wasNull() ? null : c);
+                } else if (param.clazz.isAssignableFrom(char.class)) {
                     param.method.invoke(t, (char) data.getByte(param.name));
-                } else if (param.clazz.isAssignableFrom(Float.class)
-                        || param.clazz.isAssignableFrom(float.class)) {
+
+                    // float
+                } else if (param.clazz.isAssignableFrom(Float.class)) {
+                    float f = data.getFloat(param.name);
+                    param.method.invoke(t, data.wasNull() ? null : f);
+                } else if (param.clazz.isAssignableFrom(float.class)) {
                     param.method.invoke(t, data.getFloat(param.name));
-                } else if (param.clazz.isAssignableFrom(Double.class)
-                        || param.clazz.isAssignableFrom(double.class)) {
+
+                    // double
+                } else if (param.clazz.isAssignableFrom(Double.class)) {
+                    double d = data.getDouble(param.name);
+                    param.method.invoke(t, data.wasNull() ? null : d);
+                } else if (param.clazz.isAssignableFrom(double.class)) {
                     param.method.invoke(t, data.getDouble(param.name));
-                } else if (param.clazz.isAssignableFrom(Long.class)
-                        || param.clazz.isAssignableFrom(long.class)) {
+
+                    // long
+                } else if (param.clazz.isAssignableFrom(Long.class)) {
+                    long l = data.getLong(param.name);
+                    param.method.invoke(t, data.wasNull() ? null : l);
+                } else if (param.clazz.isAssignableFrom(long.class)) {
                     param.method.invoke(t, data.getLong(param.name));
-                } else if (param.clazz.isAssignableFrom(Boolean.class)
-                        || param.clazz.isAssignableFrom(boolean.class)) {
+
+                    // boolean
+                } else if (param.clazz.isAssignableFrom(Boolean.class)) {
+                    boolean b = data.getBoolean(param.name);
+                    param.method.invoke(t, data.wasNull() ? null : b);
+                } else if (param.clazz.isAssignableFrom(boolean.class)) {
                     param.method.invoke(t, data.getBoolean(param.name));
+
+                    // timestamp
                 } else if (param.clazz.isAssignableFrom(Timestamp.class)) {
-                    param.method.invoke(t, data.getTimestamp(param.name));
+                    Timestamp ts = data.getTimestamp(param.name);
+                    param.method.invoke(t, data.wasNull() ? null : ts);
+
+                    // bytes
                 } else if (param.clazz.isAssignableFrom(Byte[].class)
                         || param.clazz.isAssignableFrom(byte[].class)) {
-                    param.method.invoke(t, data.getBytes(param.name));
+                    byte[] bytes = data.getBytes(param.name);
+                    param.method.invoke(t, data.wasNull() ? null : bytes);
                 }
             }
-        } catch (IllegalAccessException | IntrospectionException | InvocationTargetException  e) {
+        } catch (IllegalAccessException | IntrospectionException | InvocationTargetException e) {
             throw new SQLException(this.getClass().getSimpleName() + " resultSet get Data error: ", e);
         }
         return t;
