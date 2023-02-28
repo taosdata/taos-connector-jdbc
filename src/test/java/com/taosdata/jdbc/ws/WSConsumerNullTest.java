@@ -55,7 +55,7 @@ public class WSConsumerNullTest {
                 ConsumerRecords<ResultBean> consumerRecords = consumer.poll(Duration.ofMillis(100));
                 for (ResultBean bean : consumerRecords) {
                     Assert.assertEquals(0, bean.getC1());
-                    Assert.assertEquals(0.0, bean.getC2(), 0.000001);
+                    Assert.assertNull(bean.getC2());
                     Assert.assertNull(bean.getC3());
                     Assert.assertNull(bean.getC4());
                 }
