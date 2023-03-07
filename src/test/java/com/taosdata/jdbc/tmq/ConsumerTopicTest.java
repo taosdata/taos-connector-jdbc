@@ -10,34 +10,30 @@ import java.util.Collections;
 import java.util.Properties;
 
 @FixMethodOrder
-public class DeserializerNullTest {
+public class ConsumerTopicTest {
     private static final String host = "127.0.0.1";
-    private static final String dbName = "tmq_null_test";
+    private static final String dbName = "tmq_topic_test";
     private static final String superTable = "st";
-    private static String topic = "topic_with_bean";
+    private static String topic = "topic_result_topic";
 
     private static Connection connection;
 
     @Test
-    public void JNI_01_TestWithBean() throws Exception {
+    public void testGetTopic() throws Exception {
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
         properties.setProperty(TMQConstants.GROUP_ID, "withBean");
-        properties.setProperty(TMQConstants.VALUE_DESERIALIZER, "com.taosdata.jdbc.tmq.DeserializerNullTest$BeanDeserializer");
+        properties.setProperty(TMQConstants.VALUE_DESERIALIZER, "com.taosdata.jdbc.tmq.ConsumerTopicTest$BeanDeserializer");
 
         try (TaosConsumer<Bean> consumer = new TaosConsumer<>(properties)) {
             consumer.subscribe(Collections.singletonList(topic));
             for (int i = 0; i < 1; i++) {
                 ConsumerRecords<Bean> consumerRecords = consumer.poll(Duration.ofMillis(100));
                 for (ConsumerRecord<Bean> r : consumerRecords) {
-                    Bean bean = r.value();
-                    Assert.assertEquals(1000, bean.getT1().intValue());
-                    Assert.assertNull(bean.c1);
-                    Assert.assertNull(bean.c2);
-                    Assert.assertNull(bean.c3);
-                    Assert.assertNull(bean.c4);
-                    Assert.assertNull(bean.c5);
+                    Assert.assertEquals(topic, r.getTopic());
+                    Assert.assertEquals(dbName, r.getDbName());
+//                    System.out.println(r.getVGroupId());
                 }
             }
             consumer.unsubscribe();

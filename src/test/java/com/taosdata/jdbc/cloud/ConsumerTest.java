@@ -1,9 +1,6 @@
 package com.taosdata.jdbc.cloud;
 
-import com.taosdata.jdbc.tmq.ConsumerRecords;
-import com.taosdata.jdbc.tmq.ReferenceDeserializer;
-import com.taosdata.jdbc.tmq.TMQConstants;
-import com.taosdata.jdbc.tmq.TaosConsumer;
+import com.taosdata.jdbc.tmq.*;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -58,7 +55,8 @@ public class ConsumerTest {
             consumer.subscribe(Collections.singletonList(topic));
             for (int i = 0; i < 10; i++) {
                 ConsumerRecords<Bean> consumerRecords = consumer.poll(Duration.ofMillis(100));
-                for (Bean bean : consumerRecords) {
+                for (ConsumerRecord<Bean> r : consumerRecords) {
+                    Bean bean = r.value();
                     Assert.assertEquals(1, bean.getC1());
                     Assert.assertEquals(1.1, bean.getC2(), 0.000001);
                     Assert.assertEquals("中国", bean.getC3());
