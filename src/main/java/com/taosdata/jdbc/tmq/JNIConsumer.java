@@ -94,7 +94,7 @@ public class JNIConsumer<V> implements Consumer<V> {
                 int vGroupId = connector.getVgroupId(resultSet);
                 TopicPartition tp = new TopicPartition(topic, dbName, vGroupId);
 
-                V v = deserializer.deserialize(rs);
+                V v = deserializer.deserialize(rs, topic, dbName);
                 ConsumerRecord<V> r = new ConsumerRecord<>(topic, dbName, vGroupId, v);
                 records.put(tp, r);
             }

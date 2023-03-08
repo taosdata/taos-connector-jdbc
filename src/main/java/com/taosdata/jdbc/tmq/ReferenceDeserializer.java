@@ -29,7 +29,7 @@ public class ReferenceDeserializer<V> implements Deserializer<V> {
     }
 
     @Override
-    public V deserialize(ResultSet data) throws DeserializerException, SQLException {
+    public V deserialize(ResultSet data, String topic, String dbName) throws DeserializerException, SQLException {
 
         Class<V> clazz = getGenericType();
         V t = null;

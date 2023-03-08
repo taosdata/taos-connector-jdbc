@@ -11,7 +11,7 @@ public interface Deserializer<V> extends Closeable {
         // intentionally left blank
     }
 
-    V deserialize(ResultSet data) throws DeserializerException, SQLException;
+    V deserialize(ResultSet data, String topic, String dbName) throws DeserializerException, SQLException;
 
     @Override
     default void close() {
