@@ -47,6 +47,7 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
 
     TSDBPreparedStatement(TSDBConnection connection, String sql) throws SQLException {
         super(connection);
+        this.rawSql = sql;
         int parameterCnt = 0;
         if (!sql.contains("?"))
             return;
