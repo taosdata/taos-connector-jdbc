@@ -236,33 +236,6 @@ public class Utils {
         return true;
     }
 
-    /**
-     * Some of the SQLs sent by other popular frameworks or tools like Spark, contains syntax that cannot be parsed by
-     * the TDengine client. Thus, some simple parsers/filters are intentionally added in this JDBC implementation in
-     * order to process those supported SQLs.
-     */
-    public static String preprocessSql(String rawSql) {
-        //For processing some of Spark SQLs
-        // SELECT * FROM db.tb WHERE 1=0
-        rawSql = rawSql.replaceAll("WHERE 1=0", "WHERE _c0 is null");
-        rawSql = rawSql.replaceAll("WHERE 1=2", "WHERE _c0 is null");
-
-        // SELECT "ts","val" FROM db.tb
-        rawSql = rawSql.replaceAll("\"", "");
-
-        Matcher matcher = INNER_QUERY_PATTERN.matcher(rawSql);
-        String tableFullName = "";
-        if (matcher.find() && matcher.groupCount() == 2) {
-            String subQry = matcher.group(2);
-            Matcher matcher1 = FROM_PATTERN.matcher(subQry);
-            if (matcher1.find() && matcher1.groupCount() == 1) {
-                tableFullName = matcher1.group(1);
-            }
-            rawSql = rawSql.replace(matcher.group(1), tableFullName);
-        }
-        return rawSql;
-    }
-
     public static ClassLoader getClassLoader() {
         ClassLoader cl = Thread.currentThread().getContextClassLoader();
         if (cl == null)
