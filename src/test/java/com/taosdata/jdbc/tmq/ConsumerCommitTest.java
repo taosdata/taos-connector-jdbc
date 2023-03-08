@@ -61,7 +61,8 @@ public class ConsumerCommitTest {
             for (int i = 0; i < 10; i++) {
                 consumer.poll(Duration.ofMillis(100));
                 consumer.commitAsync((r, e) -> {
-                    for (ResultBean resultBean : r) {
+                    for (ConsumerRecord<ResultBean> record : r) {
+                        ResultBean resultBean = record.value();
                         Assert.assertTrue(Arrays.stream(strings)
                                 .anyMatch(s -> s.equals(new String(resultBean.getC4()))));
                     }

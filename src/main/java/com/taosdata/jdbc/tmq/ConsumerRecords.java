@@ -2,14 +2,14 @@ package com.taosdata.jdbc.tmq;
 
 import java.util.*;
 
-public class ConsumerRecords<V> implements Iterable<V> {
+public class ConsumerRecords<V> implements Iterable<ConsumerRecord<V>> {
 
     public static final ConsumerRecords<?> EMPTY = new ConsumerRecords<>(Collections.emptyMap());
 
     private long offset;
-    private final Map<TopicPartition, List<V>> records;
+    private final Map<TopicPartition, List<ConsumerRecord<V>>> records;
 
-    public ConsumerRecords(Map<TopicPartition, List<V>> records) {
+    public ConsumerRecords(Map<TopicPartition, List<ConsumerRecord<V>>> records) {
         this.records = records;
     }
 
@@ -22,43 +22,39 @@ public class ConsumerRecords<V> implements Iterable<V> {
         return offset;
     }
 
-    public void put(TopicPartition tp, V v) {
+    public void put(TopicPartition tp, ConsumerRecord<V> r) {
         if (records.containsKey(tp)) {
-            records.get(tp).add(v);
+            records.get(tp).add(r);
         } else {
-            ArrayList<V> list = new ArrayList<>();
-            list.add(v);
+            ArrayList<ConsumerRecord<V>> list = new ArrayList<>();
+            list.add(r);
             records.put(tp, list);
         }
     }
 
-    public List<V> get(TopicPartition partition) {
-        List<V> recs = this.records.get(partition);
-        if (recs == null)
-            return Collections.emptyList();
-        else
-            return Collections.unmodifiableList(recs);
+    public List<ConsumerRecord<V>> get(TopicPartition partition) {
+        List<ConsumerRecord<V>> recs = this.records.get(partition);
+        if (recs == null) return Collections.emptyList();
+        else return Collections.unmodifiableList(recs);
     }
 
     @Override
-    public Iterator<V> iterator() {
-        return new Iterator<V>() {
-            final Iterator<? extends Iterable<V>> iters = records.values().iterator();
-            Iterator<V> current;
+    public Iterator<ConsumerRecord<V>> iterator() {
+        return new Iterator<ConsumerRecord<V>>() {
+            final Iterator<? extends Iterable<ConsumerRecord<V>>> iters = records.values().iterator();
+            Iterator<ConsumerRecord<V>> current;
 
             @Override
             public boolean hasNext() {
                 while (current == null || !current.hasNext()) {
-                    if (iters.hasNext())
-                        current = iters.next().iterator();
-                    else
-                        return false;
+                    if (iters.hasNext()) current = iters.next().iterator();
+                    else return false;
                 }
                 return true;
             }
 
             @Override
-            public V next() {
+            public ConsumerRecord<V> next() {
                 return current.next();
             }
         };

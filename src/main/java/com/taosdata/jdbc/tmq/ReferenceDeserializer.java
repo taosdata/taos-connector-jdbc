@@ -54,9 +54,14 @@ public class ReferenceDeserializer<V> implements Deserializer<V> {
                 }
                 params = lists.toArray(new Param[0]);
             }
+        } catch (IntrospectionException e) {
+            throw new SQLException(this.getClass().getSimpleName() + " get BeanInfo error!", e);
+        }
 
-            for (Param param : params) {
-                    // string
+
+        for (Param param : params) {
+            try {
+                // string
                 if (param.clazz.isAssignableFrom(String.class)) {
                     String string = data.getString(param.name);
                     param.method.invoke(t, data.wasNull() ? null : string);
@@ -128,9 +133,10 @@ public class ReferenceDeserializer<V> implements Deserializer<V> {
                     byte[] bytes = data.getBytes(param.name);
                     param.method.invoke(t, data.wasNull() ? null : bytes);
                 }
+            } catch (IllegalAccessException | InvocationTargetException e) {
+                throw new SQLException(this.getClass().getSimpleName() + ": " + param.name
+                        + " through method:" + param.method.getName() +" get Data error: ", e);
             }
-        } catch (IllegalAccessException | IntrospectionException | InvocationTargetException e) {
-            throw new SQLException(this.getClass().getSimpleName() + " resultSet get Data error: ", e);
         }
         return t;
     }

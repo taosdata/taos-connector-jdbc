@@ -1,10 +1,7 @@
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
-import com.taosdata.jdbc.tmq.ConsumerRecords;
-import com.taosdata.jdbc.tmq.ResultBean;
-import com.taosdata.jdbc.tmq.TMQConstants;
-import com.taosdata.jdbc.tmq.TaosConsumer;
+import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -67,7 +64,8 @@ public class WSConsumerTest {
             consumer.subscribe(Collections.singletonList(topic));
             for (int i = 0; i < 10; i++) {
                 ConsumerRecords<Map<String, Object>> consumerRecords = consumer.poll(Duration.ofMillis(100));
-                for (Map<String, Object> map : consumerRecords) {
+                for (ConsumerRecord<Map<String, Object>> r : consumerRecords) {
+                    Map<String, Object> map = r.value();
                     Assert.assertEquals(7, map.size());
                 }
             }
@@ -114,7 +112,8 @@ public class WSConsumerTest {
             consumer.subscribe(Collections.singletonList(topic));
             for (int i = 0; i < 10; i++) {
                 ConsumerRecords<ResultBean> consumerRecords = consumer.poll(Duration.ofMillis(100));
-                for (ResultBean bean : consumerRecords) {
+                for (ConsumerRecord<ResultBean> r : consumerRecords) {
+                    ResultBean bean = r.value();
                     Assert.assertTrue(strings.contains(bean.getC3()));
                 }
             }
