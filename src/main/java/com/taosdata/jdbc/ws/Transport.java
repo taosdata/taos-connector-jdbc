@@ -23,7 +23,6 @@ public class Transport implements AutoCloseable {
     private final WSClient client;
     private final InFlightRequest inFlightRequest;
     private final int timeout;
-    private boolean auth;
 
     public Transport(WSFunction function, ConnectionParam param, InFlightRequest inFlightRequest) throws SQLException {
         this.client = WSClient.getInstance(param, function);
@@ -37,14 +36,6 @@ public class Transport implements AutoCloseable {
 
     public void setBinaryMessageHandler(Consumer<ByteBuffer> binaryMessageHandler) {
         client.setBinaryMessageHandler(binaryMessageHandler);
-    }
-
-    public boolean isAuth() {
-        return auth;
-    }
-
-    public void setAuth(boolean auth) {
-        this.auth = auth;
     }
 
     @SuppressWarnings("all")
@@ -92,23 +83,6 @@ public class Transport implements AutoCloseable {
             Thread.currentThread().interrupt();
             transport.close();
             throw new SQLException("create websocket connection has been Interrupted ", e);
-        }
-    }
-
-    public static void checkoutAuth(Transport transport, CountDownLatch latch, int requestTimeout) throws SQLException {
-        try {
-            if (!latch.await(requestTimeout, TimeUnit.MILLISECONDS)) {
-                transport.close();
-                throw new SQLException("auth timeout");
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            transport.close();
-            throw new SQLException("create websocket connection has been Interrupted ", e);
-        }
-        if (!transport.isAuth()) {
-            transport.close();
-            throw new SQLException("auth failure");
         }
     }
 }

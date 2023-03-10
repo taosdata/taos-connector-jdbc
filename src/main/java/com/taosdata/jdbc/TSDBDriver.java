@@ -29,7 +29,7 @@ public class TSDBDriver extends AbstractDriver {
     @Deprecated
     private static final String URL_PREFIX1 = "jdbc:TSDB://";
 
-    private static final String URL_PREFIX = "jdbc:TAOS://";
+    public static final String URL_PREFIX = "jdbc:TAOS://";
 
     /**
      * PRODUCT_NAME

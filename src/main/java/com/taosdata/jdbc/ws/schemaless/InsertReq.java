@@ -6,7 +6,7 @@ public class InsertReq extends Payload {
     // database
     private String db;
     private int protocol;
-    private int precision;
+    private String precision;
     private String data;
     private int ttl;
 
@@ -26,11 +26,11 @@ public class InsertReq extends Payload {
         this.protocol = protocol;
     }
 
-    public int getPrecision() {
+    public String getPrecision() {
         return precision;
     }
 
-    public void setPrecision(int precision) {
+    public void setPrecision(String precision) {
         this.precision = precision;
     }
 

@@ -16,7 +16,6 @@ import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.util.Base64;
 import java.util.Properties;
-import java.util.concurrent.CountDownLatch;
 import java.util.logging.Logger;
 
 public class RestfulDriver extends AbstractDriver {
@@ -105,31 +104,16 @@ public class RestfulDriver extends AbstractDriver {
     }
 
     private Connection getWSConnection(String url, ConnectionParam param, Properties props) throws SQLException {
-        CountDownLatch latch = new CountDownLatch(1);
         InFlightRequest inFlightRequest = new InFlightRequest(param.getRequestTimeout(), param.getMaxRequest());
         Transport transport = new Transport(WSFunction.WS, param, inFlightRequest);
 
         transport.setTextMessageHandler(message -> {
             JSONObject jsonObject = JSON.parseObject(message);
-            if (Action.CONN.getAction().equals(jsonObject.getString("action"))) {
-                if (Code.SUCCESS.getCode() != jsonObject.getInteger("code")) {
-                    transport.close();
-                } else {
-                    transport.setAuth(true);
-                    Response response = jsonObject.toJavaObject(ConnectResp.class);
-                    FutureResponse remove = inFlightRequest.remove(Action.CONN.getAction(), response.getReqId());
-                    if (null != remove) {
-                        remove.getFuture().complete(response);
-                    }
-                }
-                latch.countDown();
-            } else {
-                Action action = Action.of(jsonObject.getString("action"));
-                Response response = jsonObject.toJavaObject(action.getResponseClazz());
-                FutureResponse remove = inFlightRequest.remove(response.getAction(), response.getReqId());
-                if (null != remove) {
-                    remove.getFuture().complete(response);
-                }
+            Action action = Action.of(jsonObject.getString("action"));
+            Response response = jsonObject.toJavaObject(action.getResponseClazz());
+            FutureResponse remove = inFlightRequest.remove(response.getAction(), response.getReqId());
+            if (null != remove) {
+                remove.getFuture().complete(response);
             }
         });
         transport.setBinaryMessageHandler(byteBuffer -> {
@@ -150,9 +134,11 @@ public class RestfulDriver extends AbstractDriver {
         connectReq.setUser(param.getUser());
         connectReq.setPassword(param.getPassword());
         connectReq.setDb(param.getDatabase());
-        transport.send(new Request(Action.CONN.getAction(), connectReq));
+        ConnectResp auth = (ConnectResp) transport.send(new Request(Action.CONN.getAction(), connectReq));
 
-        Transport.checkoutAuth(transport, latch, param.getRequestTimeout());
+        if (Code.SUCCESS.getCode() != auth.getCode()) {
+            throw new SQLException("0x" + Integer.toHexString(auth.getCode()) + ":" + "auth failure:" + auth.getMessage());
+        }
 
         TaosGlobalConfig.setCharset(props.getProperty(TSDBDriver.PROPERTY_KEY_CHARSET));
         return new WSConnection(url, props, transport, param.getDatabase());
