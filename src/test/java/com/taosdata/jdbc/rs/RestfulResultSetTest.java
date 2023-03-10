@@ -256,7 +256,7 @@ public class RestfulResultSetTest {
         Object f6 = rs.getObject("f6");
         // taosAdapter return binary -> varchar
         Assert.assertEquals(String.class, f6.getClass());
-        Assert.assertEquals("abc", new String((byte[]) f6));
+        Assert.assertEquals("abc", f6);
 
         Object f7 = rs.getObject("f7");
         Assert.assertEquals(Short.class, f7.getClass());
