@@ -81,7 +81,7 @@ public class SchemalessTest {
 
         // when
 
-        writer.write(lines, SchemalessProtocolType.TELNET, SchemalessTimestampType.NOT_CONFIGURED);
+        writer.write(lines, SchemalessProtocolType.TELNET, SchemalessTimestampType.MILLI_SECONDS);
 
         // then
         Statement statement = connection.createStatement();
@@ -126,7 +126,7 @@ public class SchemalessTest {
                 "]";
 
         // when
-        writer.write(json, SchemalessProtocolType.JSON, SchemalessTimestampType.NOT_CONFIGURED);
+        writer.write(json, SchemalessProtocolType.JSON, SchemalessTimestampType.MILLI_SECONDS);
 
         // then
         Statement statement = connection.createStatement();
@@ -154,7 +154,7 @@ public class SchemalessTest {
         list.add("stb0_2 1626006833 4 host=host0 interface=eth0 id=\"special_name\"");
         // when
 
-        writer.write(list, SchemalessProtocolType.TELNET, SchemalessTimestampType.NOT_CONFIGURED);
+        writer.write(list, SchemalessProtocolType.TELNET, SchemalessTimestampType.MILLI_SECONDS);
 
         // then
         Statement statement = connection.createStatement();
