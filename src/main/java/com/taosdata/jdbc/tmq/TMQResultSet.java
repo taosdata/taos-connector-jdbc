@@ -50,6 +50,11 @@ public class TMQResultSet extends AbstractResultSet {
         isClosed = true;
     }
 
+    public boolean wasNull() throws SQLException {
+
+        return this.blockData.wasNull;
+    }
+
     public String getString(int columnIndex) throws SQLException {
         checkAvailability(columnIndex, this.columnMetaDataList.size());
 

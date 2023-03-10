@@ -57,7 +57,8 @@ public class TaosConsumerTest {
             for (int i = 0; i < 10; i++) {
                 ConsumerRecords<Map<String, Object>> consumerRecords = consumer.poll(Duration.ofMillis(100));
                 int count = 0;
-                for (Map<String, Object> map : consumerRecords) {
+                for (ConsumerRecord<Map<String, Object>> r : consumerRecords) {
+                    Map<String, Object> map = r.value();
                     count++;
                     Assert.assertEquals(6, map.size());
                 }
@@ -105,7 +106,8 @@ public class TaosConsumerTest {
             for (int i = 0; i < 10; i++) {
                 ConsumerRecords<ResultBean> consumerRecords = consumer.poll(Duration.ofMillis(100));
                 int count = 0;
-                for (ResultBean bean : consumerRecords) {
+                for (ConsumerRecord<ResultBean> r : consumerRecords) {
+                    ResultBean bean = r.value();
                     count++;
                     Assert.assertTrue(strings.contains(bean.getC3()));
                 }

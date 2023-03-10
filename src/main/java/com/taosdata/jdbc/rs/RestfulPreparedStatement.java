@@ -20,7 +20,7 @@ public class RestfulPreparedStatement extends RestfulStatement implements Prepar
 
     public RestfulPreparedStatement(RestfulConnection conn, String database, String sql) {
         super(conn, database);
-        this.rawSql = Utils.preprocessSql(sql);
+        this.rawSql = sql;
 
         int parameterCnt = 0;
         if (sql.contains("?")) {

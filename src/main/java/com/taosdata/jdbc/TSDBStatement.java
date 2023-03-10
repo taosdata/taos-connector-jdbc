@@ -43,9 +43,7 @@ public class TSDBStatement extends AbstractStatement {
 
             try {
                 return f.get(this.queryTimeout, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                throw new SQLException("failed to execute sql: " + sql + ", cause: " + e.getMessage(), e);
-            } catch (ExecutionException e) {
+            } catch (InterruptedException | ExecutionException e) {
                 throw new SQLException("failed to execute sql: " + sql + ", cause: " + e.getMessage(), e);
             } catch (TimeoutException e) {
                 f.cancel(true);
@@ -93,9 +91,7 @@ public class TSDBStatement extends AbstractStatement {
 
             try {
                 return f.get(this.queryTimeout, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                throw new SQLException("failed to execute sql: " + sql + ", cause: " + e.getMessage(), e);
-            } catch (ExecutionException e) {
+            } catch (InterruptedException | ExecutionException e) {
                 throw new SQLException("failed to execute sql: " + sql + ", cause: " + e.getMessage(), e);
             } catch (TimeoutException e) {
                 f.cancel(true);
@@ -158,9 +154,7 @@ public class TSDBStatement extends AbstractStatement {
 
             try {
                 return f.get(this.queryTimeout, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                throw new SQLException("failed to execute sql: " + sql + ", cause: " + e.getMessage(), e);
-            } catch (ExecutionException e) {
+            } catch (InterruptedException | ExecutionException e) {
                 throw new SQLException("failed to execute sql: " + sql + ", cause: " + e.getMessage(), e);
             } catch (TimeoutException e) {
                 f.cancel(true);

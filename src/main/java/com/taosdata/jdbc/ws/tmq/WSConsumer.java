@@ -104,8 +104,9 @@ public class WSConsumer<V> implements Consumer<V> {
                 int vGroupId = pollResp.getVgroupId();
                 TopicPartition tp = new TopicPartition(topic, dbName, vGroupId);
 
-                V v = deserializer.deserialize(rs);
-                records.put(tp, v);
+                V v = deserializer.deserialize(rs, topic, dbName);
+                ConsumerRecord<V> r = new ConsumerRecord<>(topic, dbName, vGroupId, v);
+                records.put(tp, r);
             }
         }
 

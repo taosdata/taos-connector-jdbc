@@ -8,7 +8,7 @@ import java.util.Map;
 
 public class MapDeserializer implements Deserializer<Map<String, Object>> {
     @Override
-    public Map<String, Object> deserialize(ResultSet data) throws SQLException {
+    public Map<String, Object> deserialize(ResultSet data, String topic, String dbName) throws SQLException {
         Map<String, Object> map = new HashMap<>();
 
         ResultSetMetaData metaData = data.getMetaData();

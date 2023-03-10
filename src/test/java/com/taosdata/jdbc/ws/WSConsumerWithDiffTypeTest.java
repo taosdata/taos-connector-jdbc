@@ -47,7 +47,8 @@ public class WSConsumerWithDiffTypeTest {
             consumer.subscribe(Collections.singletonList(topic));
             for (int i = 0; i < 10; i++) {
                 ConsumerRecords<Bean> consumerRecords = consumer.poll(Duration.ofMillis(100));
-                for (Bean bean : consumerRecords) {
+                for (ConsumerRecord<Bean> r : consumerRecords) {
+                    Bean bean = r.value();
                     Assert.assertEquals(1.0, bean.getC1(), 0.000001);
                     Assert.assertEquals(2.2, bean.getC2(), 0.000001);
                     Assert.assertEquals(1, bean.getC3());

@@ -40,7 +40,7 @@ public class TSDBResultSetBlockData {
 
     private List<ColumnMetaData> columnMetaDataList;
     private ArrayList<List<Object>> colData;
-    protected boolean wasNull;
+    public boolean wasNull;
 
     private int timestampPrecision;
 

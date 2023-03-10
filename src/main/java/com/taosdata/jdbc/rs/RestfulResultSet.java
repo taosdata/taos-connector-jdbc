@@ -90,7 +90,7 @@ public class RestfulResultSet extends AbstractResultSet {
             List<Object> row = new ArrayList<>();
             JSONArray jsonRow = data.getJSONArray(rowIndex);
             for (int colIndex = 0; colIndex < this.metaData.getColumnCount(); colIndex++) {
-                row.add(parseColumnData(jsonRow, colIndex, columns.get(colIndex).taos_type));
+                row.add(parseColumnData(jsonRow, colIndex, columns.get(colIndex)));
             }
             resultSet.add(row);
         }
@@ -115,7 +115,8 @@ public class RestfulResultSet extends AbstractResultSet {
         }
     }
 
-    private Object parseColumnData(JSONArray row, int colIndex, int taosType) throws SQLException {
+    private Object parseColumnData(JSONArray row, int colIndex, Field field) throws SQLException {
+        int taosType = field.taos_type;
         switch (taosType) {
             case TSDBConstants.TSDB_DATA_TYPE_NULL:
                 return null;
@@ -136,7 +137,12 @@ public class RestfulResultSet extends AbstractResultSet {
             case TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP:
                 return parseTimestampColumnData(row, colIndex);
             case TSDBConstants.TSDB_DATA_TYPE_BINARY:
-                return row.getString(colIndex) == null ? null : row.getString(colIndex).getBytes();
+                int type = field.type;
+                if (Types.BINARY == type) {
+                    return row.getString(colIndex) == null ? null : row.getString(colIndex).getBytes();
+                }else {
+                    return row.getString(colIndex) == null ? null : row.getString(colIndex);
+                }
             case TSDBConstants.TSDB_DATA_TYPE_NCHAR:
                 return row.getString(colIndex) == null ? null : row.getString(colIndex);
             case TSDBConstants.TSDB_DATA_TYPE_JSON:

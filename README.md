@@ -855,6 +855,8 @@ Please refer to: [JDBC example](https://github.com/taosdata/TDengine/tree/3.0/ex
 
 | taos-jdbcdriver version |                 major changes                  |
 |:-----------------------:|:----------------------------------------------:|
+|       3.1.0             |       JDBC REST connection supports subscription over WebSocket |
+|       3.0.1 - 3.0.4     |  fix the resultSet data is parsed incorrectly sometimes. 3.0.1 is compiled on JDK 11, you are advised to use other version in the JDK 8 environment    |
 |          3.0.0          |              Support TDengine 3.0              |
 |     2.0.39 - 2.0.40     | Add REST connection/request timeout parameters |
 |         2.0.38          |  JDBC REST connections add bulk pull function  |
