@@ -3,12 +3,9 @@ package com.taosdata.jdbc.ws.tmq;
 import com.taosdata.jdbc.common.Consumer;
 import com.taosdata.jdbc.common.ConsumerFactory;
 import com.taosdata.jdbc.common.ConsumerManager;
+import com.taosdata.jdbc.enums.ConnectionType;
 
 public class WSConsumerFactory implements ConsumerFactory {
-
-    private static final String CONNECTION_TYPE_WS = "ws";
-
-    private static final String CONNECTION_TYPE_WEBSOCKET = "websocket";
 
     static {
         ConsumerManager.register(new WSConsumerFactory());
@@ -16,11 +13,11 @@ public class WSConsumerFactory implements ConsumerFactory {
 
     @Override
     public boolean acceptsType(String type) {
-        return CONNECTION_TYPE_WS.equalsIgnoreCase(type) || CONNECTION_TYPE_WEBSOCKET.equalsIgnoreCase(type);
+        return ConnectionType.WS.getType().equalsIgnoreCase(type) || ConnectionType.WEBSOCKET.getType().equalsIgnoreCase(type);
     }
 
     @Override
-    public Consumer getConsumer() {
-        return new WSConsumer();
+    public Consumer<?> getConsumer() {
+        return new WSConsumer<>();
     }
 }

@@ -2,12 +2,22 @@ package com.taosdata.jdbc.enums;
 
 public enum SchemalessTimestampType {
     // Let the database decide
-    NOT_CONFIGURED,
-    HOURS,
-    MINUTES,
-    SECONDS,
-    MILLI_SECONDS,
-    MICRO_SECONDS,
-    NANO_SECONDS,
+    NOT_CONFIGURED(""),
+    HOURS("h"),
+    MINUTES("m"),
+    SECONDS("s"),
+    MILLI_SECONDS("ms"),
+    MICRO_SECONDS("u"),
+    NANO_SECONDS("ns"),
     ;
+
+    private String type;
+
+    SchemalessTimestampType(String type) {
+        this.type = type;
+    }
+
+    public String getType() {
+        return type;
+    }
 }

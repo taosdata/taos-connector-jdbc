@@ -3,6 +3,10 @@ package com.taosdata.jdbc.utils;
 import java.math.BigDecimal;
 
 public class UnsignedDataUtils {
+
+    private UnsignedDataUtils() {
+    }
+
     public static short parseUTinyInt(byte val) {
         return (short) (val & 0xff);
     }

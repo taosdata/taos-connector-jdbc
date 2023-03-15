@@ -41,8 +41,6 @@ public class ConsumerTest {
 
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.CONNECT_URL, url);
-//        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, "gw.us-central-1.gcp.cloud.tdengine.com");
-//        properties.setProperty(TMQConstants.CONNECT_TOKEN, "bb28ba585ffd654f46926cb6897baaaacf0aaed0");
         properties.setProperty(TMQConstants.CONNECT_TIMEOUT, "10000");
         properties.setProperty(TMQConstants.CONNECT_MESSAGE_TIMEOUT, "10000");
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");

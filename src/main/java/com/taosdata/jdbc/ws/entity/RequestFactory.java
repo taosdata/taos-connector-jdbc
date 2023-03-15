@@ -39,14 +39,6 @@ public class RequestFactory {
         return new Request(Action.FETCH.getAction(), fetchReq);
     }
 
-    public Request generateFetchJson(long id) {
-        long reqId = this.getId(Action.FETCH_JSON.getAction());
-        FetchReq fetchReq = new FetchReq();
-        fetchReq.setReqId(reqId);
-        fetchReq.setId(id);
-        return new Request(Action.FETCH_JSON.getAction(), fetchReq);
-    }
-
     public Request generateFetchBlock(long id) {
         FetchReq fetchReq = new FetchReq();
         fetchReq.setReqId(id);

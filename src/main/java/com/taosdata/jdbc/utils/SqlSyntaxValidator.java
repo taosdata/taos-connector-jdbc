@@ -15,6 +15,8 @@
 package com.taosdata.jdbc.utils;
 
 public class SqlSyntaxValidator {
+    private SqlSyntaxValidator() {
+    }
 
     public static boolean isUseSql(String sql) {
         return sql.trim().toLowerCase().startsWith("use");
