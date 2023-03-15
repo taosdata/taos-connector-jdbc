@@ -20,8 +20,10 @@ public class ConsumerParam {
             String url = properties.getProperty(TMQConstants.CONNECT_URL);
             StringUtils.parseUrl(url, properties);
         }
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, properties.getProperty(TMQConstants.CONNECT_USER, "root"));
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, properties.getProperty(TMQConstants.CONNECT_PASS, "taosdata"));
+        if (null != properties.getProperty(TMQConstants.CONNECT_USER))
+            properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, properties.getProperty(TMQConstants.CONNECT_USER));
+        if (null != properties.getProperty(TMQConstants.CONNECT_PASS))
+            properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, properties.getProperty(TMQConstants.CONNECT_PASS));
         if (null != properties.getProperty(TMQConstants.CONNECT_IP))
             properties.setProperty(TSDBDriver.PROPERTY_KEY_HOST, properties.getProperty(TMQConstants.CONNECT_IP));
         if (null != properties.getProperty(TMQConstants.CONNECT_PORT))

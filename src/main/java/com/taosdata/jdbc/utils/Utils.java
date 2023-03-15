@@ -27,10 +27,6 @@ public class Utils {
     private static final DateTimeFormatter microSecFormatter = new DateTimeFormatterBuilder().appendPattern("yyyy-MM-dd HH:mm:ss.SSSSSS").toFormatter();
     private static final DateTimeFormatter nanoSecFormatter = new DateTimeFormatterBuilder().appendPattern("yyyy-MM-dd HH:mm:ss.SSSSSSSSS").toFormatter();
 
-    /***** For processing inner subQueries *****/
-    private static final Pattern INNER_QUERY_PATTERN = Pattern.compile("FROM\\s+((\\(.+\\))\\s+SUB_QRY)", Pattern.CASE_INSENSITIVE);
-    private static final Pattern FROM_PATTERN = Pattern.compile("FROM\\s+(\\w+\\.\\w+)", Pattern.CASE_INSENSITIVE);
-
     public static Time parseTime(String timestampStr) throws DateTimeParseException {
         LocalDateTime dateTime = parseLocalDateTime(timestampStr);
         return dateTime != null ? Time.valueOf(dateTime.toLocalTime()) : null;

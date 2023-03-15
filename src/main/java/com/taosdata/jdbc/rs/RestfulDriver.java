@@ -20,7 +20,7 @@ import java.util.logging.Logger;
 
 public class RestfulDriver extends AbstractDriver {
 
-    private static final String URL_PREFIX = "jdbc:TAOS-RS://";
+    public static final String URL_PREFIX = "jdbc:TAOS-RS://";
 
     static {
         try {

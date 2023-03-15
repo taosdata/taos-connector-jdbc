@@ -7,6 +7,7 @@ import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.rs.RestfulDriver;
 import com.taosdata.jdbc.utils.HttpClientPoolUtil;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.ws.FutureResponse;
@@ -21,6 +22,7 @@ import com.taosdata.jdbc.ws.schemaless.InsertReq;
 import com.taosdata.jdbc.ws.schemaless.SchemalessAction;
 
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Properties;
@@ -39,33 +41,72 @@ public class SchemalessWriter {
     private String dbName;
     private ConnectionType type;
 
-    public SchemalessWriter(Connection connection) {
-        this.connection = connection;
+    public SchemalessWriter(Connection connection) throws SQLException {
+        if (connection instanceof TSDBConnection) {
+            this.connection = connection;
+        } else {
+            // url mast contain username password or cloudToken
+            DatabaseMetaData metaData = connection.getMetaData();
+            String url = metaData.getURL();
+            init(url, null, null, null, null, null);
+        }
     }
 
     public SchemalessWriter(String url) throws SQLException {
-        this(url, null, null, null);
+        init(url, null, null, null, null, null);
     }
 
-    public SchemalessWriter(String url, String username, String password, String db) throws SQLException {
-        String t = "jni";
-        if (!url.startsWith(TSDBDriver.URL_PREFIX)) {
-            t = "ws";
-        }
-        Properties properties = StringUtils.parseUrl(url, null);
-        String name = db != null ? db : properties.getProperty(TSDBDriver.PROPERTY_KEY_DBNAME);
-        String port = properties.getProperty(TSDBDriver.PROPERTY_KEY_PORT);
-        String host = properties.getProperty(TSDBDriver.PROPERTY_KEY_HOST);
-        String user = null != username ? username : properties.getProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        String pass = null != password ? password : properties.getProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
-        init(host, port, user, pass, name, t);
+    public SchemalessWriter(String url, String dbName) throws SQLException {
+        init(url, null, null, null, dbName, null);
+    }
+
+    public SchemalessWriter(String url, String cloudToken, String dbName) throws SQLException {
+        init(url, null, null, cloudToken, dbName, null);
+    }
+
+    public SchemalessWriter(String url, String username, String password, String dbName) throws SQLException {
+        init(url, username, password, null, dbName, null);
+    }
+
+    public SchemalessWriter(String url, String username, String password, String dbName, boolean useSSL) throws SQLException {
+        init(url, username, password, null, dbName, useSSL);
     }
 
     public SchemalessWriter(String host, String port, String user, String password, String dbName, String type) throws SQLException {
-        init(host, port, user, password, dbName, type);
+        init(host, port, user, password, dbName, null, type, false);
     }
 
-    private void init(String host, String port, String user, String password, String dbName, String type) throws SQLException {
+    public SchemalessWriter(String host, String port, String user, String password, String dbName, String type, boolean useSSL) throws SQLException {
+        init(host, port, user, password, dbName, null, type, useSSL);
+    }
+
+    private void init(String url, String user, String password, String cloudToken, String dbName, Boolean useSSL) throws SQLException {
+        String t;
+        if (url.startsWith(TSDBDriver.URL_PREFIX)) {
+            t = "jni";
+        } else if (url.startsWith(RestfulDriver.URL_PREFIX)) {
+            t = "ws";
+        } else {
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "unknown url：" + url);
+        }
+
+        Properties properties = StringUtils.parseUrl(url, null);
+        if (user != null)
+            properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, user);
+        if (password != null)
+            properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, password);
+        if (cloudToken != null)
+            properties.setProperty(TSDBDriver.PROPERTY_KEY_TOKEN, cloudToken);
+        if (dbName != null)
+            properties.setProperty(TSDBDriver.PROPERTY_KEY_DBNAME, dbName);
+        if (useSSL != null)
+            properties.setProperty(TSDBDriver.PROPERTY_KEY_USE_SSL, String.valueOf(useSSL));
+        ConnectionParam param = ConnectionParam.getParam(properties);
+
+        this.init(param.getHost(), param.getPort(), param.getUser(), param.getPassword(), param.getDatabase(), param.getCloudToken(), t, param.isUseSsl());
+    }
+
+    private void init(String host, String port, String user, String password, String dbName, String cloudToken, String type, boolean useSSL) throws SQLException {
         this.dbName = dbName;
         if (null == type || ConnectionType.JNI.getType().equalsIgnoreCase(type)) {
             this.type = ConnectionType.JNI;
@@ -79,8 +120,10 @@ public class SchemalessWriter {
             ConnectionParam param = new ConnectionParam.Builder(host, port)
                     .setUserAndPassword(user, password)
                     .setDatabase(dbName)
+                    .setCloudToken(cloudToken)
                     .setConnectionTimeout(connectTime)
                     .setRequestTimeout(timeout)
+                    .setUseSsl(useSSL)
                     .build();
             InFlightRequest inFlightRequest = new InFlightRequest(1000, 1);
             this.transport = new Transport(WSFunction.SCHEMALESS, param, inFlightRequest);
