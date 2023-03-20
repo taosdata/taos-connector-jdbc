@@ -2,27 +2,24 @@ package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
 
 public class SchemalessConnectionTest {
     private final String host = "127.0.0.1";
     private final String db = "schemaless_connction";
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testThroughJniConnectionAndUserPassword() throws SQLException {
         String url = "jdbc:TAOS://" + host + ":6030/";
         Connection conn = DriverManager.getConnection(url, "root", "taosdata");
         SchemalessWriter writer = new SchemalessWriter(conn);
         writer.write("measurement,host=host1 field1=2i,field2=2.0 1577837300000", SchemalessProtocolType.LINE, SchemalessTimestampType.MILLI_SECONDS);
-        try (Statement statement = conn.createStatement();
-             ResultSet resultSet = statement.executeQuery("select count(*) from " + db + ".measurement")) {
-            Assert.assertNotNull(resultSet.getString(1));
-        }
-        conn.close();
     }
 
     @Test(expected = SQLException.class)

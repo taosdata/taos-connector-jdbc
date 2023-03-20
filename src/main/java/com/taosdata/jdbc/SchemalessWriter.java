@@ -33,7 +33,7 @@ public class SchemalessWriter {
     private TSDBJNIConnector connector;
     // websocket
     private Transport transport;
-    private AtomicLong insertId = new AtomicLong(0);
+    private final AtomicLong insertId = new AtomicLong(0);
 
     // meta
     private String dbName;
@@ -48,6 +48,19 @@ public class SchemalessWriter {
             DatabaseMetaData metaData = connection.getMetaData();
             String url = metaData.getURL();
             init(url, null, null, null, null, null);
+        }
+    }
+
+    public SchemalessWriter(Connection connection, String dbName) throws SQLException {
+        if (connection instanceof TSDBConnection) {
+            this.type = ConnectionType.JNI;
+            this.connector = ((TSDBConnection) connection).getConnector();
+            selectDB(connector, dbName);
+        } else {
+            // use websocket schemaless insert through existing connection, url mast contain username password or cloudToken
+            DatabaseMetaData metaData = connection.getMetaData();
+            String url = metaData.getURL();
+            init(url, null, null, null, dbName, null);
         }
     }
 
