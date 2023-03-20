@@ -1,0 +1,151 @@
+package com.taosdata.jdbc;
+
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
+import com.taosdata.jdbc.annotation.CatalogRunner;
+import com.taosdata.jdbc.annotation.Description;
+import com.taosdata.jdbc.annotation.TestTarget;
+import com.taosdata.jdbc.enums.SchemalessProtocolType;
+import com.taosdata.jdbc.enums.SchemalessTimestampType;
+import com.taosdata.jdbc.utils.SpecifyAddress;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import java.sql.*;
+
+@RunWith(CatalogRunner.class)
+@TestTarget(alias = "Schemaless", author = "huolibo", version = "2.0.36")
+public class SchemalessRawInsertTest {
+    private static String host = "127.0.0.1";
+    private final String dbname = "test_schemaless_insert";
+    private Connection conn;
+
+    /**
+     * schemaless insert compatible with influxdb
+     *
+     * @throws SQLException execute error
+     */
+    @Test
+    @Description("line insert")
+    public void schemalessInsert() throws SQLException {
+        // given
+        String line = "measurement,host=host1 field1=2i,field2=2.0 1577837300000\n" +
+                "measurement,host=host1 field1=2i,field2=2.0 1577837400000\n" +
+                "measurement,host=host1 field1=2i,field2=2.0 1577837500000\n" +
+                "measurement,host=host1 field1=2i,field2=2.0 1577837600000";
+        // when
+        SchemalessWriter writer = new SchemalessWriter(conn);
+        int num = writer.writeRaw(line, SchemalessProtocolType.LINE, SchemalessTimestampType.MILLI_SECONDS);
+        Assert.assertEquals(4, num);
+        // then
+        Statement statement = conn.createStatement();
+        ResultSet rs = statement.executeQuery("select count(*) from measurement");
+        Assert.assertNotNull(rs);
+        ResultSetMetaData metaData = rs.getMetaData();
+        Assert.assertTrue(metaData.getColumnCount() > 0);
+        rs.next();
+        Assert.assertEquals(4, rs.getInt(1));
+        rs.close();
+        statement.close();
+    }
+
+    /**
+     * telnet insert compatible with opentsdb
+     *
+     * @throws SQLException execute error
+     */
+//    @Test
+    @Description("telnet insert")
+    public void telnetInsert() throws SQLException {
+        // given
+        String lines = "meters.current 1648432611249 10.3 location=California.SanFrancisco group=2\n" +
+                "meters.current 1648432611250 12.6 location=California.SanFrancisco group=2\n" +
+                "meters.current 1648432611249 10.8 location=California.LosAngeles group=3\n" +
+                "meters.current 1648432611250 11.3 location=California.LosAngeles group=3\n" +
+                "meters.voltage 1648432611249 219 location=California.SanFrancisco group=2\n" +
+                "meters.voltage 1648432611250 218 location=California.SanFrancisco group=2\n" +
+                "meters.voltage 1648432611249 221 location=California.LosAngeles group=3\n" +
+                "meters.voltage 1648432611250 217 location=California.LosAngeles group=3";
+
+        // when
+
+        SchemalessWriter writer = new SchemalessWriter(conn);
+        writer.writeRaw(lines, SchemalessProtocolType.TELNET, SchemalessTimestampType.MILLI_SECONDS);
+
+        // then
+        Statement statement = conn.createStatement();
+        ResultSet rs = statement.executeQuery("show tables");
+        Assert.assertNotNull(rs);
+        ResultSetMetaData metaData = rs.getMetaData();
+        Assert.assertTrue(metaData.getColumnCount() > 0);
+        int rowCnt = 0;
+        while (rs.next()) {
+            rowCnt++;
+        }
+        Assert.assertEquals(1, rowCnt);
+        rs.close();
+        statement.close();
+    }
+
+    /**
+     * json insert compatible with opentsdb json format
+     *
+     * @throws SQLException execute error
+     */
+//    @Test
+    @Description("json insert")
+    public void jsonInsert() throws SQLException {
+        // given
+        String json = "[{\"metric\": \"meters.current\", \"timestamp\": 1648432611249, \"value\": 10.3, \"tags\": " +
+                "{\"location\": \"California.SanFrancisco\", \"groupid\": 2 } }, {\"metric\": \"meters.voltage\", " +
+                "\"timestamp\": 1648432611249, \"value\": 219, \"tags\": {\"location\": \"California.LosAngeles\", " +
+                "\"groupid\": 1 } }, {\"metric\": \"meters.current\", \"timestamp\": 1648432611250, \"value\": 12.6, " +
+                "\"tags\": {\"location\": \"California.SanFrancisco\", \"groupid\": 2 } }, {\"metric\": \"meters.voltage\", " +
+                "\"timestamp\": 1648432611250, \"value\": 221, \"tags\": {\"location\": \"California.LosAngeles\", " +
+                "\"groupid\": 1 } }]";
+
+        // when
+        SchemalessWriter writer = new SchemalessWriter(conn);
+        writer.writeRaw(json, SchemalessProtocolType.JSON, SchemalessTimestampType.MILLI_SECONDS);
+
+        // then
+        Statement statement = conn.createStatement();
+        ResultSet rs = statement.executeQuery("show tables");
+        Assert.assertNotNull(rs);
+        ResultSetMetaData metaData = rs.getMetaData();
+        Assert.assertTrue(metaData.getColumnCount() > 0);
+        int rowCnt = 0;
+        while (rs.next()) {
+            rowCnt++;
+        }
+
+        Assert.assertEquals(((JSONArray) JSONObject.parse(json)).size(), rowCnt);
+        rs.close();
+        statement.close();
+    }
+
+    @Before
+    public void before() throws SQLException {
+        String url = SpecifyAddress.getInstance().getJniUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+        }
+        conn = DriverManager.getConnection(url);
+        Statement stmt = conn.createStatement();
+        stmt.execute("drop database if exists " + dbname);
+        stmt.execute("create database if not exists " + dbname + " precision 'ns'");
+        stmt.execute("use " + dbname);
+    }
+
+//    @After
+    public void after() {
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute("drop database if exists " + dbname);
+            conn.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+}

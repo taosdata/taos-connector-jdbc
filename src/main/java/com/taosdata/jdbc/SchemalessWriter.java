@@ -29,8 +29,6 @@ import java.util.Properties;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class SchemalessWriter {
-    protected Connection connection;
-
     // jni
     private TSDBJNIConnector connector;
     // websocket
@@ -43,9 +41,10 @@ public class SchemalessWriter {
 
     public SchemalessWriter(Connection connection) throws SQLException {
         if (connection instanceof TSDBConnection) {
-            this.connection = connection;
+            this.type = ConnectionType.JNI;
+            this.connector = ((TSDBConnection) connection).getConnector();
         } else {
-            // url mast contain username password or cloudToken
+            // use websocket schemaless insert through existing connection, url mast contain username password or cloudToken
             DatabaseMetaData metaData = connection.getMetaData();
             String url = metaData.getURL();
             init(url, null, null, null, null, null);
@@ -56,28 +55,20 @@ public class SchemalessWriter {
         init(url, null, null, null, null, null);
     }
 
-    public SchemalessWriter(String url, String dbName) throws SQLException {
-        init(url, null, null, null, dbName, null);
+    public SchemalessWriter(String url, String cloudToken) throws SQLException {
+        init(url, null, null, cloudToken, null, null);
     }
 
-    public SchemalessWriter(String url, String cloudToken, String dbName) throws SQLException {
-        init(url, null, null, cloudToken, dbName, null);
+    public SchemalessWriter(String url, String username, String password) throws SQLException {
+        init(url, username, password, null, null, null);
     }
 
     public SchemalessWriter(String url, String username, String password, String dbName) throws SQLException {
         init(url, username, password, null, dbName, null);
     }
 
-    public SchemalessWriter(String url, String username, String password, String dbName, boolean useSSL) throws SQLException {
-        init(url, username, password, null, dbName, useSSL);
-    }
-
-    public SchemalessWriter(String host, String port, String user, String password, String dbName, String type) throws SQLException {
-        init(host, port, user, password, dbName, null, type, false);
-    }
-
-    public SchemalessWriter(String host, String port, String user, String password, String dbName, String type, boolean useSSL) throws SQLException {
-        init(host, port, user, password, dbName, null, type, useSSL);
+    public SchemalessWriter(String url, String user, String password, String cloudToken, String dbName, Boolean useSSL) throws SQLException {
+        init(url, user, password, cloudToken, dbName, useSSL);
     }
 
     private void init(String url, String user, String password, String cloudToken, String dbName, Boolean useSSL) throws SQLException {
@@ -104,6 +95,18 @@ public class SchemalessWriter {
         ConnectionParam param = ConnectionParam.getParam(properties);
 
         this.init(param.getHost(), param.getPort(), param.getUser(), param.getPassword(), param.getDatabase(), param.getCloudToken(), t, param.isUseSsl());
+    }
+
+    public SchemalessWriter(String host, String port, String cloudToken, String dbName, Boolean useSSL) throws SQLException {
+        init(host, port, null, null, dbName, cloudToken, "ws", useSSL);
+    }
+
+    public SchemalessWriter(String host, String port, String user, String password, String dbName, String type) throws SQLException {
+        init(host, port, user, password, dbName, null, type, false);
+    }
+
+    public SchemalessWriter(String host, String port, String user, String password, String dbName, String type, Boolean useSSL) throws SQLException {
+        init(host, port, user, password, dbName, null, type, useSSL);
     }
 
     private void init(String host, String port, String user, String password, String dbName, String cloudToken, String type, boolean useSSL) throws SQLException {
@@ -160,41 +163,51 @@ public class SchemalessWriter {
      * @throws SQLException execute exception
      */
     public void write(String[] lines, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType) throws SQLException {
-        write(lines, protocolType, timestampType, null, 0);
+        write(lines, protocolType, timestampType, null, null, null);
     }
 
-    public void write(String[] lines, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, String name, int ttl) throws SQLException {
-        if (null != connection) {
-            TSDBConnection tsdbConnection = (TSDBConnection) connection;
-            tsdbConnection.getConnector().insertLines(lines, protocolType, timestampType);
-        } else {
-            switch (type) {
-                case JNI:
-                    connector.insertLines(lines, protocolType, timestampType);
-                    break;
-                case WS: {
-                    for (String line : lines) {
-                        InsertReq insertReq = new InsertReq();
-                        insertReq.setReqId(insertId.getAndIncrement());
-                        insertReq.setProtocol(protocolType.ordinal());
-                        insertReq.setPrecision(timestampType.getType());
-                        if (name == null) {
-                            insertReq.setDb(dbName);
-                        } else {
-                            insertReq.setDb(name);
-                        }
-                        insertReq.setTtl(ttl);
-                        insertReq.setData(line);
-                        CommonResp response = (CommonResp) transport.send(new Request(SchemalessAction.INSERT.getAction(), insertReq));
-                        if (Code.SUCCESS.getCode() != response.getCode()) {
-                            throw new SQLException("0x" + Integer.toHexString(response.getCode()) + ":" + response.getMessage());
-                        }
-                    }
-                    break;
+    public void write(String[] lines, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, String dbName, Integer ttl, Long reqId) throws SQLException {
+        switch (type) {
+            case JNI: {
+                if (null != dbName && (this.dbName == null || !this.dbName.endsWith(dbName))) {
+                    selectDB(connector, dbName);
                 }
-                default:
-                    // nothing
+                if (null == ttl && null == reqId) {
+                    connector.insertLines(lines, protocolType, timestampType);
+                } else if (null == reqId) {
+                    connector.insertLinesWithTtl(lines, protocolType, timestampType, ttl);
+                } else if (null == ttl) {
+                    connector.insertLinesWithReqId(lines, protocolType, timestampType, reqId);
+                } else {
+                    connector.insertLinesWithTtlAndReqId(lines, protocolType, timestampType, ttl, reqId);
+                }
+                break;
             }
+            case WS: {
+                for (String line : lines) {
+                    InsertReq insertReq = new InsertReq();
+                    insertReq.setReqId(insertId.getAndIncrement());
+                    insertReq.setProtocol(protocolType.ordinal());
+                    insertReq.setPrecision(timestampType.getType());
+                    if (dbName == null) {
+                        insertReq.setDb(this.dbName);
+                    } else {
+                        insertReq.setDb(dbName);
+                    }
+                    insertReq.setData(line);
+                    if (ttl != null)
+                        insertReq.setTtl(ttl);
+                    if (reqId != null)
+                        insertReq.setReqId(reqId);
+                    CommonResp response = (CommonResp) transport.send(new Request(SchemalessAction.INSERT.getAction(), insertReq));
+                    if (Code.SUCCESS.getCode() != response.getCode()) {
+                        throw new SQLException("0x" + Integer.toHexString(response.getCode()) + ":" + response.getMessage());
+                    }
+                }
+                break;
+            }
+            default:
+                // nothing
         }
     }
 
@@ -210,11 +223,6 @@ public class SchemalessWriter {
         write(new String[]{line}, protocolType, timestampType);
     }
 
-    // only valid in websocket connection
-    public void write(String line, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, String dbName, int ttl) throws SQLException {
-        write(new String[]{line}, protocolType, timestampType, dbName, ttl);
-    }
-
     /**
      * batch schemaless lines write to db with list
      *
@@ -226,5 +234,58 @@ public class SchemalessWriter {
     public void write(List<String> lines, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType) throws SQLException {
         String[] strings = lines.toArray(new String[0]);
         write(strings, protocolType, timestampType);
+    }
+
+    public int writeRaw(String line, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType) throws SQLException {
+        return this.writeRaw(line, protocolType, timestampType, null, null, null);
+    }
+
+    public int writeRaw(String line, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, String dbName, Integer ttl, Long reqId) throws SQLException {
+        switch (type) {
+            case JNI: {
+                if (null != dbName && (this.dbName == null || !this.dbName.endsWith(dbName))) {
+                    selectDB(connector, dbName);
+                }
+                if (null == ttl && null == reqId) {
+                    return connector.insertRaw(line, protocolType, timestampType);
+                } else if (null == reqId) {
+                    return connector.insertRawWithTtl(line, protocolType, timestampType, ttl);
+                } else if (null == ttl) {
+                    return connector.insertRawWithReqId(line, protocolType, timestampType, reqId);
+                } else {
+                    return connector.insertRawWithTtlAndReqId(line, protocolType, timestampType, ttl, reqId);
+                }
+            }
+            case WS: {
+                InsertReq insertReq = new InsertReq();
+                insertReq.setReqId(insertId.getAndIncrement());
+                insertReq.setProtocol(protocolType.ordinal());
+                insertReq.setPrecision(timestampType.getType());
+                if (dbName == null) {
+                    insertReq.setDb(this.dbName);
+                } else {
+                    insertReq.setDb(dbName);
+                }
+                insertReq.setData(line);
+                if (ttl != null)
+                    insertReq.setTtl(ttl);
+                if (reqId != null)
+                    insertReq.setReqId(reqId);
+                CommonResp response = (CommonResp) transport.send(new Request(SchemalessAction.INSERT.getAction(), insertReq));
+                if (Code.SUCCESS.getCode() != response.getCode()) {
+                    throw new SQLException("0x" + Integer.toHexString(response.getCode()) + ":" + response.getMessage());
+                }
+                // websocket don't return the num of schemaless insert
+                return 0;
+            }
+            default:
+                // nothing
+                return 0;
+        }
+    }
+
+    private void selectDB(TSDBJNIConnector connector, String dbName) throws SQLException {
+        long pSql = connector.executeQuery("use " + dbName);
+        connector.freeResultSet(pSql);
     }
 }
