@@ -103,8 +103,19 @@ public class HttpClientPoolUtil {
         return responseBody;
     }
 
-    /*** execute POST request ***/
     public static String execute(String uri, String data, String auth) throws SQLException {
+        return execute(uri, data, auth, null);
+    }
+
+    /*** execute POST request ***/
+    public static String execute(String uri, String data, String auth, Long reqId) throws SQLException {
+
+        if (reqId != null) {
+            if (uri.contains("?"))
+                uri = uri + "&reqId=" + reqId;
+            else
+                uri = uri + "?reqId=" + reqId;
+        }
 
         HttpEntityEnclosingRequestBase method = (HttpEntityEnclosingRequestBase) getRequest(uri, HttpPost.METHOD_NAME);
         method.setHeader(HTTP.CONTENT_TYPE, "text/plain");

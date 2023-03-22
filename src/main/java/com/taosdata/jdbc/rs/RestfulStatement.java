@@ -38,12 +38,28 @@ public class RestfulStatement extends AbstractStatement {
         return resultSet;
     }
 
+    public ResultSet executeQuery(String sql, Long reqId) throws SQLException {
+        if (isClosed())
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
+
+        execute(sql, reqId);
+        return resultSet;
+    }
+
     @Override
     public int executeUpdate(String sql) throws SQLException {
         if (isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
 
         execute(sql);
+        return affectedRows;
+    }
+
+    public int executeUpdate(String sql, Long reqId) throws SQLException {
+        if (isClosed())
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
+
+        execute(sql, reqId);
         return affectedRows;
     }
 
@@ -57,13 +73,18 @@ public class RestfulStatement extends AbstractStatement {
 
     @Override
     public boolean execute(String sql) throws SQLException {
+        return execute(sql, (Long) null);
+    }
+
+    @Override
+    public boolean execute(String sql, Long reqId) throws SQLException {
         if (isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
 
         // 如果执行了use操作应该将当前Statement的catalog设置为新的database
         boolean result = true;
 
-        String response = HttpClientPoolUtil.execute(getUrl(), sql, this.conn.getAuth());
+        String response = HttpClientPoolUtil.execute(getUrl(), sql, this.conn.getAuth(), reqId);
         JSONObject jsonObject = null;
         try {
             jsonObject = JSON.parseObject(response);
