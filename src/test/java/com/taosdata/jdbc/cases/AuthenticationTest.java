@@ -25,7 +25,7 @@ public class AuthenticationTest {
             DriverManager.getConnection(url);
         } catch (SQLException e) {
             Assert.assertEquals(TSDBErrorNumbers.ERROR_USER_IS_REQUIRED, e.getErrorCode());
-            Assert.assertEquals("ERROR (2319): user is required", e.getMessage());
+            Assert.assertEquals("ERROR (0x2319): user is required", e.getMessage());
         }
     }
 
@@ -39,7 +39,7 @@ public class AuthenticationTest {
             DriverManager.getConnection(url);
         } catch (SQLException e) {
             Assert.assertEquals(TSDBErrorNumbers.ERROR_USER_IS_REQUIRED, e.getErrorCode());
-            Assert.assertEquals("ERROR (2319): user is required", e.getMessage());
+            Assert.assertEquals("ERROR (0x2319): user is required", e.getMessage());
         }
     }
 
@@ -55,7 +55,7 @@ public class AuthenticationTest {
             DriverManager.getConnection(url);
         } catch (SQLException e) {
             Assert.assertEquals(TSDBErrorNumbers.ERROR_PASSWORD_IS_REQUIRED, e.getErrorCode());
-            Assert.assertEquals("ERROR (231a): password is required", e.getMessage());
+            Assert.assertEquals("ERROR (0x231a): password is required", e.getMessage());
         }
     }
 
@@ -71,7 +71,7 @@ public class AuthenticationTest {
             DriverManager.getConnection(url);
         } catch (SQLException e) {
             Assert.assertEquals(TSDBErrorNumbers.ERROR_PASSWORD_IS_REQUIRED, e.getErrorCode());
-            Assert.assertEquals("ERROR (231a): password is required", e.getMessage());
+            Assert.assertEquals("ERROR (0x231a): password is required", e.getMessage());
         }
     }
 
