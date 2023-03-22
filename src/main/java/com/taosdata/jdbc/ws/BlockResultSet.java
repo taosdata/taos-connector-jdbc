@@ -28,14 +28,14 @@ import static com.taosdata.jdbc.utils.UnsignedDataUtils.*;
 
 public class BlockResultSet extends AbstractWSResultSet {
 
-    public BlockResultSet(Statement statement, Transport transport, RequestFactory factory,
+    public BlockResultSet(Statement statement, Transport transport,
                           QueryResp response, String database) throws SQLException {
-        super(statement, transport, factory, response, database);
+        super(statement, transport, response, database);
     }
 
     @Override
     public List<List<Object>> fetchJsonData() throws SQLException {
-        Request blockRequest = factory.generateFetchBlock(queryId);
+        Request blockRequest = RequestFactory.generateFetchBlock(queryId);
         FetchBlockResp resp = (FetchBlockResp) transport.send(blockRequest);
         ByteBuffer buffer = resp.getBuffer();
         List<List<Object>> list = new ArrayList<>();

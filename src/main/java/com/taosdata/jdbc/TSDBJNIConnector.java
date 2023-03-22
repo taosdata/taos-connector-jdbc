@@ -92,9 +92,18 @@ public class TSDBJNIConnector {
      * Execute DML/DDL operation
      */
     public long executeQuery(String sql) throws SQLException {
+        return this.executeQuery(sql, null);
+    }
+
+    private native long executeQueryImp(byte[] sqlBytes, long connection);
+
+    public long executeQuery(String sql, Long reqId) throws SQLException {
         long pSql = 0L;
         try {
-            pSql = this.executeQueryImp(sql.getBytes(TaosGlobalConfig.getCharset()), this.taos);
+            if (null == reqId)
+                pSql = this.executeQueryImp(sql.getBytes(TaosGlobalConfig.getCharset()), this.taos);
+            else
+                pSql = this.executeQueryWithReqId(sql.getBytes(TaosGlobalConfig.getCharset()), this.taos, reqId);
             taosInfo.stmt_count_increment();
         } catch (UnsupportedEncodingException e) {
             this.freeResultSetImp(this.taos, pSql);
@@ -121,7 +130,7 @@ public class TSDBJNIConnector {
             throw TSDBError.createSQLException(code, msg);
         }
 
-        // Try retrieving result set for the executed SQL using the current connection pointer. 
+        // Try retrieving result set for the executed SQL using the current connection pointer.
         pSql = this.getResultSetImp(this.taos, pSql);
         // if pSql == 0L that means resultset is closed
         isResultsetClosed = (pSql == TSDBConstants.JNI_NULL_POINTER);
@@ -129,7 +138,7 @@ public class TSDBJNIConnector {
         return pSql;
     }
 
-    private native long executeQueryImp(byte[] sqlBytes, long connection);
+    private native long executeQueryWithReqId(byte[] sqlBytes, long connection, long reqId);
 
     /**
      * Get recent error code by connection
@@ -249,7 +258,17 @@ public class TSDBJNIConnector {
     /******************************************************************************************************/
     // NOTE: parameter binding
     public long prepareStmt(String sql) throws SQLException {
-        long stmt = prepareStmtImp(sql.getBytes(), this.taos);
+        return this.prepareStmt(sql, null);
+    }
+
+    private native long prepareStmtImp(byte[] sql, long con);
+
+    public long prepareStmt(String sql, Long reqId) throws SQLException {
+        long stmt;
+        if (null == reqId)
+            stmt = prepareStmtImp(sql.getBytes(), this.taos);
+        else
+            stmt = prepareStmtWithReqId(sql.getBytes(), this.taos, reqId);
 
         if (stmt == TSDBConstants.JNI_CONNECTION_NULL) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_JNI_CONNECTION_NULL, "connection already closed");
@@ -267,7 +286,7 @@ public class TSDBJNIConnector {
         return stmt;
     }
 
-    private native long prepareStmtImp(byte[] sql, long con);
+    private native long prepareStmtWithReqId(byte[] sql, long con, long reqId);
 
     public void setBindTableName(long stmt, String tableName) throws SQLException {
         int code = setBindTableNameImp(stmt, tableName, this.taos);
@@ -402,7 +421,7 @@ public class TSDBJNIConnector {
     private native SchemalessResp schemalessInsertRawWithReqId(long conn, String line, int type, int precision, long reqId);
 
 
-    public int insertRawWithTtl(String line, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, int  ttl) throws SQLException {
+    public int insertRawWithTtl(String line, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, int ttl) throws SQLException {
         if (null == line)
             throw TSDBError.createSQLException(ERROR_INVALID_VARIABLE);
 

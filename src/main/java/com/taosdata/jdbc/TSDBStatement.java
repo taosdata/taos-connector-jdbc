@@ -36,10 +36,14 @@ public class TSDBStatement extends AbstractStatement {
     }
 
     public ResultSet executeQuery(String sql) throws SQLException {
+        return executeQuery(sql, null);
+    }
+
+    public ResultSet executeQuery(String sql, Long reqId) throws SQLException {
         if (queryTimeout > 0) {
             ExecutorService executor = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
                     new ArrayBlockingQueue<>(1), Executors.defaultThreadFactory(), new ThreadPoolExecutor.CallerRunsPolicy());
-            Future<ResultSet> f = executor.submit(() -> executeQueryImpl(sql));
+            Future<ResultSet> f = executor.submit(() -> executeQueryImpl(sql, reqId));
 
             try {
                 return f.get(this.queryTimeout, TimeUnit.SECONDS);
@@ -52,11 +56,11 @@ public class TSDBStatement extends AbstractStatement {
                 executor.shutdownNow();
             }
         } else {
-            return executeQueryImpl(sql);
+            return executeQueryImpl(sql, reqId);
         }
     }
 
-    private ResultSet executeQueryImpl(String sql) throws SQLException {
+    private ResultSet executeQueryImpl(String sql, Long reqId) throws SQLException {
         synchronized (this) {
             if (isClosed()) {
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
@@ -69,7 +73,7 @@ public class TSDBStatement extends AbstractStatement {
             // we use this pSql and invoke the isUpdateQuery(long pSql) method to decide .
             // but the insert sql is already executed in database.
             //execute query
-            long pSql = this.connection.getConnector().executeQuery(sql);
+            long pSql = this.connection.getConnector().executeQuery(sql, reqId);
             // if pSql is create/insert/update/delete/alter SQL
             if (this.connection.getConnector().isUpdateQuery(pSql)) {
                 this.connection.getConnector().freeResultSet(pSql);
@@ -83,11 +87,15 @@ public class TSDBStatement extends AbstractStatement {
     }
 
     public int executeUpdate(String sql) throws SQLException {
+        return executeUpdate(sql, (Long) null);
+    }
+
+    public int executeUpdate(String sql, Long reqId) throws SQLException {
         if (queryTimeout > 0) {
             ExecutorService executor = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
                     new ArrayBlockingQueue<>(1), Executors.defaultThreadFactory(), new ThreadPoolExecutor.CallerRunsPolicy());
 
-            Future<Integer> f = executor.submit(() -> executeUpdateImpl(sql));
+            Future<Integer> f = executor.submit(() -> executeUpdateImpl(sql, reqId));
 
             try {
                 return f.get(this.queryTimeout, TimeUnit.SECONDS);
@@ -100,11 +108,11 @@ public class TSDBStatement extends AbstractStatement {
                 executor.shutdownNow();
             }
         } else {
-            return executeUpdateImpl(sql);
+            return executeUpdateImpl(sql, reqId);
         }
     }
 
-    private int executeUpdateImpl(String sql) throws SQLException {
+    private int executeUpdateImpl(String sql, Long reqId) throws SQLException {
 
         synchronized (this) {
             if (isClosed())
@@ -112,7 +120,7 @@ public class TSDBStatement extends AbstractStatement {
             if (this.resultSet != null && !this.resultSet.isClosed())
                 this.resultSet.close();
 
-            long pSql = this.connection.getConnector().executeQuery(sql);
+            long pSql = this.connection.getConnector().executeQuery(sql, reqId);
             // if pSql is create/insert/update/delete/alter SQL
             if (!this.connection.getConnector().isUpdateQuery(pSql)) {
                 this.connection.getConnector().freeResultSet(pSql);
@@ -146,11 +154,15 @@ public class TSDBStatement extends AbstractStatement {
     }
 
     public boolean execute(String sql) throws SQLException {
+        return execute(sql, (Long) null);
+    }
+
+    public boolean execute(String sql, Long reqId) throws SQLException {
         if (queryTimeout > 0) {
             ExecutorService executor = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
                     new ArrayBlockingQueue<>(1), Executors.defaultThreadFactory(), new ThreadPoolExecutor.CallerRunsPolicy());
 
-            Future<Boolean> f = executor.submit(() -> executeImpl(sql));
+            Future<Boolean> f = executor.submit(() -> executeImpl(sql, reqId));
 
             try {
                 return f.get(this.queryTimeout, TimeUnit.SECONDS);
@@ -163,11 +175,11 @@ public class TSDBStatement extends AbstractStatement {
                 executor.shutdownNow();
             }
         } else {
-            return executeImpl(sql);
+            return executeImpl(sql, reqId);
         }
     }
 
-    public boolean executeImpl(String sql) throws SQLException {
+    public boolean executeImpl(String sql, Long reqId) throws SQLException {
         synchronized (this) {
             // check if closed
             if (isClosed()) {
@@ -177,7 +189,7 @@ public class TSDBStatement extends AbstractStatement {
                 this.resultSet.close();
 
             // execute query
-            long pSql = this.connection.getConnector().executeQuery(sql);
+            long pSql = this.connection.getConnector().executeQuery(sql, reqId);
             // if pSql is create/insert/update/delete/alter SQL
             if (this.connection.getConnector().isUpdateQuery(pSql)) {
                 this.affectedRows = this.connection.getConnector().getAffectedRows(pSql);
