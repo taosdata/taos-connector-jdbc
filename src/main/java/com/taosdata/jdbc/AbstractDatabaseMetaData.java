@@ -3,17 +3,33 @@ package com.taosdata.jdbc;
 import com.taosdata.jdbc.enums.DataType;
 import com.taosdata.jdbc.utils.StringUtils;
 
+import java.io.IOException;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 public abstract class AbstractDatabaseMetaData extends WrapperImpl implements DatabaseMetaData {
 
-    private final static String PRODUCT_NAME = "TDengine";
-    private final static String PRODUCT_VERSION = "3.0.0.0";
-    private final static String DRIVER_VERSION = "3.0.0";
-    private final static int DRIVER_MAJAR_VERSION = 3;
-    private final static int DRIVER_MINOR_VERSION = 0;
+    private static final String PRODUCT_NAME ;
+    private static final String PRODUCT_VERSION ;
+    private static final String DRIVER_VERSION ;
+    private static final int DRIVER_MAJAR_VERSION ;
+    private static final int DRIVER_MINOR_VERSION ;
+
+    static {
+        Properties props = System.getProperties();
+        try {
+            props.load(AbstractDatabaseMetaData.class.getClassLoader().getResourceAsStream("version.properties"));
+        } catch (IOException e) {
+            //ignore
+        }
+        PRODUCT_NAME = props.getProperty("PRODUCT_NAME");
+        PRODUCT_VERSION = props.getProperty("PRODUCT_VERSION");
+        DRIVER_VERSION = props.getProperty("DRIVER_VERSION");
+        DRIVER_MAJAR_VERSION = Integer.parseInt(DRIVER_VERSION.split("\\.")[0]);
+        DRIVER_MINOR_VERSION = Integer.parseInt(DRIVER_VERSION.split("\\.")[1]);
+    }
 
     private String precision = TSDBConstants.DEFAULT_PRECISION;
 
