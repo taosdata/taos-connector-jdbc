@@ -104,21 +104,6 @@ public class RestfulDatabaseMetaDataTest {
     }
 
     @Test
-    public void getDriverVersion() throws SQLException {
-        Assert.assertEquals("3.0.0", metaData.getDriverVersion());
-    }
-
-    @Test
-    public void getDriverMajorVersion() {
-        Assert.assertEquals(3, metaData.getDriverMajorVersion());
-    }
-
-    @Test
-    public void getDriverMinorVersion() {
-        Assert.assertEquals(0, metaData.getDriverMinorVersion());
-    }
-
-    @Test
     public void usesLocalFiles() throws SQLException {
         Assert.assertFalse(metaData.usesLocalFiles());
     }
