@@ -17,6 +17,10 @@ public abstract class AbstractStatement extends WrapperImpl implements Statement
     @Override
     public abstract int executeUpdate(String sql) throws SQLException;
 
+    public abstract ResultSet executeQuery(String sql, Long reqId) throws SQLException;
+
+    public abstract int executeUpdate(String sql, Long reqId) throws SQLException;
+
     @Override
     public abstract void close() throws SQLException;
 
@@ -106,6 +110,8 @@ public abstract class AbstractStatement extends WrapperImpl implements Statement
 
     @Override
     public abstract boolean execute(String sql) throws SQLException;
+
+    public abstract boolean execute(String sql, Long reqId) throws SQLException;
 
     @Override
     public abstract ResultSet getResultSet() throws SQLException;

@@ -79,16 +79,16 @@ public class TSDBError {
 
         if (errorCode > 0x2300 && errorCode < 0x2350)
             // JDBC exception's error number is less than 0x2350
-            return new SQLException("ERROR (" + Integer.toHexString(errorCode) + "): " + message, "", errorCode);
+            return new SQLException("ERROR (0x" + Integer.toHexString(errorCode) + "): " + message, "", errorCode);
         if (errorCode > 0x2350 && errorCode < 0x2400)
             // JNI exception's error number is large than 0x2350
-            return new SQLException("JNI ERROR (" + Integer.toHexString(errorCode) + "): " + message, "", errorCode);
-        return new SQLException("TDengine ERROR (" + Integer.toHexString(errorCode) + "): " + message, "", errorCode);
+            return new SQLException("JNI ERROR (0x" + Integer.toHexString(errorCode) + "): " + message, "", errorCode);
+        return new SQLException("TDengine ERROR (0x" + Integer.toHexString(errorCode) + "): " + message, "", errorCode);
     }
 
     public static RuntimeException createRuntimeException(int errorCode, Throwable t) {
         String message = TSDBErrorMap.get(errorCode);
-        return new RuntimeException("ERROR (" + Integer.toHexString(errorCode) + "): " + message, t);
+        return new RuntimeException("ERROR (0x" + Integer.toHexString(errorCode) + "): " + message, t);
     }
 
     public static SQLWarning createSQLWarning(String message) {

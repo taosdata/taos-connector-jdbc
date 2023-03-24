@@ -12,6 +12,8 @@ import java.sql.SQLWarning;
 import java.util.List;
 import java.util.Properties;
 
+import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_INVALID_VARIABLE;
+
 /**
  * JNI connector
  */
@@ -90,9 +92,18 @@ public class TSDBJNIConnector {
      * Execute DML/DDL operation
      */
     public long executeQuery(String sql) throws SQLException {
+        return this.executeQuery(sql, null);
+    }
+
+    private native long executeQueryImp(byte[] sqlBytes, long connection);
+
+    public long executeQuery(String sql, Long reqId) throws SQLException {
         long pSql = 0L;
         try {
-            pSql = this.executeQueryImp(sql.getBytes(TaosGlobalConfig.getCharset()), this.taos);
+            if (null == reqId)
+                pSql = this.executeQueryImp(sql.getBytes(TaosGlobalConfig.getCharset()), this.taos);
+            else
+                pSql = this.executeQueryWithReqId(sql.getBytes(TaosGlobalConfig.getCharset()), this.taos, reqId);
             taosInfo.stmt_count_increment();
         } catch (UnsupportedEncodingException e) {
             this.freeResultSetImp(this.taos, pSql);
@@ -119,7 +130,7 @@ public class TSDBJNIConnector {
             throw TSDBError.createSQLException(code, msg);
         }
 
-        // Try retrieving result set for the executed SQL using the current connection pointer. 
+        // Try retrieving result set for the executed SQL using the current connection pointer.
         pSql = this.getResultSetImp(this.taos, pSql);
         // if pSql == 0L that means resultset is closed
         isResultsetClosed = (pSql == TSDBConstants.JNI_NULL_POINTER);
@@ -127,7 +138,7 @@ public class TSDBJNIConnector {
         return pSql;
     }
 
-    private native long executeQueryImp(byte[] sqlBytes, long connection);
+    private native long executeQueryWithReqId(byte[] sqlBytes, long connection, long reqId);
 
     /**
      * Get recent error code by connection
@@ -244,10 +255,20 @@ public class TSDBJNIConnector {
 
     private native int closeConnectionImp(long connection);
 
- /******************************************************************************************************/
+    /******************************************************************************************************/
     // NOTE: parameter binding
     public long prepareStmt(String sql) throws SQLException {
-        long stmt = prepareStmtImp(sql.getBytes(), this.taos);
+        return this.prepareStmt(sql, null);
+    }
+
+    private native long prepareStmtImp(byte[] sql, long con);
+
+    public long prepareStmt(String sql, Long reqId) throws SQLException {
+        long stmt;
+        if (null == reqId)
+            stmt = prepareStmtImp(sql.getBytes(), this.taos);
+        else
+            stmt = prepareStmtWithReqId(sql.getBytes(), this.taos, reqId);
 
         if (stmt == TSDBConstants.JNI_CONNECTION_NULL) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_JNI_CONNECTION_NULL, "connection already closed");
@@ -265,7 +286,7 @@ public class TSDBJNIConnector {
         return stmt;
     }
 
-    private native long prepareStmtImp(byte[] sql, long con);
+    private native long prepareStmtWithReqId(byte[] sql, long con, long reqId);
 
     public void setBindTableName(long stmt, String tableName) throws SQLException {
         int code = setBindTableNameImp(stmt, tableName, this.taos);
@@ -327,6 +348,10 @@ public class TSDBJNIConnector {
     // NOTE: schemaless-lines
     public void insertLines(String[] lines, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType) throws SQLException {
         long pSql = schemalessInsertImp(lines, this.taos, protocolType.ordinal(), timestampType.ordinal());
+        releaseSchemalessInsert(pSql);
+    }
+
+    private void releaseSchemalessInsert(long pSql) throws SQLException {
         try {
             if (pSql == TSDBConstants.JNI_CONNECTION_NULL) {
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_JNI_CONNECTION_NULL);
@@ -345,7 +370,84 @@ public class TSDBJNIConnector {
         }
     }
 
+    //    DLL_EXPORT TAOS_RES *taos_schemaless_insert(TAOS *taos, char *lines[], int numLines, int protocol, int precision);
     private native long schemalessInsertImp(String[] lines, long conn, int type, int precision);
+
+    public void insertLinesWithReqId(String[] lines, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, long reqId) throws SQLException {
+        long pSql = schemalessInsertWithReqId(this.taos, lines, protocolType.ordinal(), timestampType.ordinal(), reqId);
+        releaseSchemalessInsert(pSql);
+    }
+
+    private native long schemalessInsertWithReqId(long conn, String[] lines, int type, int precision, long reqId);
+
+    public void insertLinesWithTtl(String[] lines, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, int ttl) throws SQLException {
+        long pSql = schemalessInsertWithTtl(this.taos, lines, protocolType.ordinal(), timestampType.ordinal(), ttl);
+        releaseSchemalessInsert(pSql);
+    }
+
+    private native long schemalessInsertWithTtl(long conn, String[] lines, int type, int precision, int ttl);
+
+    public void insertLinesWithTtlAndReqId(String[] lines, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, int ttl, long reqId) throws SQLException {
+        long pSql = schemalessInsertWithTtlAndReqId(this.taos, lines, protocolType.ordinal(), timestampType.ordinal(), ttl, reqId);
+        releaseSchemalessInsert(pSql);
+    }
+
+    //    DLL_EXPORT TAOS_RES *taos_schemaless_insert_ttl_with_reqid(TAOS *taos, char *lines[], int numLines, int protocol,
+    //                                                               int precision, int32_t ttl, int64_t reqid);
+    private native long schemalessInsertWithTtlAndReqId(long conn, String[] lines, int type, int precision, int ttl, long reqId);
+
+    public int insertRaw(String line, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType) throws SQLException {
+        if (null == line)
+            throw TSDBError.createSQLException(ERROR_INVALID_VARIABLE);
+
+        SchemalessResp resp = schemalessInsertRaw(this.taos, line, protocolType.ordinal(), timestampType.ordinal());
+        if (TSDBConstants.JNI_SUCCESS != resp.getCode())
+            throw TSDBError.createSQLException(resp.getCode(), resp.getMsg());
+        return resp.getTotalRows();
+    }
+
+    private native SchemalessResp schemalessInsertRaw(long conn, String line, int type, int precision);
+
+    public int insertRawWithReqId(String line, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, long reqId) throws SQLException {
+        if (null == line)
+            throw TSDBError.createSQLException(ERROR_INVALID_VARIABLE);
+
+        SchemalessResp resp = schemalessInsertRawWithReqId(this.taos, line, protocolType.ordinal(), timestampType.ordinal(), reqId);
+        if (TSDBConstants.JNI_SUCCESS != resp.getCode())
+            throw TSDBError.createSQLException(resp.getCode(), resp.getMsg());
+        return resp.getTotalRows();
+    }
+
+    private native SchemalessResp schemalessInsertRawWithReqId(long conn, String line, int type, int precision, long reqId);
+
+
+    public int insertRawWithTtl(String line, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, int ttl) throws SQLException {
+        if (null == line)
+            throw TSDBError.createSQLException(ERROR_INVALID_VARIABLE);
+
+        SchemalessResp resp = schemalessInsertRawWithTtl(this.taos, line, protocolType.ordinal(), timestampType.ordinal(), ttl);
+        if (TSDBConstants.JNI_SUCCESS != resp.getCode())
+            throw TSDBError.createSQLException(resp.getCode(), resp.getMsg());
+        return resp.getTotalRows();
+    }
+
+    private native SchemalessResp schemalessInsertRawWithTtl(long conn, String line, int type, int precision, int ttl);
+
+    public int insertRawWithTtlAndReqId(String line, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, int ttl, long reqId) throws SQLException {
+        if (null == line)
+            throw TSDBError.createSQLException(ERROR_INVALID_VARIABLE);
+
+        SchemalessResp resp = schemalessInsertRawWithTtlAndReqId(this.taos, line, protocolType.ordinal(), timestampType.ordinal(), ttl, reqId);
+        if (TSDBConstants.JNI_SUCCESS != resp.getCode())
+            throw TSDBError.createSQLException(resp.getCode(), resp.getMsg());
+        return resp.getTotalRows();
+    }
+
+    //    DLL_EXPORT TAOS_RES *taos_schemaless_insert_raw_ttl_with_reqid(TAOS *taos, char *lines, int len, int32_t *totalRows,
+    //                                                                   int protocol, int precision, int32_t ttl, int64_t reqid);
+    private native SchemalessResp schemalessInsertRawWithTtlAndReqId(long conn, String line, int type, int precision, int ttl, long reqId);
+
+    /******************** VGroupID ************************/
 
     public int getTableVGroupID(String db, String table) throws SQLException {
         VGroupIDResp resp = getTableVgID(this.taos, db, table, new VGroupIDResp());

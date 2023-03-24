@@ -18,8 +18,8 @@ import java.util.List;
 public abstract class AbstractWSResultSet extends AbstractResultSet {
     protected final Statement statement;
     protected final Transport transport;
-    protected final RequestFactory factory;
     protected final long queryId;
+    protected final long reqId;
 
     protected volatile boolean isClosed;
     // meta
@@ -34,12 +34,12 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
     protected int rowIndex = 0;
     private boolean isCompleted;
 
-    protected AbstractWSResultSet(Statement statement, Transport transport, RequestFactory factory,
+    protected AbstractWSResultSet(Statement statement, Transport transport,
                                QueryResp response, String database) throws SQLException {
         this.statement = statement;
         this.transport = transport;
-        this.factory = factory;
         this.queryId = response.getId();
+        this.reqId = response.getReqId();
         columnNames = Arrays.asList(response.getFieldsNames());
         for (int i = 0; i < response.getFieldsCount(); i++) {
             String colName = response.getFieldsNames()[i];
@@ -74,7 +74,7 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
             return true;
         }
 
-        Request request = factory.generateFetch(queryId);
+        Request request = RequestFactory.generateFetch(queryId, reqId);
         FetchResp fetchResp = (FetchResp)transport.send(request);
         if (Code.SUCCESS.getCode() != fetchResp.getCode()) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, fetchResp.getMessage());

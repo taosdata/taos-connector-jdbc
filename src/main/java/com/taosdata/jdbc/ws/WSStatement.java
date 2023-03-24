@@ -4,6 +4,7 @@ import com.taosdata.jdbc.AbstractStatement;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
+import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.utils.SqlSyntaxValidator;
 import com.taosdata.jdbc.ws.entity.*;
 
@@ -15,33 +16,39 @@ public class WSStatement extends AbstractStatement {
     private final Transport transport;
     private String database;
     private final Connection connection;
-    private final RequestFactory factory;
 
     private boolean closed;
     private ResultSet resultSet;
 
-    public WSStatement(Transport transport, String database, Connection connection, RequestFactory factory) {
+    public WSStatement(Transport transport, String database, Connection connection) {
         this.transport = transport;
         this.database = database;
         this.connection = connection;
-        this.factory = factory;
     }
 
     @Override
     public ResultSet executeQuery(String sql) throws SQLException {
+        return executeQuery(sql, null);
+    }
+
+    public ResultSet executeQuery(String sql, Long reqId) throws SQLException {
         if (isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
 
-        this.execute(sql);
+        this.execute(sql, reqId);
         return this.resultSet;
     }
 
     @Override
     public int executeUpdate(String sql) throws SQLException {
+        return this.executeUpdate(sql, (Long) null);
+    }
+
+    public int executeUpdate(String sql, Long reqId) throws SQLException {
         if (isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
 
-        this.execute(sql);
+        this.execute(sql, reqId);
         return affectedRows;
     }
 
@@ -57,10 +64,16 @@ public class WSStatement extends AbstractStatement {
 
     @Override
     public boolean execute(String sql) throws SQLException {
+        return this.execute(sql, (Long) null);
+    }
+
+    public boolean execute(String sql, Long reqId) throws SQLException {
         if (isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
 
-        Request request = factory.generateQuery(sql);
+        if (null == reqId)
+            reqId = ReqId.getReqID();
+        Request request = RequestFactory.generateQuery(sql, reqId);
         Response response = transport.send(request);
 
         QueryResp queryResp = (QueryResp) response;
@@ -77,7 +90,7 @@ public class WSStatement extends AbstractStatement {
             this.affectedRows = queryResp.getAffectedRows();
             return false;
         } else {
-            this.resultSet = new BlockResultSet(this, this.transport, this.factory, queryResp, this.database);
+            this.resultSet = new BlockResultSet(this, this.transport, queryResp, this.database);
             this.affectedRows = -1;
             return true;
         }

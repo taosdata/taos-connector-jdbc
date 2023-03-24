@@ -115,7 +115,7 @@ public class HttpClientPoolUtilTest {
         } else {
             url = "http://" + specifyHost + ":6041/rest/sql";
         }
-        String result = HttpClientPoolUtil.execute(url, sql, token);
+        String result = HttpClientPoolUtil.execute(url, sql, token, null);
         JSONObject resultJson = JSON.parseObject(result);
         if (resultJson.getIntValue("code") == 0) {
 //            HttpClientPoolUtil.reset();
