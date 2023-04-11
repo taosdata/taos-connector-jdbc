@@ -120,7 +120,7 @@ public class ConsumerCommitTest {
             if (connection != null) {
                 if (statement != null) {
                     statement.executeUpdate("drop topic if exists " + topic);
-                    statement.executeUpdate("drop database if exists " + dbName);
+                    statement.executeUpdate("drop database if exists " + dbName + " WAL_RETENTION_PERIOD 3650");
                     statement.close();
                 }
                 connection.close();
