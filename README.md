@@ -891,6 +891,3 @@ Please refer to: [JDBC example](https://github.com/taosdata/TDengine/tree/3.0/ex
 
 For other questions, please refer to [FAQ](https://docs.taosdata.com/train-faq/faq/)
 
-## API Reference
-
-[taos-jdbcdriver doc](https://docs.taosdata.com/api/taos-jdbcdriver)
