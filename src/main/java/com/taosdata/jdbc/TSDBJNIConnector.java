@@ -266,6 +266,7 @@ public class TSDBJNIConnector {
     public long prepareStmt(String sql, Long reqId) throws SQLException {
         long stmt;
         if (null == reqId)
+            // jni error code can not return to java
             stmt = prepareStmtImp(sql.getBytes(), this.taos);
         else
             stmt = prepareStmtWithReqId(sql.getBytes(), this.taos, reqId);
@@ -291,7 +292,7 @@ public class TSDBJNIConnector {
     public void setBindTableName(long stmt, String tableName) throws SQLException {
         int code = setBindTableNameImp(stmt, tableName, this.taos);
         if (code != TSDBConstants.JNI_SUCCESS) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "failed to set table name, reason: " + stmtErrorMsgImp(stmt, this.taos));
+            throw TSDBError.createSQLException(code, "failed to set table name, reason: " + stmtErrorMsgImp(stmt, this.taos));
         }
     }
 
@@ -300,7 +301,7 @@ public class TSDBJNIConnector {
     public void setBindTableNameAndTags(long stmt, String tableName, int numOfTags, ByteBuffer tags, ByteBuffer typeList, ByteBuffer lengthList, ByteBuffer nullList) throws SQLException {
         int code = setTableNameTagsImp(stmt, tableName, numOfTags, tags.array(), typeList.array(), lengthList.array(), nullList.array(), this.taos);
         if (code != TSDBConstants.JNI_SUCCESS) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "failed to bind table name and corresponding tags, reason: " + stmtErrorMsgImp(stmt, this.taos));
+            throw TSDBError.createSQLException(code, "failed to bind table name and corresponding tags, reason: " + stmtErrorMsgImp(stmt, this.taos));
         }
     }
 
@@ -309,7 +310,7 @@ public class TSDBJNIConnector {
     public void bindColumnDataArray(long stmt, ByteBuffer colDataList, ByteBuffer lengthList, ByteBuffer isNullList, int type, int bytes, int numOfRows, int columnIndex) throws SQLException {
         int code = bindColDataImp(stmt, colDataList.array(), lengthList.array(), isNullList.array(), type, bytes, numOfRows, columnIndex, this.taos);
         if (code != TSDBConstants.JNI_SUCCESS) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "failed to bind column data, reason: " + stmtErrorMsgImp(stmt, this.taos));
+            throw TSDBError.createSQLException(code, "failed to bind column data, reason: " + stmtErrorMsgImp(stmt, this.taos));
         }
     }
 
@@ -318,14 +319,14 @@ public class TSDBJNIConnector {
     public void executeBatch(long stmt) throws SQLException {
         int code = executeBatchImp(stmt, this.taos);
         if (code != TSDBConstants.JNI_SUCCESS) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "failed to execute batch bind, reason: " + stmtErrorMsgImp(stmt, this.taos));
+            throw TSDBError.createSQLException(code, "failed to execute batch bind, reason: " + stmtErrorMsgImp(stmt, this.taos));
         }
     }
 
     public void addBatch(long stmt) throws SQLException {
         int code = addBatchImp(stmt, this.taos);
         if (code != TSDBConstants.JNI_SUCCESS) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, stmtErrorMsgImp(stmt, this.taos));
+            throw TSDBError.createSQLException(code, stmtErrorMsgImp(stmt, this.taos));
         }
     }
 
@@ -336,7 +337,7 @@ public class TSDBJNIConnector {
     public void closeBatch(long stmt) throws SQLException {
         int code = closeStmt(stmt, this.taos);
         if (code != TSDBConstants.JNI_SUCCESS) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "failed to close batch bind");
+            throw TSDBError.createSQLException(code, "failed to close batch bind: " + stmtErrorMsgImp(stmt, this.taos));
         }
     }
 

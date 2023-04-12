@@ -132,7 +132,7 @@ public class TaosConsumerTest {
         connection = DriverManager.getConnection(url, properties);
         statement = connection.createStatement();
         statement.execute("drop database if exists " + dbName);
-        statement.execute("create database if not exists " + dbName);
+        statement.execute("create database if not exists " + dbName + " WAL_RETENTION_PERIOD 3650");
         statement.execute("use " + dbName);
         statement.execute("create stable if not exists " + superTable
                 + " (ts timestamp, c1 int, c2 float, c3 nchar(10), c4 binary(10), c5 bool) tags(t1 int)");
