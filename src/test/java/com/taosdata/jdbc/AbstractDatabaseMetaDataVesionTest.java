@@ -55,11 +55,13 @@ public class AbstractDatabaseMetaDataVesionTest {
 
     @Test
     public void testWebsocket() throws IOException, SQLException {
-        String url = SpecifyAddress.getInstance().getJniUrl();
+        String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata&batchfetch=true";
+            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
         }
-        connection = DriverManager.getConnection(url);
+        Properties config = new Properties();
+        config.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
+        connection = DriverManager.getConnection(url, config);
         DatabaseMetaData metaData = connection.getMetaData();
         Properties properties = new Properties();
         properties.load(AbstractDatabaseMetaDataVesionTest.class.getClassLoader().getResourceAsStream("version.properties"));

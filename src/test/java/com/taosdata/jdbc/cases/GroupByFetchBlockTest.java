@@ -1,11 +1,13 @@
 package com.taosdata.jdbc.cases;
 
+import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.sql.*;
+import java.util.Properties;
 
 public class GroupByFetchBlockTest {
     private static Connection connection;
@@ -29,9 +31,11 @@ public class GroupByFetchBlockTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata&batchfetch=true";
+            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
         }
-        connection = DriverManager.getConnection(url);
+        Properties config = new Properties();
+        config.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
+        connection = DriverManager.getConnection(url, config);
         statement = connection.createStatement();
         statement.execute("drop database if exists " + dbName);
         statement.execute("create database " + dbName);

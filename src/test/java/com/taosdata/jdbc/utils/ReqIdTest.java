@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.utils;
 
 import com.taosdata.jdbc.AbstractStatement;
+import com.taosdata.jdbc.TSDBDriver;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -11,6 +12,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 public class ReqIdTest {
     String host = "127.0.0.1";
@@ -65,12 +67,14 @@ public class ReqIdTest {
 
     @Test
     public void testQueryWSWithReqId() throws SQLException {
-        String url = SpecifyAddress.getInstance().getJniUrl();
+        String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata&batchfetch=true";
+            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
         }
+        Properties config = new Properties();
+        config.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
 
-        try (Connection connection = DriverManager.getConnection(url);
+        try (Connection connection = DriverManager.getConnection(url, config);
              AbstractStatement statement = (AbstractStatement) connection.createStatement();
              ResultSet rs = statement.executeQuery("show databases", ReqId.getReqID())) {
             List<String> list = new ArrayList<>();

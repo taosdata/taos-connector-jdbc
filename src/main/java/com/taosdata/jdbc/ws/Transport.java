@@ -2,12 +2,15 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
+import com.taosdata.jdbc.common.SerializeBlock;
 import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.CompletableFutureTimeout;
 import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.entity.Response;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.sql.SQLException;
 import java.util.concurrent.*;
@@ -22,7 +25,7 @@ public class Transport implements AutoCloseable {
 
     private final WSClient client;
     private final InFlightRequest inFlightRequest;
-    private final int timeout;
+    private long timeout;
 
     public Transport(WSFunction function, ConnectionParam param, InFlightRequest inFlightRequest) throws SQLException {
         this.client = WSClient.getInstance(param, function);
@@ -36,6 +39,10 @@ public class Transport implements AutoCloseable {
 
     public void setBinaryMessageHandler(Consumer<ByteBuffer> binaryMessageHandler) {
         client.setBinaryMessageHandler(binaryMessageHandler);
+    }
+
+    public void setTimeout(long timeout) {
+        this.timeout = timeout;
     }
 
     @SuppressWarnings("all")
@@ -54,6 +61,35 @@ public class Transport implements AutoCloseable {
             response = responseFuture.get();
         } catch (InterruptedException | ExecutionException e) {
             inFlightRequest.remove(request.getAction(), request.id());
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());
+        }
+        return response;
+    }
+
+    public Response send(String action, long reqId, long stmtId, long type, byte[] rawData) throws SQLException {
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        try {
+            buffer.write(SerializeBlock.longToBytes(reqId));
+            buffer.write(SerializeBlock.longToBytes(stmtId));
+            buffer.write(SerializeBlock.longToBytes(type));
+            buffer.write(rawData);
+        } catch (IOException e) {
+            throw new SQLException("data serialize error!", e);
+        }
+
+        Response response = null;
+        CompletableFuture<Response> completableFuture = new CompletableFuture<>();
+        try {
+            inFlightRequest.put(new FutureResponse(action, reqId, completableFuture));
+            client.send(buffer.toByteArray());
+        } catch (InterruptedException | TimeoutException e) {
+            throw new SQLException(e);
+        }
+        CompletableFuture<Response> responseFuture = CompletableFutureTimeout.orTimeout(completableFuture, timeout, TimeUnit.MILLISECONDS);
+        try {
+            response = responseFuture.get();
+        } catch (InterruptedException | ExecutionException e) {
+            inFlightRequest.remove(action, reqId);
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());
         }
         return response;
