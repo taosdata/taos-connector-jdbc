@@ -26,7 +26,7 @@ public class ReqIdTest {
 
     @Test
     public void testGetReqID() {
-        System.out.println(ReqId.getReqID());
+        ReqId.getReqID();
     }
 
     @Test

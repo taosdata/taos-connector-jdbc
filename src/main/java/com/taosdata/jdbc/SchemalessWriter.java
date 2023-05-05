@@ -159,6 +159,7 @@ public class SchemalessWriter {
             connectReq.setReqId(1);
             connectReq.setUser(param.getUser());
             connectReq.setPassword(param.getPassword());
+            connectReq.setDb(dbName);
             CommonResp auth = (CommonResp) transport.send(new Request(SchemalessAction.CONN.getAction(), connectReq));
 
             if (Code.SUCCESS.getCode() != auth.getCode()) {
@@ -202,11 +203,6 @@ public class SchemalessWriter {
                     insertReq.setReqId(insertId.getAndIncrement());
                     insertReq.setProtocol(protocolType.ordinal());
                     insertReq.setPrecision(timestampType.getType());
-                    if (dbName == null) {
-                        insertReq.setDb(this.dbName);
-                    } else {
-                        insertReq.setDb(dbName);
-                    }
                     insertReq.setData(line);
                     if (ttl != null)
                         insertReq.setTtl(ttl);
@@ -274,11 +270,6 @@ public class SchemalessWriter {
                 insertReq.setReqId(insertId.getAndIncrement());
                 insertReq.setProtocol(protocolType.ordinal());
                 insertReq.setPrecision(timestampType.getType());
-                if (dbName == null) {
-                    insertReq.setDb(this.dbName);
-                } else {
-                    insertReq.setDb(dbName);
-                }
                 insertReq.setData(line);
                 if (ttl != null)
                     insertReq.setTtl(ttl);
