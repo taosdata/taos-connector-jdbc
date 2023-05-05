@@ -68,21 +68,18 @@ public class PreparedStatementBatchInsertJNITest {
     }
 
     @Before
-    public void before() {
-        try {
-            String url = SpecifyAddress.getInstance().getJniUrl();
-            if (url == null) {
-                url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
-            }
-            conn = DriverManager.getConnection(url);
-            Statement stmt = conn.createStatement();
-            stmt.execute("drop database if exists " + dbname);
-            stmt.execute("create database if not exists " + dbname);
-            stmt.execute("use " + dbname);
-            stmt.execute("create table meters(ts timestamp, current float, voltage int, phase int) tags(groupId int)");
-        } catch (SQLException e) {
-            e.printStackTrace();
+    public void before() throws SQLException {
+        String url = SpecifyAddress.getInstance().getJniUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
         }
+        conn = DriverManager.getConnection(url);
+        Statement stmt = conn.createStatement();
+        stmt.execute("drop database if exists " + dbname);
+        stmt.execute("create database if not exists " + dbname);
+        stmt.execute("use " + dbname);
+        stmt.execute("create table meters(ts timestamp, current float, voltage int, phase int) tags(groupId int)");
+
     }
 
     @After
@@ -93,7 +90,7 @@ public class PreparedStatementBatchInsertJNITest {
             stmt.close();
             conn.close();
         } catch (SQLException e) {
-            e.printStackTrace();
+           // ignore
         }
     }
 

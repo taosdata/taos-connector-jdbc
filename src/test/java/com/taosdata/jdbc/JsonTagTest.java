@@ -294,7 +294,7 @@ public class JsonTagTest {
         ResultSet resultSet = statement.executeQuery("select jtag->'tag1' from jsons1_4");
         resultSet.next();
         String string = resultSet.getString(1);
-        Assert.assertEquals("null",string);
+        Assert.assertEquals("null", string);
         close(resultSet);
     }
 
@@ -1180,25 +1180,21 @@ public class JsonTagTest {
     }
 
     @BeforeClass
-    public static void beforeClass() {
+    public static void beforeClass() throws SQLException {
 
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
             url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
         }
-        try {
-            Properties properties = new Properties();
-            properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
-            properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
-            connection = DriverManager.getConnection(url, properties);
-            statement = connection.createStatement();
-            statement.execute("drop database if exists " + dbName);
-            statement.execute("create database if not exists " + dbName);
-            statement.execute("use " + dbName);
-            statement.execute(superSql);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        Properties properties = new Properties();
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
+        connection = DriverManager.getConnection(url, properties);
+        statement = connection.createStatement();
+        statement.execute("drop database if exists " + dbName);
+        statement.execute("create database if not exists " + dbName);
+        statement.execute("use " + dbName);
+        statement.execute(superSql);
     }
 
     @AfterClass
