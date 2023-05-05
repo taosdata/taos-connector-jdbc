@@ -55,9 +55,8 @@ public class SerializeBlock {
 
         int bitMapLen = bitMapLen(rows);
         ByteArrayOutputStream data = new ByteArrayOutputStream();
-
-        for (ColumnInfo column : list) {
-            int colIndex = column.getIndex() - 1;
+        for (int colIndex = 0; colIndex < list.size(); colIndex++) {
+            ColumnInfo column = list.get(colIndex);
             switch (column.getType()) {
                 case TSDB_DATA_TYPE_BOOL: {
                     colInfoData[colIndex * 5] = TSDB_DATA_TYPE_BOOL;
@@ -310,7 +309,7 @@ public class SerializeBlock {
                         } else {
                             String v = (String) rowData.get(rowIndex);
                             for (int i = 0; i < Integer.BYTES; i++) {
-                                index[offset + i] = (byte) (length >> (8 * i) & 0xFF);
+                                index[offset + i] = (byte) ((length >> (8 * i)) & 0xFF);
                             }
                             short len = (short) (v.length() * 4);
                             tmp.write((byte) (len & 0xFF));
@@ -319,7 +318,7 @@ public class SerializeBlock {
                             for (int i : t) {
                                 tmp.write(intToBytes(i));
                             }
-                            length += v.length() * 4 + Short.BYTES;
+                            length += t.length * 4 + Short.BYTES;
                         }
                     }
                     byte[] array = intToBytes(length);

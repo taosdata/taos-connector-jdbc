@@ -31,7 +31,7 @@ public class InFlightRequest {
             String action = value.getAction();
             futureMap.put(action, new ConcurrentHashMap<>());
         }
-        for (SchemalessAction value : SchemalessAction.values()){
+        for (SchemalessAction value : SchemalessAction.values()) {
             String action = value.getAction();
             futureMap.put(action, new ConcurrentHashMap<>());
         }
@@ -66,5 +66,10 @@ public class InFlightRequest {
                 })
                 .parallel().map(FutureResponse::getFuture)
                 .forEach(e -> e.completeExceptionally(new Exception("close all inFlightRequest")));
+    }
+
+    public boolean hasInFlightRequest() {
+        return futureMap.keySet().stream()
+                .filter(k -> !futureMap.get(k).isEmpty()).findAny().orElse(null) != null;
     }
 }

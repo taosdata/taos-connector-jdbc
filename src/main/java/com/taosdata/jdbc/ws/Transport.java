@@ -26,6 +26,7 @@ public class Transport implements AutoCloseable {
     private final WSClient client;
     private final InFlightRequest inFlightRequest;
     private long timeout;
+    private boolean closed = false;
 
     public Transport(WSFunction function, ConnectionParam param, InFlightRequest inFlightRequest) throws SQLException {
         this.client = WSClient.getInstance(param, function);
@@ -100,11 +101,12 @@ public class Transport implements AutoCloseable {
     }
 
     public boolean isClosed() {
-        return client.isClosed();
+        return closed;
     }
 
     @Override
     public void close() {
+        closed = true;
         inFlightRequest.close();
         client.close();
     }
@@ -119,6 +121,22 @@ public class Transport implements AutoCloseable {
             Thread.currentThread().interrupt();
             transport.close();
             throw new SQLException("create websocket connection has been Interrupted ", e);
+        }
+    }
+
+    public void shutdown() {
+        closed = true;
+        if (inFlightRequest.hasInFlightRequest()) {
+            CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                try {
+                    TimeUnit.MILLISECONDS.sleep(timeout);
+                } catch (InterruptedException e) {
+                    // ignore
+                }
+            });
+            future.thenRun(this::close);
+        } else {
+            close();
         }
     }
 }

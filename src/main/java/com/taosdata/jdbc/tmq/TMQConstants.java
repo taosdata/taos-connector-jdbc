@@ -74,11 +74,6 @@ public class TMQConstants {
     public static final String CONNECT_PASS = "td.connect.pass";
 
     /**
-     * databaseName option
-     */
-    public static final String CONNECT_DB = "td.connect.db";
-
-    /**
      * connect type websocket or jni, default is jni
      */
     public static final String CONNECT_TYPE = "td.connect.type";
@@ -136,7 +131,6 @@ public class TMQConstants {
         configSet.add(CONNECT_USER);
         configSet.add(CONNECT_PASS);
         configSet.add(CONNECT_PORT);
-        configSet.add(CONNECT_DB);
         configSet.add(EXPERIMENTAL_SNAPSHOT_ENABLE);
     }
 }

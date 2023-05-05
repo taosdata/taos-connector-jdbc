@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.ws;
 
+import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.TSDBParameterMetaData;
@@ -7,6 +8,7 @@ import com.taosdata.jdbc.common.ColumnInfo;
 import com.taosdata.jdbc.common.SerializeBlock;
 import com.taosdata.jdbc.enums.BindType;
 import com.taosdata.jdbc.enums.TimestampPrecision;
+import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.entity.Code;
@@ -31,16 +33,18 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
+import static com.taosdata.jdbc.utils.SqlSyntaxValidator.getDatabaseName;
+import static com.taosdata.jdbc.utils.SqlSyntaxValidator.isUseSql;
 
 public class TSWSPreparedStatement extends WSStatement implements PreparedStatement {
-    Pattern PATTERN = Pattern.compile("insert\\s+into\\s+(\\w+|\\?)\\s+(using\\s+(\\w+)\\s+tags\\s*\\(.*\\))?\\s*values\\s*\\(.*\\)");
-    private final Transport prepareTransport;
+    private static final Pattern INSERT_PATTERN = Pattern.compile("insert\\s+into\\s+(\\w+|\\?)\\s+(using\\s+(\\w+)\\s+tags\\s*\\(.*\\))?\\s*values\\s*\\(.*\\)");
+    private final ConnectionParam param;
+    private Transport prepareTransport;
     private long reqId;
     private long stmtId;
     private final String rawSql;
 
     private int queryTimeout = 0;
-    private Object[] parameters;
     private int precision = TimestampPrecision.MS;
 
     private final Map<Integer, Column> column = new HashMap<>();
@@ -48,15 +52,18 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
     private final Map<Integer, Column> tag = new HashMap<>();
     private final List<ColumnInfo> data = new ArrayList<>();
 
-    public TSWSPreparedStatement(Transport transport, Transport prepareTransport, String database, Connection connection, String sql) throws SQLException {
+    private final PriorityQueue<ColumnInfo> queue = new PriorityQueue<>();
+
+    public TSWSPreparedStatement(Transport transport, Transport prepareTransport, ConnectionParam param, String database, Connection connection, String sql) throws SQLException {
         super(transport, database, connection);
         this.prepareTransport = prepareTransport;
         this.rawSql = sql;
+        this.param = param;
         if (!sql.contains("?"))
             return;
 
         String useDb = null;
-        Matcher matcher = PATTERN.matcher(sql);
+        Matcher matcher = INSERT_PATTERN.matcher(sql);
         if (matcher.find()) {
             if (matcher.group(1).equals("?") && matcher.group(3) != null) {
                 String usingGroup = matcher.group(3);
@@ -108,6 +115,45 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
         prepareTransport.setTimeout(seconds * 1000L);
     }
 
+    private void checkUseStatement(String sql) throws SQLException {
+        if (sql == null || sql.isEmpty()) {
+            throw new SQLException("sql is empty");
+        }
+
+        if (isUseSql(sql)) {
+            prepareTransport.shutdown();
+            String database = getDatabaseName(sql);
+            if (null != database) {
+                prepareTransport = WSConnection.initPrepareTransport(param, database);
+
+                ResultSet resultSet = this.executeQuery("select `precision` from information_schema.ins_databases where name = '" + database + "'");
+                if (resultSet.next()) {
+                    String tmp = resultSet.getString(1);
+                    precision = TimestampPrecision.getPrecision(tmp);
+                }
+
+                reqId = ReqId.getReqID();
+                Request request = RequestFactory.generateInit(reqId);
+                StmtResp resp = (StmtResp) prepareTransport.send(request);
+                if (Code.SUCCESS.getCode() != resp.getCode()) {
+                    throw new SQLException("0x" + Integer.toHexString(resp.getCode()) + ":" + resp.getMessage());
+                }
+                stmtId = resp.getStmtId();
+                Request prepare = RequestFactory.generatePrepare(stmtId, reqId, rawSql);
+                StmtResp prepareResp = (StmtResp) prepareTransport.send(prepare);
+                if (Code.SUCCESS.getCode() != prepareResp.getCode()) {
+                    throw new SQLException("0x" + Integer.toHexString(prepareResp.getCode()) + ":" + prepareResp.getMessage());
+                }
+            }
+        }
+    }
+
+    @Override
+    public boolean execute(String sql, Long reqId) throws SQLException {
+        checkUseStatement(sql);
+        return super.execute(sql, reqId);
+    }
+
     @Override
     public ResultSet executeQuery() throws SQLException {
         List<Object> list = new ArrayList<>();
@@ -123,7 +169,7 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
                 list.add(col.data);
             });
         }
-        parameters = list.toArray(new Object[0]);
+        Object[] parameters = list.toArray(new Object[0]);
         this.clearParameters();
 
         final String sql = Utils.getNativeSql(this.rawSql, parameters);
@@ -200,42 +246,83 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
         }
     }
 
-    public void setTagNull(int index, int type) throws SQLException {
+    public void setTagSqlTypeNull(int index, int type) throws SQLException {
         switch (type) {
             case Types.BOOLEAN:
-                column.put(index, new Column(null, TSDB_DATA_TYPE_BOOL, index));
+                tag.put(index, new Column(null, TSDB_DATA_TYPE_BOOL, index));
                 break;
             case Types.TINYINT:
-                column.put(index, new Column(null, TSDB_DATA_TYPE_TINYINT, index));
+                tag.put(index, new Column(null, TSDB_DATA_TYPE_TINYINT, index));
                 break;
             case Types.SMALLINT:
-                column.put(index, new Column(null, TSDB_DATA_TYPE_SMALLINT, index));
+                tag.put(index, new Column(null, TSDB_DATA_TYPE_SMALLINT, index));
                 break;
             case Types.INTEGER:
-                column.put(index, new Column(null, TSDB_DATA_TYPE_INT, index));
+                tag.put(index, new Column(null, TSDB_DATA_TYPE_INT, index));
                 break;
             case Types.BIGINT:
-                column.put(index, new Column(null, TSDB_DATA_TYPE_BIGINT, index));
+                tag.put(index, new Column(null, TSDB_DATA_TYPE_BIGINT, index));
                 break;
             case Types.FLOAT:
-                column.put(index, new Column(null, TSDB_DATA_TYPE_FLOAT, index));
+                tag.put(index, new Column(null, TSDB_DATA_TYPE_FLOAT, index));
                 break;
             case Types.DOUBLE:
-                column.put(index, new Column(null, TSDB_DATA_TYPE_DOUBLE, index));
+                tag.put(index, new Column(null, TSDB_DATA_TYPE_DOUBLE, index));
                 break;
             case Types.TIMESTAMP:
-                column.put(index, new Column(null, TSDB_DATA_TYPE_TIMESTAMP, index));
+                tag.put(index, new Column(null, TSDB_DATA_TYPE_TIMESTAMP, index));
                 break;
             case Types.BINARY:
             case Types.VARCHAR:
-                column.put(index, new Column(null, TSDB_DATA_TYPE_BINARY, index));
+                tag.put(index, new Column(null, TSDB_DATA_TYPE_BINARY, index));
                 break;
             case Types.NCHAR:
-                column.put(index, new Column(null, TSDB_DATA_TYPE_NCHAR, index));
+                tag.put(index, new Column(null, TSDB_DATA_TYPE_NCHAR, index));
                 break;
             // json
             case Types.OTHER:
-                column.put(index, new Column(null, TSDB_DATA_TYPE_JSON, index));
+                tag.put(index, new Column(null, TSDB_DATA_TYPE_JSON, index));
+                break;
+            default:
+                throw new SQLException("unsupported type: " + type);
+        }
+    }
+
+    public void setTagNull(int index, int type) throws SQLException {
+        switch (type) {
+            case TSDB_DATA_TYPE_BOOL:
+                tag.put(index, new Column(null, TSDB_DATA_TYPE_BOOL, index));
+                break;
+            case TSDB_DATA_TYPE_TINYINT:
+                tag.put(index, new Column(null, TSDB_DATA_TYPE_TINYINT, index));
+                break;
+            case TSDB_DATA_TYPE_SMALLINT:
+                tag.put(index, new Column(null, TSDB_DATA_TYPE_SMALLINT, index));
+                break;
+            case TSDB_DATA_TYPE_INT:
+                tag.put(index, new Column(null, TSDB_DATA_TYPE_INT, index));
+                break;
+            case TSDB_DATA_TYPE_BIGINT:
+                tag.put(index, new Column(null, TSDB_DATA_TYPE_BIGINT, index));
+                break;
+            case TSDB_DATA_TYPE_FLOAT:
+                tag.put(index, new Column(null, TSDB_DATA_TYPE_FLOAT, index));
+                break;
+            case TSDB_DATA_TYPE_DOUBLE:
+                tag.put(index, new Column(null, TSDB_DATA_TYPE_DOUBLE, index));
+                break;
+            case TSDB_DATA_TYPE_TIMESTAMP:
+                tag.put(index, new Column(null, TSDB_DATA_TYPE_TIMESTAMP, index));
+                break;
+            case TSDB_DATA_TYPE_BINARY:
+                tag.put(index, new Column(null, TSDB_DATA_TYPE_BINARY, index));
+                break;
+            case TSDB_DATA_TYPE_NCHAR:
+                tag.put(index, new Column(null, TSDB_DATA_TYPE_NCHAR, index));
+                break;
+            // json
+            case TSDB_DATA_TYPE_JSON:
+                tag.put(index, new Column(null, TSDB_DATA_TYPE_JSON, index));
                 break;
             default:
                 throw new SQLException("unsupported type: " + type);
@@ -378,6 +465,10 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
     @Override
     public void setString(int parameterIndex, String x) throws SQLException {
         // UTF-8
+        if (x == null) {
+            setNull(parameterIndex, Types.VARCHAR);
+            return;
+        }
         byte[] bytes = x.getBytes(StandardCharsets.UTF_8);
         setBytes(parameterIndex, bytes);
     }
@@ -389,12 +480,20 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
 
     @Override
     public void setDate(int parameterIndex, Date x) throws SQLException {
+        if (x == null) {
+            setNull(parameterIndex, Types.TIMESTAMP);
+            return;
+        }
         Timestamp timestamp = new Timestamp(x.getTime());
         setTimestamp(parameterIndex, timestamp);
     }
 
     @Override
     public void setTime(int parameterIndex, Time x) throws SQLException {
+        if (x == null) {
+            setNull(parameterIndex, Types.TIMESTAMP);
+            return;
+        }
         Timestamp timestamp = new Timestamp(x.getTime());
         setTimestamp(parameterIndex, timestamp);
     }
@@ -502,7 +601,7 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
                 list.add(col.data);
             });
         }
-        this.parameters = list.toArray(new Object[0]);
+        Object[] parameters = list.toArray(new Object[0]);
         this.clearParameters();
         final String sql = Utils.getNativeSql(this.rawSql, parameters);
         return execute(sql);
@@ -609,8 +708,20 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
     public ParameterMetaData getParameterMetaData() throws SQLException {
         if (isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
-
-        return new TSDBParameterMetaData(parameters);
+        List<Object> list = new ArrayList<>();
+        if (!tag.isEmpty()) {
+            tag.keySet().stream().sorted().forEach(i -> {
+                Column col = this.tag.get(i);
+                list.add(col.data);
+            });
+        }
+        if (!column.isEmpty()) {
+            column.keySet().stream().sorted().forEach(i -> {
+                Column col = this.column.get(i);
+                list.add(col.data);
+            });
+        }
+        return new TSDBParameterMetaData(list.toArray(new Object[0]));
     }
 
     @Override
@@ -828,5 +939,124 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
             this.type = type;
             this.index = index;
         }
+    }
+
+    public void setInt(int columnIndex, List<Integer> list) throws SQLException {
+        setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_INT, Integer.BYTES);
+    }
+
+    public void setFloat(int columnIndex, List<Float> list) throws SQLException {
+        setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_FLOAT, Float.BYTES);
+    }
+
+    public void setTimestamp(int columnIndex, List<Long> list) throws SQLException {
+        List<Timestamp> collect = list.stream().map(x -> {
+            if (x == null) {
+                return null;
+            }
+            return new Timestamp(x);
+        }).collect(Collectors.toList());
+        setValueImpl(columnIndex, collect, TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP, Long.BYTES);
+    }
+
+    public void setLong(int columnIndex, List<Long> list) throws SQLException {
+        setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_BIGINT, Long.BYTES);
+    }
+
+    public void setDouble(int columnIndex, List<Double> list) throws SQLException {
+        setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_DOUBLE, Double.BYTES);
+    }
+
+    public void setBoolean(int columnIndex, List<Boolean> list) throws SQLException {
+        setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_BOOL, Byte.BYTES);
+    }
+
+    public void setByte(int columnIndex, List<Byte> list) throws SQLException {
+        setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_TINYINT, Byte.BYTES);
+    }
+
+    public void setShort(int columnIndex, List<Short> list) throws SQLException {
+        setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_SMALLINT, Short.BYTES);
+    }
+
+    public void setString(int columnIndex, List<String> list, int size) throws SQLException {
+        List<byte[]> collect = list.stream().map(x -> {
+            if (x == null) {
+                return null;
+            }
+            return x.getBytes(StandardCharsets.UTF_8);
+        }).collect(Collectors.toList());
+        setValueImpl(columnIndex, collect, TSDBConstants.TSDB_DATA_TYPE_BINARY, size);
+    }
+
+    // note: expand the required space for each NChar character
+    public void setNString(int columnIndex, List<String> list, int size) throws SQLException {
+        setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_NCHAR, size * Integer.BYTES);
+    }
+
+    public <T> void setValueImpl(int columnIndex, List<T> list, int type, int bytes) throws SQLException {
+        List<Object> listObject = list.stream()
+                .map(Object.class::cast)
+                .collect(Collectors.toList());
+        ColumnInfo p = new ColumnInfo(columnIndex, listObject, type, null);
+        queue.add(p);
+    }
+
+    public void columnDataAddBatch() throws SQLException {
+        while (!queue.isEmpty()) {
+            data.add(queue.poll());
+        }
+    }
+
+    public void columnDataExecuteBatch() throws SQLException {
+        //set tag
+        if (!tag.isEmpty()) {
+            List<ColumnInfo> collect = tag.keySet().stream().sorted().map(i -> {
+                Column col = this.tag.get(i);
+                return new ColumnInfo(i, col.data, col.type);
+            }).collect(Collectors.toList());
+            byte[] tagBlock;
+            try {
+                tagBlock = SerializeBlock.getRawBlock(collect, precision);
+            } catch (IOException e) {
+                throw new SQLException("data serialize error!", e);
+            }
+            StmtResp bindResp = (StmtResp) prepareTransport.send(STMTAction.SET_TAGS.getAction(),
+                    reqId, stmtId, BindType.TAG.get(), tagBlock);
+            if (Code.SUCCESS.getCode() != bindResp.getCode()) {
+                throw new SQLException("0x" + Integer.toHexString(bindResp.getCode()) + ":" + bindResp.getMessage());
+            }
+        }
+        // bind
+        byte[] rawBlock;
+        try {
+            rawBlock = SerializeBlock.getRawBlock(data, precision);
+        } catch (IOException e) {
+            throw new SQLException("data serialize error!", e);
+        }
+        StmtResp bindResp = (StmtResp) prepareTransport.send(STMTAction.BIND.getAction(),
+                reqId, stmtId, BindType.BIND.get(), rawBlock);
+        if (Code.SUCCESS.getCode() != bindResp.getCode()) {
+            throw new SQLException("0x" + Integer.toHexString(bindResp.getCode()) + ":" + bindResp.getMessage());
+        }
+        // add batch
+        Request batch = RequestFactory.generateBatch(stmtId, reqId);
+        Response send = prepareTransport.send(batch);
+        StmtResp batchResp = (StmtResp) send;
+        if (Code.SUCCESS.getCode() != batchResp.getCode()) {
+            throw new SQLException("0x" + Integer.toHexString(batchResp.getCode()) + ":" + batchResp.getMessage());
+        }
+
+        this.clearParameters();
+        // send
+        Request request = RequestFactory.generateExec(stmtId, reqId);
+        ExecResp resp = (ExecResp) prepareTransport.send(request);
+        if (Code.SUCCESS.getCode() != resp.getCode()) {
+            throw new SQLException("0x" + Integer.toHexString(resp.getCode()) + ":" + resp.getMessage());
+        }
+    }
+
+    public void columnDataCloseBatch() throws SQLException {
+        this.close();
     }
 }
