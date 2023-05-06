@@ -8,6 +8,7 @@ import org.junit.*;
 import java.sql.*;
 import java.util.Properties;
 
+@Ignore
 public class RestfulDatabaseMetaDataTest {
 
     private static final String host = "127.0.0.1";

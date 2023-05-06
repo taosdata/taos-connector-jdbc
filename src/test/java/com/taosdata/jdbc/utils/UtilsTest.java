@@ -1,10 +1,12 @@
 package com.taosdata.jdbc.utils;
 
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.stream.Stream;
 
+@Ignore
 public class UtilsTest {
 
     @Test

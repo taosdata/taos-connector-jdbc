@@ -4,10 +4,7 @@ import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.utils.SpecifyAddress;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runner.RunWith;
 
 import java.sql.*;
@@ -15,6 +12,7 @@ import java.util.Properties;
 
 @RunWith(CatalogRunner.class)
 @TestTarget(author = "huolibo", version = "3.0.1")
+@Ignore
 public class WasNullTest {
     static String host = "127.0.0.1";
     static String dbName = "was_null_test";

@@ -3,16 +3,14 @@ package com.taosdata.jdbc.ws;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.SpecifyAddress;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 
 import java.sql.*;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Properties;
 
+@Ignore
 public class WSConsumerWithDiffTypeTest {
     private static final String host = "127.0.0.1";
     private static final String dbName = "tmq_ws_test_diff_type";

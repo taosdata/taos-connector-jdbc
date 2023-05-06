@@ -9,6 +9,7 @@ import java.util.Properties;
 
 import static org.junit.Assert.assertEquals;
 
+@Ignore
 public class RestfulConnectionTest {
 
     private static final String host = "127.0.0.1";

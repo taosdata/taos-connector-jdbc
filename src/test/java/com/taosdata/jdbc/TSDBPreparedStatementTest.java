@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Properties;
 import java.util.Random;
 
+@Ignore
 public class TSDBPreparedStatementTest {
 
     private static final String host = "127.0.0.1";

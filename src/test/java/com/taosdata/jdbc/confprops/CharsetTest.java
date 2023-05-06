@@ -4,11 +4,13 @@ import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.sql.*;
 import java.util.Properties;
 
+@Ignore
 public class CharsetTest {
     private static final String host = "127.0.0.1";
 

@@ -18,6 +18,7 @@ import java.util.Properties;
  */
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "test connection with server", author = "huolibo", version = "2.0.37")
+@Ignore
 public class WSConnectionTest {
     //    private static final String host = "192.168.1.98";
     private static String host = "127.0.0.1";

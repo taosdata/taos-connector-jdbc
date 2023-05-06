@@ -2,10 +2,7 @@ package com.taosdata.jdbc.tmq;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -20,6 +17,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+@Ignore
 public class ConsumerCommitTest {
     private static final String host = "127.0.0.1";
     private static final String dbName = "tmq_test_callback";

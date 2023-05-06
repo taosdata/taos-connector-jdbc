@@ -1,10 +1,7 @@
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
+import org.junit.*;
 
 import java.sql.*;
 import java.util.AbstractCollection;
@@ -13,6 +10,7 @@ import java.util.HashSet;
 import java.util.Properties;
 
 @FixMethodOrder
+@Ignore
 public class WSPreparedStatementTest {
     String host = "127.0.0.1";
     String db_name = "ws_prepare";

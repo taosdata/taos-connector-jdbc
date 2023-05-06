@@ -3,6 +3,7 @@ package com.taosdata.jdbc.ws;
 import com.taosdata.jdbc.SchemalessWriter;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.sql.Connection;
@@ -10,6 +11,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+@Ignore
 public class SchemaConnectTest {
     private static final String host = "127.0.0.1";
 

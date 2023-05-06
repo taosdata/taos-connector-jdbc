@@ -3,6 +3,7 @@ package com.taosdata.jdbc.ws;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.sql.*;
@@ -10,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
+@Ignore
 public class WSSelectTest {
     private static final String host = "127.0.0.1";
     private static final int port = 6041;

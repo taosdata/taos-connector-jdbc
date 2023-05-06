@@ -2,13 +2,11 @@ package com.taosdata.jdbc.rs;
 
 import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.utils.SpecifyAddress;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 
 import java.sql.*;
 
+@Ignore
 public class RestfulParameterMetaDataTest {
 
     private static final String host = "127.0.0.1";

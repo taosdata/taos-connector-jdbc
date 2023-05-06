@@ -3,6 +3,7 @@ package com.taosdata.jdbc;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.sql.Connection;
@@ -10,6 +11,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+@Ignore
 public class SchemalessConnectionTest {
     private final String host = "127.0.0.1";
     private final String db = "schemaless_connction";

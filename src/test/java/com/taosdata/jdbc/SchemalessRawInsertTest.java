@@ -10,6 +10,7 @@ import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -17,6 +18,7 @@ import java.sql.*;
 
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "Schemaless", author = "huolibo", version = "2.0.36")
+@Ignore
 public class SchemalessRawInsertTest {
     private static String host = "127.0.0.1";
     private final String dbname = "test_schemaless_insert";

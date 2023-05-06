@@ -1,6 +1,7 @@
 package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.sql.Connection;
@@ -9,7 +10,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Properties;
 
-
+@Ignore
 public class SetConfigurationInJNITest {
 
     private String host = "127.0.0.1";

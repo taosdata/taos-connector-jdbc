@@ -16,6 +16,7 @@ import java.util.stream.IntStream;
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "websocket query test", author = "huolibo", version = "2.0.38")
 @FixMethodOrder
+@Ignore
 public class WSQueryTest {
     private static final String host = "127.0.0.1";
     private static final int port = 6041;

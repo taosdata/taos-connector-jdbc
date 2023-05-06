@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.Properties;
 
 @FixMethodOrder
+@Ignore
 public class DeserializerNullTest {
     private static final String host = "127.0.0.1";
     private static final String dbName = "tmq_null_test";

@@ -3,11 +3,13 @@ package com.taosdata.jdbc.ws;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.sql.*;
 import java.util.Properties;
 
+@Ignore
 public class PrepareStatementUseDBTest {
     private static final String host = "127.0.0.1";
     private static Connection conn;

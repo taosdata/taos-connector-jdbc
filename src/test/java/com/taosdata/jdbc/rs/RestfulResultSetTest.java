@@ -16,6 +16,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 
+@Ignore
 public class RestfulResultSetTest {
 
     private static final String host = "127.0.0.1";

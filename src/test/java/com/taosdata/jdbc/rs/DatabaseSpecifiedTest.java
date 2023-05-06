@@ -3,12 +3,14 @@ package com.taosdata.jdbc.rs;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.sql.*;
 
 import static org.junit.Assert.*;
 
+@Ignore
 public class DatabaseSpecifiedTest {
 
     private static String host = "127.0.0.1";

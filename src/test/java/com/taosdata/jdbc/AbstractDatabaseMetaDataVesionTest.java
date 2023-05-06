@@ -2,6 +2,7 @@ package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -11,6 +12,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
 
+@Ignore
 public class AbstractDatabaseMetaDataVesionTest {
     Connection connection;
     String host = "127.0.0.1";

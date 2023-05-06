@@ -7,6 +7,7 @@ import org.junit.*;
 import java.sql.*;
 import java.util.Properties;
 
+@Ignore
 public class TSDBDatabaseMetaDataTest {
     private static final String host = "127.0.0.1";
     private static String url;

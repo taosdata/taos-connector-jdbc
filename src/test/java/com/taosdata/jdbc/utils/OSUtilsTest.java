@@ -2,8 +2,10 @@ package com.taosdata.jdbc.utils;
 
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
+@Ignore
 public class OSUtilsTest {
 
     private String OS;

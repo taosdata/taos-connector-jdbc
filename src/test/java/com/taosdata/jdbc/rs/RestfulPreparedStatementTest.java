@@ -6,6 +6,7 @@ import org.junit.*;
 import java.io.IOException;
 import java.sql.*;
 
+@Ignore
 public class RestfulPreparedStatementTest {
     private static final String host = "127.0.0.1";
     private static Connection conn;

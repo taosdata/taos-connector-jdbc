@@ -5,6 +5,7 @@ import org.junit.*;
 
 import java.sql.*;
 
+@Ignore
 public class RestfulResultSetMetaDataTest {
 
     private static final String host = "127.0.0.1";

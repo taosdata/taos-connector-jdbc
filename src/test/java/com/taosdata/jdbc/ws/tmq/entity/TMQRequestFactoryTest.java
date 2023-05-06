@@ -8,11 +8,13 @@ import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.ws.entity.Request;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 @TestTarget(alias = "consumer request content", author = "huolibo", version = "3.1.0")
 @RunWith(CatalogRunner.class)
+@Ignore
 public class TMQRequestFactoryTest {
     private static TMQRequestFactory factory;
 

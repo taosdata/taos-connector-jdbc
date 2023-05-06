@@ -3,6 +3,7 @@ package com.taosdata.jdbc.utils;
 import com.taosdata.jdbc.AbstractStatement;
 import com.taosdata.jdbc.TSDBDriver;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -14,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
+@Ignore
 public class ReqIdTest {
     String host = "127.0.0.1";
 

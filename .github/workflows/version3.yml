@@ -21,7 +21,7 @@ jobs:
     strategy:
       matrix:
         #        os: [ ubuntu-latest,macos-latest,windows-latest ]
-        os: [ Ubuntu-20.04-16g ]
+        os: [ Ubuntu-20.04 ]
         java: [ 8 ]
         maven: [ '3.6.3' ]
     runs-on: ${{ matrix.os }}

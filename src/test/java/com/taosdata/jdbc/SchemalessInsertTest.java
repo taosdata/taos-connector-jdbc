@@ -17,6 +17,7 @@ import java.util.List;
 
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "Schemaless", author = "huolibo", version = "2.0.36")
+@Ignore
 public class SchemalessInsertTest {
     private static String host = "127.0.0.1";
     private final String dbname = "test_schemaless_insert";

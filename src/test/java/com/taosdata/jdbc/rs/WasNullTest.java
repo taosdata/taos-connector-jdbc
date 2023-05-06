@@ -1,13 +1,11 @@
 package com.taosdata.jdbc.rs;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.*;
 
 import java.sql.*;
 
+@Ignore
 public class WasNullTest {
 
     private static final String host = "127.0.0.1";

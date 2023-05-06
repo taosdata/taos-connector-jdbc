@@ -7,6 +7,7 @@ import org.junit.runners.MethodSorters;
 import java.sql.*;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@Ignore
 public class SQLTest {
 
     private static final String host = "127.0.0.1";

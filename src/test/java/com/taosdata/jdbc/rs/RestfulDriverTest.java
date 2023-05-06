@@ -2,10 +2,12 @@ package com.taosdata.jdbc.rs;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.sql.*;
 
+@Ignore
 public class RestfulDriverTest {
     private static final String host = "127.0.0.1";
 

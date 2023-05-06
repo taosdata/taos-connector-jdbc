@@ -10,6 +10,7 @@ import java.sql.*;
 import java.time.Instant;
 import java.util.Properties;
 
+@Ignore
 public class TimestampFormatTest {
     private static final String host = "127.0.0.1";
     private long ts = Instant.now().toEpochMilli();

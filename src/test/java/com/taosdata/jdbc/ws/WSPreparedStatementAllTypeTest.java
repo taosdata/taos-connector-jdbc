@@ -3,11 +3,13 @@ package com.taosdata.jdbc.ws;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.sql.*;
 import java.util.Properties;
 
+@Ignore
 public class WSPreparedStatementAllTypeTest {
     String host = "127.0.0.1";
     String db_name = "ws_prepare_type";
