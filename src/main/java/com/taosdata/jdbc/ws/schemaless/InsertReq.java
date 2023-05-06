@@ -3,20 +3,11 @@ package com.taosdata.jdbc.ws.schemaless;
 import com.taosdata.jdbc.ws.entity.Payload;
 
 public class InsertReq extends Payload {
-    // database
-    private String db;
+
     private int protocol;
     private String precision;
     private String data;
     private int ttl;
-
-    public String getDb() {
-        return db;
-    }
-
-    public void setDb(String db) {
-        this.db = db;
-    }
 
     public int getProtocol() {
         return protocol;

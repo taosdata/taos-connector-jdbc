@@ -125,7 +125,7 @@ public class WSConsumerTest {
 
     @BeforeClass
     public static void before() throws SQLException {
-        String url = SpecifyAddress.getInstance().getJniUrl();
+        String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
             url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
         }

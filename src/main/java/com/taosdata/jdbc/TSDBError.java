@@ -94,4 +94,10 @@ public class TSDBError {
     public static SQLWarning createSQLWarning(String message) {
         return new SQLWarning(message);
     }
+
+
+    // paramter size is greater than 1
+    public static SQLException undeterminedExecutionError() {
+        return new SQLException("Please either call clearBatch() to clean up context first, or use executeBatch() instead", (String) null);
+    }
 }

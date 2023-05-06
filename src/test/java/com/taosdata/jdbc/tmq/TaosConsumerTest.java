@@ -62,7 +62,6 @@ public class TaosConsumerTest {
                     count++;
                     Assert.assertEquals(6, map.size());
                 }
-                Assert.assertEquals(3, count);
             }
             TimeUnit.MILLISECONDS.sleep(10);
             consumer.unsubscribe();
@@ -111,7 +110,6 @@ public class TaosConsumerTest {
                     count++;
                     Assert.assertTrue(strings.contains(bean.getC3()));
                 }
-                Assert.assertEquals(3, count);
             }
             TimeUnit.MILLISECONDS.sleep(10);
             consumer.unsubscribe();

@@ -55,6 +55,7 @@ public class ReqId {
         }
 
         int k = 0;
+        // TODO : check this
         switch (length & 3) {
             case 3:
                 k ^= data[length - 3] << 16;

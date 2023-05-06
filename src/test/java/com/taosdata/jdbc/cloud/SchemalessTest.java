@@ -19,7 +19,6 @@ public class SchemalessTest {
     @Before
     public void before() throws SQLException {
         String url = System.getenv("TDENGINE_CLOUD_URL");
-        System.out.println("cloud url:" + url);
         if (url == null || "".equals(url.trim())) {
             System.out.println("Environment variable for CloudTest not set properly");
             return;

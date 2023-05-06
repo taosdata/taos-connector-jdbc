@@ -12,6 +12,8 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+import static com.taosdata.jdbc.utils.SqlSyntaxValidator.getDatabaseName;
+
 public class WSStatement extends AbstractStatement {
     private final Transport transport;
     private String database;
@@ -81,7 +83,7 @@ public class WSStatement extends AbstractStatement {
             throw TSDBError.createSQLException(queryResp.getCode(), queryResp.getMessage());
         }
         if (SqlSyntaxValidator.isUseSql(sql)) {
-            this.database = sql.trim().replace("use", "").trim();
+            this.database = getDatabaseName(sql);
             this.connection.setCatalog(this.database);
             this.connection.setClientInfo(TSDBDriver.PROPERTY_KEY_DBNAME, this.database);
         }

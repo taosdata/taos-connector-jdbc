@@ -15,6 +15,8 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+import static com.taosdata.jdbc.utils.SqlSyntaxValidator.getDatabaseName;
+
 public class RestfulStatement extends AbstractStatement {
 
     private boolean closed;
@@ -99,7 +101,7 @@ public class RestfulStatement extends AbstractStatement {
         }
 
         if (SqlSyntaxValidator.isUseSql(sql)) {
-            this.database = sql.trim().replace("use", "").trim();
+            this.database = getDatabaseName(sql);
             this.conn.setCatalog(this.database);
             this.conn.setClientInfo(TSDBDriver.PROPERTY_KEY_DBNAME, this.database);
             result = false;

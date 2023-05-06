@@ -8,6 +8,10 @@ import java.util.Set;
 import static com.taosdata.jdbc.TSDBDriver.*;
 
 public class TMQConstants {
+
+    private TMQConstants() {
+    }
+
     public static final Set<String> configSet = new HashSet<>();
 
     public static final String GROUP_ID = "group.id";
@@ -70,11 +74,6 @@ public class TMQConstants {
     public static final String CONNECT_PASS = "td.connect.pass";
 
     /**
-     * databaseName option
-     */
-    public static final String CONNECT_DB = "td.connect.db";
-
-    /**
      * connect type websocket or jni, default is jni
      */
     public static final String CONNECT_TYPE = "td.connect.type";
@@ -112,6 +111,14 @@ public class TMQConstants {
      */
     public static final String CONNECT_MESSAGE_TIMEOUT = PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT;
 
+    /**
+     * the maximum number of request in a single connection.
+     * only valid in websocket
+     */
+    public static final String CONNECT_MAX_REQUEST = HTTP_POOL_SIZE;
+
+    public static final String EXPERIMENTAL_SNAPSHOT_ENABLE = "experimental.snapshot.enable";
+
 
     static {
         configSet.add(GROUP_ID);
@@ -124,6 +131,6 @@ public class TMQConstants {
         configSet.add(CONNECT_USER);
         configSet.add(CONNECT_PASS);
         configSet.add(CONNECT_PORT);
-        configSet.add(CONNECT_DB);
+        configSet.add(EXPERIMENTAL_SNAPSHOT_ENABLE);
     }
 }

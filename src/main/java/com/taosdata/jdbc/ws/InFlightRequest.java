@@ -2,6 +2,7 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.ws.entity.Action;
 import com.taosdata.jdbc.ws.schemaless.SchemalessAction;
+import com.taosdata.jdbc.ws.stmt.entity.STMTAction;
 import com.taosdata.jdbc.ws.tmq.ConsumerAction;
 
 import java.util.HashMap;
@@ -30,7 +31,11 @@ public class InFlightRequest {
             String action = value.getAction();
             futureMap.put(action, new ConcurrentHashMap<>());
         }
-        for (SchemalessAction value : SchemalessAction.values()){
+        for (SchemalessAction value : SchemalessAction.values()) {
+            String action = value.getAction();
+            futureMap.put(action, new ConcurrentHashMap<>());
+        }
+        for (STMTAction value : STMTAction.values()) {
             String action = value.getAction();
             futureMap.put(action, new ConcurrentHashMap<>());
         }
@@ -61,5 +66,10 @@ public class InFlightRequest {
                 })
                 .parallel().map(FutureResponse::getFuture)
                 .forEach(e -> e.completeExceptionally(new Exception("close all inFlightRequest")));
+    }
+
+    public boolean hasInFlightRequest() {
+        return futureMap.keySet().stream()
+                .filter(k -> !futureMap.get(k).isEmpty()).findAny().orElse(null) != null;
     }
 }

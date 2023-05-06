@@ -22,27 +22,24 @@ public class StableTest {
     private static final String host = "127.0.0.1";
 
     @BeforeClass
-    public static void createDatabase() {
-        try {
-            Properties properties = new Properties();
-            properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-            properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
-            properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
-            properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "en_US.UTF-8");
-            properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
-            String url = SpecifyAddress.getInstance().getJniWithoutUrl();
-            if (url == null) {
-                url = "jdbc:TAOS://" + host + ":0/";
-            }
-            connection = DriverManager.getConnection(url, properties);
-            Statement statement = connection.createStatement();
-            statement.execute("drop database if exists " + dbName);
-            statement.execute("create database if not exists " + dbName);
-            statement.execute("use " + dbName);
-            statement.close();
-        } catch (SQLException e) {
-            e.printStackTrace();
+    public static void createDatabase() throws SQLException {
+        Properties properties = new Properties();
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "en_US.UTF-8");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
+        String url = SpecifyAddress.getInstance().getJniWithoutUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://" + host + ":0/";
         }
+        connection = DriverManager.getConnection(url, properties);
+        Statement statement = connection.createStatement();
+        statement.execute("drop database if exists " + dbName);
+        statement.execute("create database if not exists " + dbName);
+        statement.execute("use " + dbName);
+        statement.close();
+
     }
 
     @Test

@@ -139,29 +139,25 @@ public class UnsignedNumberRestfulTest {
     }
 
     @BeforeClass
-    public static void beforeClass() {
+    public static void beforeClass() throws SQLException {
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "en_US.UTF-8");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
         ts = System.currentTimeMillis();
 
-        try {
-            String url = SpecifyAddress.getInstance().getRestUrl();
-            if (url == null) {
-                url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
-            }
-            conn = DriverManager.getConnection(url, properties);
-            Statement stmt = conn.createStatement();
-            stmt.execute("drop database if exists " + dbname);
-            stmt.execute("create database if not exists " + dbname);
-            stmt.execute("use " + dbname);
-            stmt.execute("create table us_table(ts timestamp, f1 tinyint unsigned, f2 smallint unsigned, f3 int unsigned, f4 bigint unsigned)");
-            stmt.executeUpdate("insert into us_table(ts,f1,f2,f3,f4) values(" + ts + ", 127, 32767,2147483647, 9223372036854775807)");
-            stmt.close();
-        } catch (SQLException e) {
-            e.printStackTrace();
+        String url = SpecifyAddress.getInstance().getRestUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
         }
+        conn = DriverManager.getConnection(url, properties);
+        Statement stmt = conn.createStatement();
+        stmt.execute("drop database if exists " + dbname);
+        stmt.execute("create database if not exists " + dbname);
+        stmt.execute("use " + dbname);
+        stmt.execute("create table us_table(ts timestamp, f1 tinyint unsigned, f2 smallint unsigned, f3 int unsigned, f4 bigint unsigned)");
+        stmt.executeUpdate("insert into us_table(ts,f1,f2,f3,f4) values(" + ts + ", 127, 32767,2147483647, 9223372036854775807)");
+        stmt.close();
     }
 
     @AfterClass

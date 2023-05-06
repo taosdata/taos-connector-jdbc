@@ -91,12 +91,17 @@ public class ImportTest {
     }
 
     @AfterClass
-    public static void close() throws SQLException {
+    public static void close() {
         if (connection != null) {
-            Statement statement = connection.createStatement();
-            statement.executeUpdate("drop database " + dbName);
-            statement.close();
-            connection.close();
+            try {
+                Statement statement = connection.createStatement();
+                statement.executeUpdate("drop database " + dbName);
+                statement.close();
+                connection.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+
         }
     }
 }

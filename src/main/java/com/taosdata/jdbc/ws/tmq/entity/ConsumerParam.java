@@ -28,8 +28,6 @@ public class ConsumerParam {
             properties.setProperty(TSDBDriver.PROPERTY_KEY_HOST, properties.getProperty(TMQConstants.CONNECT_IP));
         if (null != properties.getProperty(TMQConstants.CONNECT_PORT))
             properties.setProperty(TSDBDriver.PROPERTY_KEY_PORT, properties.getProperty(TMQConstants.CONNECT_PORT));
-        if (null != properties.getProperty(TMQConstants.CONNECT_DB))
-            properties.setProperty(TSDBDriver.PROPERTY_KEY_PORT, properties.getProperty(TMQConstants.CONNECT_DB));
         autoCommit = Boolean.parseBoolean(properties.getProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true"));
         connectionParam = ConnectionParam.getParam(properties);
         groupId = properties.getProperty(TMQConstants.GROUP_ID);

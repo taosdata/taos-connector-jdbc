@@ -39,7 +39,7 @@ public class SelectTest {
     }
 
     @Test
-    public void selectData() {
+    public void selectData() throws SQLException {
         long ts = 1496732686000l;
 
         try (Statement stmt = connection.createStatement()) {
@@ -58,8 +58,6 @@ public class SelectTest {
             }
             resSet.close();
             assertEquals(num, 50);
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
 
     }

@@ -141,7 +141,7 @@ public class RestfulDriver extends AbstractDriver {
         }
 
         TaosGlobalConfig.setCharset(props.getProperty(TSDBDriver.PROPERTY_KEY_CHARSET));
-        return new WSConnection(url, props, transport, param.getDatabase());
+        return new WSConnection(url, props, transport, param);
     }
 
     static class ConnectReq extends Payload {
