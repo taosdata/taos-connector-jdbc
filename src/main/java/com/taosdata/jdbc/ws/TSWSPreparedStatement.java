@@ -685,8 +685,7 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
         }
         int[] ints = new int[resp.getAffected()];
         for (int i = 0, len = ints.length; i < len; i++)
-            // TODO not sure
-            ints[i] = 1;
+            ints[i] = SUCCESS_NO_INFO;
         return ints;
     }
 
