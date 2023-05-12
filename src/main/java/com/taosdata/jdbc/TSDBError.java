@@ -8,7 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class TSDBError {
-    public static final Map<Integer, String> TSDBErrorMap = new HashMap<>();
+    private static final Map<Integer, String> TSDBErrorMap = new HashMap<>();
 
     static {
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "connection already closed");
