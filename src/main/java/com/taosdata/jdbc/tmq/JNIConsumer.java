@@ -120,6 +120,20 @@ public class JNIConsumer<V> implements Consumer<V> {
     }
 
     @Override
+    public void seek(TopicPartition partition, long offset) {
+        connector.seek(partition.getTopic(), partition.getVGroupId(), offset);
+    }
+
+    @Override
+    public Map<TopicPartition, Long> endOffsets(String topic) {
+        return connector.getTopicAssignment(topic).stream()
+                .collect(HashMap::new
+                        , (m, a) -> m.put(new TopicPartition(topic, null, a.getVgId()), a.getCurrentOffset())
+                        , HashMap::putAll
+                );
+    }
+
+    @Override
     public void commitSync() throws SQLException {
         for (ConsumerRecords<V> r : offsetList) {
             connector.syncCommit(r.getOffset());

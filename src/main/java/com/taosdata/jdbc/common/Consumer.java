@@ -3,10 +3,12 @@ package com.taosdata.jdbc.common;
 import com.taosdata.jdbc.tmq.ConsumerRecords;
 import com.taosdata.jdbc.tmq.Deserializer;
 import com.taosdata.jdbc.tmq.OffsetCommitCallback;
+import com.taosdata.jdbc.tmq.TopicPartition;
 
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.Collection;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
@@ -61,4 +63,11 @@ public interface Consumer<V> {
     void close() throws SQLException;
 
     void commitAsync(OffsetCommitCallback<V> callback);
+
+    /**
+     * If this API is invoked for the same partition more than once, the latest offset will be used on the next poll().
+     */
+    void seek(TopicPartition partition, long offset);
+
+    Map<TopicPartition, Long> endOffsets(String topic);
 }

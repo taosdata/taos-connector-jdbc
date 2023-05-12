@@ -8,7 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class TSDBError {
-    private static final Map<Integer, String> TSDBErrorMap = new HashMap<>();
+    public static final Map<Integer, String> TSDBErrorMap = new HashMap<>();
 
     static {
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "connection already closed");
@@ -58,6 +58,7 @@ public class TSDBError {
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_TOPIC_NAME_NULL, "failed to set consumer topic, topic name is empty");
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_CONSUMER_NULL, "consumer reference has been destroyed");
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_CONSUMER_CREATE_ERROR, "consumer create error");
+        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_SEEK_OFFSET, "seek offset must not be a negative number");
     }
 
     public static SQLException createSQLException(int errorCode) {
@@ -99,5 +100,29 @@ public class TSDBError {
     // paramter size is greater than 1
     public static SQLException undeterminedExecutionError() {
         return new SQLException("Please either call clearBatch() to clean up context first, or use executeBatch() instead", (String) null);
+    }
+
+    public static IllegalArgumentException createIllegalArgumentException(int errorCode) {
+        String message;
+        if (TSDBErrorNumbers.contains(errorCode))
+            message = TSDBErrorMap.get(errorCode);
+        else
+            message = TSDBErrorMap.get(TSDBErrorNumbers.ERROR_UNKNOWN);
+
+        return new IllegalArgumentException("ERROR (0x" + Integer.toHexString(errorCode) + "): " + message);
+    }
+
+    public static RuntimeException createRuntimeException(int errorCode) {
+        String message;
+        if (TSDBErrorNumbers.contains(errorCode))
+            message = TSDBErrorMap.get(errorCode);
+        else
+            message = TSDBErrorMap.get(TSDBErrorNumbers.ERROR_UNKNOWN);
+
+        return new RuntimeException("ERROR (0x" + Integer.toHexString(errorCode) + "): " + message);
+    }
+
+    public static RuntimeException createRuntimeException(int errorCode, String message) {
+        return new RuntimeException("ERROR (0x" + Integer.toHexString(errorCode) + "): " + message);
     }
 }

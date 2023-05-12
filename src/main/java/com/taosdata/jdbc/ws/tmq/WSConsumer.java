@@ -135,4 +135,14 @@ public class WSConsumer<V> implements Consumer<V> {
     public void commitAsync(OffsetCommitCallback<V> callback) {
         // nothing to do
     }
+
+    @Override
+    public void seek(TopicPartition partition, long offset) {
+        // nothing to do
+    }
+
+    @Override
+    public Map<TopicPartition, Long> endOffsets(String topic) {
+        return null;
+    }
 }

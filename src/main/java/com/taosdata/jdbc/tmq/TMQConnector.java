@@ -239,4 +239,38 @@ public class TMQConnector extends TSDBJNIConnector {
     }
 
     private native int fetchRawBlockImp(long connection, long resultSet, TSDBResultSetBlockData blockData, List<ColumnMetaData> columnMetaData);
+
+    public void seek(String topicName, int vgId, long offset) {
+        int code = tmqSeekImp(this.taos, topicName, vgId, offset);
+        if (code != TMQ_SUCCESS) {
+            if (code == TMQ_CONSUMER_NULL) {
+                throw TSDBError.createRuntimeException(TSDBErrorNumbers.ERROR_TMQ_CONSUMER_NULL);
+            } else if (code == TMQ_TOPIC_NULL) {
+                throw TSDBError.createRuntimeException(TSDBErrorNumbers.ERROR_TMQ_TOPIC_NULL);
+            }
+            throw TSDBError.createRuntimeException(code, getErrMsg(code));
+        }
+    }
+
+    // DLL_EXPORT int32_t   tmq_offset_seek(tmq_t *tmq, const char* pTopicName, int32_t vgId, int64_t offset);
+    private native int tmqSeekImp(long tmq, String topicName, int vgId, long offset);
+
+    public List<Assignment> getTopicAssignment(String topicName) {
+        List<Assignment> assignments = new ArrayList<>();
+        int code = tmqGetTopicAssignmentImp(this.taos, topicName, assignments);
+        if (code != TMQ_SUCCESS) {
+            if (code == TMQ_CONSUMER_NULL) {
+                throw TSDBError.createRuntimeException(TSDBErrorNumbers.ERROR_TMQ_CONSUMER_NULL);
+            } else if (code == TMQ_TOPIC_NULL) {
+                throw TSDBError.createRuntimeException(TSDBErrorNumbers.ERROR_TMQ_TOPIC_NULL);
+            }
+            throw TSDBError.createRuntimeException(code, getErrMsg(code));
+        }
+
+        return  assignments;
+    }
+
+    // DLL_EXPORT int32_t   tmq_get_topic_assignment(tmq_t *tmq, const char* pTopicName, tmq_topic_assignment **assignment, int32_t *numOfAssignment);
+    private native int tmqGetTopicAssignmentImp(long tmq, String topicName, List<Assignment> assignments);
+
 }
