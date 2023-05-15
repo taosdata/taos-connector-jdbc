@@ -38,14 +38,4 @@ public class TopicPartition {
     public int hashCode() {
         return Objects.hash(topic, databaseName, vGroupId);
     }
-
-    @Override
-    public String toString() {
-        final StringBuffer sb = new StringBuffer("TopicPartition{");
-        sb.append("topic='").append(topic).append('\'');
-        sb.append(", databaseName='").append(databaseName).append('\'');
-        sb.append(", vGroupId=").append(vGroupId);
-        sb.append('}');
-        return sb.toString();
-    }
 }
