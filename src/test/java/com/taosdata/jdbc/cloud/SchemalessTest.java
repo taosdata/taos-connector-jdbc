@@ -5,7 +5,6 @@ import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.sql.*;
@@ -28,7 +27,6 @@ public class SchemalessTest {
     }
 
     @Test
-    @Ignore
     public void testLine() throws SQLException {
         // given
         long cur_time = System.currentTimeMillis();
