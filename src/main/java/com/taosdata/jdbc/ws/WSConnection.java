@@ -128,6 +128,7 @@ public class WSConnection extends AbstractConnection {
         ConnResp auth = (ConnResp) ts.send(new Request(STMTAction.CONN.getAction(), connectReq));
 
         if (Code.SUCCESS.getCode() != auth.getCode()) {
+            ts.close();
             throw new SQLException("0x" + Integer.toHexString(auth.getCode()) + ":" + "prepareStatement auth failure:" + auth.getMessage());
         }
 

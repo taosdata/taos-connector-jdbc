@@ -164,6 +164,7 @@ public class SchemalessWriter implements AutoCloseable{
             CommonResp auth = (CommonResp) transport.send(new Request(SchemalessAction.CONN.getAction(), connectReq));
 
             if (Code.SUCCESS.getCode() != auth.getCode()) {
+                transport.close();
                 throw new SQLException("0x" + Integer.toHexString(auth.getCode()) + ":" + "auth failure: " + auth.getMessage());
             }
         }

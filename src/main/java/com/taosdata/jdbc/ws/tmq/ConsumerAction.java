@@ -13,6 +13,8 @@ public enum ConsumerAction {
     FETCH("fetch", FetchResp.class),
     FETCH_BLOCK("fetch_block", FetchBlockResp.class),
     COMMIT("commit", CommitResp.class),
+    ASSIGNMENT("assignment", AssignmentResp.class),
+    SEEK("seek", SeekResp.class),
     ;
 
     private final String action;

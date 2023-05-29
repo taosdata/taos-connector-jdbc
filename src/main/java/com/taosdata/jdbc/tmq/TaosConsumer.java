@@ -121,7 +121,7 @@ public class TaosConsumer<V> implements AutoCloseable {
         consumer.commitSync();
     }
 
-    public void seek(TopicPartition partition, long offset) {
+    public void seek(TopicPartition partition, long offset) throws SQLException {
         if (offset < 0)
             throw TSDBError.createIllegalArgumentException(TSDBErrorNumbers.ERROR_TMQ_SEEK_OFFSET);
 
@@ -133,7 +133,25 @@ public class TaosConsumer<V> implements AutoCloseable {
         }
     }
 
-    public Map<TopicPartition, Long> endOffsets(String topic) {
+    public Map<TopicPartition, Long> position(String topic) throws SQLException {
+        acquireAndEnsureOpen();
+        try {
+            return consumer.position(topic);
+        } finally {
+            release();
+        }
+    }
+
+    public Map<TopicPartition, Long> beginningOffsets(String topic) throws SQLException {
+        acquireAndEnsureOpen();
+        try {
+            return consumer.beginningOffsets(topic);
+        } finally {
+            release();
+        }
+    }
+
+    public Map<TopicPartition, Long> endOffsets(String topic) throws SQLException {
         acquireAndEnsureOpen();
         try {
             return consumer.endOffsets(topic);

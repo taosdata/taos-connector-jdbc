@@ -67,7 +67,13 @@ public interface Consumer<V> {
     /**
      * If this API is invoked for the same partition more than once, the latest offset will be used on the next poll().
      */
-    void seek(TopicPartition partition, long offset);
+    void seek(TopicPartition partition, long offset) throws SQLException;
 
-    Map<TopicPartition, Long> endOffsets(String topic);
+    long position(TopicPartition partition) throws SQLException;
+
+    Map<TopicPartition, Long> position(String topic) throws SQLException;
+
+    Map<TopicPartition, Long> beginningOffsets(String topic) throws SQLException;
+
+    Map<TopicPartition, Long> endOffsets(String topic) throws SQLException;
 }

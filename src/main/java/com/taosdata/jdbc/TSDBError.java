@@ -59,6 +59,7 @@ public class TSDBError {
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_CONSUMER_NULL, "consumer reference has been destroyed");
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_CONSUMER_CREATE_ERROR, "consumer create error");
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_SEEK_OFFSET, "seek offset must not be a negative number");
+        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_VGROUP_NOT_FOUND, "gGroup not found in result set");
     }
 
     public static SQLException createSQLException(int errorCode) {
@@ -124,5 +125,15 @@ public class TSDBError {
 
     public static RuntimeException createRuntimeException(int errorCode, String message) {
         return new RuntimeException("ERROR (0x" + Integer.toHexString(errorCode) + "): " + message);
+    }
+
+    public static IllegalStateException createIllegalStateException(int errorCode) {
+        String message;
+        if (TSDBErrorNumbers.contains(errorCode))
+            message = TSDBErrorMap.get(errorCode);
+        else
+            message = TSDBErrorMap.get(TSDBErrorNumbers.ERROR_UNKNOWN);
+
+        return new IllegalStateException("ERROR (0x" + Integer.toHexString(errorCode) + "): " + message);
     }
 }

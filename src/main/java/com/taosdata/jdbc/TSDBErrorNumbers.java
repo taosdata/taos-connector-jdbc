@@ -57,6 +57,7 @@ public class TSDBErrorNumbers {
     public static final int ERROR_TMQ_CONSUMER_NULL = 0x2377; // consumer is null, consumer reference has been destroyed
     public static final int ERROR_TMQ_CONSUMER_CREATE_ERROR = 0x2378; // consumer create error
     public static final int ERROR_TMQ_SEEK_OFFSET = 0x2379; // consumer create error
+    public static final int ERROR_TMQ_VGROUP_NOT_FOUND = 0x237a; // consumer create error
 
     private static final Set<Integer> errorNumbers = new HashSet<>();
 

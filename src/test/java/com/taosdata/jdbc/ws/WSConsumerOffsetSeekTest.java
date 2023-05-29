@@ -1,35 +1,41 @@
-package com.taosdata.jdbc.tmq;
+package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.SpecifyAddress;
-import org.junit.*;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.Duration;
-import java.util.*;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class OffsetSeekTest {
+public class WSConsumerOffsetSeekTest {
     private static ScheduledExecutorService scheduledExecutorService = null;
     private static Connection connection = null;
     private static Statement statement = null;
 //    private static final String host = "127.0.0.1";
         private static final String host = "172.17.0.2";
-    private static final String dbName = "tmq_test_offset_seek";
+    private static final String dbName = "tmq_ws_offset_seek";
     private static final String superTable = "st";
-    private static final String topic = "offset_seek_test";
+    private static final String topic = "offset_seek_ws_test";
 
     @Test
     public void testGetOffset() throws Exception {
         Properties properties = new Properties();
-        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, host + ":6030");
-        properties.setProperty(TMQConstants.CONNECT_TYPE, "jni");
+        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, host + ":6041");
+        properties.setProperty(TMQConstants.CONNECT_TYPE, "ws");
         properties.setProperty(TMQConstants.CONNECT_USER, "root");
         properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
@@ -80,9 +86,9 @@ public class OffsetSeekTest {
 
     @BeforeClass
     public static void before() throws SQLException {
-        String url = SpecifyAddress.getInstance().getJniUrl();
+        String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
@@ -117,10 +123,9 @@ public class OffsetSeekTest {
     @AfterClass
     public static void after() throws SQLException {
         scheduledExecutorService.shutdown();
-        statement.execute("drop topic if exists " + topic);
-        statement.execute("drop database if exists " + dbName);
+//        statement.execute("drop topic if exists " + topic);
+//        statement.execute("drop database if exists " + dbName);
         statement.close();
         connection.close();
     }
-
 }

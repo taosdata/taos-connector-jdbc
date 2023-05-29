@@ -111,6 +111,11 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
 
     @Override
     public void setQueryTimeout(int seconds) throws SQLException {
+        if (isClosed())
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
+        if (seconds < 0)
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE);
+
         this.queryTimeout = seconds;
         prepareTransport.setTimeout(seconds * 1000L);
     }

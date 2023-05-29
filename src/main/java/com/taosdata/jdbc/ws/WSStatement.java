@@ -22,6 +22,8 @@ public class WSStatement extends AbstractStatement {
     private boolean closed;
     private ResultSet resultSet;
 
+    private int queryTimeout = 0;
+
     public WSStatement(Transport transport, String database, Connection connection) {
         this.transport = transport;
         this.database = database;
@@ -96,6 +98,22 @@ public class WSStatement extends AbstractStatement {
             this.affectedRows = -1;
             return true;
         }
+    }
+
+    @Override
+    public int getQueryTimeout() throws SQLException {
+        return queryTimeout;
+    }
+
+    @Override
+    public void setQueryTimeout(int seconds) throws SQLException {
+        if (isClosed())
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
+        if (seconds < 0)
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE);
+
+        this.queryTimeout = seconds;
+        transport.setTimeout(seconds * 1000L);
     }
 
     @Override
