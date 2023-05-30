@@ -48,7 +48,6 @@ public class WSConsumerOffsetSeekTest {
         try (TaosConsumer<ResultBean> consumer = new TaosConsumer<>(properties)) {
             consumer.subscribe(Collections.singletonList(topic));
             for (int i = 0; i < 10; i++) {
-                System.out.println(i + " polling...");
                 if (i == 0) {
                     offset = consumer.position(topic);
                 }
@@ -63,7 +62,6 @@ public class WSConsumerOffsetSeekTest {
                 // log
                 for (ConsumerRecord<ResultBean> record : records) {
                     ResultBean value = record.value();
-                    System.out.println(value);
                 }
                 if (i == 0) {
                     for (ConsumerRecord<ResultBean> record : records) {
