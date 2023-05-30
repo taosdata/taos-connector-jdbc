@@ -32,7 +32,6 @@ public class ConsumerTest {
     @Test
     public void testWSBeanObject() throws Exception {
         if (url == null || "".equals(url.trim())) {
-            System.out.println("Environment variable for CloudTest not set properly");
             return;
         }
         // create topic sql

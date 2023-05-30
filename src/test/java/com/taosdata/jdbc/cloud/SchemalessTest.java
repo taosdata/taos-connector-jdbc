@@ -28,6 +28,10 @@ public class SchemalessTest {
 
     @Test
     public void testLine() throws SQLException {
+        if (url == null || "".equals(url.trim())) {
+            return;
+        }
+
         // given
         long cur_time = System.currentTimeMillis();
         String[] lines = new String[]{
