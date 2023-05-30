@@ -133,6 +133,15 @@ public class TaosConsumer<V> implements AutoCloseable {
         }
     }
 
+    public long position(TopicPartition tp) throws SQLException {
+        acquireAndEnsureOpen();
+        try {
+            return consumer.position(tp);
+        } finally {
+            release();
+        }
+    }
+
     public Map<TopicPartition, Long> position(String topic) throws SQLException {
         acquireAndEnsureOpen();
         try {

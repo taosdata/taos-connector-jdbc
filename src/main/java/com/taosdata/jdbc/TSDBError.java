@@ -6,6 +6,7 @@ import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLWarning;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 public class TSDBError {
     private static final Map<Integer, String> TSDBErrorMap = new HashMap<>();
@@ -36,6 +37,8 @@ public class TSDBError {
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_USER_IS_REQUIRED, "user is required");
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_PASSWORD_IS_REQUIRED, "password is required");
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_INVALID_JSON_FORMAT, "invalid json format");
+        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT, "create connection with server timeout");
+        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_QUERY_TIMEOUT, "query timeout");
 
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_UNKNOWN, "unknown error");
 
@@ -59,7 +62,7 @@ public class TSDBError {
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_CONSUMER_NULL, "consumer reference is null or has been destroyed");
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_CONSUMER_CREATE_ERROR, "consumer create error");
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_SEEK_OFFSET, "seek offset must not be a negative number");
-        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_VGROUP_NOT_FOUND, "gGroup not found in result set");
+        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_VGROUP_NOT_FOUND, "vGroup not found in result set");
     }
 
     public static SQLException createSQLException(int errorCode) {
@@ -82,9 +85,13 @@ public class TSDBError {
         if (errorCode > 0x2300 && errorCode < 0x2350)
             // JDBC exception's error number is less than 0x2350
             return new SQLException("ERROR (0x" + Integer.toHexString(errorCode) + "): " + message, "", errorCode);
-        if (errorCode > 0x2350 && errorCode < 0x2400)
+        if (errorCode > 0x2350 && errorCode < 0x2370)
             // JNI exception's error number is large than 0x2350
             return new SQLException("JNI ERROR (0x" + Integer.toHexString(errorCode) + "): " + message, "", errorCode);
+
+        if (errorCode > 0x2370 && errorCode < 0x2400)
+            return new SQLException("Consumer ERROR (0x" + Integer.toHexString(errorCode) + "): " + message, "", errorCode);
+
         return new SQLException("TDengine ERROR (0x" + Integer.toHexString(errorCode) + "): " + message, "", errorCode);
     }
 
@@ -135,5 +142,9 @@ public class TSDBError {
             message = TSDBErrorMap.get(TSDBErrorNumbers.ERROR_UNKNOWN);
 
         return new IllegalStateException("ERROR (0x" + Integer.toHexString(errorCode) + "): " + message);
+    }
+
+    public static TimeoutException createTimeoutException(int errorCode, String message) {
+        return new TimeoutException("ERROR (0x" + Integer.toHexString(errorCode) + "): " + message);
     }
 }

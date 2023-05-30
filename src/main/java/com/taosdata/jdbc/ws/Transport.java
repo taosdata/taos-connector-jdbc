@@ -16,6 +16,8 @@ import java.sql.SQLException;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
 
+import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT;
+
 /**
  * send message
  */
@@ -115,7 +117,8 @@ public class Transport implements AutoCloseable {
         try {
             if (!transport.client.connectBlocking(connectTimeout, TimeUnit.MILLISECONDS)) {
                 transport.close();
-                throw new SQLException("can't create connection with server within: " + connectTimeout + " milliseconds");
+                throw TSDBError.createSQLException(ERROR_CONNECTION_TIMEOUT,
+                        "can't create connection with server within: " + connectTimeout + " milliseconds");
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
