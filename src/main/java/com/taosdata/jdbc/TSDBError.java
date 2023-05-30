@@ -56,7 +56,7 @@ public class TSDBError {
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_CONF_ERROR, "consumer config error");
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_TOPIC_NULL, "topic reference has been destroyed");
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_TOPIC_NAME_NULL, "failed to set consumer topic, topic name is empty");
-        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_CONSUMER_NULL, "consumer reference has been destroyed");
+        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_CONSUMER_NULL, "consumer reference is null or has been destroyed");
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_CONSUMER_CREATE_ERROR, "consumer create error");
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_SEEK_OFFSET, "seek offset must not be a negative number");
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_VGROUP_NOT_FOUND, "gGroup not found in result set");

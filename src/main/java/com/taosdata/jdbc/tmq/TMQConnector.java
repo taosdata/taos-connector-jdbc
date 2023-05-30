@@ -8,6 +8,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
+import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_JNI_RESULT_SET_NULL;
 import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_TMQ_CONSUMER_NULL;
 
 public class TMQConnector extends TSDBJNIConnector {
@@ -232,8 +233,8 @@ public class TMQConnector extends TSDBJNIConnector {
 
     public int getVgroupId(long res) throws SQLException {
         int code = tmqGetVgroupId(res);
-        if (code != TMQ_SUCCESS)
-            throw TSDBError.createSQLException(ERROR_TMQ_CONSUMER_NULL);
+        if (code == JNI_RESULT_SET_NULL)
+            throw TSDBError.createSQLException(ERROR_JNI_RESULT_SET_NULL);
 
         return code;
     }
@@ -253,8 +254,8 @@ public class TMQConnector extends TSDBJNIConnector {
 
     public long getOffset(long res) throws SQLException {
         long l = tmqGetOffset(res);
-        if (l != TMQ_SUCCESS)
-            throw TSDBError.createSQLException(ERROR_TMQ_CONSUMER_NULL);
+        if (l == JNI_RESULT_SET_NULL)
+            throw TSDBError.createSQLException(ERROR_JNI_RESULT_SET_NULL);
 
         return l;
     }

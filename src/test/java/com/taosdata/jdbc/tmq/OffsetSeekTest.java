@@ -19,8 +19,7 @@ public class OffsetSeekTest {
     private static ScheduledExecutorService scheduledExecutorService = null;
     private static Connection connection = null;
     private static Statement statement = null;
-//    private static final String host = "127.0.0.1";
-        private static final String host = "172.17.0.2";
+    private static final String host = "127.0.0.1";
     private static final String dbName = "tmq_test_offset_seek";
     private static final String superTable = "st";
     private static final String topic = "offset_seek_test";
@@ -45,7 +44,7 @@ public class OffsetSeekTest {
             for (int i = 0; i < 10; i++) {
                 System.out.println(i + " polling...");
                 if (i == 0) {
-                    offset = consumer.endOffsets(topic);
+                    offset = consumer.position(topic);
                 }
                 if (i == 5) {
                     if (offset != null) {
@@ -54,7 +53,7 @@ public class OffsetSeekTest {
                         }
                     }
                 }
-                ConsumerRecords<ResultBean> records = consumer.poll(Duration.ofMillis(200));
+                ConsumerRecords<ResultBean> records = consumer.poll(Duration.ofMillis(500));
                 // log
                 for (ConsumerRecord<ResultBean> record : records) {
                     ResultBean value = record.value();
