@@ -56,6 +56,7 @@ public class WSConsumerOffsetSeekTest {
                         for (Map.Entry<TopicPartition, Long> entry : offset.entrySet()) {
                             consumer.seek(entry.getKey(), entry.getValue());
                         }
+                        TimeUnit.SECONDS.sleep(1);
                     }
                 }
                 ConsumerRecords<ResultBean> records = consumer.poll(Duration.ofMillis(500));
@@ -112,7 +113,7 @@ public class WSConsumerOffsetSeekTest {
             } catch (SQLException e) {
                 // ignore
             }
-        }, 0, 10, TimeUnit.MILLISECONDS);
+        }, 0, 100, TimeUnit.MILLISECONDS);
 
         statement.executeUpdate("create topic if not exists " + topic + " as select ts, c1, c2, c3, c4, c5, t1 from ct0");
     }

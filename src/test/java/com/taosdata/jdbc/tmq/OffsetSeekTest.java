@@ -50,6 +50,7 @@ public class OffsetSeekTest {
                         for (Map.Entry<TopicPartition, Long> entry : offset.entrySet()) {
                             consumer.seek(entry.getKey(), entry.getValue());
                         }
+                        TimeUnit.SECONDS.sleep(1);
                     }
                 }
                 ConsumerRecords<ResultBean> records = consumer.poll(Duration.ofMillis(500));
