@@ -4,8 +4,11 @@ import com.taosdata.jdbc.enums.DataType;
 import com.taosdata.jdbc.utils.StringUtils;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.Properties;
 
@@ -20,7 +23,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
     static {
         Properties props = System.getProperties();
         try {
-            props.load(AbstractDatabaseMetaData.class.getClassLoader().getResourceAsStream("version.properties"));
+            props.load(loadProperties());
         } catch (IOException e) {
             //ignore
         }
@@ -29,6 +32,17 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
         DRIVER_VERSION = props.getProperty("DRIVER_VERSION");
         DRIVER_MAJAR_VERSION = Integer.parseInt(DRIVER_VERSION.split("\\.")[0]);
         DRIVER_MINOR_VERSION = Integer.parseInt(DRIVER_VERSION.split("\\.")[1]);
+    }
+    
+    private static InputStream loadProperties() throws IOException {
+        Enumeration<URL> urls = AbstractDatabaseMetaData.class.getClassLoader().getResources("version.properties");
+        while (urls.hasMoreElements()) {
+            URL url = urls.nextElement();
+            if (url.getFile().contains("taos-jdbcdriver")) {
+                return url.openStream();
+            }
+        }
+        return null;
     }
 
     private String precision = TSDBConstants.DEFAULT_PRECISION;
