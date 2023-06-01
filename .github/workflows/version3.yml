@@ -35,6 +35,11 @@ jobs:
           path: 'TDengine'
           ref: ${{ github.base_ref }}
 
+      - name: prepare install
+        run: | 
+          sudo apt-get install  -y libgeos-dev
+          geos-config --version
+
       - name: install TDengine
         run: cd TDengine && mkdir debug && cd debug && cmake .. -DBUILD_JDBC=false -DBUILD_TOOLS=false -DBUILD_HTTP=false && make && sudo make install
 
