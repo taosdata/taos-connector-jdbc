@@ -22,6 +22,8 @@ public class PollResp extends Response {
     @JSONField(name = "message_id")
     private long messageId;
 
+    private long offset;
+
     private long timing;
 
     public int getCode() {
@@ -94,5 +96,13 @@ public class PollResp extends Response {
 
     public void setTiming(long timing) {
         this.timing = timing;
+    }
+
+    public long getOffset() {
+        return offset;
+    }
+
+    public void setOffset(long offset) {
+        this.offset = offset;
     }
 }

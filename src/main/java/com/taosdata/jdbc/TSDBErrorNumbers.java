@@ -33,7 +33,8 @@ public class TSDBErrorNumbers {
     public static final int ERROR_PASSWORD_IS_REQUIRED = 0x231a;    // password is required
     public static final int ERROR_INVALID_JSON_FORMAT = 0x231b;
     public static final int ERROR_HTTP_ENTITY_IS_NULL = 0x231c; //http entity is null
-
+    public static final int ERROR_CONNECTION_TIMEOUT = 0x231d;
+    public static final int ERROR_QUERY_TIMEOUT = 0x231e;
 
     public static final int ERROR_UNKNOWN = 0x2350;    //unknown error
 
@@ -53,9 +54,11 @@ public class TSDBErrorNumbers {
 
     public static final int ERROR_TMQ_CONF_ERROR = 0x2374; // consumer config error
     public static final int ERROR_TMQ_TOPIC_NULL = 0x2375; // topic reference has been destroyed
-    public static final int ERROR_TMQ_TOPIC_NAME_NULL =0x2376; // consumer topic's name is empty
+    public static final int ERROR_TMQ_TOPIC_NAME_NULL = 0x2376; // consumer topic's name is empty
     public static final int ERROR_TMQ_CONSUMER_NULL = 0x2377; // consumer is null, consumer reference has been destroyed
     public static final int ERROR_TMQ_CONSUMER_CREATE_ERROR = 0x2378; // consumer create error
+    public static final int ERROR_TMQ_SEEK_OFFSET = 0x2379; // consumer create error
+    public static final int ERROR_TMQ_VGROUP_NOT_FOUND = 0x237a; // consumer create error
 
     private static final Set<Integer> errorNumbers = new HashSet<>();
 
@@ -86,6 +89,8 @@ public class TSDBErrorNumbers {
         errorNumbers.add(ERROR_PASSWORD_IS_REQUIRED);
         errorNumbers.add(ERROR_INVALID_JSON_FORMAT);
         errorNumbers.add(ERROR_HTTP_ENTITY_IS_NULL);
+        errorNumbers.add(ERROR_CONNECTION_TIMEOUT);
+        errorNumbers.add(ERROR_QUERY_TIMEOUT);
 
         errorNumbers.add(ERROR_RESTFul_Client_Protocol_Exception);
 
@@ -106,6 +111,8 @@ public class TSDBErrorNumbers {
         errorNumbers.add(ERROR_TMQ_TOPIC_NAME_NULL);
         errorNumbers.add(ERROR_TMQ_CONSUMER_NULL);
         errorNumbers.add(ERROR_TMQ_CONSUMER_CREATE_ERROR);
+        errorNumbers.add(ERROR_TMQ_SEEK_OFFSET);
+        errorNumbers.add(ERROR_TMQ_VGROUP_NOT_FOUND);
     }
 
     private TSDBErrorNumbers() {

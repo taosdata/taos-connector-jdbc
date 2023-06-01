@@ -1,7 +1,11 @@
 package com.taosdata.jdbc.utils;
 
+import com.taosdata.jdbc.TSDBError;
+
 import java.util.concurrent.*;
 import java.util.function.Function;
+
+import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_QUERY_TIMEOUT;
 
 public class CompletableFutureTimeout {
     private CompletableFutureTimeout() {
@@ -21,7 +25,9 @@ public class CompletableFutureTimeout {
     private static <T> CompletableFuture<T> timeoutAfter(long timeout, TimeUnit unit) {
         CompletableFuture<T> result = new CompletableFuture<>();
         Delayer.delayer.schedule(
-                () -> result.completeExceptionally(new TimeoutException(String.format("failed to complete the task within the specified time : %d,%s",timeout,unit))), timeout, unit);
+                () -> result.completeExceptionally(TSDBError.createTimeoutException(ERROR_QUERY_TIMEOUT,
+                        String.format("failed to complete the task within the specified time : %d,%s", timeout, unit))), timeout, unit)
+        ;
         return result;
     }
 

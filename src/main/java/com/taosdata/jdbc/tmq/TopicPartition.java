@@ -4,8 +4,13 @@ import java.util.Objects;
 
 public class TopicPartition {
     private final String topic;
-    private final String databaseName;
+    private String databaseName;
     private final int vGroupId;
+
+    public TopicPartition(String topic, int vGroupId) {
+        this.topic = topic;
+        this.vGroupId = vGroupId;
+    }
 
     public TopicPartition(String topic, String databaseName, int vGroupId) {
         this.topic = topic;
@@ -30,12 +35,22 @@ public class TopicPartition {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         TopicPartition partition = (TopicPartition) o;
-        return vGroupId == partition.vGroupId && Objects.equals(topic, partition.topic)
-                && Objects.equals(databaseName, partition.databaseName);
+        return vGroupId == partition.vGroupId && Objects.equals(topic, partition.topic);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(topic, databaseName, vGroupId);
+        return Objects.hash(topic, vGroupId);
+    }
+
+
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("TopicPartition{");
+        sb.append("topic='").append(topic).append('\'');
+        sb.append(", databaseName='").append(databaseName).append('\'');
+        sb.append(", vGroupId=").append(vGroupId);
+        sb.append('}');
+        return sb.toString();
     }
 }

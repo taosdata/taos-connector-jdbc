@@ -6,6 +6,7 @@ import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLWarning;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 public class TSDBError {
     private static final Map<Integer, String> TSDBErrorMap = new HashMap<>();
@@ -36,6 +37,8 @@ public class TSDBError {
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_USER_IS_REQUIRED, "user is required");
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_PASSWORD_IS_REQUIRED, "password is required");
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_INVALID_JSON_FORMAT, "invalid json format");
+        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT, "create connection with server timeout");
+        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_QUERY_TIMEOUT, "query timeout");
 
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_UNKNOWN, "unknown error");
 
@@ -56,8 +59,10 @@ public class TSDBError {
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_CONF_ERROR, "consumer config error");
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_TOPIC_NULL, "topic reference has been destroyed");
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_TOPIC_NAME_NULL, "failed to set consumer topic, topic name is empty");
-        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_CONSUMER_NULL, "consumer reference has been destroyed");
+        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_CONSUMER_NULL, "consumer reference is null or has been destroyed");
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_CONSUMER_CREATE_ERROR, "consumer create error");
+        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_SEEK_OFFSET, "seek offset must not be a negative number");
+        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_VGROUP_NOT_FOUND, "vGroup not found in result set");
     }
 
     public static SQLException createSQLException(int errorCode) {
@@ -80,9 +85,13 @@ public class TSDBError {
         if (errorCode > 0x2300 && errorCode < 0x2350)
             // JDBC exception's error number is less than 0x2350
             return new SQLException("ERROR (0x" + Integer.toHexString(errorCode) + "): " + message, "", errorCode);
-        if (errorCode > 0x2350 && errorCode < 0x2400)
+        if (errorCode > 0x2350 && errorCode < 0x2370)
             // JNI exception's error number is large than 0x2350
             return new SQLException("JNI ERROR (0x" + Integer.toHexString(errorCode) + "): " + message, "", errorCode);
+
+        if (errorCode > 0x2370 && errorCode < 0x2400)
+            return new SQLException("Consumer ERROR (0x" + Integer.toHexString(errorCode) + "): " + message, "", errorCode);
+
         return new SQLException("TDengine ERROR (0x" + Integer.toHexString(errorCode) + "): " + message, "", errorCode);
     }
 
@@ -99,5 +108,43 @@ public class TSDBError {
     // paramter size is greater than 1
     public static SQLException undeterminedExecutionError() {
         return new SQLException("Please either call clearBatch() to clean up context first, or use executeBatch() instead", (String) null);
+    }
+
+    public static IllegalArgumentException createIllegalArgumentException(int errorCode) {
+        String message;
+        if (TSDBErrorNumbers.contains(errorCode))
+            message = TSDBErrorMap.get(errorCode);
+        else
+            message = TSDBErrorMap.get(TSDBErrorNumbers.ERROR_UNKNOWN);
+
+        return new IllegalArgumentException("ERROR (0x" + Integer.toHexString(errorCode) + "): " + message);
+    }
+
+    public static RuntimeException createRuntimeException(int errorCode) {
+        String message;
+        if (TSDBErrorNumbers.contains(errorCode))
+            message = TSDBErrorMap.get(errorCode);
+        else
+            message = TSDBErrorMap.get(TSDBErrorNumbers.ERROR_UNKNOWN);
+
+        return new RuntimeException("ERROR (0x" + Integer.toHexString(errorCode) + "): " + message);
+    }
+
+    public static RuntimeException createRuntimeException(int errorCode, String message) {
+        return new RuntimeException("ERROR (0x" + Integer.toHexString(errorCode) + "): " + message);
+    }
+
+    public static IllegalStateException createIllegalStateException(int errorCode) {
+        String message;
+        if (TSDBErrorNumbers.contains(errorCode))
+            message = TSDBErrorMap.get(errorCode);
+        else
+            message = TSDBErrorMap.get(TSDBErrorNumbers.ERROR_UNKNOWN);
+
+        return new IllegalStateException("ERROR (0x" + Integer.toHexString(errorCode) + "): " + message);
+    }
+
+    public static TimeoutException createTimeoutException(int errorCode, String message) {
+        return new TimeoutException("ERROR (0x" + Integer.toHexString(errorCode) + "): " + message);
     }
 }

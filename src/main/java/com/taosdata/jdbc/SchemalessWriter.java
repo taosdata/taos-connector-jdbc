@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class SchemalessWriter {
+public class SchemalessWriter implements AutoCloseable{
     // jni
     private TSDBJNIConnector connector;
     // websocket
@@ -47,7 +47,8 @@ public class SchemalessWriter {
             // use websocket schemaless insert through existing connection, url mast contain username password or cloudToken
             DatabaseMetaData metaData = connection.getMetaData();
             String url = metaData.getURL();
-            init(url, null, null, null, null, null);
+            String db = connection.getCatalog();
+            init(url, null, null, null, db, null);
         }
     }
 
@@ -163,6 +164,7 @@ public class SchemalessWriter {
             CommonResp auth = (CommonResp) transport.send(new Request(SchemalessAction.CONN.getAction(), connectReq));
 
             if (Code.SUCCESS.getCode() != auth.getCode()) {
+                transport.close();
                 throw new SQLException("0x" + Integer.toHexString(auth.getCode()) + ":" + "auth failure: " + auth.getMessage());
             }
         }
@@ -291,5 +293,19 @@ public class SchemalessWriter {
     private void selectDB(TSDBJNIConnector connector, String dbName) throws SQLException {
         long pSql = connector.executeQuery("use " + dbName);
         connector.freeResultSet(pSql);
+    }
+
+    public void close() throws SQLException {
+        switch (type) {
+            case JNI: {
+                break;
+            }
+            case WS: {
+                transport.close();
+                break;
+            }
+            default:
+                // nothing
+        }
     }
 }

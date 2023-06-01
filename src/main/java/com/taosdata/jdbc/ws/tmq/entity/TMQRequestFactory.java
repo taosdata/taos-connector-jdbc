@@ -69,4 +69,22 @@ public class TMQRequestFactory {
         commitReq.setMessageId(messageId);
         return new Request(ConsumerAction.COMMIT.getAction(), commitReq);
     }
+
+    public Request generateSeek(String topic, int vgId, long offset) {
+        long reqId = this.getId(ConsumerAction.SEEK.getAction());
+        SeekReq seekReq = new SeekReq();
+        seekReq.setReqId(reqId);
+        seekReq.setTopic(topic);
+        seekReq.setVgId(vgId);
+        seekReq.setOffset(offset);
+        return new Request(ConsumerAction.SEEK.getAction(), seekReq);
+    }
+
+    public Request generateAssignment(String topic){
+        long reqId = this.getId(ConsumerAction.ASSIGNMENT.getAction());
+        AssignmentReq assignmentReq = new AssignmentReq();
+        assignmentReq.setReqId(reqId);
+        assignmentReq.setTopic(topic);
+        return new Request(ConsumerAction.ASSIGNMENT.getAction(), assignmentReq);
+    }
 }

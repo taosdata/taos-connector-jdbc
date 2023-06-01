@@ -5,6 +5,7 @@ public class ConsumerRecord<V> {
 
     private final String dbName;
     private final int vGroupId;
+    private long offset;
     private final V value;
 
     public ConsumerRecord(String topic,
@@ -14,6 +15,14 @@ public class ConsumerRecord<V> {
         this.topic = topic;
         this.dbName = dbName;
         this.vGroupId = vGroupId;
+        this.value = value;
+    }
+
+    public ConsumerRecord(String topic, String dbName, int vGroupId, long offset, V value) {
+        this.topic = topic;
+        this.dbName = dbName;
+        this.vGroupId = vGroupId;
+        this.offset = offset;
         this.value = value;
     }
 
@@ -31,5 +40,9 @@ public class ConsumerRecord<V> {
 
     public V value() {
         return value;
+    }
+
+    public long getOffset() {
+        return offset;
     }
 }

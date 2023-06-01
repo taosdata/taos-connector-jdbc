@@ -137,6 +137,7 @@ public class RestfulDriver extends AbstractDriver {
         ConnectResp auth = (ConnectResp) transport.send(new Request(Action.CONN.getAction(), connectReq));
 
         if (Code.SUCCESS.getCode() != auth.getCode()) {
+            transport.close();
             throw new SQLException("0x" + Integer.toHexString(auth.getCode()) + ":" + "auth failure:" + auth.getMessage());
         }
 

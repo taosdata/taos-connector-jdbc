@@ -8,6 +8,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
+import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_JNI_RESULT_SET_NULL;
+import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_TMQ_CONSUMER_NULL;
 
 public class TMQConnector extends TSDBJNIConnector {
 
@@ -59,6 +61,9 @@ public class TMQConnector extends TSDBJNIConnector {
         if (taos == TMQ_CONF_NULL) {
             throw TSDBError.createSQLException(TMQ_CONF_NULL);
         }
+        if (taos == JNI_OUT_OF_MEMORY) {
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_JNI_OUT_OF_MEMORY);
+        }
         if (taos < TMQ_SUCCESS) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TMQ_CONSUMER_CREATE_ERROR, createConsumerErrorMsg);
         }
@@ -75,7 +80,7 @@ public class TMQConnector extends TSDBJNIConnector {
     public long createTopic(Collection<String> topics) throws SQLException {
         long topic = tmqTopicNewImp(taos);
         if (topic < TMQ_SUCCESS) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TMQ_CONSUMER_NULL);
+            throw TSDBError.createSQLException(ERROR_TMQ_CONSUMER_NULL);
         }
         if (null != topics && !topics.isEmpty()) {
             for (String name : topics) {
@@ -112,15 +117,14 @@ public class TMQConnector extends TSDBJNIConnector {
 
     public void subscribe(long topic) throws SQLException {
         int code = tmqSubscribeImp(taos, topic);
-        if (code == TMQ_CONSUMER_NULL) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TMQ_CONSUMER_NULL, "failed to subscribe topic, consumer reference has been destroyed");
-        }
-        if (code == TMQ_TOPIC_NULL) {
+        if (code == TMQ_CONSUMER_NULL)
+            throw TSDBError.createSQLException(ERROR_TMQ_CONSUMER_NULL, "failed to subscribe topic, consumer reference has been destroyed");
+
+        if (code == TMQ_TOPIC_NULL)
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TMQ_TOPIC_NULL);
-        }
-        if (code != TMQ_SUCCESS) {
+
+        if (code != TMQ_SUCCESS)
             throw TSDBError.createSQLException(code, getErrMsg(code));
-        }
     }
 
     // DLL_EXPORT int32_t tmq_subscribe(tmq_t *tmq, const tmq_list_t *topic_list);
@@ -128,12 +132,12 @@ public class TMQConnector extends TSDBJNIConnector {
 
     public Set<String> subscription() throws SQLException {
         int code = tmqSubscriptionImp(taos, this);
-        if (code == TMQ_CONSUMER_NULL) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TMQ_CONSUMER_NULL, "get subscription error, consumer reference has been destroyed");
-        }
-        if (code != TMQ_SUCCESS) {
+        if (code == TMQ_CONSUMER_NULL)
+            throw TSDBError.createSQLException(ERROR_TMQ_CONSUMER_NULL, "get subscription error, consumer reference has been destroyed");
+
+        if (code != TMQ_SUCCESS)
             throw TSDBError.createSQLException(code, getErrMsg(code));
-        }
+
         return Arrays.stream(topics).collect(Collectors.toSet());
     }
 
@@ -146,12 +150,11 @@ public class TMQConnector extends TSDBJNIConnector {
 
     public void syncCommit(long offsets) throws SQLException {
         int code = tmqCommitSync(taos, offsets);
-        if (code == TMQ_CONSUMER_NULL) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TMQ_CONSUMER_NULL, "sync commit offset error, consumer reference has been destroyed");
-        }
-        if (code != TMQ_SUCCESS) {
+        if (code == TMQ_CONSUMER_NULL)
+            throw TSDBError.createSQLException(ERROR_TMQ_CONSUMER_NULL, "sync commit offset error, consumer reference has been destroyed");
+
+        if (code != TMQ_SUCCESS)
             throw TSDBError.createSQLException(code, createConsumerErrorMsg);
-        }
     }
 
     // DLL_EXPORT int32_t tmq_commit_sync(tmq_t *tmq, const TAOS_RES *msg);
@@ -166,12 +169,11 @@ public class TMQConnector extends TSDBJNIConnector {
 
     public void unsubscribe() throws SQLException {
         int code = tmqUnsubscribeImp(taos);
-        if (code == TMQ_CONSUMER_NULL) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TMQ_CONSUMER_NULL, "unsubscribe error, consumer reference has been destroyed");
-        }
-        if (code != TMQ_SUCCESS) {
+        if (code == TMQ_CONSUMER_NULL)
+            throw TSDBError.createSQLException(ERROR_TMQ_CONSUMER_NULL, "unsubscribe error, consumer reference has been destroyed");
+
+        if (code != TMQ_SUCCESS)
             throw TSDBError.createSQLException(code, getErrMsg(code));
-        }
     }
 
     // DLL_EXPORT int32_t tmq_unsubscribe(tmq_t *tmq);
@@ -179,9 +181,8 @@ public class TMQConnector extends TSDBJNIConnector {
 
     public void closeConsumer() throws SQLException {
         int code = tmqConsumerCloseImp(taos);
-        if (code != TMQ_SUCCESS && code != TMQ_CONSUMER_NULL) {
+        if (code != TMQ_SUCCESS && code != TMQ_CONSUMER_NULL)
             throw TSDBError.createSQLException(code, getErrMsgImp(code));
-        }
     }
 
     // DLL_EXPORT int32_t tmq_consumer_close(tmq_t *tmq);
@@ -196,30 +197,46 @@ public class TMQConnector extends TSDBJNIConnector {
     // DLL_EXPORT const char *tmq_err2str(int32_t code);
     private native String getErrMsgImp(int code);
 
-    public long poll(long waitTime) {
-        return tmqConsumerPoll(taos, waitTime);
+    public long poll(long waitTime) throws SQLException {
+        long l = tmqConsumerPoll(taos, waitTime);
+        if (l == TMQ_CONSUMER_NULL)
+            throw TSDBError.createSQLException(ERROR_TMQ_CONSUMER_NULL);
+
+        return l;
     }
 
     // DLL_EXPORT TAOS_RES *tmq_consumer_poll(tmq_t *tmq, int64_t wait_time);
     private native long tmqConsumerPoll(long tmq, long waitTime);
 
 
-    public String getTopicName(long res) {
-        return tmqGetTopicName(res);
+    public String getTopicName(long res) throws SQLException {
+        String s = tmqGetTopicName(res);
+        if (s == null)
+            throw TSDBError.createSQLException(ERROR_TMQ_CONSUMER_NULL);
+
+        return s;
     }
 
     // DLL_EXPORT const char *tmq_get_topic_name(TAOS_RES *res);
     private native String tmqGetTopicName(long res);
 
-    public String getDbName(long res) {
-        return tmqGetDbName(res);
+    public String getDbName(long res) throws SQLException {
+        String s = tmqGetDbName(res);
+        if (s == null)
+            throw TSDBError.createSQLException(ERROR_TMQ_CONSUMER_NULL);
+
+        return s;
     }
 
     // DLL_EXPORT const char *tmq_get_db_name(TAOS_RES *res);
     private native String tmqGetDbName(long res);
 
-    public int getVgroupId(long res) {
-        return tmqGetVgroupId(res);
+    public int getVgroupId(long res) throws SQLException {
+        int code = tmqGetVgroupId(res);
+        if (code == JNI_RESULT_SET_NULL)
+            throw TSDBError.createSQLException(ERROR_JNI_RESULT_SET_NULL);
+
+        return code;
     }
 
     // DLL_EXPORT int32_t tmq_get_vgroup_id(TAOS_RES *res);
@@ -232,6 +249,17 @@ public class TMQConnector extends TSDBJNIConnector {
     // DLL_EXPORT const char *tmq_get_table_name(TAOS_RES *res);
     private native String tmqGetTableName(long res);
 
+    // DLL_EXPORT int64_t     tmq_get_vgroup_offset(TAOS_RES* res);
+    private native long tmqGetOffset(long res);
+
+    public long getOffset(long res) throws SQLException {
+        long l = tmqGetOffset(res);
+        if (l == JNI_RESULT_SET_NULL)
+            throw TSDBError.createSQLException(ERROR_JNI_RESULT_SET_NULL);
+
+        return l;
+    }
+
     public int fetchBlock(long resultSet, TSDBResultSetBlockData blockData, List<ColumnMetaData> columnMetaData) {
         int ret = this.fetchRawBlockImp(this.taos, resultSet, blockData, columnMetaData);
         columnMetaData.forEach(column -> column.setColIndex(column.getColIndex() + 1));
@@ -239,4 +267,38 @@ public class TMQConnector extends TSDBJNIConnector {
     }
 
     private native int fetchRawBlockImp(long connection, long resultSet, TSDBResultSetBlockData blockData, List<ColumnMetaData> columnMetaData);
+
+    public void seek(String topicName, int vgId, long offset) {
+        int code = tmqSeekImp(this.taos, topicName, vgId, offset);
+        if (code != TMQ_SUCCESS) {
+            if (code == TMQ_CONSUMER_NULL) {
+                throw TSDBError.createRuntimeException(ERROR_TMQ_CONSUMER_NULL);
+            } else if (code == TMQ_TOPIC_NULL) {
+                throw TSDBError.createRuntimeException(TSDBErrorNumbers.ERROR_TMQ_TOPIC_NULL);
+            }
+            throw TSDBError.createRuntimeException(code, getErrMsg(code));
+        }
+    }
+
+    // DLL_EXPORT int32_t   tmq_offset_seek(tmq_t *tmq, const char* pTopicName, int32_t vgId, int64_t offset);
+    private native int tmqSeekImp(long tmq, String topicName, int vgId, long offset);
+
+    public List<Assignment> getTopicAssignment(String topicName) {
+        List<Assignment> assignments = new ArrayList<>();
+        int code = tmqGetTopicAssignmentImp(this.taos, topicName, assignments);
+        if (code != TMQ_SUCCESS) {
+            if (code == TMQ_CONSUMER_NULL) {
+                throw TSDBError.createRuntimeException(ERROR_TMQ_CONSUMER_NULL);
+            } else if (code == TMQ_TOPIC_NULL) {
+                throw TSDBError.createRuntimeException(TSDBErrorNumbers.ERROR_TMQ_TOPIC_NULL);
+            }
+            throw TSDBError.createRuntimeException(code, getErrMsg(code));
+        }
+
+        return assignments;
+    }
+
+    // DLL_EXPORT int32_t   tmq_get_topic_assignment(tmq_t *tmq, const char* pTopicName, tmq_topic_assignment **assignment, int32_t *numOfAssignment);
+    private native int tmqGetTopicAssignmentImp(long tmq, String topicName, List<Assignment> assignments);
+
 }

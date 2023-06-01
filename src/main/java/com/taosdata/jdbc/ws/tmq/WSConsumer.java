@@ -21,6 +21,8 @@ import java.sql.SQLException;
 import java.time.Duration;
 import java.util.*;
 
+import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_TMQ_VGROUP_NOT_FOUND;
+
 public class WSConsumer<V> implements Consumer<V> {
     private Transport transport;
     private ConsumerParam param;
@@ -78,6 +80,7 @@ public class WSConsumer<V> implements Consumer<V> {
     @Override
     public void unsubscribe() throws SQLException {
         // nothing to do
+
     }
 
     @Override
@@ -105,7 +108,7 @@ public class WSConsumer<V> implements Consumer<V> {
                 TopicPartition tp = new TopicPartition(topic, dbName, vGroupId);
 
                 V v = deserializer.deserialize(rs, topic, dbName);
-                ConsumerRecord<V> r = new ConsumerRecord<>(topic, dbName, vGroupId, v);
+                ConsumerRecord<V> r = new ConsumerRecord<>(topic, dbName, vGroupId, pollResp.getOffset(), v);
                 records.put(tp, r);
             }
         }
@@ -134,5 +137,50 @@ public class WSConsumer<V> implements Consumer<V> {
     @Override
     public void commitAsync(OffsetCommitCallback<V> callback) {
         // nothing to do
+    }
+
+    @Override
+    public void seek(TopicPartition partition, long offset) throws SQLException {
+        Request request = factory.generateSeek(partition.getTopic(), partition.getVGroupId(), offset);
+        SeekResp resp = (SeekResp) transport.send(request);
+        if (Code.SUCCESS.getCode() != resp.getCode()) {
+            throw new SQLException("consumer seek error, code: " + resp.getCode() + ", message: " + resp.getMessage());
+        }
+    }
+
+    @Override
+    public long position(TopicPartition partition) throws SQLException {
+        return Arrays.stream(getAssignment(partition.getTopic())).
+                filter(a->a.getVgId() == partition.getVGroupId())
+                .findFirst()
+                .orElseThrow(() -> TSDBError.createIllegalStateException(ERROR_TMQ_VGROUP_NOT_FOUND))
+                .getCurrentOffset();
+    }
+
+    @Override
+    public Map<TopicPartition, Long> position(String topic) throws SQLException {
+        return Arrays.stream(getAssignment(topic))
+                .collect(HashMap::new, (m, a) -> m.put(new TopicPartition(topic, a.getVgId()), a.getCurrentOffset()), HashMap::putAll);
+    }
+
+    @Override
+    public Map<TopicPartition, Long> beginningOffsets(String topic) throws SQLException {
+        return Arrays.stream(getAssignment(topic))
+                .collect(HashMap::new, (m, a) -> m.put(new TopicPartition(topic, a.getVgId()), a.getBegin()), HashMap::putAll);
+    }
+
+    @Override
+    public Map<TopicPartition, Long> endOffsets(String topic) throws SQLException {
+        return Arrays.stream(getAssignment(topic))
+                .collect(HashMap::new, (m, a) -> m.put(new TopicPartition(topic, a.getVgId()), a.getEnd()), HashMap::putAll);
+    }
+
+    private Assignment[] getAssignment(String topic) throws SQLException {
+        Request request = factory.generateAssignment(topic);
+        AssignmentResp resp = (AssignmentResp) transport.send(request);
+        if (Code.SUCCESS.getCode() != resp.getCode()) {
+            throw new SQLException("consumer assignment error, code: " + resp.getCode() + ", message: " + resp.getMessage());
+        }
+        return resp.getAssignment();
     }
 }

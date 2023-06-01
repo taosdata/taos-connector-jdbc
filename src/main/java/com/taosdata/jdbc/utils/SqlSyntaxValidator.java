@@ -17,7 +17,7 @@ package com.taosdata.jdbc.utils;
 import java.util.regex.Pattern;
 
 public class SqlSyntaxValidator {
-    private static final Pattern USE_PATTERN = Pattern.compile("use\\s+(\\w+);?");
+    private static final Pattern USE_PATTERN = Pattern.compile("use\\s+(\\w+);?", Pattern.CASE_INSENSITIVE);
 
     private SqlSyntaxValidator() {
     }

@@ -13,6 +13,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_TMQ_CONSUMER_NULL;
+import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_TMQ_VGROUP_NOT_FOUND;
 
 public class JNIConsumer<V> implements Consumer<V> {
 
@@ -92,10 +93,11 @@ public class JNIConsumer<V> implements Consumer<V> {
                 String topic = connector.getTopicName(resultSet);
                 String dbName = connector.getDbName(resultSet);
                 int vGroupId = connector.getVgroupId(resultSet);
+                long offset = connector.getOffset(resultSet);
                 TopicPartition tp = new TopicPartition(topic, dbName, vGroupId);
 
                 V v = deserializer.deserialize(rs, topic, dbName);
-                ConsumerRecord<V> r = new ConsumerRecord<>(topic, dbName, vGroupId, v);
+                ConsumerRecord<V> r = new ConsumerRecord<>(topic, dbName, vGroupId, offset, v);
                 records.put(tp, r);
             }
         }
@@ -117,6 +119,47 @@ public class JNIConsumer<V> implements Consumer<V> {
             callbacks.put(r.getOffset(), offset);
         }
         offsetList.clear();
+    }
+
+    @Override
+    public void seek(TopicPartition partition, long offset) {
+        connector.seek(partition.getTopic(), partition.getVGroupId(), offset);
+    }
+
+    @Override
+    public long position(TopicPartition partition) {
+       return connector.getTopicAssignment(partition.getTopic()).stream()
+                .filter(a -> a.getVgId() == partition.getVGroupId())
+                .findFirst()
+                .orElseThrow(() -> TSDBError.createIllegalStateException(ERROR_TMQ_VGROUP_NOT_FOUND))
+                .getCurrentOffset();
+    }
+
+    @Override
+    public Map<TopicPartition, Long> position(String topic) {
+        return connector.getTopicAssignment(topic).stream()
+                .collect(HashMap::new
+                        , (m, a) -> m.put(new TopicPartition(topic, a.getVgId()), a.getCurrentOffset())
+                        , HashMap::putAll
+                );
+    }
+
+    @Override
+    public Map<TopicPartition, Long> beginningOffsets(String topic) {
+        return connector.getTopicAssignment(topic).stream()
+                .collect(HashMap::new
+                        , (m, a) -> m.put(new TopicPartition(topic, a.getVgId()), a.getBegin())
+                        , HashMap::putAll
+                );
+    }
+
+    @Override
+    public Map<TopicPartition, Long> endOffsets(String topic) {
+        return connector.getTopicAssignment(topic).stream()
+                .collect(HashMap::new
+                        , (m, a) -> m.put(new TopicPartition(topic, a.getVgId()), a.getEnd())
+                        , HashMap::putAll
+                );
     }
 
     @Override
