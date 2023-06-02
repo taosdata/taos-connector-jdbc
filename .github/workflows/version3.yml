@@ -31,7 +31,7 @@ jobs:
         with:
           repository: 'taosdata/TDengine'
           path: 'TDengine'
-          ref: 'main'
+          ref: ${{ github.base_ref }}
 
       - name: install TDengine
         run: cd TDengine && mkdir debug && cd debug && cmake .. -DBUILD_JDBC=false -DBUILD_TOOLS=false -DBUILD_HTTP=false && make && sudo make install
