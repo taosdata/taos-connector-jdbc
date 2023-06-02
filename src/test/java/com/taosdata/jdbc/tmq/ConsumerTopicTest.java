@@ -64,17 +64,12 @@ public class ConsumerTopicTest {
     }
 
     @AfterClass
-    public static void after() {
+    public static void after() throws SQLException {
         try (Statement statement = connection.createStatement()) {
             statement.executeUpdate("drop topic if exists " + topic);
-        } catch (SQLException e) {
-            // nothing
+            statement.executeUpdate("drop database if exists " + dbName);
         }
-        try {
-            connection.close();
-        } catch (SQLException e) {
-            // nothing
-        }
+        connection.close();
     }
 
     static class BeanDeserializer extends ReferenceDeserializer<Bean> {

@@ -88,6 +88,7 @@ public class WSConsumerWithDiffTypeTest {
                 if (statement != null) {
                     for (String topic : topics) {
                         statement.executeUpdate("drop topic " + topic);
+                        statement.executeUpdate("drop database if exists " + dbName);
                     }
                     statement.close();
                 }

@@ -2,6 +2,7 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -77,5 +78,13 @@ public class WSSelectTest {
         statement.execute("create table " + databaseName + ".alltype_query(ts timestamp, c1 bool,c2 tinyint, c3 smallint, c4 int, c5 bigint, c6 tinyint unsigned, c7 smallint unsigned, c8 int unsigned, c9 bigint unsigned, c10 float, c11 double, c12 binary(20), c13 nchar(30) )");
         statement.close();
         testInsert();
+    }
+
+    @AfterClass
+    public static void afterClass() throws SQLException {
+        try(Statement statement = connection.createStatement()) {
+            statement.execute("drop database if exists " + databaseName);
+        }
+        connection.close();
     }
 }

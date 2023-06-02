@@ -151,13 +151,14 @@ public class WSConsumerTest {
                 if (statement != null) {
                     for (String topic : topics) {
                         statement.executeUpdate("drop topic " + topic);
+                    statement.executeUpdate("drop database if exists " + dbName);
                     }
                     statement.close();
                 }
                 connection.close();
             }
         } catch (SQLException e) {
-            //
+            // ignore
         }
     }
 }
