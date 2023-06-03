@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -86,5 +87,13 @@ public class WSPreparedStatementAllTypeTest {
                 "(ts timestamp, c1 tinyint, c2 smallint, c3 int, c4 bigint, " +
                 "c5 float, c6 double, c7 bool, c8 binary(10), c9 nchar(10), c10 varchar(20))");
         statement.close();
+    }
+
+    @After
+    public void after() throws SQLException {
+        try (Statement statement = connection.createStatement()){
+            statement.execute("drop database if exists " + db_name);
+        }
+        connection.close();
     }
 }

@@ -2,6 +2,7 @@ package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -11,8 +12,9 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 public class SchemalessConnectionTest {
-    private final String host = "127.0.0.1";
-    private final String db = "schemaless_connction";
+    private static final String host = "127.0.0.1";
+    private static final String db = "schemaless_connction";
+    private static Connection connection;
 
     @Test(expected = SQLException.class)
     public void testThroughJniConnectionAndUserPassword() throws SQLException {
@@ -47,10 +49,19 @@ public class SchemalessConnectionTest {
     @Before
     public void before() throws SQLException {
         String url = "jdbc:TAOS://" + host + ":6030/";
-        try (Connection connection = DriverManager.getConnection(url, "root", "taosdata");
-             Statement statement = connection.createStatement()) {
+        connection = DriverManager.getConnection(url, "root", "taosdata");
+        try (Statement statement = connection.createStatement()) {
             statement.executeUpdate("drop database if exists " + db);
             statement.executeUpdate("create database " + db);
         }
+    }
+
+    @AfterClass
+    public static void after() throws SQLException {
+        String url = "jdbc:TAOS://" + host + ":6030/";
+        try (Statement statement = connection.createStatement()) {
+            statement.executeUpdate("drop database if exists " + db);
+        }
+        connection.close();
     }
 }

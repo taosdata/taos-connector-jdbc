@@ -2,6 +2,7 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -57,5 +58,14 @@ public class PrepareStatementUseDBTest {
             stmt.execute("use " + use_db);
             stmt.execute("create table t1 (ts timestamp, c1 int)");
         }
+    }
+
+    @AfterClass
+    public static void after() throws SQLException {
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute("drop database if exists " + dbname);
+            stmt.execute("drop database if exists " + use_db);
+        }
+        conn.close();
     }
 }

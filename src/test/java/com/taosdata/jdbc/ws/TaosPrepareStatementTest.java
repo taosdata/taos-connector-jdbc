@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -121,5 +122,13 @@ public class TaosPrepareStatementTest {
                 "t9 bool, t10 timestamp, t11 varchar(10))");
         statement.execute("create table if not exists " + db_name + "." + superTable2 + " (ts timestamp, c1 int) tags (tt json)");
         statement.close();
+    }
+
+    @After
+    public void after() throws SQLException {
+        try(Statement statement = connection.createStatement()) {
+            statement.execute("drop database if exists " + db_name);
+        }
+        connection.close();
     }
 }

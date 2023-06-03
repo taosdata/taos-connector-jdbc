@@ -8,6 +8,7 @@ import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -139,13 +140,11 @@ public class SchemalessRawInsertTest {
         stmt.execute("use " + dbname);
     }
 
-//    @After
-    public void after() {
+    @After
+    public void after() throws SQLException {
         try (Statement stmt = conn.createStatement()) {
-            stmt.execute("drop database if exists " + dbname);
-            conn.close();
-        } catch (SQLException e) {
-            e.printStackTrace();
+            stmt.executeUpdate("drop database if exists " + dbname);
         }
+        conn.close();
     }
 }

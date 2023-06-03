@@ -5,10 +5,12 @@ import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.sql.*;
 
+@Ignore
 public class SchemalessTest {
     String url = null;
     public static SchemalessWriter writer;

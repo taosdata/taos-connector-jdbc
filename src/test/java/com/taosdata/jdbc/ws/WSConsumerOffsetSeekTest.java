@@ -119,11 +119,16 @@ public class WSConsumerOffsetSeekTest {
     }
 
     @AfterClass
-    public static void after() throws SQLException {
+    public static void after() {
         scheduledExecutorService.shutdown();
-//        statement.execute("drop topic if exists " + topic);
-//        statement.execute("drop database if exists " + dbName);
-        statement.close();
-        connection.close();
+        try {
+            statement.execute("drop topic if exists " + topic);
+            statement.execute("drop database if exists " + dbName);
+            statement.close();
+            connection.close();
+        } catch (SQLException e) {
+            // ignore
+        }
+
     }
 }

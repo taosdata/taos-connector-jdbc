@@ -1106,16 +1106,12 @@ public class TSDBDatabaseMetaDataTest {
     }
 
     @AfterClass
-    public static void afterClass() {
-        try {
-            if (connection != null)
-                try (Statement statement = connection.createStatement()) {
-                    statement.executeUpdate("drop database if exists " + db_name);
-                }
-            connection.close();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+    public static void afterClass() throws SQLException {
+        if (connection != null)
+            try (Statement statement = connection.createStatement()) {
+                statement.executeUpdate("drop database if exists " + db_name);
+            }
+        connection.close();
     }
 
 }
