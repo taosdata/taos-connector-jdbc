@@ -112,21 +112,17 @@ public class ConsumerCommitTest {
     }
 
     @AfterClass
-    public static void after() {
+    public static void after() throws SQLException {
         if (null != scheduledExecutorService) {
             scheduledExecutorService.shutdown();
         }
-        try {
-            if (connection != null) {
-                if (statement != null) {
-                    statement.executeUpdate("drop topic if exists " + topic);
-                    statement.executeUpdate("drop database if exists " + dbName);
-                    statement.close();
-                }
-                connection.close();
+        if (connection != null) {
+            if (statement != null) {
+                statement.executeUpdate("drop topic if exists " + topic);
+                statement.executeUpdate("drop database if exists " + dbName);
+                statement.close();
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
+            connection.close();
         }
     }
 }

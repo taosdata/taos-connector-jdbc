@@ -15,6 +15,7 @@ import java.sql.Statement;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 public class WSConsumerNullTest {
     private static final String host = "127.0.0.1";
@@ -84,19 +85,21 @@ public class WSConsumerNullTest {
     }
 
     @AfterClass
-    public static void after() {
+    public static void after() throws InterruptedException {
         try {
             if (connection != null) {
                 if (statement != null) {
                     for (String topic : topics) {
+                        TimeUnit.SECONDS.sleep(3);
                         statement.executeUpdate("drop topic " + topic);
+                        statement.executeUpdate("drop database if exists " + dbName);
                     }
                     statement.close();
                 }
                 connection.close();
             }
         } catch (SQLException e) {
-            //
+            // ignore
         }
     }
 }

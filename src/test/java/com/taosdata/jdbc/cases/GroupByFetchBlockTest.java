@@ -2,6 +2,7 @@ package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -44,5 +45,12 @@ public class GroupByFetchBlockTest {
                 "quote_volume double, changed double,amplitude double,ticket_id bigint) tags(symbol nchar(50), kline_type nchar(20))");
         statement.execute("insert into t1 using " + tName + " tags ('1m','1m') values (now, 1, 1.1, 1.1, 1.1, 1.1, 1, 1.1, 1, 1.1,1.1,1.1,1);");
         statement.execute("insert into t1 using " + tName + " tags ('1m','1m') values (now, 2, 2.2, 2.2, 2.2, 2.2, 2, 2.2, 2, 2.2,2.2,2.2,2)");
+    }
+
+    @After
+    public void after() throws SQLException {
+        statement.execute("drop database if exists " + dbName);
+        statement.close();
+        connection.close();
     }
 }

@@ -175,18 +175,16 @@ public class SchemalessInsertTest {
         }
         conn = DriverManager.getConnection(url);
         Statement stmt = conn.createStatement();
-        stmt.execute("drop database if exists " + dbname);
-        stmt.execute("create database if not exists " + dbname + " precision 'ns'");
-        stmt.execute("use " + dbname);
+        stmt.executeUpdate("drop database if exists " + dbname);
+        stmt.executeUpdate("create database if not exists " + dbname + " precision 'ns'");
+        stmt.executeUpdate("use " + dbname);
     }
 
     @After
-    public void after() {
+    public void after() throws SQLException {
         try (Statement stmt = conn.createStatement()) {
-            stmt.execute("drop database if exists " + dbname);
-            conn.close();
-        } catch (SQLException e) {
-            e.printStackTrace();
+            stmt.executeUpdate("drop database if exists " + dbname);
         }
+        conn.close();
     }
 }

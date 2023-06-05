@@ -1,10 +1,7 @@
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
+import org.junit.*;
 
 import java.sql.*;
 import java.util.AbstractCollection;
@@ -84,5 +81,13 @@ public class WSPreparedStatementTest {
         statement.execute("use " + db_name);
         statement.execute("create table if not exists " + db_name + "." + tableName + " (ts timestamp, c1 int)");
         statement.close();
+    }
+
+    @After
+    public void after() throws SQLException {
+        try (Statement statement = connection.createStatement()) {
+            statement.execute("drop database if exists " + db_name);
+        }
+        connection.close();
     }
 }

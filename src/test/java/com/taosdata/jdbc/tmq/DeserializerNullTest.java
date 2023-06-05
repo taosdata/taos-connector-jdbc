@@ -71,6 +71,7 @@ public class DeserializerNullTest {
     public static void after() {
         try (Statement statement = connection.createStatement()) {
             statement.executeUpdate("drop topic if exists " + topic);
+            statement.executeUpdate("drop database if exists " + dbName);
         } catch (SQLException e) {
             // nothing
         }

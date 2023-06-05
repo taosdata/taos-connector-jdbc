@@ -1106,8 +1106,12 @@ public class RestfulDatabaseMetaDataTest {
 
     @AfterClass
     public static void afterClass() throws SQLException {
-        if (connection != null)
+        if (connection != null) {
+            try (Statement statement = connection.createStatement()) {
+                statement.executeUpdate("drop database if exists " + dbName);
+            }
             connection.close();
+        }
     }
 
 }
