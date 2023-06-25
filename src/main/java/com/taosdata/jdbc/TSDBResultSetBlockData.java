@@ -102,8 +102,14 @@ public class TSDBResultSetBlockData {
         ByteBuffer buffer = ByteBuffer.wrap(value);
         buffer.order(ByteOrder.LITTLE_ENDIAN);
         int bitMapOffset = BitmapLen(numOfRows);
-        int pHeader = 28 + columnMetaDataList.size() * 9;
+        int pHeader = buffer.position() + 28 + columnMetaDataList.size() * 5;
         buffer.position(pHeader);
+        List<Integer> lengths = new ArrayList<>(columnMetaDataList.size());
+        for (int i = 0; i < columnMetaDataList.size(); i++) {
+            lengths.add(buffer.getInt());
+        }
+        pHeader = buffer.position();
+        int length = 0;
         for (int i = 0; i < columnMetaDataList.size(); i++) {
             List<Object> col = new ArrayList<>(numOfRows);
             int type = columnMetaDataList.get(i).getColType();
@@ -111,6 +117,7 @@ public class TSDBResultSetBlockData {
                 case TSDB_DATA_TYPE_BOOL:
                 case TSDB_DATA_TYPE_TINYINT:
                 case TSDB_DATA_TYPE_UTINYINT: {
+                    length = bitMapOffset;
                     byte[] tmp = new byte[bitMapOffset];
                     buffer.get(tmp);
                     for (int j = 0; j < numOfRows; j++) {
@@ -125,6 +132,7 @@ public class TSDBResultSetBlockData {
                 }
                 case TSDB_DATA_TYPE_SMALLINT:
                 case TSDB_DATA_TYPE_USMALLINT: {
+                    length = bitMapOffset;
                     byte[] tmp = new byte[bitMapOffset];
                     buffer.get(tmp);
                     for (int j = 0; j < numOfRows; j++) {
@@ -139,6 +147,7 @@ public class TSDBResultSetBlockData {
                 }
                 case TSDB_DATA_TYPE_INT:
                 case TSDB_DATA_TYPE_UINT: {
+                    length = bitMapOffset;
                     byte[] tmp = new byte[bitMapOffset];
                     buffer.get(tmp);
                     for (int j = 0; j < numOfRows; j++) {
@@ -154,6 +163,7 @@ public class TSDBResultSetBlockData {
                 case TSDB_DATA_TYPE_BIGINT:
                 case TSDB_DATA_TYPE_UBIGINT:
                 case TSDB_DATA_TYPE_TIMESTAMP: {
+                    length = bitMapOffset;
                     byte[] tmp = new byte[bitMapOffset];
                     buffer.get(tmp);
                     for (int j = 0; j < numOfRows; j++) {
@@ -167,6 +177,7 @@ public class TSDBResultSetBlockData {
                     break;
                 }
                 case TSDB_DATA_TYPE_FLOAT: {
+                    length = bitMapOffset;
                     byte[] tmp = new byte[bitMapOffset];
                     buffer.get(tmp);
                     for (int j = 0; j < numOfRows; j++) {
@@ -180,6 +191,7 @@ public class TSDBResultSetBlockData {
                     break;
                 }
                 case TSDB_DATA_TYPE_DOUBLE: {
+                    length = bitMapOffset;
                     byte[] tmp = new byte[bitMapOffset];
                     buffer.get(tmp);
                     for (int j = 0; j < numOfRows; j++) {
@@ -194,6 +206,7 @@ public class TSDBResultSetBlockData {
                 }
                 case TSDB_DATA_TYPE_BINARY:
                 case TSDB_DATA_TYPE_JSON: {
+                    length = numOfRows * 4;
                     List<Integer> offset = new ArrayList<>(numOfRows);
                     for (int m = 0; m < numOfRows; m++) {
                         offset.add(buffer.getInt());
@@ -213,6 +226,7 @@ public class TSDBResultSetBlockData {
                     break;
                 }
                 case TSDB_DATA_TYPE_NCHAR: {
+                    length = numOfRows * 4;
                     List<Integer> offset = new ArrayList<>(numOfRows);
                     for (int m = 0; m < numOfRows; m++) {
                         offset.add(buffer.getInt());
@@ -238,6 +252,8 @@ public class TSDBResultSetBlockData {
                     col.add(null);
                     break;
             }
+            pHeader += length + lengths.get(i);
+            buffer.position(pHeader);
             colData.add(col);
         }
     }
