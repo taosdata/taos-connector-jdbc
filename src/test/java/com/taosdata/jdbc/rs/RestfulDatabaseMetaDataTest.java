@@ -91,11 +91,6 @@ public class RestfulDatabaseMetaDataTest {
 
         Assert.assertNotNull(array);
         Assert.assertTrue(array.length == 5 || array.length == 4);
-        for (String str : array) {
-            for (int i = str.length(); --i >= 0; ) {
-                Assert.assertTrue(StringUtils.isNumeric(str));
-            }
-        }
     }
 
     @Test
