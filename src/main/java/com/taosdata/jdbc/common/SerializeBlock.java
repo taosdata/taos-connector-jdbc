@@ -348,7 +348,7 @@ public class SerializeBlock {
                             if (precision == TimestampPrecision.MS) {
                                 v = t.getTime();
                             } else if (precision == TimestampPrecision.US) {
-                                v = t.getTime() * 1000L + t.getNanos() / 1000 % 1000_000L;
+                                v = t.getTime() * 1000L + t.getNanos() / 1000 % 1000;
                             } else {
                                 v = t.getTime() * 1000_000L + t.getNanos() % 1000_000L;
                             }

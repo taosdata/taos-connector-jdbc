@@ -142,7 +142,7 @@ public class SchemalessWriter implements AutoCloseable{
                     .setRequestTimeout(timeout)
                     .setUseSsl(useSSL)
                     .build();
-            InFlightRequest inFlightRequest = new InFlightRequest(1000, 1);
+            InFlightRequest inFlightRequest = new InFlightRequest(timeout, 20);
             this.transport = new Transport(WSFunction.SCHEMALESS, param, inFlightRequest);
 
             this.transport.setTextMessageHandler(message -> {
