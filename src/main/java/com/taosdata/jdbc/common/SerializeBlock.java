@@ -29,7 +29,7 @@ public class SerializeBlock {
     }
 
     private static byte bmSetNull(byte c, int n) {
-        return (byte) (c & ~(1 << (7 - bitPos(n))));
+        return (byte) (c + (1 << (7 - bitPos(n))));
     }
 
     public static byte[] getRawBlock(List<ColumnInfo> list, int precision) throws IOException, SQLException {
