@@ -33,8 +33,8 @@ public class HttpClientPoolUtil {
     public static final String DEFAULT_HTTP_KEEP_ALIVE = "true";
     public static final String DEFAULT_MAX_PER_ROUTE = "20";
     private static final int DEFAULT_HTTP_KEEP_TIME = -1;
-    public static final String DEFAULT_CONNECT_TIMEOUT = "5000";
-    public static final String DEFAULT_SOCKET_TIMEOUT = "5000";
+    public static final String DEFAULT_CONNECT_TIMEOUT = "60000";
+    public static final String DEFAULT_SOCKET_TIMEOUT = "60000";
     private static String isKeepAlive;
 
     private static final ConnectionKeepAliveStrategy DEFAULT_KEEP_ALIVE_STRATEGY = (response, context) -> {
