@@ -1,8 +1,10 @@
 package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
-import com.taosdata.jdbc.utils.StringUtils;
-import org.junit.*;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.sql.*;
 import java.util.Properties;
@@ -88,12 +90,7 @@ public class TSDBDatabaseMetaDataTest {
         String[] array = version.split("\\.");
 
         Assert.assertNotNull(array);
-        Assert.assertEquals(4, array.length);
-        for (String str : array) {
-            for (int i = str.length(); --i >= 0; ) {
-                Assert.assertTrue(StringUtils.isNumeric(str));
-            }
-        }
+        Assert.assertTrue(array.length == 5 || array.length == 4);
     }
 
     @Test

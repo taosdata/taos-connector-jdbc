@@ -23,7 +23,7 @@ import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT;
  */
 public class Transport implements AutoCloseable {
 
-    public static final int DEFAULT_MESSAGE_WAIT_TIMEOUT = 10_000;
+    public static final int DEFAULT_MESSAGE_WAIT_TIMEOUT = 60_000;
 
     private final WSClient client;
     private final InFlightRequest inFlightRequest;
