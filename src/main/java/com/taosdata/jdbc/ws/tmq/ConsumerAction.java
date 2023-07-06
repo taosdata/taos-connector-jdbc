@@ -15,6 +15,7 @@ public enum ConsumerAction {
     COMMIT("commit", CommitResp.class),
     ASSIGNMENT("assignment", AssignmentResp.class),
     SEEK("seek", SeekResp.class),
+    UNSUBSCRIBE("unsubscribe", UnsubscribeResp.class)
     ;
 
     private final String action;

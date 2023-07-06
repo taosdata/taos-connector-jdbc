@@ -14,11 +14,11 @@ import java.util.Properties;
 
 public abstract class AbstractDatabaseMetaData extends WrapperImpl implements DatabaseMetaData {
 
-    private static final String PRODUCT_NAME ;
-    private static final String PRODUCT_VERSION ;
-    private static final String DRIVER_VERSION ;
-    private static final int DRIVER_MAJAR_VERSION ;
-    private static final int DRIVER_MINOR_VERSION ;
+    private static final String PRODUCT_NAME;
+    private static final String PRODUCT_VERSION;
+    private static final String DRIVER_VERSION;
+    private static final int DRIVER_MAJAR_VERSION;
+    private static final int DRIVER_MINOR_VERSION;
 
     static {
         Properties props = System.getProperties();
@@ -615,9 +615,10 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
             if (!StringUtils.isEmpty(catalog)) {
                 dbs.add(catalog);
             } else {
-                ResultSet dbRs = stmt.executeQuery("show databases");
-                while (dbRs.next()) {
-                    dbs.add(dbRs.getString("name"));
+                try (ResultSet dbRs = stmt.executeQuery("show databases")) {
+                    while (dbRs.next()) {
+                        dbs.add(dbRs.getString("name"));
+                    }
                 }
             }
             if (dbs.isEmpty()) {
@@ -630,25 +631,27 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                     sql.append("like '").append(tableNamePattern).append("'");
                     Ssql.append("like '").append(tableNamePattern).append("'");
                 }
-                ResultSet tables = stmt.executeQuery(sql.toString());
-                while (tables.next()) {
-                    TSDBResultSetRowData rowData = new TSDBResultSetRowData(10);
-                    rowData.setStringValue(1, catalog);                                     //TABLE_CAT
-                    rowData.setStringValue(2, null);                                 //TABLE_SCHEM
-                    rowData.setStringValue(3, tables.getString("table_name"));  //TABLE_NAME
-                    rowData.setStringValue(4, "TABLE");                              //TABLE_TYPE
-                    rowData.setStringValue(5, "");                                   //REMARKS
-                    rowDataList.add(rowData);
+                try (ResultSet tables = stmt.executeQuery(sql.toString())) {
+                    while (tables.next()) {
+                        TSDBResultSetRowData rowData = new TSDBResultSetRowData(10);
+                        rowData.setStringValue(1, catalog);                                     //TABLE_CAT
+                        rowData.setStringValue(2, null);                                 //TABLE_SCHEM
+                        rowData.setStringValue(3, tables.getString("table_name"));  //TABLE_NAME
+                        rowData.setStringValue(4, "TABLE");                              //TABLE_TYPE
+                        rowData.setStringValue(5, "");                                   //REMARKS
+                        rowDataList.add(rowData);
+                    }
                 }
-                ResultSet stables = stmt.executeQuery(Ssql.toString());
-                while (stables.next()) {
-                    TSDBResultSetRowData rowData = new TSDBResultSetRowData(10);
-                    rowData.setStringValue(1, catalog);                                  //TABLE_CAT
-                    rowData.setStringValue(2, null);                              //TABLE_SCHEM
-                    rowData.setStringValue(3, stables.getString("stable_name"));    //TABLE_NAME
-                    rowData.setStringValue(4, "TABLE");                           //TABLE_TYPE
-                    rowData.setStringValue(5, "STABLE");                          //REMARKS
-                    rowDataList.add(rowData);
+                try (ResultSet stables = stmt.executeQuery(Ssql.toString())) {
+                    while (stables.next()) {
+                        TSDBResultSetRowData rowData = new TSDBResultSetRowData(10);
+                        rowData.setStringValue(1, catalog);                                  //TABLE_CAT
+                        rowData.setStringValue(2, null);                              //TABLE_SCHEM
+                        rowData.setStringValue(3, stables.getString("stable_name"));    //TABLE_NAME
+                        rowData.setStringValue(4, "TABLE");                           //TABLE_TYPE
+                        rowData.setStringValue(5, "STABLE");                          //REMARKS
+                        rowDataList.add(rowData);
+                    }
                 }
             }
             resultSet.setRowDataList(rowDataList);

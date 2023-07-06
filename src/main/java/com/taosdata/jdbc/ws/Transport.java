@@ -53,13 +53,15 @@ public class Transport implements AutoCloseable {
 
         Response response = null;
         CompletableFuture<Response> completableFuture = new CompletableFuture<>();
+        String reqString = request.toString();
         try {
             inFlightRequest.put(new FutureResponse(request.getAction(), request.id(), completableFuture));
-            client.send(request.toString());
+            client.send(reqString);
         } catch (InterruptedException | TimeoutException e) {
             throw new SQLException(e);
         }
-        CompletableFuture<Response> responseFuture = CompletableFutureTimeout.orTimeout(completableFuture, timeout, TimeUnit.MILLISECONDS);
+        CompletableFuture<Response> responseFuture = CompletableFutureTimeout.orTimeout(
+                completableFuture, timeout, TimeUnit.MILLISECONDS, reqString);
         try {
             response = responseFuture.get();
         } catch (InterruptedException | ExecutionException e) {
@@ -88,7 +90,8 @@ public class Transport implements AutoCloseable {
         } catch (InterruptedException | TimeoutException e) {
             throw new SQLException(e);
         }
-        CompletableFuture<Response> responseFuture = CompletableFutureTimeout.orTimeout(completableFuture, timeout, TimeUnit.MILLISECONDS);
+        String reqString = "action:" + action + ", reqId:" + reqId + ", stmtId:" + stmtId + ", bindType" + type;
+        CompletableFuture<Response> responseFuture = CompletableFutureTimeout.orTimeout(completableFuture, timeout, TimeUnit.MILLISECONDS, reqString);
         try {
             response = responseFuture.get();
         } catch (InterruptedException | ExecutionException e) {
