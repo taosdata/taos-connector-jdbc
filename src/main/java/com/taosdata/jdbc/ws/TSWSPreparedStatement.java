@@ -83,10 +83,11 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
             useDb = database;
         }
         if (useDb != null) {
-            ResultSet resultSet = this.executeQuery("select `precision` from information_schema.ins_databases where name = '" + useDb + "'");
-            if (resultSet.next()) {
-                String tmp = resultSet.getString(1);
-                precision = TimestampPrecision.getPrecision(tmp);
+            try (ResultSet resultSet = this.executeQuery("select `precision` from information_schema.ins_databases where name = '" + useDb + "'")) {
+                while (resultSet.next()) {
+                    String tmp = resultSet.getString(1);
+                    precision = TimestampPrecision.getPrecision(tmp);
+                }
             }
         }
 
@@ -131,10 +132,11 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
             if (null != database) {
                 prepareTransport = WSConnection.initPrepareTransport(param, database);
 
-                ResultSet resultSet = this.executeQuery("select `precision` from information_schema.ins_databases where name = '" + database + "'");
-                if (resultSet.next()) {
-                    String tmp = resultSet.getString(1);
-                    precision = TimestampPrecision.getPrecision(tmp);
+                try (ResultSet resultSet = this.executeQuery("select `precision` from information_schema.ins_databases where name = '" + database + "'")) {
+                    while (resultSet.next()) {
+                        String tmp = resultSet.getString(1);
+                        precision = TimestampPrecision.getPrecision(tmp);
+                    }
                 }
 
                 reqId = ReqId.getReqID();

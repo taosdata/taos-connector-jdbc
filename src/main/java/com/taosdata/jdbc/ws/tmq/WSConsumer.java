@@ -70,17 +70,27 @@ public class WSConsumer<V> implements Consumer<V> {
                 , param.getGroupId()
                 , param.getClientId()
                 , param.getOffsetRest()
-                , topics.toArray(new String[0]));
+                , topics.toArray(new String[0])
+                , String.valueOf(param.isAutoCommit())
+                , param.getAutoCommitInterval()
+                , param.getSnapshotEnable()
+                , param.getMsgWithTableName()
+        );
         SubscribeResp response = (SubscribeResp) transport.send(request);
         if (Code.SUCCESS.getCode() != response.getCode()) {
-            throw new SQLException("subscribe topic error, code: " + response.getCode() + ", message: " + response.getMessage());
+            throw new SQLException("subscribe topic error, code: 0x(" + Integer.toHexString(response.getCode())
+                    + "), message: " + response.getMessage());
         }
     }
 
     @Override
     public void unsubscribe() throws SQLException {
-        // nothing to do
-
+        Request request = factory.generateUnsubscribe();
+        UnsubscribeResp response = (UnsubscribeResp) transport.send(request);
+        if (Code.SUCCESS.getCode() != response.getCode()) {
+            throw new SQLException("unsubscribe topic error, code: 0x(" + Integer.toHexString(response.getCode())
+                    + "), message: " + response.getMessage() + ", timing: " + response.getTiming());
+        }
     }
 
     @Override
@@ -93,7 +103,7 @@ public class WSConsumer<V> implements Consumer<V> {
         Request request = factory.generatePoll(timeout.toMillis());
         PollResp pollResp = (PollResp) transport.send(request);
         if (Code.SUCCESS.getCode() != pollResp.getCode()) {
-            throw new SQLException("consumer poll error, code: " + pollResp.getCode() + ", message: " + pollResp.getMessage());
+            throw new SQLException("consumer poll error, code: 0x(" + Integer.toHexString(pollResp.getCode()) + "), message: " + pollResp.getMessage());
         }
         if (!pollResp.isHaveMessage())
             return ConsumerRecords.emptyRecord();
@@ -124,7 +134,7 @@ public class WSConsumer<V> implements Consumer<V> {
         if (0 != offset) {
             CommitResp commitResp = (CommitResp) transport.send(factory.generateCommit(offset));
             if (Code.SUCCESS.getCode() != commitResp.getCode())
-                throw new SQLException("consumer commit error. code: " + commitResp.getCode() + ", message: " + commitResp.getMessage());
+                throw new SQLException("consumer commit error. code: 0x(" + Integer.toHexString(commitResp.getCode()) + "), message: " + commitResp.getMessage());
             offset = 0;
         }
     }
@@ -144,14 +154,15 @@ public class WSConsumer<V> implements Consumer<V> {
         Request request = factory.generateSeek(partition.getTopic(), partition.getVGroupId(), offset);
         SeekResp resp = (SeekResp) transport.send(request);
         if (Code.SUCCESS.getCode() != resp.getCode()) {
-            throw new SQLException("consumer seek error, code: " + resp.getCode() + ", message: " + resp.getMessage());
+            throw new SQLException("consumer seek error, code: 0x(" + Integer.toHexString(resp.getCode())
+                    + "), message: " + resp.getMessage() + ", timing: " + resp.getTiming());
         }
     }
 
     @Override
     public long position(TopicPartition partition) throws SQLException {
         return Arrays.stream(getAssignment(partition.getTopic())).
-                filter(a->a.getVgId() == partition.getVGroupId())
+                filter(a -> a.getVgId() == partition.getVGroupId())
                 .findFirst()
                 .orElseThrow(() -> TSDBError.createIllegalStateException(ERROR_TMQ_VGROUP_NOT_FOUND))
                 .getCurrentOffset();
@@ -179,7 +190,8 @@ public class WSConsumer<V> implements Consumer<V> {
         Request request = factory.generateAssignment(topic);
         AssignmentResp resp = (AssignmentResp) transport.send(request);
         if (Code.SUCCESS.getCode() != resp.getCode()) {
-            throw new SQLException("consumer assignment error, code: " + resp.getCode() + ", message: " + resp.getMessage());
+            throw new SQLException("consumer assignment error, code: 0x(" + Integer.toHexString(resp.getCode())
+                    + "), message: " + resp.getMessage() + ", timing: " + resp.getTiming());
         }
         return resp.getAssignment();
     }

@@ -15,6 +15,15 @@ public class SubscribeReq extends Payload {
     private String offsetRest;
     private String[] topics;
 
+    @JSONField(name = "auto_commit")
+    private String autoCommit;
+    @JSONField(name = "auto_commit_interval_ms")
+    private String autoCommitIntervalMs;
+    @JSONField(name = "snapshot_enable")
+    private String snapshotEnable;
+    @JSONField(name = "with_table_name")
+    private String withTableName;
+
     public String getUser() {
         return user;
     }
@@ -69,5 +78,37 @@ public class SubscribeReq extends Payload {
 
     public void setTopics(String[] topics) {
         this.topics = topics;
+    }
+
+    public String getAutoCommit() {
+        return autoCommit;
+    }
+
+    public void setAutoCommit(String autoCommit) {
+        this.autoCommit = autoCommit;
+    }
+
+    public String getAutoCommitIntervalMs() {
+        return autoCommitIntervalMs;
+    }
+
+    public void setAutoCommitIntervalMs(String autoCommitIntervalMs) {
+        this.autoCommitIntervalMs = autoCommitIntervalMs;
+    }
+
+    public String getSnapshotEnable() {
+        return snapshotEnable;
+    }
+
+    public void setSnapshotEnable(String snapshotEnable) {
+        this.snapshotEnable = snapshotEnable;
+    }
+
+    public String getWithTableName() {
+        return withTableName;
+    }
+
+    public void setWithTableName(String withTableName) {
+        this.withTableName = withTableName;
     }
 }

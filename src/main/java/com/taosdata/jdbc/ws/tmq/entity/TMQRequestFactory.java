@@ -24,7 +24,8 @@ public class TMQRequestFactory {
     }
 
     public Request generateSubscribe(String user, String password, String db, String groupId,
-                                     String clientId, String offsetRest, String[] topics) {
+                                     String clientId, String offsetRest, String[] topics
+            , String enableAutoCommit, String autoCommitIntervalMs, String snapshotEnable, String withTableName) {
         long reqId = this.getId(ConsumerAction.SUBSCRIBE.getAction());
 
         SubscribeReq subscribeReq = new SubscribeReq();
@@ -36,6 +37,10 @@ public class TMQRequestFactory {
         subscribeReq.setClientId(clientId);
         subscribeReq.setOffsetRest(offsetRest);
         subscribeReq.setTopics(topics);
+        subscribeReq.setAutoCommit(enableAutoCommit);
+        subscribeReq.setAutoCommitIntervalMs(autoCommitIntervalMs);
+        subscribeReq.setSnapshotEnable(snapshotEnable);
+        subscribeReq.setWithTableName(withTableName);
         return new Request(ConsumerAction.SUBSCRIBE.getAction(), subscribeReq);
     }
 
@@ -55,7 +60,7 @@ public class TMQRequestFactory {
         return new Request(ConsumerAction.FETCH.getAction(), fetchReq);
     }
 
-    public Request generateFetchBlock(long fetchRequestId,long messageId) {
+    public Request generateFetchBlock(long fetchRequestId, long messageId) {
         FetchBlockReq fetchBlockReq = new FetchBlockReq();
         fetchBlockReq.setReqId(fetchRequestId);
         fetchBlockReq.setMessageId(messageId);
@@ -80,11 +85,18 @@ public class TMQRequestFactory {
         return new Request(ConsumerAction.SEEK.getAction(), seekReq);
     }
 
-    public Request generateAssignment(String topic){
+    public Request generateAssignment(String topic) {
         long reqId = this.getId(ConsumerAction.ASSIGNMENT.getAction());
         AssignmentReq assignmentReq = new AssignmentReq();
         assignmentReq.setReqId(reqId);
         assignmentReq.setTopic(topic);
         return new Request(ConsumerAction.ASSIGNMENT.getAction(), assignmentReq);
+    }
+
+    public Request generateUnsubscribe() {
+        long reqId = this.getId(ConsumerAction.UNSUBSCRIBE.getAction());
+        UnsubscribeReq unsubscribeReq = new UnsubscribeReq();
+        unsubscribeReq.setReqId(reqId);
+        return new Request(ConsumerAction.UNSUBSCRIBE.getAction(), unsubscribeReq);
     }
 }
