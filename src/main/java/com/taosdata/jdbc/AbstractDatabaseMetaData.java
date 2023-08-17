@@ -1019,7 +1019,6 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                 if (columnNamePattern == null) {
                     Map<String, Set<String>> stableMate = getSTableMate(conn, null, catalog);
                     for (String db : stableMate.keySet()) {
-                        if (!db.equals(catalog)) continue;
                         for (String s : stableMate.get(db)) {
                             try (Statement stmt = conn.createStatement();
                                  ResultSet rs = stmt.executeQuery("describe " + catalog + "." + s)) {
