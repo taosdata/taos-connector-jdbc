@@ -2,8 +2,10 @@ package com.taosdata.jdbc.rs;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
-import com.taosdata.jdbc.utils.StringUtils;
-import org.junit.*;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.sql.*;
 import java.util.Properties;
@@ -695,7 +697,7 @@ public class RestfulDatabaseMetaDataTest {
     @Test
     public void getColumns() throws SQLException {
         // when
-        ResultSet columns = metaData.getColumns(dbName, "", "dn", "");
+        ResultSet columns = metaData.getColumns(dbName, "", "dn", null);
         // then
         ResultSetMetaData meta = columns.getMetaData();
         columns.next();

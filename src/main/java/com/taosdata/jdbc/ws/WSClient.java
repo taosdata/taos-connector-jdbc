@@ -63,7 +63,7 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
 
     @Override
     public void onMessage(ByteBuffer bytes) {
-        binaryMessageHandler.accept(bytes);
+        executor.submit(() -> binaryMessageHandler.accept(bytes));
     }
 
     @Override

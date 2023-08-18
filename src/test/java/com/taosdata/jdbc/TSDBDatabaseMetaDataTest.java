@@ -695,7 +695,7 @@ public class TSDBDatabaseMetaDataTest {
     @Test
     public void getColumns() throws SQLException {
         // when
-        ResultSet columns = metaData.getColumns(db_name, "", "dn", "");
+        ResultSet columns = metaData.getColumns(db_name, "", "dn", null);
         // then
         ResultSetMetaData meta = columns.getMetaData();
         columns.next();
