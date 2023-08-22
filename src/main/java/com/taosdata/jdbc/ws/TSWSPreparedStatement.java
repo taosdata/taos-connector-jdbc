@@ -37,7 +37,9 @@ import static com.taosdata.jdbc.utils.SqlSyntaxValidator.getDatabaseName;
 import static com.taosdata.jdbc.utils.SqlSyntaxValidator.isUseSql;
 
 public class TSWSPreparedStatement extends WSStatement implements PreparedStatement {
-   public static final Pattern INSERT_PATTERN = Pattern.compile("insert\\s+into\\s+([.\\w]+|\\?)\\s+(using\\s+([.\\w]+)\\s+tags\\s*\\(.*\\))?\\s*values\\s*\\(.*\\)");
+   public static final Pattern INSERT_PATTERN = Pattern.compile(
+             "insert\\s+into\\s+([.\\w]+|\\?)\\s+(using\\s+([.\\w]+)(\\s*\\(.*\\)\\s*|\\s+)tags\\s*\\(.*\\))?\\s*(\\(.*\\))?\\s*values\\s*\\(.*\\)"
+   );
     private final ConnectionParam param;
     private Transport prepareTransport;
     private long reqId;
