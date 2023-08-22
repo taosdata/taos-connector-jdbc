@@ -97,13 +97,13 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
         Request request = RequestFactory.generateInit(reqId);
         StmtResp resp = (StmtResp) prepareTransport.send(request);
         if (Code.SUCCESS.getCode() != resp.getCode()) {
-            throw new SQLException("0x" + Integer.toHexString(resp.getCode()) + ":" + resp.getMessage());
+            throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
         }
         stmtId = resp.getStmtId();
         Request prepare = RequestFactory.generatePrepare(stmtId, reqId, sql);
         StmtResp prepareResp = (StmtResp) prepareTransport.send(prepare);
         if (Code.SUCCESS.getCode() != prepareResp.getCode()) {
-            throw new SQLException("0x" + Integer.toHexString(prepareResp.getCode()) + ":" + prepareResp.getMessage());
+            throw new SQLException("(0x" + Integer.toHexString(prepareResp.getCode()) + "):" + prepareResp.getMessage());
         }
     }
 
@@ -145,13 +145,13 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
                 Request request = RequestFactory.generateInit(reqId);
                 StmtResp resp = (StmtResp) prepareTransport.send(request);
                 if (Code.SUCCESS.getCode() != resp.getCode()) {
-                    throw new SQLException("0x" + Integer.toHexString(resp.getCode()) + ":" + resp.getMessage());
+                    throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
                 }
                 stmtId = resp.getStmtId();
                 Request prepare = RequestFactory.generatePrepare(stmtId, reqId, rawSql);
                 StmtResp prepareResp = (StmtResp) prepareTransport.send(prepare);
                 if (Code.SUCCESS.getCode() != prepareResp.getCode()) {
-                    throw new SQLException("0x" + Integer.toHexString(prepareResp.getCode()) + ":" + prepareResp.getMessage());
+                    throw new SQLException("(0x" + Integer.toHexString(prepareResp.getCode()) + "):" + prepareResp.getMessage());
                 }
             }
         }
@@ -207,7 +207,7 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
             StmtResp bindResp = (StmtResp) prepareTransport.send(STMTAction.SET_TAGS.getAction(),
                     reqId, stmtId, BindType.TAG.get(), tagBlock);
             if (Code.SUCCESS.getCode() != bindResp.getCode()) {
-                throw new SQLException("0x" + Integer.toHexString(bindResp.getCode()) + ":" + bindResp.getMessage());
+                throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
             }
         }
         // bind
@@ -224,21 +224,21 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
         StmtResp bindResp = (StmtResp) prepareTransport.send(STMTAction.BIND.getAction(),
                 reqId, stmtId, BindType.BIND.get(), rawBlock);
         if (Code.SUCCESS.getCode() != bindResp.getCode()) {
-            throw new SQLException("0x" + Integer.toHexString(bindResp.getCode()) + ":" + bindResp.getMessage());
+            throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
         }
         // add batch
         Request batch = RequestFactory.generateBatch(stmtId, reqId);
         Response send = prepareTransport.send(batch);
         StmtResp batchResp = (StmtResp) send;
         if (Code.SUCCESS.getCode() != batchResp.getCode()) {
-            throw new SQLException("0x" + Integer.toHexString(batchResp.getCode()) + ":" + batchResp.getMessage());
+            throw new SQLException("(0x" + Integer.toHexString(batchResp.getCode()) + "):" + batchResp.getMessage());
         }
         this.clearParameters();
         // send
         Request request = RequestFactory.generateExec(stmtId, reqId);
         ExecResp resp = (ExecResp) prepareTransport.send(request);
         if (Code.SUCCESS.getCode() != resp.getCode()) {
-            throw new SQLException("0x" + Integer.toHexString(resp.getCode()) + ":" + resp.getMessage());
+            throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
         }
         // close
         Request close = RequestFactory.generateClose(stmtId, reqId);
@@ -251,7 +251,7 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
         Request request = RequestFactory.generateSetTableName(stmtId, reqId, name);
         StmtResp resp = (StmtResp) prepareTransport.send(request);
         if (Code.SUCCESS.getCode() != resp.getCode()) {
-            throw new SQLException("0x" + Integer.toHexString(resp.getCode()) + ":" + resp.getMessage());
+            throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
         }
     }
 
@@ -662,7 +662,7 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
             StmtResp bindResp = (StmtResp) prepareTransport.send(STMTAction.SET_TAGS.getAction(),
                     reqId, stmtId, BindType.TAG.get(), tagBlock);
             if (Code.SUCCESS.getCode() != bindResp.getCode()) {
-                throw new SQLException("0x" + Integer.toHexString(bindResp.getCode()) + ":" + bindResp.getMessage());
+                throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
             }
         }
         // bind
@@ -675,14 +675,14 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
         StmtResp bindResp = (StmtResp) prepareTransport.send(STMTAction.BIND.getAction(),
                 reqId, stmtId, BindType.BIND.get(), rawBlock);
         if (Code.SUCCESS.getCode() != bindResp.getCode()) {
-            throw new SQLException("0x" + Integer.toHexString(bindResp.getCode()) + ":" + bindResp.getMessage());
+            throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
         }
         // add batch
         Request batch = RequestFactory.generateBatch(stmtId, reqId);
         Response send = prepareTransport.send(batch);
         StmtResp batchResp = (StmtResp) send;
         if (Code.SUCCESS.getCode() != batchResp.getCode()) {
-            throw new SQLException("0x" + Integer.toHexString(batchResp.getCode()) + ":" + batchResp.getMessage());
+            throw new SQLException("(0x" + Integer.toHexString(batchResp.getCode()) + "):" + batchResp.getMessage());
         }
 
         this.clearParameters();
@@ -690,7 +690,7 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
         Request request = RequestFactory.generateExec(stmtId, reqId);
         ExecResp resp = (ExecResp) prepareTransport.send(request);
         if (Code.SUCCESS.getCode() != resp.getCode()) {
-            throw new SQLException("0x" + Integer.toHexString(resp.getCode()) + ":" + resp.getMessage());
+            throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
         }
         int[] ints = new int[resp.getAffected()];
         for (int i = 0, len = ints.length; i < len; i++)
@@ -1032,7 +1032,7 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
             StmtResp bindResp = (StmtResp) prepareTransport.send(STMTAction.SET_TAGS.getAction(),
                     reqId, stmtId, BindType.TAG.get(), tagBlock);
             if (Code.SUCCESS.getCode() != bindResp.getCode()) {
-                throw new SQLException("0x" + Integer.toHexString(bindResp.getCode()) + ":" + bindResp.getMessage());
+                throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
             }
         }
         // bind
@@ -1045,14 +1045,14 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
         StmtResp bindResp = (StmtResp) prepareTransport.send(STMTAction.BIND.getAction(),
                 reqId, stmtId, BindType.BIND.get(), rawBlock);
         if (Code.SUCCESS.getCode() != bindResp.getCode()) {
-            throw new SQLException("0x" + Integer.toHexString(bindResp.getCode()) + ":" + bindResp.getMessage());
+            throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
         }
         // add batch
         Request batch = RequestFactory.generateBatch(stmtId, reqId);
         Response send = prepareTransport.send(batch);
         StmtResp batchResp = (StmtResp) send;
         if (Code.SUCCESS.getCode() != batchResp.getCode()) {
-            throw new SQLException("0x" + Integer.toHexString(batchResp.getCode()) + ":" + batchResp.getMessage());
+            throw new SQLException("(0x" + Integer.toHexString(batchResp.getCode()) + "):" + batchResp.getMessage());
         }
 
         this.clearParameters();
@@ -1060,7 +1060,7 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
         Request request = RequestFactory.generateExec(stmtId, reqId);
         ExecResp resp = (ExecResp) prepareTransport.send(request);
         if (Code.SUCCESS.getCode() != resp.getCode()) {
-            throw new SQLException("0x" + Integer.toHexString(resp.getCode()) + ":" + resp.getMessage());
+            throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
         }
     }
 
