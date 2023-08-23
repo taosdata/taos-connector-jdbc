@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.ws.tmq.entity;
 
+import com.taosdata.jdbc.tmq.TopicPartition;
 import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.tmq.ConsumerAction;
 
@@ -98,5 +99,38 @@ public class TMQRequestFactory {
         UnsubscribeReq unsubscribeReq = new UnsubscribeReq();
         unsubscribeReq.setReqId(reqId);
         return new Request(ConsumerAction.UNSUBSCRIBE.getAction(), unsubscribeReq);
+    }
+
+    public Request generateCommitted(TopicPartition[] topicPartitions) {
+        long reqId = this.getId(ConsumerAction.COMMITTED.getAction());
+        CommittedReq committedReq = new CommittedReq();
+        committedReq.setReqId(reqId);
+        committedReq.setTopicPartitions(topicPartitions);
+        return new Request(ConsumerAction.COMMITTED.getAction(), committedReq);
+    }
+
+    public Request generatePosition(TopicPartition[] topicPartitions){
+        long reqId = this.getId(ConsumerAction.POSITION.getAction());
+        PositionReq positionReq = new PositionReq();
+        positionReq.setReqId(reqId);
+        positionReq.setTopicPartitions(topicPartitions);
+        return new Request(ConsumerAction.POSITION.getAction(), positionReq);
+    }
+
+    public Request generateSubscription(){
+        long reqId = this.getId(ConsumerAction.LIST_TOPICS.getAction());
+        ListTopicsReq listTopicsReq = new ListTopicsReq();
+        listTopicsReq.setReqId(reqId);
+        return new Request(ConsumerAction.LIST_TOPICS.getAction(), listTopicsReq);
+    }
+
+    public Request generateCommitOffset(TopicPartition topicPartition, long offset){
+        long reqId = this.getId(ConsumerAction.COMMIT_OFFSET.getAction());
+        CommitOffsetReq commitOffsetReq = new CommitOffsetReq();
+        commitOffsetReq.setReqId(reqId);
+        commitOffsetReq.setTopic(topicPartition.getTopic());
+        commitOffsetReq.setVgId(topicPartition.getVGroupId());
+        commitOffsetReq.setOffset(offset);
+        return new Request(ConsumerAction.COMMIT_OFFSET.getAction(), commitOffsetReq);
     }
 }

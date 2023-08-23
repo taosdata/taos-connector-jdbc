@@ -10,6 +10,7 @@ import com.taosdata.jdbc.TaosGlobalConfig;
 import com.taosdata.jdbc.enums.DataType;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.rs.RestfulResultSet;
+import com.taosdata.jdbc.rs.RestfulResultSetMetaData;
 import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.Transport;
 import com.taosdata.jdbc.ws.entity.Code;
@@ -39,7 +40,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
 
     protected volatile boolean isClosed;
     // meta
-    protected WSConsumerResultSetMetaData metaData;
+    protected RestfulResultSetMetaData metaData;
     protected final List<RestfulResultSet.Field> fields = new ArrayList<>();
     protected List<String> columnNames;
     // data
@@ -93,7 +94,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
             int length = (int) fetchResp.getFieldsLengths()[i];
             fields.add(new RestfulResultSet.Field(colName, jdbcType, length, "", taosType));
         }
-        this.metaData = new WSConsumerResultSetMetaData(database, fields, fetchResp.getTableName());
+        this.metaData = new RestfulResultSetMetaData(database, fields, fetchResp.getTableName());
         this.numOfRows = fetchResp.getRows();
         this.result = fetchBlockData(request.id());
         this.timestampPrecision = fetchResp.getPrecision();

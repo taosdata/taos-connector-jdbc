@@ -20,8 +20,7 @@ import java.nio.ByteOrder;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.*;
-
-import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_TMQ_VGROUP_NOT_FOUND;
+import java.util.stream.Collectors;
 
 public class WSConsumer<V> implements Consumer<V> {
     private Transport transport;
@@ -78,7 +77,7 @@ public class WSConsumer<V> implements Consumer<V> {
         );
         SubscribeResp response = (SubscribeResp) transport.send(request);
         if (Code.SUCCESS.getCode() != response.getCode()) {
-            throw new SQLException("subscribe topic error, code: 0x(" + Integer.toHexString(response.getCode())
+            throw new SQLException("subscribe topic error, code: (0x" + Integer.toHexString(response.getCode())
                     + "), message: " + response.getMessage());
         }
     }
@@ -88,14 +87,20 @@ public class WSConsumer<V> implements Consumer<V> {
         Request request = factory.generateUnsubscribe();
         UnsubscribeResp response = (UnsubscribeResp) transport.send(request);
         if (Code.SUCCESS.getCode() != response.getCode()) {
-            throw new SQLException("unsubscribe topic error, code: 0x(" + Integer.toHexString(response.getCode())
+            throw new SQLException("unsubscribe topic error, code: (0x" + Integer.toHexString(response.getCode())
                     + "), message: " + response.getMessage() + ", timing: " + response.getTiming());
         }
     }
 
     @Override
     public Set<String> subscription() throws SQLException {
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
+        Request request = factory.generateSubscription();
+        ListTopicsResp response = (ListTopicsResp) transport.send(request);
+        if (Code.SUCCESS.getCode() != response.getCode()) {
+            throw new SQLException("get subscription error, code: (0x" + Integer.toHexString(response.getCode())
+                    + "), message: " + response.getMessage());
+        }
+        return Arrays.stream(response.getTopics()).collect(Collectors.toSet());
     }
 
     @Override
@@ -103,19 +108,19 @@ public class WSConsumer<V> implements Consumer<V> {
         Request request = factory.generatePoll(timeout.toMillis());
         PollResp pollResp = (PollResp) transport.send(request);
         if (Code.SUCCESS.getCode() != pollResp.getCode()) {
-            throw new SQLException("consumer poll error, code: 0x(" + Integer.toHexString(pollResp.getCode()) + "), message: " + pollResp.getMessage());
+            throw new SQLException("consumer poll error, code: (0x" + Integer.toHexString(pollResp.getCode()) + "), message: " + pollResp.getMessage());
         }
         if (!pollResp.isHaveMessage())
             return ConsumerRecords.emptyRecord();
 
         offset = pollResp.getMessageId();
-        ConsumerRecords<V> records = new ConsumerRecords<>(pollResp.getMessageId());
+        ConsumerRecords<V> records = new ConsumerRecords<>();
         try (WSConsumerResultSet rs = new WSConsumerResultSet(transport, factory, pollResp.getMessageId(), pollResp.getDatabase())) {
             while (rs.next()) {
                 String topic = pollResp.getTopic();
                 String dbName = pollResp.getDatabase();
                 int vGroupId = pollResp.getVgroupId();
-                TopicPartition tp = new TopicPartition(topic, dbName, vGroupId);
+                TopicPartition tp = new TopicPartition(topic, vGroupId);
 
                 V v = deserializer.deserialize(rs, topic, dbName);
                 ConsumerRecord<V> r = new ConsumerRecord<>(topic, dbName, vGroupId, pollResp.getOffset(), v);
@@ -134,7 +139,7 @@ public class WSConsumer<V> implements Consumer<V> {
         if (0 != offset) {
             CommitResp commitResp = (CommitResp) transport.send(factory.generateCommit(offset));
             if (Code.SUCCESS.getCode() != commitResp.getCode())
-                throw new SQLException("consumer commit error. code: 0x(" + Integer.toHexString(commitResp.getCode()) + "), message: " + commitResp.getMessage());
+                throw new SQLException("consumer commit error. code: (0x" + Integer.toHexString(commitResp.getCode()) + "), message: " + commitResp.getMessage());
             offset = 0;
         }
     }
@@ -154,24 +159,36 @@ public class WSConsumer<V> implements Consumer<V> {
         Request request = factory.generateSeek(partition.getTopic(), partition.getVGroupId(), offset);
         SeekResp resp = (SeekResp) transport.send(request);
         if (Code.SUCCESS.getCode() != resp.getCode()) {
-            throw new SQLException("consumer seek error, code: 0x(" + Integer.toHexString(resp.getCode())
+            throw new SQLException("consumer seek error, code: (0x" + Integer.toHexString(resp.getCode())
                     + "), message: " + resp.getMessage() + ", timing: " + resp.getTiming());
         }
     }
 
     @Override
     public long position(TopicPartition partition) throws SQLException {
-        return Arrays.stream(getAssignment(partition.getTopic())).
-                filter(a -> a.getVgId() == partition.getVGroupId())
-                .findFirst()
-                .orElseThrow(() -> TSDBError.createIllegalStateException(ERROR_TMQ_VGROUP_NOT_FOUND))
-                .getCurrentOffset();
+        Request request = factory.generatePosition(new TopicPartition[]{partition});
+        PositionResp resp = (PositionResp) transport.send(request);
+        if (Code.SUCCESS.getCode() != resp.getCode()) {
+            throw new SQLException("consumer position error, code: (0x" + Integer.toHexString(resp.getCode())
+                    + "), message: " + resp.getMessage() + ", timing: " + resp.getTiming());
+        }
+        return resp.getPositions()[0];
     }
 
     @Override
     public Map<TopicPartition, Long> position(String topic) throws SQLException {
-        return Arrays.stream(getAssignment(topic))
-                .collect(HashMap::new, (m, a) -> m.put(new TopicPartition(topic, a.getVgId()), a.getCurrentOffset()), HashMap::putAll);
+        TopicPartition[] topicPartitions = Arrays.stream(getAssignment(topic))
+                .map(a -> new TopicPartition(topic, a.getVgId()))
+                .toArray(TopicPartition[]::new);
+        Request request = factory.generatePosition(topicPartitions);
+        PositionResp resp = (PositionResp) transport.send(request);
+        if (Code.SUCCESS.getCode() != resp.getCode()) {
+            throw new SQLException("consumer position error, code: (0x" + Integer.toHexString(resp.getCode())
+                    + "), message: " + resp.getMessage() + ", timing: " + resp.getTiming());
+        }
+
+        return  Arrays.stream(topicPartitions)
+                .collect(Collectors.toMap(tp -> tp, tp -> resp.getPositions()[Arrays.asList(topicPartitions).indexOf(tp)]));
     }
 
     @Override
@@ -186,11 +203,106 @@ public class WSConsumer<V> implements Consumer<V> {
                 .collect(HashMap::new, (m, a) -> m.put(new TopicPartition(topic, a.getVgId()), a.getEnd()), HashMap::putAll);
     }
 
+    @Override
+    public void seekToBeginning(Collection<TopicPartition> partitions) throws SQLException {
+        Map<TopicPartition, Long> beginningOffsets = new HashMap<>();
+        for (TopicPartition partition : partitions) {
+            if (beginningOffsets.containsKey(partition)) {
+                Long aLong = beginningOffsets.get(partition);
+                seek(partition, aLong);
+            } else {
+                Map<TopicPartition, Long> map = beginningOffsets(partition.getTopic());
+                for (Map.Entry<TopicPartition, Long> entry : map.entrySet()) {
+                    if (entry.getKey().getVGroupId() == partition.getVGroupId()) {
+                        seek(entry.getKey(), entry.getValue());
+                    } else {
+                        beginningOffsets.put(entry.getKey(), entry.getValue());
+                    }
+                }
+            }
+        }
+
+    }
+
+    @Override
+    public void seekToEnd(Collection<TopicPartition> partitions) throws SQLException {
+        Map<TopicPartition, Long> endOffsets = new HashMap<>();
+        for (TopicPartition partition : partitions) {
+            if (endOffsets.containsKey(partition)) {
+                Long aLong = endOffsets.get(partition);
+                seek(partition, aLong);
+            } else {
+                Map<TopicPartition, Long> map = endOffsets(partition.getTopic());
+                for (Map.Entry<TopicPartition, Long> entry : map.entrySet()) {
+                    if (entry.getKey().getVGroupId() == partition.getVGroupId()) {
+                        seek(entry.getKey(), entry.getValue());
+                    } else {
+                        endOffsets.put(entry.getKey(), entry.getValue());
+                    }
+                }
+            }
+        }
+    }
+
+    @Override
+    public Set<TopicPartition> assignment() throws SQLException {
+        Set<TopicPartition> set = new HashSet<>();
+        for (String topic : subscription()) {
+            Assignment[] topicAssignment = getAssignment(topic);
+            set.addAll(Arrays.stream(topicAssignment).map(a -> new TopicPartition(topic, a.getVgId())).collect(Collectors.toSet()));
+        }
+        return set;
+    }
+
+    @Override
+    public OffsetAndMetadata committed(TopicPartition partition) throws SQLException {
+        Request request = factory.generateCommitted(new TopicPartition[]{partition});
+        CommittedResp resp = (CommittedResp) transport.send(request);
+        if (Code.SUCCESS.getCode() != resp.getCode()) {
+            throw new SQLException("consumer committed error, code: (0x" + Integer.toHexString(resp.getCode())
+                    + "), message: " + resp.getMessage() + ", timing: " + resp.getTiming());
+        }
+        return new OffsetAndMetadata(resp.getCommitted()[0], null);
+    }
+
+    @Override
+    public Map<TopicPartition, OffsetAndMetadata> committed(Set<TopicPartition> partitions) throws SQLException {
+        Map<TopicPartition, OffsetAndMetadata> map = new HashMap<>();
+        TopicPartition[] topicPartitions = partitions.toArray(new TopicPartition[0]);
+        Request request = factory.generateCommitted(topicPartitions);
+        CommittedResp resp = (CommittedResp) transport.send(request);
+        if (Code.SUCCESS.getCode() != resp.getCode()) {
+            throw new SQLException("consumer committed error, code: (0x" + Integer.toHexString(resp.getCode())
+                    + "), message: " + resp.getMessage() + ", timing: " + resp.getTiming());
+        }
+        for (int i = 0; i < topicPartitions.length; i++) {
+            map.put(topicPartitions[i], new OffsetAndMetadata(resp.getCommitted()[i], null));
+        }
+        return map;
+    }
+
+    @Override
+    public void commitSync(Map<TopicPartition, OffsetAndMetadata> offsets) throws SQLException {
+        for ( Map.Entry<TopicPartition, OffsetAndMetadata> entry: offsets.entrySet()) {
+            Request request = factory.generateCommitOffset(entry.getKey(), entry.getValue().offset());
+            CommitOffsetResp resp = (CommitOffsetResp) transport.send(request);
+            if (Code.SUCCESS.getCode() != resp.getCode()) {
+                throw new SQLException("consumer commit offset error, code: (0x" + Integer.toHexString(resp.getCode())
+                        + "), message: " + resp.getMessage() + ", timing: " + resp.getTiming());
+            }
+        }
+    }
+
+    @Override
+    public void commitAsync(Map<TopicPartition, OffsetAndMetadata> offsets, OffsetCommitCallback<V> callback) {
+        callback.onComplete(offsets, TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD));
+    }
+
     private Assignment[] getAssignment(String topic) throws SQLException {
         Request request = factory.generateAssignment(topic);
         AssignmentResp resp = (AssignmentResp) transport.send(request);
         if (Code.SUCCESS.getCode() != resp.getCode()) {
-            throw new SQLException("consumer assignment error, code: 0x(" + Integer.toHexString(resp.getCode())
+            throw new SQLException("consumer assignment error, code: (0x" + Integer.toHexString(resp.getCode())
                     + "), message: " + resp.getMessage() + ", timing: " + resp.getTiming());
         }
         return resp.getAssignment();

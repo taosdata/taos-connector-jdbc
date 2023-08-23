@@ -106,19 +106,27 @@ public class TaosConsumer<V> implements AutoCloseable {
     }
 
     @SuppressWarnings("unused")
-    public void commitAsync() {
+    public void commitAsync() throws SQLException {
         consumer.commitAsync((r, e) -> {
         });
     }
 
     @SuppressWarnings("unused")
-    public void commitAsync(OffsetCommitCallback<V> callback) {
+    public void commitAsync(OffsetCommitCallback<V> callback) throws SQLException {
         consumer.commitAsync(callback);
+    }
+
+    public void commitAsync(Map<TopicPartition, OffsetAndMetadata> offsets, OffsetCommitCallback<V> callback) throws SQLException {
+        consumer.commitAsync(offsets, callback);
     }
 
     @SuppressWarnings("unused")
     public void commitSync() throws SQLException {
         consumer.commitSync();
+    }
+
+    public void commitSync(Map<TopicPartition, OffsetAndMetadata> offsets) throws SQLException {
+        consumer.commitSync(offsets);
     }
 
     public void seek(TopicPartition partition, long offset) throws SQLException {
@@ -164,6 +172,42 @@ public class TaosConsumer<V> implements AutoCloseable {
         acquireAndEnsureOpen();
         try {
             return consumer.endOffsets(topic);
+        } finally {
+            release();
+        }
+    }
+
+    public void seekToBeginning(Collection<TopicPartition> partitions) throws SQLException {
+        acquireAndEnsureOpen();
+        try {
+            consumer.seekToBeginning(partitions);
+        } finally {
+            release();
+        }
+    }
+
+    public void seekToEnd(Collection<TopicPartition> partitions) throws SQLException {
+        acquireAndEnsureOpen();
+        try {
+            consumer.seekToEnd(partitions);
+        } finally {
+            release();
+        }
+    }
+
+    public Set<TopicPartition> assignment() throws SQLException {
+        acquireAndEnsureOpen();
+        try {
+            return consumer.assignment();
+        } finally {
+            release();
+        }
+    }
+
+    public OffsetAndMetadata committed(TopicPartition partition) throws SQLException {
+        acquireAndEnsureOpen();
+        try {
+            return consumer.committed(partition);
         } finally {
             release();
         }

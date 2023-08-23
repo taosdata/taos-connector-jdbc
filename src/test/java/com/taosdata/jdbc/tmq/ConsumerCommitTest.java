@@ -3,7 +3,6 @@ package com.taosdata.jdbc.tmq;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -12,7 +11,6 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Properties;
 import java.util.concurrent.Executors;
@@ -49,7 +47,6 @@ public class ConsumerCommitTest {
 
     @Test
     public void testAsync() throws Exception {
-        String[] strings = {"一", "二", "三"};
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "false");
@@ -61,11 +58,7 @@ public class ConsumerCommitTest {
             for (int i = 0; i < 10; i++) {
                 consumer.poll(Duration.ofMillis(100));
                 consumer.commitAsync((r, e) -> {
-                    for (ConsumerRecord<ResultBean> record : r) {
-                        ResultBean resultBean = record.value();
-                        Assert.assertTrue(Arrays.stream(strings)
-                                .anyMatch(s -> s.equals(new String(resultBean.getC4()))));
-                    }
+                    r.keySet().forEach(k -> System.out.println(k + " " + r.get(k)));
                 });
             }
             consumer.unsubscribe();

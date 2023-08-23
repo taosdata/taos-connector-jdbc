@@ -6,20 +6,32 @@ public class ConsumerRecords<V> implements Iterable<ConsumerRecord<V>> {
 
     public static final ConsumerRecords<?> EMPTY = new ConsumerRecords<>(Collections.emptyMap());
 
-    private long offset;
     private final Map<TopicPartition, List<ConsumerRecord<V>>> records;
 
     public ConsumerRecords(Map<TopicPartition, List<ConsumerRecord<V>>> records) {
         this.records = records;
     }
 
-    public ConsumerRecords(long offset) {
+    public ConsumerRecords() {
         this.records = new HashMap<>();
-        this.offset = offset;
     }
 
-    protected long getOffset() {
-        return offset;
+    /**
+     * Get the partitions which have records contained in this record set.
+     * @return the set of partitions with data in this record set (may be empty if no data was returned)
+     */
+    public Set<TopicPartition> partitions() {
+        return Collections.unmodifiableSet(records.keySet());
+    }
+
+    /**
+     * The number of records for all topics
+     */
+    public int count() {
+        int count = 0;
+        for (List<ConsumerRecord<V>> recs: this.records.values())
+            count += recs.size();
+        return count;
     }
 
     public void put(TopicPartition tp, ConsumerRecord<V> r) {

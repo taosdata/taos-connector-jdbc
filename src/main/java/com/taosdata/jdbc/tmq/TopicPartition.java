@@ -1,10 +1,12 @@
 package com.taosdata.jdbc.tmq;
 
+import com.alibaba.fastjson.annotation.JSONField;
+
 import java.util.Objects;
 
 public class TopicPartition {
     private final String topic;
-    private String databaseName;
+    @JSONField(name = "vgroup_id")
     private final int vGroupId;
 
     public TopicPartition(String topic, int vGroupId) {
@@ -12,18 +14,8 @@ public class TopicPartition {
         this.vGroupId = vGroupId;
     }
 
-    public TopicPartition(String topic, String databaseName, int vGroupId) {
-        this.topic = topic;
-        this.databaseName = databaseName;
-        this.vGroupId = vGroupId;
-    }
-
     public String getTopic() {
         return topic;
-    }
-
-    public String getDatabaseName() {
-        return databaseName;
     }
 
     public int getVGroupId() {
@@ -46,11 +38,8 @@ public class TopicPartition {
 
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("TopicPartition{");
-        sb.append("topic='").append(topic).append('\'');
-        sb.append(", databaseName='").append(databaseName).append('\'');
-        sb.append(", vGroupId=").append(vGroupId);
-        sb.append('}');
-        return sb.toString();
+        return "TopicPartition{" + "topic='" + topic + '\'' +
+                ", vGroupId=" + vGroupId +
+                '}';
     }
 }
