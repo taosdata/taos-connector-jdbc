@@ -119,6 +119,8 @@ public class TMQConstants {
 
     public static final String EXPERIMENTAL_SNAPSHOT_ENABLE = "experimental.snapshot.enable";
 
+    public static final int INVALID_OFFSET = -2147467247;
+
 
     static {
         configSet.add(GROUP_ID);

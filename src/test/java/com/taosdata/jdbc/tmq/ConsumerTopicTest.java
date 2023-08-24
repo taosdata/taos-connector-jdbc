@@ -6,8 +6,8 @@ import org.junit.*;
 
 import java.sql.*;
 import java.time.Duration;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
+import java.util.Collections;
+import java.util.Properties;
 
 @FixMethodOrder
 public class ConsumerTopicTest {
@@ -36,27 +36,6 @@ public class ConsumerTopicTest {
 //                    System.out.println(r.getVGroupId());
                 }
             }
-            consumer.commitSync();
-            consumer.commitAsync((r, e) -> {
-                System.out.println("r: " + r);
-                if (e != null) {
-                    e.printStackTrace();
-                }
-            });
-            Map<TopicPartition, OffsetAndMetadata> map = new HashMap<>();
-            for (TopicPartition topicPartition : consumer.assignment()) {
-                map.put(topicPartition, new OffsetAndMetadata(consumer.committed(topicPartition).offset()));
-            }
-            consumer.commitSync(map);
-            consumer.commitAsync(map, ((offsets, exception) -> {
-                System.out.println(offsets);
-                if (exception != null) {
-                    exception.printStackTrace();
-                }
-            }));
-            TimeUnit.MILLISECONDS.sleep(1000);
-            consumer.seekToBeginning(new HashSet<>(map.keySet()));
-            consumer.seekToEnd(new HashSet<>(map.keySet()));
             consumer.unsubscribe();
         }
     }

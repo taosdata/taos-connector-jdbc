@@ -31,7 +31,7 @@ public class Transport implements AutoCloseable {
     private boolean closed = false;
 
     public Transport(WSFunction function, ConnectionParam param, InFlightRequest inFlightRequest) throws SQLException {
-        this.client = WSClient.getInstance(param, function);
+        this.client = WSClient.getInstance(param, function, this);
         this.inFlightRequest = inFlightRequest;
         this.timeout = param.getRequestTimeout();
     }
@@ -109,8 +109,11 @@ public class Transport implements AutoCloseable {
         return closed;
     }
 
+    boolean flag = false;
     @Override
-    public void close() {
+    public synchronized void close() {
+        if (flag) return;
+        flag = true;
         closed = true;
         inFlightRequest.close();
         client.close();

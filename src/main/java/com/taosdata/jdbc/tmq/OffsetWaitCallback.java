@@ -20,7 +20,6 @@ public class OffsetWaitCallback<V> {
 
     @SuppressWarnings("unused")
     public void commitCallbackHandler(int code) {
-        System.out.println("commitCallbackHandler: " + code);
         if (TMQ_SUCCESS != code) {
             Exception exception = TSDBError.createSQLException(code, consumer.getErrMsg(code));
 

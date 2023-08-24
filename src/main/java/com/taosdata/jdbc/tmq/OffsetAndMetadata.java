@@ -10,8 +10,8 @@ public class OffsetAndMetadata {
     }
 
     public OffsetAndMetadata(long offset, String metadata) {
-        if (offset < 0)
-            throw new IllegalArgumentException("Invalid negative offset");
+        if (offset < 0 && offset != TMQConstants.INVALID_OFFSET)
+            throw new IllegalArgumentException("Invalid negative offset: " + offset);
 
         this.offset = offset;
 
@@ -24,5 +24,13 @@ public class OffsetAndMetadata {
 
     public String metadata() {
         return metadata;
+    }
+
+    @Override
+    public String toString() {
+        final StringBuffer sb = new StringBuffer("OffsetAndMetadata{");
+        sb.append("offset=").append(offset);
+        sb.append('}');
+        return sb.toString();
     }
 }

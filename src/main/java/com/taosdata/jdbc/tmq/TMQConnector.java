@@ -336,7 +336,7 @@ public class TMQConnector extends TSDBJNIConnector {
         } else if (l == TMQ_TOPIC_NULL) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TMQ_TOPIC_NULL);
         }
-        if (l < TMQ_SUCCESS)
+        if (l < TMQ_SUCCESS && l != TMQConstants.INVALID_OFFSET)
             throw TSDBError.createSQLException((int) l, getErrMsg((int) l));
 
         return l;

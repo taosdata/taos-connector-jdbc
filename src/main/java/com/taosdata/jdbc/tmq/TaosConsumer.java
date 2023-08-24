@@ -213,6 +213,15 @@ public class TaosConsumer<V> implements AutoCloseable {
         }
     }
 
+    public Map<TopicPartition, OffsetAndMetadata> committed(Set<TopicPartition> partitions) throws SQLException {
+        acquireAndEnsureOpen();
+        try {
+            return consumer.committed(partitions);
+        } finally {
+            release();
+        }
+    }
+
     /**
      * Acquire the light lock and ensure that the consumer hasn't been closed.
      *

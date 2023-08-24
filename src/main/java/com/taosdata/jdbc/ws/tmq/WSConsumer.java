@@ -26,7 +26,7 @@ public class WSConsumer<V> implements Consumer<V> {
     private Transport transport;
     private ConsumerParam param;
     private TMQRequestFactory factory;
-    private long offset = 0L;
+    private long messageId = 0L;
 
     @Override
     public void create(Properties properties) throws SQLException {
@@ -113,7 +113,7 @@ public class WSConsumer<V> implements Consumer<V> {
         if (!pollResp.isHaveMessage())
             return ConsumerRecords.emptyRecord();
 
-        offset = pollResp.getMessageId();
+        messageId = pollResp.getMessageId();
         ConsumerRecords<V> records = new ConsumerRecords<>();
         try (WSConsumerResultSet rs = new WSConsumerResultSet(transport, factory, pollResp.getMessageId(), pollResp.getDatabase())) {
             while (rs.next()) {
@@ -127,20 +127,16 @@ public class WSConsumer<V> implements Consumer<V> {
                 records.put(tp, r);
             }
         }
-
-        if (param.isAutoCommit()) {
-            this.commitSync();
-        }
         return records;
     }
 
     @Override
     public synchronized void commitSync() throws SQLException {
-        if (0 != offset) {
-            CommitResp commitResp = (CommitResp) transport.send(factory.generateCommit(offset));
+        if (0 != messageId) {
+            CommitResp commitResp = (CommitResp) transport.send(factory.generateCommit(messageId));
             if (Code.SUCCESS.getCode() != commitResp.getCode())
                 throw new SQLException("consumer commit error. code: (0x" + Integer.toHexString(commitResp.getCode()) + "), message: " + commitResp.getMessage());
-            offset = 0;
+            messageId = 0;
         }
     }
 
@@ -172,7 +168,7 @@ public class WSConsumer<V> implements Consumer<V> {
             throw new SQLException("consumer position error, code: (0x" + Integer.toHexString(resp.getCode())
                     + "), message: " + resp.getMessage() + ", timing: " + resp.getTiming());
         }
-        return resp.getPositions()[0];
+        return resp.getPosition()[0];
     }
 
     @Override
@@ -187,8 +183,8 @@ public class WSConsumer<V> implements Consumer<V> {
                     + "), message: " + resp.getMessage() + ", timing: " + resp.getTiming());
         }
 
-        return  Arrays.stream(topicPartitions)
-                .collect(Collectors.toMap(tp -> tp, tp -> resp.getPositions()[Arrays.asList(topicPartitions).indexOf(tp)]));
+        return Arrays.stream(topicPartitions)
+                .collect(Collectors.toMap(tp -> tp, tp -> resp.getPosition()[Arrays.asList(topicPartitions).indexOf(tp)]));
     }
 
     @Override
@@ -249,7 +245,8 @@ public class WSConsumer<V> implements Consumer<V> {
         Set<TopicPartition> set = new HashSet<>();
         for (String topic : subscription()) {
             Assignment[] topicAssignment = getAssignment(topic);
-            set.addAll(Arrays.stream(topicAssignment).map(a -> new TopicPartition(topic, a.getVgId())).collect(Collectors.toSet()));
+            set.addAll(Arrays.stream(topicAssignment).map(a -> new TopicPartition(topic, a.getVgId()))
+                    .collect(Collectors.toSet()));
         }
         return set;
     }
@@ -283,7 +280,7 @@ public class WSConsumer<V> implements Consumer<V> {
 
     @Override
     public void commitSync(Map<TopicPartition, OffsetAndMetadata> offsets) throws SQLException {
-        for ( Map.Entry<TopicPartition, OffsetAndMetadata> entry: offsets.entrySet()) {
+        for (Map.Entry<TopicPartition, OffsetAndMetadata> entry : offsets.entrySet()) {
             Request request = factory.generateCommitOffset(entry.getKey(), entry.getValue().offset());
             CommitOffsetResp resp = (CommitOffsetResp) transport.send(request);
             if (Code.SUCCESS.getCode() != resp.getCode()) {

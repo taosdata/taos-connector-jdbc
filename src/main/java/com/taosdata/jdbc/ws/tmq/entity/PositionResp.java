@@ -6,7 +6,7 @@ public class PositionResp extends Response {
     private int code;
     private String message;
     private long timing;
-    private long[] positions;
+    private long[] position;
 
     public int getCode() {
         return code;
@@ -32,11 +32,11 @@ public class PositionResp extends Response {
         this.timing = timing;
     }
 
-    public long[] getPositions() {
-        return positions;
+    public long[] getPosition() {
+        return position;
     }
 
-    public void setPositions(long[] positions) {
-        this.positions = positions;
+    public void setPosition(long[] position) {
+        this.position = position;
     }
 }
