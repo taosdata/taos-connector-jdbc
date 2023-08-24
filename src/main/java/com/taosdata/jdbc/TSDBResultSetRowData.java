@@ -91,7 +91,8 @@ public class TSDBResultSetRowData {
                 return parseUBigInt((long) obj).equals(new BigDecimal(0)) ? Boolean.FALSE : Boolean.TRUE;
             case TSDBConstants.TSDB_DATA_TYPE_BINARY:
             case TSDBConstants.TSDB_DATA_TYPE_JSON:
-            case TSDBConstants.TSDB_DATA_TYPE_NCHAR: {
+            case TSDBConstants.TSDB_DATA_TYPE_NCHAR:
+            case TSDB_DATA_TYPE_VARBINARY: {
                 String tmp = obj.toString();
                 return "1".equals(tmp) || "TRUE".equalsIgnoreCase(tmp);
             }
@@ -426,9 +427,10 @@ public class TSDBResultSetRowData {
                 return BigDecimal.valueOf(lowValue).add(BigDecimal.valueOf(Long.MAX_VALUE)).add(BigDecimal.valueOf(1)).toString();
             }
             case TSDBConstants.TSDB_DATA_TYPE_BINARY:
+            case TSDB_DATA_TYPE_VARBINARY:
+            case TSDBConstants.TSDB_DATA_TYPE_JSON:
                 return new String((byte[]) obj);
             case TSDBConstants.TSDB_DATA_TYPE_NCHAR:
-            case TSDBConstants.TSDB_DATA_TYPE_JSON:
                 return (String) obj;
             default:
                 return String.valueOf(obj);
