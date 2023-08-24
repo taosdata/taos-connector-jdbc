@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class SchemalessWriter implements AutoCloseable{
+public class SchemalessWriter implements AutoCloseable {
     // jni
     private TSDBJNIConnector connector;
     // websocket
@@ -165,7 +165,7 @@ public class SchemalessWriter implements AutoCloseable{
 
             if (Code.SUCCESS.getCode() != auth.getCode()) {
                 transport.close();
-                throw new SQLException("0x" + Integer.toHexString(auth.getCode()) + ":" + "auth failure: " + auth.getMessage());
+                throw new SQLException("(0x" + Integer.toHexString(auth.getCode()) + "):" + "auth failure: " + auth.getMessage());
             }
         }
     }
@@ -182,12 +182,50 @@ public class SchemalessWriter implements AutoCloseable{
         write(lines, protocolType, timestampType, null, null, null);
     }
 
+    @Deprecated
     public void write(String[] lines, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, String dbName, Integer ttl, Long reqId) throws SQLException {
         switch (type) {
             case JNI: {
                 if (null != dbName && (this.dbName == null || !this.dbName.endsWith(dbName))) {
                     selectDB(connector, dbName);
                 }
+                if (null == ttl && null == reqId) {
+                    connector.insertLines(lines, protocolType, timestampType);
+                } else if (null == reqId) {
+                    connector.insertLinesWithTtl(lines, protocolType, timestampType, ttl);
+                } else if (null == ttl) {
+                    connector.insertLinesWithReqId(lines, protocolType, timestampType, reqId);
+                } else {
+                    connector.insertLinesWithTtlAndReqId(lines, protocolType, timestampType, ttl, reqId);
+                }
+                break;
+            }
+            case WS: {
+                for (String line : lines) {
+                    InsertReq insertReq = new InsertReq();
+                    insertReq.setReqId(insertId.getAndIncrement());
+                    insertReq.setProtocol(protocolType.ordinal());
+                    insertReq.setPrecision(timestampType.getType());
+                    insertReq.setData(line);
+                    if (ttl != null)
+                        insertReq.setTtl(ttl);
+                    if (reqId != null)
+                        insertReq.setReqId(reqId);
+                    CommonResp response = (CommonResp) transport.send(new Request(SchemalessAction.INSERT.getAction(), insertReq));
+                    if (Code.SUCCESS.getCode() != response.getCode()) {
+                        throw new SQLException("(0x" + Integer.toHexString(response.getCode()) + "):" + response.getMessage());
+                    }
+                }
+                break;
+            }
+            default:
+                // nothing
+        }
+    }
+
+    public void write(String[] lines, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, Integer ttl, Long reqId) throws SQLException {
+        switch (type) {
+            case JNI: {
                 if (null == ttl && null == reqId) {
                     connector.insertLines(lines, protocolType, timestampType);
                 } else if (null == reqId) {
@@ -251,6 +289,7 @@ public class SchemalessWriter implements AutoCloseable{
         return this.writeRaw(line, protocolType, timestampType, null, null, null);
     }
 
+    @Deprecated
     public int writeRaw(String line, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, String dbName, Integer ttl, Long reqId) throws SQLException {
         switch (type) {
             case JNI: {
@@ -279,7 +318,43 @@ public class SchemalessWriter implements AutoCloseable{
                     insertReq.setReqId(reqId);
                 CommonResp response = (CommonResp) transport.send(new Request(SchemalessAction.INSERT.getAction(), insertReq));
                 if (Code.SUCCESS.getCode() != response.getCode()) {
-                    throw new SQLException("0x" + Integer.toHexString(response.getCode()) + ":" + response.getMessage());
+                    throw new SQLException("(0x" + Integer.toHexString(response.getCode()) + "):" + response.getMessage());
+                }
+                // websocket don't return the num of schemaless insert
+                return 0;
+            }
+            default:
+                // nothing
+                return 0;
+        }
+    }
+
+    public int writeRaw(String line, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, Integer ttl, Long reqId) throws SQLException {
+        switch (type) {
+            case JNI: {
+                if (null == ttl && null == reqId) {
+                    return connector.insertRaw(line, protocolType, timestampType);
+                } else if (null == reqId) {
+                    return connector.insertRawWithTtl(line, protocolType, timestampType, ttl);
+                } else if (null == ttl) {
+                    return connector.insertRawWithReqId(line, protocolType, timestampType, reqId);
+                } else {
+                    return connector.insertRawWithTtlAndReqId(line, protocolType, timestampType, ttl, reqId);
+                }
+            }
+            case WS: {
+                InsertReq insertReq = new InsertReq();
+                insertReq.setReqId(insertId.getAndIncrement());
+                insertReq.setProtocol(protocolType.ordinal());
+                insertReq.setPrecision(timestampType.getType());
+                insertReq.setData(line);
+                if (ttl != null)
+                    insertReq.setTtl(ttl);
+                if (reqId != null)
+                    insertReq.setReqId(reqId);
+                CommonResp response = (CommonResp) transport.send(new Request(SchemalessAction.INSERT.getAction(), insertReq));
+                if (Code.SUCCESS.getCode() != response.getCode()) {
+                    throw new SQLException("(0x" + Integer.toHexString(response.getCode()) + "):" + response.getMessage());
                 }
                 // websocket don't return the num of schemaless insert
                 return 0;

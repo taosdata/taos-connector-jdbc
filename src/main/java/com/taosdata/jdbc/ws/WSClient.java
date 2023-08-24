@@ -11,7 +11,7 @@ import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.sql.SQLException;
 import java.util.HashMap;
-import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -19,6 +19,7 @@ import java.util.function.Consumer;
 public class WSClient extends WebSocketClient implements AutoCloseable {
 
     ThreadPoolExecutor executor;
+    Transport transport;
 
     private Consumer<String> textMessageHandler;
     private Consumer<ByteBuffer> binaryMessageHandler;
@@ -36,11 +37,12 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
      *
      * @param serverUri connection url
      */
-    public WSClient(URI serverUri) {
+    public WSClient(URI serverUri, Transport transport) {
         super(serverUri, new HashMap<>());
+        this.transport = transport;
         executor = new ThreadPoolExecutor(1, 1,
                 0L, TimeUnit.MILLISECONDS,
-                new LinkedBlockingDeque<>(),
+                new LinkedBlockingQueue<>(),
                 r -> {
                     Thread t = new Thread(r);
                     t.setName("parse-message-" + t.getId());
@@ -70,6 +72,7 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
     @SuppressWarnings("all")
     public void onClose(int code, String reason, boolean remote) {
         if (remote) {
+            transport.close();
             throw new RuntimeException("The remote server closed the connection: " + reason);
         } else {
             throw new RuntimeException("close connection: " + reason);
@@ -84,10 +87,11 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
     @Override
     public void close() {
         super.close();
-        executor.shutdown();
+        if (executor != null && !executor.isShutdown())
+            executor.shutdown();
     }
 
-    public static WSClient getInstance(ConnectionParam params, WSFunction function) throws SQLException {
+    public static WSClient getInstance(ConnectionParam params, WSFunction function, Transport transport) throws SQLException {
         if (Strings.isNullOrEmpty(function.getFunction())) {
             throw new SQLException("websocket url error");
         }
@@ -111,6 +115,6 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
         } catch (URISyntaxException e) {
             throw new SQLException("Websocket url parse error: " + loginUrl, e);
         }
-        return new WSClient(urlPath);
+        return new WSClient(urlPath, transport);
     }
 }

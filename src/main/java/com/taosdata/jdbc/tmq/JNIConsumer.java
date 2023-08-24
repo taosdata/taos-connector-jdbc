@@ -1,37 +1,18 @@
 package com.taosdata.jdbc.tmq;
 
 import com.taosdata.jdbc.TSDBConstants;
-import com.taosdata.jdbc.TSDBError;
-import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.common.Consumer;
 
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_TMQ_CONSUMER_NULL;
-import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_TMQ_VGROUP_NOT_FOUND;
 
-public class JNIConsumer<V> implements Consumer<V> {
+public class JNIConsumer<V> implements  Consumer<V> {
 
     private final TMQConnector connector;
-    // use in auto commit is false, include history offset
-    private final List<ConsumerRecords<V>> offsetList = new ArrayList<>();
-    private boolean autoCommit;
-    private final Map<Long, OffsetWaitCallback<V>> callbacks = new HashMap<>();
-
-    ThreadPoolExecutor executor = new ThreadPoolExecutor(1, 1,
-            0L, TimeUnit.MILLISECONDS,
-            new ArrayBlockingQueue<>(10),
-            r -> {
-                Thread t = new Thread(r);
-                t.setName("consumer-callback-" + t.getId());
-                return t;
-            },
-            new ThreadPoolExecutor.CallerRunsPolicy());
 
     public JNIConsumer() {
         connector = new TMQConnector();
@@ -39,7 +20,6 @@ public class JNIConsumer<V> implements Consumer<V> {
 
     @Override
     public void create(Properties properties) throws SQLException {
-        this.autoCommit = Boolean.parseBoolean(properties.getProperty(TMQConstants.ENABLE_AUTO_COMMIT, "false"));
         long config = connector.createConfig(properties);
         try {
             connector.createConsumer(config);
@@ -63,12 +43,6 @@ public class JNIConsumer<V> implements Consumer<V> {
 
     @Override
     public void unsubscribe() throws SQLException {
-        for (ConsumerRecords<V> cr : offsetList) {
-            this.releaseResultSet(cr.getOffset());
-        }
-        for (Long offset : callbacks.keySet()) {
-            this.releaseResultSet(offset);
-        }
         connector.unsubscribe();
     }
 
@@ -87,38 +61,65 @@ public class JNIConsumer<V> implements Consumer<V> {
 
         int timestampPrecision = connector.getResultTimePrecision(resultSet);
 
-        ConsumerRecords<V> records = new ConsumerRecords<>(resultSet);
-        try (TMQResultSet rs = new TMQResultSet(connector, resultSet, timestampPrecision)) {
-            while (rs.next()) {
-                String topic = connector.getTopicName(resultSet);
-                String dbName = connector.getDbName(resultSet);
-                int vGroupId = connector.getVgroupId(resultSet);
-                long offset = connector.getOffset(resultSet);
-                TopicPartition tp = new TopicPartition(topic, dbName, vGroupId);
+        ConsumerRecords<V> records = new ConsumerRecords<>();
+        String topic = connector.getTopicName(resultSet);
+        String dbName = connector.getDbName(resultSet);
+        int vGroupId = connector.getVgroupId(resultSet);
+        long offset = connector.getOffset(resultSet);
+        String tableName = connector.getTableName(resultSet);
 
+        TopicPartition tp = new TopicPartition(topic, vGroupId);
+
+        try (TMQResultSet rs = new TMQResultSet(connector, resultSet, timestampPrecision, dbName, tableName)) {
+            while (rs.next()) {
                 V v = deserializer.deserialize(rs, topic, dbName);
                 ConsumerRecord<V> r = new ConsumerRecord<>(topic, dbName, vGroupId, offset, v);
                 records.put(tp, r);
             }
         }
 
-        if (autoCommit) {
-            this.releaseResultSet(resultSet);
-        } else {
-            offsetList.add(records);
-        }
         return records;
     }
 
     @Override
-    public void commitAsync(OffsetCommitCallback<V> callback) {
-        for (ConsumerRecords<V> r : offsetList) {
-            OffsetWaitCallback<V> offset = new OffsetWaitCallback<>(r, this, callback);
+    public void commitAsync(OffsetCommitCallback<V> callback) throws SQLException {
+        OffsetWaitCallback<V> call = new OffsetWaitCallback<>(getAllConsumed(), this, callback);
 
-            connector.asyncCommit(r.getOffset(), offset);
-            callbacks.put(r.getOffset(), offset);
+        connector.asyncCommit(call);
+    }
+
+    private Map<TopicPartition, OffsetAndMetadata> getAllConsumed() throws SQLException {
+        Map<TopicPartition, OffsetAndMetadata> offsets = new HashMap<>();
+        this.subscription().forEach(topic -> {
+            List<Assignment> topicAssignment = connector.getTopicAssignment(topic);
+            topicAssignment.forEach(assignment -> {
+                TopicPartition tp = new TopicPartition(topic, assignment.getVgId());
+                OffsetAndMetadata metadata = new OffsetAndMetadata(assignment.getCurrentOffset());
+                offsets.put(tp, metadata);
+            });
+        });
+        return offsets;
+    }
+
+    public void commitAsync(final Map<TopicPartition, OffsetAndMetadata> offsets, OffsetCommitCallback<V> callback) {
+        for (Map.Entry<TopicPartition, OffsetAndMetadata> entry : offsets.entrySet()) {
+            Map<TopicPartition, OffsetAndMetadata> offset = new HashMap<>();
+            offset.put(entry.getKey(), entry.getValue());
+            connector.asyncCommit(entry.getKey().getTopic(), entry.getKey().getVGroupId(), entry.getValue().offset(),
+                    new OffsetWaitCallback<>(offset, this, callback));
         }
-        offsetList.clear();
+    }
+
+    @Override
+    public void commitSync() throws SQLException {
+        connector.syncCommit();
+    }
+
+    @Override
+    public void commitSync(Map<TopicPartition, OffsetAndMetadata> offsets) throws SQLException {
+        for (Map.Entry<TopicPartition, OffsetAndMetadata> entry : offsets.entrySet()) {
+            connector.commitOffsetSync(entry.getKey().getTopic(), entry.getKey().getVGroupId(), entry.getValue().offset());
+        }
     }
 
     @Override
@@ -127,21 +128,19 @@ public class JNIConsumer<V> implements Consumer<V> {
     }
 
     @Override
-    public long position(TopicPartition partition) {
-       return connector.getTopicAssignment(partition.getTopic()).stream()
-                .filter(a -> a.getVgId() == partition.getVGroupId())
-                .findFirst()
-                .orElseThrow(() -> TSDBError.createIllegalStateException(ERROR_TMQ_VGROUP_NOT_FOUND))
-                .getCurrentOffset();
+    public long position(TopicPartition partition) throws SQLException {
+        return connector.position(partition.getTopic(), partition.getVGroupId());
     }
 
     @Override
-    public Map<TopicPartition, Long> position(String topic) {
-        return connector.getTopicAssignment(topic).stream()
-                .collect(HashMap::new
-                        , (m, a) -> m.put(new TopicPartition(topic, a.getVgId()), a.getCurrentOffset())
-                        , HashMap::putAll
-                );
+    public Map<TopicPartition, Long> position(String topic) throws SQLException {
+        List<TopicPartition> collect = connector.getTopicAssignment(topic).stream()
+                .map(a -> new TopicPartition(topic, a.getVgId())).collect(Collectors.toList());
+        Map<TopicPartition, Long> map = new HashMap<>();
+        for (TopicPartition topicPartition : collect) {
+            map.put(topicPartition, position(topicPartition));
+        }
+        return map;
     }
 
     @Override
@@ -163,41 +162,72 @@ public class JNIConsumer<V> implements Consumer<V> {
     }
 
     @Override
-    public void commitSync() throws SQLException {
-        for (ConsumerRecords<V> r : offsetList) {
-            connector.syncCommit(r.getOffset());
-            this.releaseResultSet(r.getOffset());
+    public void seekToBeginning(Collection<TopicPartition> partitions) throws SQLException {
+        Map<TopicPartition, Long> beginningOffsets = new HashMap<>();
+        for (TopicPartition partition : partitions) {
+            if (beginningOffsets.containsKey(partition)) {
+                Long aLong = beginningOffsets.get(partition);
+                seek(partition, aLong);
+            } else {
+                beginningOffsets(partition.getTopic()).forEach((tp, offset) -> {
+                    if (tp.getVGroupId() == partition.getVGroupId()) {
+                        seek(tp, offset);
+                    } else {
+                        beginningOffsets.put(tp, offset);
+                    }
+                });
+            }
         }
-        offsetList.clear();
+    }
+
+    @Override
+    public void seekToEnd(Collection<TopicPartition> partitions) throws SQLException {
+        Map<TopicPartition, Long> endOffsets = new HashMap<>();
+        for (TopicPartition partition : partitions) {
+            if (endOffsets.containsKey(partition)) {
+                Long aLong = endOffsets.get(partition);
+                seek(partition, aLong);
+            } else {
+                endOffsets(partition.getTopic()).forEach((tp, offset) -> {
+                    if (tp.getVGroupId() == partition.getVGroupId()) {
+                        seek(tp, offset);
+                    } else {
+                        endOffsets.put(tp, offset);
+                    }
+                });
+            }
+        }
+    }
+
+    @Override
+    public Set<TopicPartition> assignment() throws SQLException {
+        return subscription().stream().map(topic -> {
+            List<Assignment> topicAssignment = connector.getTopicAssignment(topic);
+            return topicAssignment.stream().map(a -> new TopicPartition(topic, a.getVgId())).collect(Collectors.toList());
+        }).flatMap(Collection::stream).collect(Collectors.toSet());
+    }
+
+    @Override
+    public OffsetAndMetadata committed(TopicPartition partition) throws SQLException {
+        long l = connector.committed(partition.getTopic(), partition.getVGroupId());
+        return new OffsetAndMetadata(l, null);
+    }
+
+    @Override
+    public Map<TopicPartition, OffsetAndMetadata> committed(Set<TopicPartition> partitions) throws SQLException {
+        Map<TopicPartition, OffsetAndMetadata> map = new HashMap<>();
+        for (TopicPartition partition : partitions) {
+            map.put(partition, committed(partition));
+        }
+        return map;
     }
 
     @Override
     public void close() throws SQLException {
-        executor.shutdown();
-
-        for (ConsumerRecords<V> cr : offsetList) {
-            this.releaseResultSet(cr.getOffset());
-        }
-        for (Long offset : callbacks.keySet()) {
-            this.releaseResultSet(offset);
-        }
         connector.closeConsumer();
-    }
-
-    public void releaseResultSet(long ptr) throws SQLException {
-        int code = this.connector.freeResultSet(ptr);
-        if (code == TSDBConstants.JNI_CONNECTION_NULL) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_JNI_CONNECTION_NULL);
-        } else if (code == TSDBConstants.JNI_RESULT_SET_NULL) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_JNI_RESULT_SET_NULL);
-        }
     }
 
     public String getErrMsg(int code) {
         return connector.getErrMsg(code);
-    }
-
-    public synchronized void closeOffset(long prt) {
-        callbacks.remove(prt);
     }
 }

@@ -129,7 +129,7 @@ public class WSConnection extends AbstractConnection {
 
         if (Code.SUCCESS.getCode() != auth.getCode()) {
             ts.close();
-            throw new SQLException("0x" + Integer.toHexString(auth.getCode()) + ":" + "prepareStatement auth failure:" + auth.getMessage());
+            throw new SQLException("(0x" + Integer.toHexString(auth.getCode()) + "):" + "prepareStatement auth failure:" + auth.getMessage());
         }
 
         return ts;

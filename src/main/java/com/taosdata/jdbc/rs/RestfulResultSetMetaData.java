@@ -12,10 +12,17 @@ import java.util.List;
 
 public class RestfulResultSetMetaData extends WrapperImpl implements ResultSetMetaData {
 
+    private String tableName = "";
     private final String database;
     private final List<RestfulResultSet.Field> fields;
 
     public RestfulResultSetMetaData(String database, List<RestfulResultSet.Field> fields) {
+        this.database = database;
+        this.fields = fields == null ? Collections.emptyList() : fields;
+    }
+
+    public RestfulResultSetMetaData(String database, List<RestfulResultSet.Field> fields, String tableName) {
+        this.tableName = tableName;
         this.database = database;
         this.fields = fields == null ? Collections.emptyList() : fields;
     }
@@ -123,7 +130,7 @@ public class RestfulResultSetMetaData extends WrapperImpl implements ResultSetMe
 
     @Override
     public String getTableName(int column) throws SQLException {
-        return "";
+        return this.tableName;
     }
 
     @Override

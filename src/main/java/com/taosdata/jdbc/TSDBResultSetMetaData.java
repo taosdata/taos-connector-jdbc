@@ -24,10 +24,18 @@ import java.util.List;
 
 public class TSDBResultSetMetaData extends WrapperImpl implements ResultSetMetaData {
 
+    private String tableName = "";
+    private String database = "";
     List<ColumnMetaData> colMetaDataList;
 
     public TSDBResultSetMetaData(List<ColumnMetaData> metaDataList) {
         this.colMetaDataList = metaDataList;
+    }
+
+    public TSDBResultSetMetaData(List<ColumnMetaData> metaDataList, String database, String tableName) {
+        this.colMetaDataList = metaDataList;
+        this.database = database;
+        this.tableName = tableName;
     }
 
     public int getColumnCount() throws SQLException {
@@ -141,11 +149,11 @@ public class TSDBResultSetMetaData extends WrapperImpl implements ResultSetMetaD
     }
 
     public String getTableName(int column) throws SQLException {
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
+        return this.tableName;
     }
 
     public String getCatalogName(int column) throws SQLException {
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
+        return this.database;
     }
 
     public int getColumnType(int column) throws SQLException {
