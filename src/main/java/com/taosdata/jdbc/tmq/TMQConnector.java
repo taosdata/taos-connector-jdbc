@@ -148,8 +148,8 @@ public class TMQConnector extends TSDBJNIConnector {
         this.topics = topics;
     }
 
-    public void syncCommit(long offsets) throws SQLException {
-        int code = tmqCommitSync(taos, offsets);
+    public void syncCommit() throws SQLException {
+        int code = tmqCommitAllSync(taos);
         if (code == TMQ_CONSUMER_NULL)
             throw TSDBError.createSQLException(ERROR_TMQ_CONSUMER_NULL, "sync commit offset error, consumer reference has been destroyed");
 
@@ -157,15 +157,43 @@ public class TMQConnector extends TSDBJNIConnector {
             throw TSDBError.createSQLException(code, createConsumerErrorMsg);
     }
 
-    // DLL_EXPORT int32_t tmq_commit_sync(tmq_t *tmq, const TAOS_RES *msg);
-    private native int tmqCommitSync(long tmq, long offsets);
+    // commit all
+    private native int tmqCommitAllSync(long tmq);
 
-    public void asyncCommit(long offset, OffsetWaitCallback<?> callback) {
-        consumerCommitAsync(taos, offset, callback);
+    public void commitOffsetSync(String topicName, int vgId, long offset) throws SQLException {
+        int code = tmqCommitOffsetSyncImp(this.taos, topicName, vgId, offset);
+        if (code != TMQ_SUCCESS) {
+            if (code == TMQ_CONSUMER_NULL) {
+                throw TSDBError.createSQLException(ERROR_TMQ_CONSUMER_NULL);
+            } else if (code == TMQ_TOPIC_NULL) {
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TMQ_TOPIC_NULL);
+            }
+            throw TSDBError.createSQLException(code, getErrMsg(code));
+        }
     }
 
-    // DLL_EXPORT void tmq_commit_async(tmq_t *tmq, const TAOS_RES *msg, tmq_commit_cb *cb, void *param);
-    private native void consumerCommitAsync(long tmq, long offsets, OffsetWaitCallback<?> callback);
+    // DLL_EXPORT int32_t   tmq_commit_offset_sync(tmq_t *tmq, const char *pTopicName, int32_t vgId, int64_t offset);
+    private native int tmqCommitOffsetSyncImp(long tmq, String topicName, int vgId, long offset);
+
+    public void asyncCommit(OffsetWaitCallback<?> callback) {
+        consumerCommitAllAsync(taos, callback);
+    }
+
+    private native void consumerCommitAllAsync(long tmq, OffsetWaitCallback<?> callback);
+
+    public void asyncCommit(String topicName, int vgId, long offset, OffsetWaitCallback<?> callback) {
+        if (taos == 0) {
+            throw TSDBError.createIllegalArgumentException(ERROR_TMQ_CONSUMER_NULL);
+        }
+        if (topicName == null || topicName.isEmpty()) {
+            throw TSDBError.createIllegalArgumentException(TSDBErrorNumbers.ERROR_TMQ_TOPIC_NULL);
+        }
+
+        consumerCommitOffsetAsync(taos, topicName, vgId, offset, callback);
+    }
+
+    // DLL_EXPORT void      tmq_commit_offset_async(tmq_t *tmq, const char *pTopicName, int32_t vgId, int64_t offset, tmq_commit_cb *cb, void *param);
+    private native void consumerCommitOffsetAsync(long tmq, String topicName, int vgId, long offset, OffsetWaitCallback<?> callback);
 
     public void unsubscribe() throws SQLException {
         int code = tmqUnsubscribeImp(taos);
@@ -300,5 +328,37 @@ public class TMQConnector extends TSDBJNIConnector {
 
     // DLL_EXPORT int32_t   tmq_get_topic_assignment(tmq_t *tmq, const char* pTopicName, tmq_topic_assignment **assignment, int32_t *numOfAssignment);
     private native int tmqGetTopicAssignmentImp(long tmq, String topicName, List<Assignment> assignments);
+
+    public long committed(String topicName, int vgId) throws SQLException {
+        long l = tmqCommittedImp(this.taos, topicName, vgId);
+        if (l == TMQ_CONSUMER_NULL) {
+            throw TSDBError.createSQLException(ERROR_TMQ_CONSUMER_NULL);
+        } else if (l == TMQ_TOPIC_NULL) {
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TMQ_TOPIC_NULL);
+        }
+        if (l < TMQ_SUCCESS && l != TMQConstants.INVALID_OFFSET)
+            throw TSDBError.createSQLException((int) l, getErrMsg((int) l));
+
+        return l;
+    }
+
+    // DLL_EXPORT int64_t     tmq_committed(tmq_t *tmq, const char *pTopicName, int32_t vgId)
+    private native long tmqCommittedImp(long tmq, String topicName, int vgId);
+
+    public long position(String topicName, int vgId) throws SQLException {
+        long l = tmqPositionImp(this.taos, topicName, vgId);
+        if (l == TMQ_CONSUMER_NULL) {
+            throw TSDBError.createSQLException(ERROR_TMQ_CONSUMER_NULL);
+        } else if (l == TMQ_TOPIC_NULL) {
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TMQ_TOPIC_NULL);
+        }
+        if (l < TMQ_SUCCESS)
+            throw TSDBError.createSQLException((int) l, getErrMsg((int) l));
+
+        return l;
+    }
+
+    // DLL_EXPORT int64_t     tmq_position(tmq_t *tmq, const char *pTopicName, int32_t vgId)
+    private native long tmqPositionImp(long tmq, String topicName, int vgId);
 
 }

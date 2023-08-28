@@ -20,9 +20,11 @@ public class TMQRequestFactoryTest {
     @Description("Generate Subscribe")
     public void testGenerateSubscribe() {
         String[] topics = {"topic_1", "topic_2"};
-        Request request = factory.generateSubscribe("root", "taosdata", "test", "gId", "cId", "offset", topics);
+        Request request = factory.generateSubscribe("root", "taosdata", "test", "gId",
+                "cId", "offset", topics
+                , null, null, null, null);
         JSONObject jsonObject = JSONObject.parseObject(request.toString());
-        SubscribeReq req  = JSON.toJavaObject((JSON) JSON.toJSON(jsonObject.get("args")),SubscribeReq.class);
+        SubscribeReq req = JSON.toJavaObject((JSON) JSON.toJSON(jsonObject.get("args")), SubscribeReq.class);
         Assert.assertEquals(1, req.getReqId());
         Assert.assertEquals("root", req.getUser());
         Assert.assertEquals("taosdata", req.getPassword());
@@ -56,7 +58,7 @@ public class TMQRequestFactoryTest {
     @Test
     @Description("Generate Fetch Block")
     public void testGenerateFetchBlock() {
-        Request request = factory.generateFetchBlock(10,1000);
+        Request request = factory.generateFetchBlock(10, 1000);
         JSONObject jsonObject = JSONObject.parseObject(request.toString());
         FetchBlockReq req = JSON.toJavaObject((JSON) JSON.toJSON(jsonObject.get("args")), FetchBlockReq.class);
         Assert.assertEquals(10, req.getReqId());

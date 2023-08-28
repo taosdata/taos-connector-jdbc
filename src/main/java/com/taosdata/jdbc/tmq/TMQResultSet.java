@@ -14,12 +14,24 @@ public class TMQResultSet extends AbstractResultSet {
     private final List<ColumnMetaData> columnMetaDataList = new ArrayList<>();
     private final TSDBResultSetBlockData blockData;
 
+    private String dbName;
+    private String tableName;
+
     private boolean isClosed;
 
     public TMQResultSet(TMQConnector connector, long resultSetPointer, int timestampPrecision) {
         this.jniConnector = connector;
         this.resultSetPointer = resultSetPointer;
         this.timestampPrecision = timestampPrecision;
+        this.blockData = new TSDBResultSetBlockData(this.columnMetaDataList, timestampPrecision);
+    }
+
+    public TMQResultSet(TMQConnector connector, long resultSetPointer, int timestampPrecision, String dbName, String tableName) {
+        this.jniConnector = connector;
+        this.resultSetPointer = resultSetPointer;
+        this.timestampPrecision = timestampPrecision;
+        this.dbName = dbName;
+        this.tableName = tableName;
         this.blockData = new TSDBResultSetBlockData(this.columnMetaDataList, timestampPrecision);
     }
 
@@ -47,6 +59,15 @@ public class TMQResultSet extends AbstractResultSet {
     public void close() throws SQLException {
         if (isClosed)
             return;
+
+        if (this.jniConnector != null) {
+            int code = this.jniConnector.freeResultSet(this.resultSetPointer);
+            if (code == TSDBConstants.JNI_CONNECTION_NULL) {
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_JNI_CONNECTION_NULL);
+            } else if (code == TSDBConstants.JNI_RESULT_SET_NULL) {
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_JNI_RESULT_SET_NULL);
+            }
+        }
         isClosed = true;
     }
 
@@ -119,7 +140,7 @@ public class TMQResultSet extends AbstractResultSet {
         if (isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);
 
-        return new TSDBResultSetMetaData(this.columnMetaDataList);
+        return new TSDBResultSetMetaData(this.columnMetaDataList, dbName, tableName);
     }
 
     @Override

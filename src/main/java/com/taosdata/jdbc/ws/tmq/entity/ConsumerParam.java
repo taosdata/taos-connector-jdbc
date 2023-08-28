@@ -14,9 +14,12 @@ public class ConsumerParam {
     private String clientId;
     private String offsetRest;
     private final boolean autoCommit;
+    private String autoCommitInterval;
+    private String msgWithTableName;
+    private String snapshotEnable;
 
     public ConsumerParam(Properties properties) throws SQLException {
-        if (null != properties.getProperty(TMQConstants.CONNECT_URL)){
+        if (null != properties.getProperty(TMQConstants.CONNECT_URL)) {
             String url = properties.getProperty(TMQConstants.CONNECT_URL);
             StringUtils.parseUrl(url, properties);
         }
@@ -33,6 +36,9 @@ public class ConsumerParam {
         groupId = properties.getProperty(TMQConstants.GROUP_ID);
         clientId = properties.getProperty(TMQConstants.CLIENT_ID);
         offsetRest = properties.getProperty(TMQConstants.AUTO_OFFSET_RESET);
+        autoCommitInterval = properties.getProperty(TMQConstants.AUTO_COMMIT_INTERVAL);
+        msgWithTableName = properties.getProperty(TMQConstants.MSG_WITH_TABLE_NAME);
+        snapshotEnable = properties.getProperty(TMQConstants.EXPERIMENTAL_SNAPSHOT_ENABLE);
     }
 
     public ConnectionParam getConnectionParam() {
@@ -69,5 +75,29 @@ public class ConsumerParam {
 
     public boolean isAutoCommit() {
         return autoCommit;
+    }
+
+    public String getAutoCommitInterval() {
+        return autoCommitInterval;
+    }
+
+    public void setAutoCommitInterval(String autoCommitInterval) {
+        this.autoCommitInterval = autoCommitInterval;
+    }
+
+    public String getMsgWithTableName() {
+        return msgWithTableName;
+    }
+
+    public void setMsgWithTableName(String msgWithTableName) {
+        this.msgWithTableName = msgWithTableName;
+    }
+
+    public String getSnapshotEnable() {
+        return snapshotEnable;
+    }
+
+    public void setSnapshotEnable(String snapshotEnable) {
+        this.snapshotEnable = snapshotEnable;
     }
 }

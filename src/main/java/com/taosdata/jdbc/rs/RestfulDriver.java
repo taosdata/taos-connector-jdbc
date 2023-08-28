@@ -138,7 +138,7 @@ public class RestfulDriver extends AbstractDriver {
 
         if (Code.SUCCESS.getCode() != auth.getCode()) {
             transport.close();
-            throw new SQLException("0x" + Integer.toHexString(auth.getCode()) + ":" + "auth failure:" + auth.getMessage());
+            throw new SQLException("(0x" + Integer.toHexString(auth.getCode()) + "):" + "auth failure:" + auth.getMessage());
         }
 
         TaosGlobalConfig.setCharset(props.getProperty(TSDBDriver.PROPERTY_KEY_CHARSET));
