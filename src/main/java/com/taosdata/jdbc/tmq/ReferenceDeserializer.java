@@ -147,7 +147,7 @@ public class ReferenceDeserializer<V> implements Deserializer<V> {
             ParameterizedType parameterizedType = (ParameterizedType) type;
             return (Class<V>) parameterizedType.getActualTypeArguments()[0];
         }
-        throw new RuntimeException();
+        throw new RuntimeException("ReferenceDeserializer getGenericType error!, maybe not extends ReferenceDeserializer");
     }
 
     private static class Param {

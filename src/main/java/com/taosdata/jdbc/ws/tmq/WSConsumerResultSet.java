@@ -224,7 +224,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
                                 continue;
                             }
                             buffer.position(start + offset.get(m));
-                            short len = buffer.getShort();
+                            int len = buffer.getShort() & 0xFFFF;
                             byte[] tmp = new byte[len];
                             buffer.get(tmp);
                             col.add(tmp);
@@ -244,7 +244,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
                                 continue;
                             }
                             buffer.position(start + offset.get(m));
-                            int len = buffer.getShort() / 4;
+                            int len = (buffer.getShort() & 0xFFFF) / 4;
                             int[] tmp = new int[len];
                             for (int n = 0; n < len; n++) {
                                 tmp[n] = buffer.getInt();
