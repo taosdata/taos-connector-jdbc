@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.ws.entity;
 
 import com.alibaba.fastjson.annotation.JSONField;
+import com.taosdata.jdbc.utils.UInt64Codec;
 
 /**
  * query result pojo
@@ -18,6 +19,7 @@ public class QueryResp extends Response {
 
     private String message;
 
+    @JSONField(deserializeUsing = UInt64Codec.class)
     private long id;
 
     @JSONField(name = "is_update")

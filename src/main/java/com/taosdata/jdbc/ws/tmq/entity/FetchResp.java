@@ -1,13 +1,14 @@
 package com.taosdata.jdbc.ws.tmq.entity;
 
 import com.alibaba.fastjson.annotation.JSONField;
+import com.taosdata.jdbc.utils.UInt64Codec;
 import com.taosdata.jdbc.ws.entity.Response;
 
 public class FetchResp extends Response {
     private int code;
     private String message;
 
-    @JSONField(name = "message_id")
+    @JSONField(name = "message_id", deserializeUsing = UInt64Codec.class)
     private long messageId;
     private boolean completed;
 
