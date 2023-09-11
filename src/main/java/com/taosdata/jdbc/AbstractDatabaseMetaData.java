@@ -8,6 +8,8 @@ import java.io.InputStream;
 import java.net.URL;
 import java.sql.*;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public abstract class AbstractDatabaseMetaData extends WrapperImpl implements DatabaseMetaData {
 
@@ -738,8 +740,8 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
         return result;
     }
 
-    private Map<String, Map<String, String>> getTableMate(Connection connection, String table, String db) throws SQLException {
-        Map<String, Map<String, String>> result = new HashMap<>();
+    private Map<String, Set<String>> getTableMate(Connection connection, String table, String db) throws SQLException {
+        Map<String, Set<String>> result = new HashMap<>();
         String sql = "select table_name, db_name, stable_name from information_schema.ins_tables where 1 = 1 ";
         if (table != null)
             sql += " and table_name='" + table + "'";
@@ -750,14 +752,13 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
             while (tables.next()) {
                 String name = tables.getString("table_name");
                 String dbName = tables.getString("db_name");
-                String sName = tables.getString("stable_name");
                 if (result.containsKey(dbName)) {
-                    Map<String, String> tableMap = result.get(dbName);
-                    tableMap.put(name, sName);
+                    Set<String> set = result.get(dbName);
+                    set.add(name);
                 } else {
-                    Map<String, String> map = new HashMap<>();
-                    map.put(name, sName);
-                    result.put(dbName, map);
+                    Set<String> set = new HashSet<>();
+                    set.add(name);
+                    result.put(dbName, set);
                 }
             }
         }
@@ -765,7 +766,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
     }
 
     // super table
-    private void show2RowData(ResultSet rs, List<TSDBResultSetRowData> rowDataList, String precision, String db, String tableName, String stableName, String colName) throws SQLException {
+    private void show2RowData(ResultSet rs, List<TSDBResultSetRowData> rowDataList, String precision, String db, String tableName, String colName) throws SQLException {
         int rowIndex = 0;
         while (rs.next()) {
 //            table_name, db_name, table_type, col_name as field, col_type as type, col_length as length
@@ -773,14 +774,14 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
             // set TABLE_CAT
             rowData.setStringValue(1, db);
             // set TABLE_SCHEM
-            rowData.setStringValue(2, stableName);
+            rowData.setStringValue(2, null);
             // set TABLE_NAME
             rowData.setStringValue(3, tableName);
             // set COLUMN_NAME
             String field = rs.getString("field");
-            if (colName == null || colName.equals(field)) {
+            if (colName == null || colName.equals("%") || colName.equals(field)) {
                 rowData.setStringValue(4, field);
-            }else {
+            } else {
                 continue;
             }
             // set DATA_TYPE
@@ -817,9 +818,9 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
         }
     }
 
+    Pattern pattern = Pattern.compile("\\((\\d+)\\)");
     // normal table or child table
-    private void colResultSet2RowData(ResultSet rs, List<TSDBResultSetRowData> rowDataList,
-                                      Map<String, String> precision, Map<String, Map<String, String>> tableMate, boolean flag) throws SQLException {
+    private void colResultSet2RowData(ResultSet rs, List<TSDBResultSetRowData> rowDataList, Map<String, String> precision) throws SQLException {
         int rowIndex = 0;
         while (rs.next()) {
 //            table_name, db_name, table_type, col_name as field, col_type as type, col_length as length
@@ -828,26 +829,26 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
             String db = rs.getString("db_name");
             rowData.setStringValue(1, db);
             // set TABLE_SCHEM
-            String tableName = rs.getString("table_name");
-            String tableType = rs.getString("table_type");
-            if ("CHILD_TABLE".equals(tableType)) {
-                rowData.setStringValue(2, tableMate.get(db).get(tableName));
-            } else if ("SUPER_TABLE".equals(tableType)) {
-                if (flag) continue;
-                else rowData.setStringValue(2, tableMate.get(db).get(tableName));
-            } else {
-                rowData.setStringValue(2, null);
-            }
+            rowData.setStringValue(2, null);
             // set TABLE_NAME
+            String tableName = rs.getString("table_name");
             rowData.setStringValue(3, tableName);
             // set COLUMN_NAME
             rowData.setStringValue(4, rs.getString("col_name"));
             // set DATA_TYPE
             String typeName = rs.getString("col_type");
-            int length;
+            int length = 0;
             if (typeName.startsWith("VARCHAR")) {
                 rowData.setIntValue(5, DataType.getDataType("VARCHAR").getJdbcTypeValue());
                 length = rs.getInt("col_length") - 2;
+                typeName = "VARCHAR";
+            } else if (typeName.startsWith("NCHAR")) {
+                rowData.setIntValue(5, DataType.getDataType("NCHAR").getJdbcTypeValue());
+                Matcher matcher = pattern.matcher(typeName);
+                if (matcher.find()) {
+                    length = Integer.parseInt(matcher.group(1));
+                }
+                typeName = "NCHAR";
             } else {
                 rowData.setIntValue(5, DataType.getDataType(typeName).getJdbcTypeValue());
                 length = rs.getInt("col_length");
@@ -883,8 +884,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
     }
 
     // child table
-    private void tagResultSet2RowData(ResultSet rs, List<TSDBResultSetRowData> rowDataList,
-                                      Map<String, String> precision) throws SQLException {
+    private void tagResultSet2RowData(ResultSet rs, List<TSDBResultSetRowData> rowDataList, Map<String, String> precision) throws SQLException {
         int rowIndex = 0;
         while (rs.next()) {
             TSDBResultSetRowData rowData = new TSDBResultSetRowData(24);
@@ -892,20 +892,29 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
             String db = rs.getString("db_name");
             rowData.setStringValue(1, db);
             // set TABLE_SCHEM
-            String sTableName = rs.getString("stable_name");
-            rowData.setStringValue(2, sTableName);
+            rowData.setStringValue(2, null);
             // set TABLE_NAME
             rowData.setStringValue(3, rs.getString("table_name"));
             // set COLUMN_NAME
             rowData.setStringValue(4, rs.getString("tag_name"));
             // set DATA_TYPE
             String typeName = rs.getString("tag_type");
-            int length;
+            int length = 0;
             if (typeName.startsWith("VARCHAR")) {
                 rowData.setIntValue(5, DataType.getDataType("VARCHAR").getJdbcTypeValue());
-                String len = typeName.split("\\(")[1].split("\\)")[0];
-                length = Integer.parseInt(len);
-            } else {
+                Matcher matcher = pattern.matcher(typeName);
+                if (matcher.find()) {
+                    length = Integer.parseInt(matcher.group(1));
+                }
+                typeName = "VARCHAR";
+            } else if (typeName.startsWith("NCHAR")) {
+                rowData.setIntValue(5, DataType.getDataType("NCHAR").getJdbcTypeValue());
+                Matcher matcher = pattern.matcher(typeName);
+                if (matcher.find()) {
+                    length = Integer.parseInt(matcher.group(1));
+                }
+                typeName = "NCHAR";
+            }else {
                 rowData.setIntValue(5, DataType.getDataType(typeName).getJdbcTypeValue());
                 length = 0;
             }
@@ -946,17 +955,16 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
         // set up rowDataList
         List<TSDBResultSetRowData> rowDataList = new ArrayList<>();
 
-        Map<String, String> precisions = getCatalogMate(conn, null);
-        if (catalog == null) {
-            if (tableNamePattern == null) {
-                Map<String, Map<String, String>> tableMate = getTableMate(conn, null, null);
-                if (columnNamePattern == null) {
+        if (catalog == null || catalog.equals("%")) {
+            Map<String, String> precisions = getCatalogMate(conn, null);
+            if (tableNamePattern == null || tableNamePattern.equals("%")) {
+                if (columnNamePattern == null || columnNamePattern.equals("%")) {
                     Map<String, Set<String>> sTableMate = getSTableMate(conn, null, null);
                     for (String db : sTableMate.keySet()) {
                         for (String s : sTableMate.get(db)) {
                             try (Statement stmt = conn.createStatement();
                                  ResultSet rs = stmt.executeQuery("describe " + db + "." + s)) {
-                                show2RowData(rs, rowDataList, precisions.get(db), db, s, s, null);
+                                show2RowData(rs, rowDataList, precisions.get(db), db, s, null);
                             }
                         }
                     }
@@ -965,7 +973,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                          ResultSet rs = stmt.executeQuery(
                                  "select table_name, db_name, table_type, col_name, col_type, col_length " +
                                          "from information_schema.ins_columns")) {
-                        colResultSet2RowData(rs, rowDataList, precisions, tableMate, true);
+                        colResultSet2RowData(rs, rowDataList, precisions);
                     }
 
                     try (Statement stmt = conn.createStatement();
@@ -979,7 +987,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                          ResultSet rs = stmt.executeQuery(
                                  "select table_name, db_name, table_type, col_name, col_type, col_length " +
                                          "from information_schema.ins_columns where col_name = '" + columnNamePattern + "'")) {
-                        colResultSet2RowData(rs, rowDataList, precisions, tableMate, false);
+                        colResultSet2RowData(rs, rowDataList, precisions);
                     }
                     // stable tag not found
                     try (Statement stmt = conn.createStatement();
@@ -995,16 +1003,16 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                     for (String s : sTableMate.get(db)) {
                         try (Statement stmt = conn.createStatement();
                              ResultSet rs = stmt.executeQuery("describe " + db + "." + s)) {
-                            show2RowData(rs, rowDataList, precisions.get(db), db, s, s, columnNamePattern);
+                            show2RowData(rs, rowDataList, precisions.get(db), db, s, columnNamePattern);
                         }
                     }
                 }
-                Map<String, Map<String, String>> tableMate = getTableMate(conn, tableNamePattern, null);
-                for (Map.Entry<String, Map<String, String>> dbs : tableMate.entrySet()) {
-                    for (Map.Entry<String, String> stables : dbs.getValue().entrySet()) {
+                Map<String, Set<String>> tableMate = getTableMate(conn, tableNamePattern, null);
+                for (Map.Entry<String, Set<String>> dbs : tableMate.entrySet()) {
+                    for (String table : dbs.getValue()) {
                         try (Statement stmt = conn.createStatement();
-                             ResultSet rs = stmt.executeQuery("describe " + dbs.getKey() + "." + stables.getKey())) {
-                            show2RowData(rs, rowDataList, precisions.get(dbs.getKey()), dbs.getKey(), stables.getKey(), stables.getValue(), columnNamePattern);
+                             ResultSet rs = stmt.executeQuery("describe " + dbs.getKey() + "." + table)) {
+                            show2RowData(rs, rowDataList, precisions.get(dbs.getKey()), dbs.getKey(), table, columnNamePattern);
                         }
                     }
                 }
@@ -1012,17 +1020,17 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
         } else {
             if (catalog.isEmpty())
                 return new EmptyResultSet();
+            Map<String, String> precisions = getCatalogMate(conn, catalog);
             if (precisions.get(catalog) == null)
                 return new EmptyResultSet();
-            if (tableNamePattern == null) {
-                Map<String, Map<String, String>> tableMate = getTableMate(conn, null, catalog);
-                if (columnNamePattern == null) {
+            if (tableNamePattern == null || tableNamePattern.equals("%")) {
+                if (columnNamePattern == null || columnNamePattern.equals("%")) {
                     Map<String, Set<String>> stableMate = getSTableMate(conn, null, catalog);
                     for (String db : stableMate.keySet()) {
                         for (String s : stableMate.get(db)) {
                             try (Statement stmt = conn.createStatement();
                                  ResultSet rs = stmt.executeQuery("describe " + catalog + "." + s)) {
-                                show2RowData(rs, rowDataList, precisions.get(catalog), catalog, s, s, null);
+                                show2RowData(rs, rowDataList, precisions.get(catalog), catalog, s, null);
                             }
                         }
                     }
@@ -1031,7 +1039,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                          ResultSet rs = stmt.executeQuery(
                                  "select table_name, db_name, table_type, col_name, col_type, col_length " +
                                          "from information_schema.ins_columns where db_name = '" + catalog + "'")) {
-                        colResultSet2RowData(rs, rowDataList, precisions, tableMate, true);
+                        colResultSet2RowData(rs, rowDataList, precisions);
                     }
 
                     try (Statement stmt = conn.createStatement();
@@ -1045,7 +1053,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                          ResultSet rs = stmt.executeQuery(
                                  "select table_name, db_name, table_type, col_name, col_type, col_length " +
                                          "from information_schema.ins_columns where col_name = '" + columnNamePattern + "' and db_name = '" + catalog + "'")) {
-                        colResultSet2RowData(rs, rowDataList, precisions, tableMate, false);
+                        colResultSet2RowData(rs, rowDataList, precisions);
                     }
 
                     // stable tag no found in result
@@ -1062,17 +1070,17 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                     for (String s : sTableMate.get(db)) {
                         try (Statement stmt = conn.createStatement();
                              ResultSet rs = stmt.executeQuery("describe " + catalog + "." + s)) {
-                            show2RowData(rs, rowDataList, precisions.get(catalog), catalog, s, s, columnNamePattern);
+                            show2RowData(rs, rowDataList, precisions.get(catalog), catalog, s, columnNamePattern);
                         }
                     }
                 }
 
-                Map<String, Map<String, String>> tableMate = getTableMate(conn, tableNamePattern, catalog);
-                for (Map.Entry<String, Map<String, String>> dbs : tableMate.entrySet()) {
-                    for (Map.Entry<String, String> stables : dbs.getValue().entrySet()) {
+                Map<String, Set<String>> tableMate = getTableMate(conn, tableNamePattern, catalog);
+                for (Map.Entry<String, Set<String>> dbs : tableMate.entrySet()) {
+                    for (String table : dbs.getValue()) {
                         try (Statement stmt = conn.createStatement();
-                             ResultSet rs = stmt.executeQuery("describe " + catalog + "." + stables.getKey())) {
-                            show2RowData(rs, rowDataList, precisions.get(catalog), catalog, stables.getKey(), stables.getValue(), columnNamePattern);
+                             ResultSet rs = stmt.executeQuery("describe " + catalog + "." + table)) {
+                            show2RowData(rs, rowDataList, precisions.get(catalog), catalog, table, columnNamePattern);
                         }
                     }
                 }

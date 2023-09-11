@@ -145,6 +145,20 @@ public class AbstractDatabaseMetaDataColumnTest {
         Assert.assertFalse(dbs.contains("performance_schema"));
     }
 
+    @Test
+    public void getColumnsPercent() throws SQLException {
+        ResultSet columns = metaData.getColumns("%", null, "%", "%");
+        Set<String> dbs = new HashSet<>();
+        Set<String> tables = new HashSet<>();
+        while (columns.next()) {
+            dbs.add(columns.getString("TABLE_CAT"));
+            tables.add(columns.getString("TABLE_NAME"));
+        }
+        Assert.assertTrue(dbs.contains("information_schema"));
+        Assert.assertTrue(tables.contains("ins_tables"));
+        Assert.assertTrue(dbs.contains("performance_schema"));
+    }
+
     @BeforeClass
     public static void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
