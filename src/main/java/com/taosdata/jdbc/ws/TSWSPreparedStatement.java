@@ -283,6 +283,9 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
             case Types.VARCHAR:
                 tag.put(index, new Column(null, TSDB_DATA_TYPE_BINARY, index));
                 break;
+            case Types.VARBINARY:
+                tag.put(index, new Column(null, TSDB_DATA_TYPE_VARBINARY, index));
+                break;
             case Types.NCHAR:
                 tag.put(index, new Column(null, TSDB_DATA_TYPE_NCHAR, index));
                 break;
@@ -323,6 +326,9 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
                 break;
             case TSDB_DATA_TYPE_BINARY:
                 tag.put(index, new Column(null, TSDB_DATA_TYPE_BINARY, index));
+                break;
+            case TSDB_DATA_TYPE_VARBINARY:
+                tag.put(index, new Column(null, TSDB_DATA_TYPE_VARBINARY, index));
                 break;
             case TSDB_DATA_TYPE_NCHAR:
                 tag.put(index, new Column(null, TSDB_DATA_TYPE_NCHAR, index));
@@ -377,6 +383,11 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
         tag.put(index, new Column(bytes, TSDB_DATA_TYPE_BINARY, index));
     }
 
+    public void setTagVarbinary(int index, String value) {
+        byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
+        tag.put(index, new Column(bytes, TSDB_DATA_TYPE_VARBINARY, index));
+    }
+
     public void setTagNString(int index, String value) {
         tag.put(index, new Column(value, TSDB_DATA_TYPE_NCHAR, index));
     }
@@ -416,6 +427,9 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
             case Types.BINARY:
             case Types.VARCHAR:
                 column.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_BINARY, parameterIndex));
+                break;
+            case Types.VARBINARY:
+                column.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_VARBINARY, parameterIndex));
                 break;
             case Types.NCHAR:
                 column.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_NCHAR, parameterIndex));
@@ -483,6 +497,16 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
     @Override
     public void setBytes(int parameterIndex, byte[] x) throws SQLException {
         column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_BINARY, parameterIndex));
+    }
+
+    public void setVarbinary(int parameterIndex, String x) throws SQLException {
+        // UTF-8
+        if (x == null) {
+            setNull(parameterIndex, Types.VARBINARY);
+            return;
+        }
+        byte[] bytes = x.getBytes(StandardCharsets.UTF_8);
+        column.put(parameterIndex, new Column(bytes, TSDB_DATA_TYPE_VARBINARY, parameterIndex));
     }
 
     @Override
@@ -568,6 +592,9 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
             case Types.BINARY:
             case Types.VARCHAR:
                 column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_BINARY, parameterIndex));
+                break;
+            case Types.VARBINARY:
+                column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_VARBINARY, parameterIndex));
                 break;
             case Types.NCHAR:
                 column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_NCHAR, parameterIndex));
@@ -993,6 +1020,16 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
             return x.getBytes(StandardCharsets.UTF_8);
         }).collect(Collectors.toList());
         setValueImpl(columnIndex, collect, TSDBConstants.TSDB_DATA_TYPE_BINARY, size);
+    }
+
+    public void setVarbinary(int columnIndex, List<String> list, int size) throws SQLException {
+        List<byte[]> collect = list.stream().map(x -> {
+            if (x == null) {
+                return null;
+            }
+            return x.getBytes(StandardCharsets.UTF_8);
+        }).collect(Collectors.toList());
+        setValueImpl(columnIndex, collect, TSDB_DATA_TYPE_VARBINARY, size);
     }
 
     // note: expand the required space for each NChar character
