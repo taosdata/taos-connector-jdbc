@@ -15,7 +15,7 @@ import java.util.Properties;
 @Ignore
 public class TimeZoneTest {
 
-    private String url ;
+    private String url;
 
     @Test
     public void javaTimeZone() {
@@ -35,12 +35,38 @@ public class TimeZoneTest {
     @Test
     public void taosTimeZone() throws SQLException {
         // given
-        Properties props = new Properties();
-        props.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
+        String[] tzList= {
+                "UTC-7",
+//                "UTC+7",
 
-        // when and then
+//                "UTC-18",
+//                "UTC+18",
+//
+//                "GMT-7",
+//                "GMT+7",
+//
+//                "GMT-18",
+//                "GMT+18",
+//
+//                "Asia/Shanghai",
+//                "Africa/Blantyre",
+//                "Pacific/Chuuk",
+//                "Europe/Warsaw",
+        };
+
+        for (String s : tzList) {
+            testTimeZone(s);
+        }
+
+    }
+
+    private void testTimeZone(String timezone) throws SQLException {
+        Properties props = new Properties();
+        props.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, timezone);
+
         try (Connection connection = DriverManager.getConnection(url, props)) {
             Statement stmt = connection.createStatement();
+            System.out.println(ZoneId.systemDefault());
 
             stmt.execute("drop database if exists timezone_test");
             stmt.execute("create database if not exists timezone_test keep 36500");
@@ -52,30 +78,28 @@ public class TimeZoneTest {
             ResultSet rs = stmt.executeQuery("select * from timezone_test.weather");
             while (rs.next()) {
                 Timestamp ts = rs.getTimestamp("ts");
-                System.out.println("ts: " + ts.getTime() + "," + ts);
+                assert (ts.equals(Timestamp.valueOf("1970-01-01 00:00:00")));
             }
-
-            stmt.execute("insert into timezone_test.weather(ts, temperature) values('1970-01-02 00:00:00', 1.0)");
-
-            rs = stmt.executeQuery("select * from timezone_test.weather");
-            while (rs.next()) {
-                Timestamp ts = rs.getTimestamp("ts");
-                System.out.println("ts: " + ts.getTime() + "," + ts);
-            }
-
-
             stmt.execute("drop database if exists timezone_test");
-
             stmt.close();
         }
     }
 
-    @Before
-    public void before(){
-        url = SpecifyAddress.getInstance().getJniUrl();
-        if (url == null) {
-            url = "jdbc:TAOS://127.0.0.1:6030/?user=root&password=taosdata";
-        }
+    @Test
+    public void testAllTimeZone() {
+//        String[] availableIDs = TimeZone.getAvailableIDs();
+//        System.out.println("可用zoneId总数：" + availableIDs.length);
+//        for (String zoneId : availableIDs) {
+//            System.out.println(zoneId);
+//        }
     }
 
+
+    @Before
+    public void before() {
+        url = SpecifyAddress.getInstance().getJniUrl();
+        if (url == null) {
+            url = "jdbc:TAOS://127.0.0.1:6030/?user=root&password=taosdata&batchfetch=true";
+        }
+    }
 }

@@ -1,6 +1,7 @@
 package com.taosdata.jdbc;
 
 import java.sql.*;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -9,6 +10,7 @@ public class TSDBConnection extends AbstractConnection {
     private TSDBJNIConnector connector;
     private final TSDBDatabaseMetaData databaseMetaData;
     private boolean batchFetch;
+
     private CopyOnWriteArrayList<Statement> statements = new CopyOnWriteArrayList<>();
 
     public Boolean getBatchFetch() {

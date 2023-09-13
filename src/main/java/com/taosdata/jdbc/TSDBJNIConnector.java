@@ -9,8 +9,13 @@ import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
+import java.time.ZoneId;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
+import java.util.TimeZone;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_INVALID_VARIABLE;
 
@@ -52,9 +57,15 @@ public class TSDBJNIConnector {
                 if (setOptions(1, charset) < 0) {
                     throw TSDBError.createSQLWarning("Failed to set charset: " + charset + ". System default will be used.");
                 }
+
                 String timezone = props.getProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE);
                 if (setOptions(2, timezone) < 0) {
                     throw TSDBError.createSQLWarning("Failed to set timezone: " + timezone + ". System default will be used.");
+                }
+
+                try{
+                    handleTimeZone(timezone.trim());
+                } catch (Exception e){
                 }
                 isInitialized = true;
                 TaosGlobalConfig.setCharset(getTsCharset());
@@ -62,6 +73,48 @@ public class TSDBJNIConnector {
         }
     }
 
+
+    private static void handleTimeZone(String posixTimeZoneStr){
+        //争取向前兼容POSIX 接口规范，只处理能处理的情况
+        // 1. UTC 和 GMT，只处理小时情况，加号变减号，减号变加号
+        if (posixTimeZoneStr.startsWith("UTC") || posixTimeZoneStr.startsWith("GMT")){
+            if (posixTimeZoneStr.length() == 3){
+                //标准时间
+                TimeZone.setDefault(TimeZone.getTimeZone(ZoneId.of("GMT")));
+                return;
+            }
+
+            // 只处理UTC-8，UTC+8, GMT+8, GMT-8这样的格式
+            String regex = "^(UTC|GMT)([+-])(\\d+)$";
+            Pattern pattern = Pattern.compile(regex);
+            Matcher matcher = pattern.matcher(posixTimeZoneStr);
+            if (matcher.matches()) {
+                String op = matcher.group(2);
+                String hourStr = matcher.group(3);
+                if (op.equals("+")){
+                    op = "-";
+                }else{
+                    op = "+";
+                }
+
+                //只处理java可以处理的情况
+                int hour = Integer.parseInt(hourStr);
+                if (hour > 18){
+                    return;
+                }
+
+                String timezone = String.format("GMT%s%02d:00", op, hour);
+                TimeZone.setDefault(TimeZone.getTimeZone(ZoneId.of(timezone)));
+                return;
+            }
+            // 不支持的格式，不处理
+        }
+
+        // 2. 尝试处理Asia/Shanghai这种情况
+        if (posixTimeZoneStr.contains("/")){
+            TimeZone.setDefault(TimeZone.getTimeZone(ZoneId.of(posixTimeZoneStr)));
+        }
+    }
     private static native void initImp(String configDir);
 
     private static native int setOptions(int optionIndex, String optionValue);
