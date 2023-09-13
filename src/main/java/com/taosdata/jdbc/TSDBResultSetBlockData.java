@@ -18,6 +18,7 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
 import com.taosdata.jdbc.enums.TimestampPrecision;
+import com.taosdata.jdbc.utils.Utils;
 
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
@@ -205,7 +206,8 @@ public class TSDBResultSetBlockData {
                     break;
                 }
                 case TSDB_DATA_TYPE_BINARY:
-                case TSDB_DATA_TYPE_JSON: {
+                case TSDB_DATA_TYPE_JSON:
+                case TSDB_DATA_TYPE_VARBINARY: {
                     length = numOfRows * 4;
                     List<Integer> offset = new ArrayList<>(numOfRows);
                     for (int m = 0; m < numOfRows; m++) {
@@ -218,7 +220,7 @@ public class TSDBResultSetBlockData {
                             continue;
                         }
                         buffer.position(start + offset.get(m));
-                        short len = buffer.getShort();
+                        int len = buffer.getShort() & 0xFFFF;
                         byte[] tmp = new byte[len];
                         buffer.get(tmp);
                         col.add(tmp);
@@ -238,7 +240,7 @@ public class TSDBResultSetBlockData {
                             continue;
                         }
                         buffer.position(start + offset.get(m));
-                        int len = buffer.getShort() / 4;
+                        int len = (buffer.getShort() & 0xFFFF) / 4;
                         int[] tmp = new int[len];
                         for (int n = 0; n < len; n++) {
                             tmp[n] = buffer.getInt();
@@ -350,7 +352,8 @@ public class TSDBResultSetBlockData {
                 return Integer.parseInt((String) obj);
             }
             case TSDB_DATA_TYPE_JSON:
-            case TSDB_DATA_TYPE_BINARY: {
+            case TSDB_DATA_TYPE_BINARY:
+            case TSDB_DATA_TYPE_VARBINARY: {
                 String charset = TaosGlobalConfig.getCharset();
                 try {
                     return Integer.parseInt(new String((byte[]) obj, charset));
@@ -409,7 +412,8 @@ public class TSDBResultSetBlockData {
                 }
             }
             case TSDB_DATA_TYPE_JSON:
-            case TSDB_DATA_TYPE_BINARY: {
+            case TSDB_DATA_TYPE_BINARY:
+            case TSDB_DATA_TYPE_VARBINARY: {
                 String charset = TaosGlobalConfig.getCharset();
                 try {
                     String tmp = new String((byte[]) obj, charset);
@@ -482,7 +486,8 @@ public class TSDBResultSetBlockData {
                 return Long.parseLong((String) obj);
             }
             case TSDBConstants.TSDB_DATA_TYPE_JSON:
-            case TSDBConstants.TSDB_DATA_TYPE_BINARY: {
+            case TSDBConstants.TSDB_DATA_TYPE_BINARY:
+            case TSDB_DATA_TYPE_VARBINARY: {
                 String charset = TaosGlobalConfig.getCharset();
                 try {
                     return Long.parseLong(new String((byte[]) obj, charset));
@@ -512,7 +517,16 @@ public class TSDBResultSetBlockData {
             return parseTimestampColumnData((long) obj);
         if (type == TSDB_DATA_TYPE_TIMESTAMP)
             return (Timestamp) obj;
-
+        if (obj instanceof byte[]) {
+            String tmp = "";
+            String charset = TaosGlobalConfig.getCharset();
+            try {
+                tmp = new String((byte[]) obj, charset);
+                return Utils.parseTimestamp(tmp);
+            } catch (UnsupportedEncodingException e) {
+                throw new RuntimeException(e.getMessage());
+            }
+        }
         return new Timestamp(getLong(col));
     }
 
@@ -541,7 +555,7 @@ public class TSDBResultSetBlockData {
                 return (long) obj;
             case TSDB_DATA_TYPE_UBIGINT: {
                 BigDecimal tmp = (BigDecimal) obj;
-                if (tmp.compareTo(new BigDecimal(Double.MIN_VALUE)) < 0 || tmp.compareTo(new BigDecimal(Double.MAX_VALUE)) > 0)
+                if (tmp.compareTo(BigDecimal.valueOf(Double.MIN_VALUE)) < 0 || tmp.compareTo(BigDecimal.valueOf(Double.MAX_VALUE)) > 0)
                     throwRangeException(obj.toString(), col, Types.TIMESTAMP);
                 return tmp.floatValue();
             }
@@ -568,7 +582,8 @@ public class TSDBResultSetBlockData {
                 return Double.parseDouble((String) obj);
             }
             case TSDBConstants.TSDB_DATA_TYPE_JSON:
-            case TSDBConstants.TSDB_DATA_TYPE_BINARY: {
+            case TSDBConstants.TSDB_DATA_TYPE_BINARY:
+            case TSDB_DATA_TYPE_VARBINARY: {
                 String charset = TaosGlobalConfig.getCharset();
                 try {
                     return Double.parseDouble(new String((byte[]) obj, charset));
@@ -604,7 +619,8 @@ public class TSDBResultSetBlockData {
             case TSDB_DATA_TYPE_DOUBLE:
             case TSDB_DATA_TYPE_NCHAR:
             case TSDB_DATA_TYPE_BINARY:
-            case TSDB_DATA_TYPE_JSON: {
+            case TSDB_DATA_TYPE_JSON:
+            case TSDB_DATA_TYPE_VARBINARY: {
                 return source;
             }
             case TSDB_DATA_TYPE_UTINYINT: {
