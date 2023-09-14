@@ -28,6 +28,7 @@ public enum DataType {
     NCHAR("NCHAR", Types.NCHAR, TSDB_DATA_TYPE_NCHAR, 0),
     JSON("JSON", Types.OTHER, TSDB_DATA_TYPE_JSON, 0),
     VARBINARY("VARBINARY", Types.VARBINARY, TSDB_DATA_TYPE_VARBINARY, 0),
+    GEOMETRY("GEOMETRY", Types.BINARY, TSDB_DATA_TYPE_GEOMETRY, 0),
     ;
 
     private final String typeName;

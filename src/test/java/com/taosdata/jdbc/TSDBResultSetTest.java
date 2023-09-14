@@ -173,6 +173,33 @@ public class TSDBResultSetTest {
         Assert.assertEquals("2021-01-01 00:00:00.0", f1.toString());
     }
 
+    @Test
+    public void getGeometry() throws SQLException{
+        byte[] f11 = rs.getBytes("f11");
+        String result = printBytesByStringBuilder(f11);
+        Assert.assertEquals(result, "0101000000000000000000F03F0000000000000040");
+    }
+
+    /**
+     * 根据字节数组，输出对应的格式化字符串
+     * @param bytes 字节数组
+     * @return 字节数组字符串
+     */
+    public static String printBytesByStringBuilder(byte[] bytes){
+        StringBuilder stringBuilder = new StringBuilder();
+
+        for (byte aByte : bytes) {
+            stringBuilder.append(byte2String(aByte));
+        }
+        return stringBuilder.toString();
+    }
+
+    public static String byte2String(byte b){
+        return String.format("%02X",b);
+    }
+
+
+
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void getAsciiStream() throws SQLException {
         rs.getAsciiStream("f1");
@@ -660,8 +687,8 @@ public class TSDBResultSetTest {
             stmt.execute("create database if not exists restful_test");
             stmt.execute("use restful_test");
             stmt.execute("drop table if exists weather");
-            stmt.execute("create table if not exists weather(f1 timestamp, f2 int, f3 bigint, f4 float, f5 double, f6 binary(64), f7 smallint, f8 tinyint, f9 bool, f10 nchar(64))");
-            stmt.execute("insert into restful_test.weather values('2021-01-01 00:00:00.000', 1, 100, 3.1415, 3.1415926, 'abc', 10, 10, true, '涛思数据')");
+            stmt.execute("create table if not exists weather(f1 timestamp, f2 int, f3 bigint, f4 float, f5 double, f6 binary(64), f7 smallint, f8 tinyint, f9 bool, f10 nchar(64), f11 GEOMETRY(50))");
+            stmt.execute("insert into restful_test.weather values('2021-01-01 00:00:00.000', 1, 100, 3.1415, 3.1415926, 'abc', 10, 10, true, '涛思数据', 'POINT(1 2)')");
             rs = stmt.executeQuery("select * from restful_test.weather");
             rs.next();
         } catch (SQLException e) {
