@@ -622,6 +622,10 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
         setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_BINARY, size);
     }
 
+    public void setVarbinary(int columnIndex, ArrayList<String> list, int size) throws SQLException {
+        setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_VARBINARY, size);
+    }
+
     // note: expand the required space for each NChar character
     public void setNString(int columnIndex, ArrayList<String> list, int size) throws SQLException {
         setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_NCHAR, size * Integer.BYTES);
@@ -712,12 +716,14 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
                     }
                     case TSDBConstants.TSDB_DATA_TYPE_NCHAR:
                     case TSDBConstants.TSDB_DATA_TYPE_JSON:
-                    case TSDBConstants.TSDB_DATA_TYPE_BINARY: {
+                    case TSDBConstants.TSDB_DATA_TYPE_BINARY:
+                    case TSDBConstants.TSDB_DATA_TYPE_VARBINARY: {
                         String charset = TaosGlobalConfig.getCharset();
                         String val = (String) tag.value;
                         byte[] b;
                         try {
-                            if (tag.type == TSDBConstants.TSDB_DATA_TYPE_BINARY) {
+                            if (tag.type == TSDBConstants.TSDB_DATA_TYPE_BINARY
+                                    || tag.type == TSDBConstants.TSDB_DATA_TYPE_VARBINARY) {
                                 b = val.getBytes();
                             } else {
                                 b = val.getBytes(charset);
@@ -844,7 +850,8 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
                 }
 
                 case TSDBConstants.TSDB_DATA_TYPE_NCHAR:
-                case TSDBConstants.TSDB_DATA_TYPE_BINARY: {
+                case TSDBConstants.TSDB_DATA_TYPE_BINARY:
+                case TSDBConstants.TSDB_DATA_TYPE_VARBINARY: {
                     String charset = TaosGlobalConfig.getCharset();
                     for (int j = 0; j < rows; ++j) {
                         String val = (String) col1.data.get(j);
@@ -853,7 +860,8 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
                         if (val != null) {
                             byte[] b = null;
                             try {
-                                if (col1.type == TSDBConstants.TSDB_DATA_TYPE_BINARY) {
+                                if (col1.type == TSDBConstants.TSDB_DATA_TYPE_BINARY
+                                        || col1.type == TSDBConstants.TSDB_DATA_TYPE_VARBINARY) {
                                     b = val.getBytes();
                                 } else {
                                     b = val.getBytes(charset);

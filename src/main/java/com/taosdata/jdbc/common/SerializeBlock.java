@@ -292,6 +292,44 @@ public class SerializeBlock {
                     data.write(bytes);
                     break;
                 }
+                case TSDB_DATA_TYPE_VARBINARY: {
+                    colInfoData[colIndex * 5] = TSDB_DATA_TYPE_VARBINARY;
+                    // 4 bytes for 0
+
+                    int length = 0;
+                    List<?> rowData = column.getDataList();
+                    byte[] index = new byte[rows * Integer.BYTES];
+                    List<Byte> tmp = new ArrayList<>();
+                    for (int rowIndex = 0; rowIndex < rows; rowIndex++) {
+                        int offset = rowIndex * Integer.BYTES;
+                        if (rowData.get(rowIndex) == null) {
+                            for (int i = 0; i < Integer.BYTES; i++) {
+                                index[offset + i] = (byte) 0xFF;
+                            }
+                        } else {
+                            byte[] v = (byte[]) rowData.get(rowIndex);
+                            for (int i = 0; i < Integer.BYTES; i++) {
+                                index[offset + i] = (byte) (length >> (8 * i) & 0xFF);
+                            }
+                            short len = (short) v.length;
+                            tmp.add((byte) (len & 0xFF));
+                            tmp.add((byte) ((len >> 8) & 0xFF));
+                            for (byte b : v) {
+                                tmp.add(b);
+                            }
+                            length += v.length + Short.BYTES;
+                        }
+                    }
+                    byte[] array = intToBytes(length);
+                    System.arraycopy(array, 0, lengthData, colIndex * 4, 4);
+                    data.write(index);
+                    byte[] bytes = new byte[tmp.size()];
+                    for (int i = 0; i < tmp.size(); i++) {
+                        bytes[i] = tmp.get(i);
+                    }
+                    data.write(bytes);
+                    break;
+                }
                 case TSDB_DATA_TYPE_NCHAR: {
                     colInfoData[colIndex * 5] = TSDB_DATA_TYPE_NCHAR;
                     // 4 bytes for 0
