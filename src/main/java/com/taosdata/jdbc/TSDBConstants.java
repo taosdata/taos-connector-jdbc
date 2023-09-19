@@ -68,7 +68,7 @@ public abstract class TSDBConstants {
     public static final int TSDB_DATA_TYPE_UBIGINT = 14;        //unsigned bigint
     public static final int TSDB_DATA_TYPE_JSON = 15;           //json
     public static final int TSDB_DATA_TYPE_VARBINARY = 16;     //varbinary
-    public static final int TSDB_DATA_TYPE_GEOMETRY = 20;     //varbinary
+    public static final int TSDB_DATA_TYPE_GEOMETRY = 20;     //geometry
 
     // nchar column max length
     public static final int maxFieldSize = 16 * 1024;

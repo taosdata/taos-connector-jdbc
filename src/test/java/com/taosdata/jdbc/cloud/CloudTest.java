@@ -22,6 +22,7 @@ public class CloudTest {
             return;
         }
 
+
         Connection conn = DriverManager.getConnection(url);
         Statement stmt = conn.createStatement();
         ResultSet rs = stmt.executeQuery("select server_version()");

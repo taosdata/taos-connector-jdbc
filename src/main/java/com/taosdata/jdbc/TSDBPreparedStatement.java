@@ -23,11 +23,10 @@ import java.math.BigDecimal;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collections;
-import java.util.PriorityQueue;
+import java.sql.Date;
+import java.util.*;
 
 /*
  * TDengine only supports a subset of the standard SQL, thus this implementation of the
@@ -577,6 +576,17 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
         }
     }
 
+    public void setTagVarbinary(int index, byte[] value) {
+        ensureTagCapacity(index);
+        this.tableTags.set(index, new TableTagInfo(value, TSDBConstants.TSDB_DATA_TYPE_VARBINARY));
+        this.tagValueLength += value.length;
+     }
+    public void setTagGeometry(int index, byte[] value) {
+        ensureTagCapacity(index);
+        this.tableTags.set(index, new TableTagInfo(value, TSDBConstants.TSDB_DATA_TYPE_GEOMETRY));
+        this.tagValueLength += value.length;
+    }
+
     public <T> void setValueImpl(int columnIndex, ArrayList<T> list, int type, int bytes) throws SQLException {
         ColumnInfo p = new ColumnInfo();
         p.setType(type);
@@ -622,8 +632,12 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
         setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_BINARY, size);
     }
 
-    public void setVarbinary(int columnIndex, ArrayList<String> list, int size) throws SQLException {
+    public void setVarbinary(int columnIndex, ArrayList<byte[]> list, int size) throws SQLException {
         setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_VARBINARY, size);
+    }
+
+    public void setGeometry(int columnIndex, ArrayList<byte[]> list, int size) throws SQLException {
+        setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_GEOMETRY, size);
     }
 
     // note: expand the required space for each NChar character
@@ -649,6 +663,10 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
         if ((this.tableTags == null || this.tableTags.size() == 0) && this.tableName != null) {
             connector.setBindTableName(this.nativeStmtHandle, this.tableName);
         } else if (this.tableTags != null && this.tableTags.size() > 0) {
+            if (tableName == null){
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "table name not set yet");
+            }
+
             int tagSize = this.tableTags.size();
             ByteBuffer tagDataList = ByteBuffer.allocate(this.tagValueLength);
             tagDataList.order(ByteOrder.LITTLE_ENDIAN);
@@ -716,8 +734,7 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
                     }
                     case TSDBConstants.TSDB_DATA_TYPE_NCHAR:
                     case TSDBConstants.TSDB_DATA_TYPE_JSON:
-                    case TSDBConstants.TSDB_DATA_TYPE_BINARY:
-                    case TSDBConstants.TSDB_DATA_TYPE_VARBINARY: {
+                    case TSDBConstants.TSDB_DATA_TYPE_BINARY: {
                         String charset = TaosGlobalConfig.getCharset();
                         String val = (String) tag.value;
                         byte[] b;
@@ -733,6 +750,14 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
                         }
                         tagDataList.put(b);
                         lengthList.putInt(b.length);
+                        break;
+                    }
+
+                    case TSDBConstants.TSDB_DATA_TYPE_VARBINARY:
+                    case TSDBConstants.TSDB_DATA_TYPE_GEOMETRY: {
+                        byte[] val = (byte[]) tag.value;
+                        tagDataList.put(val);
+                        lengthList.putInt(val.length);
                         break;
                     }
                     case TSDBConstants.TSDB_DATA_TYPE_UTINYINT:
@@ -850,18 +875,15 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
                 }
 
                 case TSDBConstants.TSDB_DATA_TYPE_NCHAR:
-                case TSDBConstants.TSDB_DATA_TYPE_BINARY:
-                case TSDBConstants.TSDB_DATA_TYPE_VARBINARY: {
+                case TSDBConstants.TSDB_DATA_TYPE_BINARY:{
                     String charset = TaosGlobalConfig.getCharset();
                     for (int j = 0; j < rows; ++j) {
                         String val = (String) col1.data.get(j);
-
                         colDataList.position(j * col1.bytes);  // seek to the correct position
                         if (val != null) {
-                            byte[] b = null;
+                            byte[] b;
                             try {
-                                if (col1.type == TSDBConstants.TSDB_DATA_TYPE_BINARY
-                                        || col1.type == TSDBConstants.TSDB_DATA_TYPE_VARBINARY) {
+                                if (col1.type == TSDBConstants.TSDB_DATA_TYPE_BINARY) {
                                     b = val.getBytes();
                                 } else {
                                     b = val.getBytes(charset);
@@ -876,6 +898,25 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
 
                             colDataList.put(b);
                             lengthList.putInt(b.length);
+                            isNullList.put((byte) 0);
+                        } else {
+                            lengthList.putInt(0);
+                            isNullList.put((byte) 1);
+                        }
+                    }
+                    break;
+                }
+                case TSDBConstants.TSDB_DATA_TYPE_VARBINARY:
+                case TSDBConstants.TSDB_DATA_TYPE_GEOMETRY: {
+                    for (int j = 0; j < rows; ++j) {
+                        byte[] val = (byte[]) col1.data.get(j);
+                        colDataList.position(j * col1.bytes);  // seek to the correct position
+                        if (val != null) {
+                            if (val.length > col1.bytes) {
+                                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "varbinary/geometry data too long");
+                            }
+                            colDataList.put(val);
+                            lengthList.putInt(val.length);
                             isNullList.put((byte) 0);
                         } else {
                             lengthList.putInt(0);

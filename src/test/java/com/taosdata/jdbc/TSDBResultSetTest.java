@@ -304,8 +304,10 @@ public class TSDBResultSetTest {
         Assert.assertEquals(9, columnIndex);
         columnIndex = rs.findColumn("f10");
         Assert.assertEquals(10, columnIndex);
+        columnIndex = rs.findColumn("f11");
+        Assert.assertEquals(11, columnIndex);
 
-        rs.findColumn("f11");
+        rs.findColumn("f12");
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)

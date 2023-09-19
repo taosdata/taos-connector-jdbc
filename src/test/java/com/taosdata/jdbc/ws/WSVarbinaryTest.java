@@ -2,6 +2,7 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.StringUtils;
 import org.junit.*;
 
 import java.sql.*;
@@ -16,65 +17,54 @@ public class WSVarbinaryTest {
     static Connection connection;
     static Statement statement;
 
+    static String testStr = "20160601";
+    static byte[] expectedArray = StringUtils.hexToBytes(testStr);
+
     @Test
     public void testInsert() throws Exception {
-        statement.executeUpdate("insert into " + dbName + "." + tableNative + " values(now, \"\\x8f4e3e\", \"\\x8f4e3e\")");
-        statement.executeUpdate("insert into " + dbName + "." + tableNative + " values(now, \"8f4e3e\", \"8f4e3e\")");
-        ResultSet resultSet = statement.executeQuery("select c1, c2 from " + dbName + "." + tableNative);
+        statement.executeUpdate("insert into " + dbName + "." + tableNative + " values(now, \"\\x" + testStr + "\")");
+        ResultSet resultSet = statement.executeQuery("select c1 from " + dbName + "." + tableNative);
+
         resultSet.next();
-        Assert.assertEquals("\\x8f4e3e", resultSet.getString(1));
-        StringBuilder tmp = new StringBuilder();
-        byte[] bytes = resultSet.getBytes(2);
-        for (byte aByte : bytes) {
-            tmp.append(Integer.toHexString(aByte & 0xFF));
-        }
-        Assert.assertEquals("8f4e3e", tmp.toString());
-        resultSet.next();
-        Assert.assertEquals("8f4e3e", resultSet.getString(1));
-        Assert.assertEquals("8f4e3e", resultSet.getString(2));
+        byte[] result1 = resultSet.getBytes(1);
+        Assert.assertArrayEquals(expectedArray, result1);
     }
 
 
     @Test
     @Ignore
     public void testPrepare() throws SQLException {
-        TSWSPreparedStatement preparedStatement = (TSWSPreparedStatement) connection.prepareStatement("insert into " + dbName + "." + tableStmt + " values (?, ?, ?)");
+        TSWSPreparedStatement preparedStatement = (TSWSPreparedStatement) connection.prepareStatement("insert into " + dbName + "." + tableStmt + " values (?, ?)");
         preparedStatement.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
-        preparedStatement.setString(2, "\\x8f4e3e");
-        preparedStatement.setVarbinary(3, "\\x8f4e3e");
+
+        preparedStatement.setVarbinary(2, expectedArray);
         preparedStatement.addBatch();
         preparedStatement.executeBatch();
-        ResultSet resultSet = statement.executeQuery("select c1, c2 from " + dbName + "." + tableStmt);
+        ResultSet resultSet = statement.executeQuery("select c1 from " + dbName + "." + tableStmt);
         while (resultSet.next()) {
-            Assert.assertEquals("\\x8f4e3e", resultSet.getString(1));
-            Assert.assertEquals("\\x8f4e3e", resultSet.getString(2));
+            Assert.assertArrayEquals(expectedArray, resultSet.getBytes(1));
         }
     }
 
     @Test
     @Ignore
     public void testPrepareOld() throws SQLException {
-        TSWSPreparedStatement preparedStatement = (TSWSPreparedStatement) connection.prepareStatement("insert into " + dbName + "." + tableStmt + " values (?, ?, ?)");
+        TSWSPreparedStatement preparedStatement = (TSWSPreparedStatement) connection.prepareStatement("insert into " + dbName + "." + tableStmt + " values (?, ?)");
 
         long current = System.currentTimeMillis();
         ArrayList<Long> tsList = new ArrayList<>();
         tsList.add(current);
         preparedStatement.setTimestamp(0, tsList);
 
-        ArrayList<String> list = new ArrayList<>();
-        list.add("\\x8f4e3e");
-        preparedStatement.setString(1, list, 20);
-
-        ArrayList<String> list1 = new ArrayList<>();
-        list1.add("\\x8f4e3e");
+        ArrayList<byte[]> list1 = new ArrayList<>();
+        list1.add(expectedArray);
         preparedStatement.setVarbinary(2, list1, 20);
 
         preparedStatement.columnDataAddBatch();
         preparedStatement.columnDataExecuteBatch();
-        ResultSet resultSet = statement.executeQuery("select c1, c2 from " + dbName + "." + tableStmt);
+        ResultSet resultSet = statement.executeQuery("select c1 from " + dbName + "." + tableStmt);
         while (resultSet.next()) {
-            Assert.assertEquals("\\x8f4e3e", resultSet.getString(1));
-            Assert.assertEquals("\\x8f4e3e", resultSet.getString(2));
+            Assert.assertArrayEquals(expectedArray, resultSet.getBytes(1));
         }
     }
 
@@ -92,8 +82,8 @@ public class WSVarbinaryTest {
         statement.executeUpdate("drop database if exists " + dbName);
         statement.executeUpdate("create database if not exists " + dbName);
         statement.executeUpdate("use " + dbName);
-        statement.executeUpdate("create table " + tableNative + " (ts timestamp, c1 varchar(20), c2 varbinary(20))");
-        statement.executeUpdate("create table " + tableStmt + " (ts timestamp, c1 varchar(20), c2 varbinary(20))");
+        statement.executeUpdate("create table " + tableNative + " (ts timestamp, c1 varbinary(20))");
+        statement.executeUpdate("create table " + tableStmt + " (ts timestamp, c1 varbinary(20))");
     }
 
     @AfterClass

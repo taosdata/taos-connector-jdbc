@@ -89,4 +89,62 @@ public class StringUtils {
         }
         return urlProps;
     }
+
+
+    public static byte[] hexToBytes(String hex)
+    {
+        int byteLen = hex.length() / 2;
+        byte[] bytes = new byte[byteLen];
+
+        for (int i = 0; i < hex.length() / 2; i++) {
+            int i2 = 2 * i;
+            if (i2 + 1 > hex.length())
+                throw new IllegalArgumentException("Hex string has odd length");
+
+            int nib1 = hexToInt(hex.charAt(i2));
+            int nib0 = hexToInt(hex.charAt(i2 + 1));
+            byte b = (byte) ((nib1 << 4) + (byte) nib0);
+            bytes[i] = b;
+        }
+        return bytes;
+    }
+    private static int hexToInt(char hex)
+    {
+        int nib = Character.digit(hex, 16);
+        if (nib < 0)
+            throw new IllegalArgumentException("Invalid hex digit: '" + hex + "'");
+        return nib;
+    }
+
+    public static String bytesToHex(byte[] bytes)
+    {
+        return toHex(bytes);
+    }
+
+    /**
+     * Converts a byte array to a hexadecimal string.
+     *
+     * @param bytes a byte array
+     * @return a string of hexadecimal digits
+     */
+    public static String toHex(byte[] bytes)
+    {
+        StringBuffer buf = new StringBuffer();
+        for (int i = 0; i < bytes.length; i++) {
+            byte b = bytes[i];
+            buf.append(toHexDigit((b >> 4) & 0x0F));
+            buf.append(toHexDigit(b & 0x0F));
+        }
+        return buf.toString();
+    }
+
+    private static char toHexDigit(int n)
+    {
+        if (n < 0 || n > 15)
+            throw new IllegalArgumentException("Nibble value out of range: " + n);
+        if (n <= 9)
+            return (char) ('0' + n);
+        return (char) ('A' + (n - 10));
+    }
+
 }
