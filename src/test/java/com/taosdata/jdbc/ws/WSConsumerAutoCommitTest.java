@@ -62,6 +62,7 @@ public class WSConsumerAutoCommitTest {
         connection = DriverManager.getConnection(url, properties);
         try (Statement statement = connection.createStatement()) {
 
+            statement.executeUpdate("drop topic if exists " + topic);
             statement.executeUpdate("drop database if exists " + dbName);
             statement.executeUpdate("create database if not exists " + dbName + " WAL_RETENTION_PERIOD 3650");
             statement.executeUpdate("use " + dbName);
