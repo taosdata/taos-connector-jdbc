@@ -104,7 +104,12 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
             port = ":" + params.getPort();
         }
 
-        String loginUrl = protocol + "://" + params.getHost() + port + "/rest/" + function.getFunction();
+        String wsFunction = "/ws";
+        if (function.equals(WSFunction.TMQ)){
+            wsFunction = "/rest/tmq";
+        }
+        String loginUrl = protocol + "://" + params.getHost() + port + wsFunction;
+
         if (null != params.getCloudToken()) {
             loginUrl = loginUrl + "?token=" + params.getCloudToken();
         }

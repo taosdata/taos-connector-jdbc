@@ -739,8 +739,7 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
                         String val = (String) tag.value;
                         byte[] b;
                         try {
-                            if (tag.type == TSDBConstants.TSDB_DATA_TYPE_BINARY
-                                    || tag.type == TSDBConstants.TSDB_DATA_TYPE_VARBINARY) {
+                            if (tag.type == TSDBConstants.TSDB_DATA_TYPE_BINARY) {
                                 b = val.getBytes();
                             } else {
                                 b = val.getBytes(charset);

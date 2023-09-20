@@ -106,7 +106,7 @@ public enum DataType {
         if (0 == tmp.getSize()) {
             if (tmp == TIMESTAMP) {
                 return precisionType.equals("ms") ? TIMESTAMP_MS_PRECISION : TIMESTAMP_US_PRECISION;
-            } else if (tmp == NCHAR || tmp == BINARY || tmp == VARCHAR || tmp == VARBINARY) {
+            } else if (tmp == NCHAR || tmp == BINARY || tmp == VARCHAR || tmp == VARBINARY  || tmp == GEOMETRY) {
                 return length;
             }
         }
