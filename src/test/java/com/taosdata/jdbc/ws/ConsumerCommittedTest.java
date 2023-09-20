@@ -140,6 +140,7 @@ public class ConsumerCommittedTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
         connection = DriverManager.getConnection(url, properties);
         statement = connection.createStatement();
+        statement.executeUpdate("drop topic if exists " + topic);
         statement.execute("drop database if exists " + dbName);
         statement.execute("create database if not exists " + dbName + " WAL_RETENTION_PERIOD 3650");
         statement.execute("use " + dbName);

@@ -42,6 +42,7 @@ public class TSDBPreparedStatementTest {
         pstmt_select.setTimestamp(2, new Timestamp(end));
         pstmt_select.setInt(3, 0);
 
+
         // when
         ResultSet rs = pstmt_select.executeQuery();
         ResultSetMetaData meta = rs.getMetaData();

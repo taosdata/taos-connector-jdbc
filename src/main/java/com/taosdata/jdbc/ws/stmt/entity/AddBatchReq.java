@@ -1,10 +1,11 @@
 package com.taosdata.jdbc.ws.stmt.entity;
 
 import com.alibaba.fastjson.annotation.JSONField;
+import com.taosdata.jdbc.utils.UInt64Codec;
 import com.taosdata.jdbc.ws.entity.Payload;
 
 public class AddBatchReq extends Payload {
-    @JSONField(name = "stmt_id")
+    @JSONField(name = "stmt_id", serializeUsing = UInt64Codec.class)
     private long stmtId;
 
     public long getStmtId() {

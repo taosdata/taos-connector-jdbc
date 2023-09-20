@@ -211,7 +211,9 @@ public class WSConsumerResultSet extends AbstractResultSet {
                         break;
                     }
                     case TSDB_DATA_TYPE_BINARY:
-                    case TSDB_DATA_TYPE_JSON: {
+                    case TSDB_DATA_TYPE_JSON:
+                    case TSDB_DATA_TYPE_VARBINARY:
+                    case TSDB_DATA_TYPE_GEOMETRY:{
                         length = numOfRows * 4;
                         List<Integer> offset = new ArrayList<>(numOfRows);
                         for (int m = 0; m < numOfRows; m++) {
@@ -224,7 +226,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
                                 continue;
                             }
                             buffer.position(start + offset.get(m));
-                            short len = buffer.getShort();
+                            int len = buffer.getShort() & 0xFFFF;
                             byte[] tmp = new byte[len];
                             buffer.get(tmp);
                             col.add(tmp);
@@ -244,7 +246,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
                                 continue;
                             }
                             buffer.position(start + offset.get(m));
-                            int len = buffer.getShort() / 4;
+                            int len = (buffer.getShort() & 0xFFFF) / 4;
                             int[] tmp = new int[len];
                             for (int n = 0; n < len; n++) {
                                 tmp[n] = buffer.getInt();
@@ -344,7 +346,8 @@ public class WSConsumerResultSet extends AbstractResultSet {
                 }
             }
             case TSDB_DATA_TYPE_JSON:
-            case TSDB_DATA_TYPE_BINARY: {
+            case TSDB_DATA_TYPE_BINARY:
+            case TSDB_DATA_TYPE_VARBINARY: {
                 String charset = TaosGlobalConfig.getCharset();
                 String tmp;
                 try {
@@ -427,7 +430,8 @@ public class WSConsumerResultSet extends AbstractResultSet {
             case TSDB_DATA_TYPE_NCHAR:
                 return Byte.parseByte((String) value);
             case TSDB_DATA_TYPE_JSON:
-            case TSDB_DATA_TYPE_BINARY: {
+            case TSDB_DATA_TYPE_BINARY:
+            case TSDB_DATA_TYPE_VARBINARY: {
                 String charset = TaosGlobalConfig.getCharset();
                 String tmp;
                 try {
@@ -505,7 +509,8 @@ public class WSConsumerResultSet extends AbstractResultSet {
             case TSDB_DATA_TYPE_NCHAR:
                 return Short.parseShort((String) value);
             case TSDB_DATA_TYPE_JSON:
-            case TSDB_DATA_TYPE_BINARY: {
+            case TSDB_DATA_TYPE_BINARY:
+            case TSDB_DATA_TYPE_VARBINARY: {
                 String charset = TaosGlobalConfig.getCharset();
                 String tmp;
                 try {
@@ -574,7 +579,8 @@ public class WSConsumerResultSet extends AbstractResultSet {
             case TSDB_DATA_TYPE_NCHAR:
                 return Integer.parseInt((String) value);
             case TSDB_DATA_TYPE_JSON:
-            case TSDB_DATA_TYPE_BINARY: {
+            case TSDB_DATA_TYPE_BINARY:
+            case TSDB_DATA_TYPE_VARBINARY: {
                 String charset = TaosGlobalConfig.getCharset();
                 String tmp;
                 try {
@@ -663,7 +669,8 @@ public class WSConsumerResultSet extends AbstractResultSet {
             case TSDB_DATA_TYPE_NCHAR:
                 return Long.parseLong((String) value);
             case TSDB_DATA_TYPE_JSON:
-            case TSDB_DATA_TYPE_BINARY: {
+            case TSDB_DATA_TYPE_BINARY:
+            case TSDB_DATA_TYPE_VARBINARY: {
                 String charset = TaosGlobalConfig.getCharset();
                 String tmp;
                 try {
@@ -722,7 +729,8 @@ public class WSConsumerResultSet extends AbstractResultSet {
             case TSDB_DATA_TYPE_NCHAR:
                 return Float.parseFloat(value.toString());
             case TSDB_DATA_TYPE_JSON:
-            case TSDB_DATA_TYPE_BINARY: {
+            case TSDB_DATA_TYPE_BINARY:
+            case TSDB_DATA_TYPE_VARBINARY: {
                 String charset = TaosGlobalConfig.getCharset();
                 String tmp;
                 try {
@@ -777,7 +785,8 @@ public class WSConsumerResultSet extends AbstractResultSet {
             case TSDB_DATA_TYPE_NCHAR:
                 return Double.parseDouble(value.toString());
             case TSDB_DATA_TYPE_JSON:
-            case TSDB_DATA_TYPE_BINARY: {
+            case TSDB_DATA_TYPE_BINARY:
+            case TSDB_DATA_TYPE_VARBINARY: {
                 String charset = TaosGlobalConfig.getCharset();
                 String tmp;
                 try {
@@ -909,7 +918,8 @@ public class WSConsumerResultSet extends AbstractResultSet {
             case TSDB_DATA_TYPE_NCHAR:
                 return new BigDecimal(value.toString());
             case TSDB_DATA_TYPE_JSON:
-            case TSDB_DATA_TYPE_BINARY: {
+            case TSDB_DATA_TYPE_BINARY:
+            case TSDB_DATA_TYPE_VARBINARY: {
                 String charset = TaosGlobalConfig.getCharset();
                 String tmp;
                 try {
@@ -1101,7 +1111,9 @@ public class WSConsumerResultSet extends AbstractResultSet {
             case TSDB_DATA_TYPE_FLOAT:
             case TSDB_DATA_TYPE_DOUBLE:
             case TSDB_DATA_TYPE_BINARY:
-            case TSDB_DATA_TYPE_JSON: {
+            case TSDB_DATA_TYPE_JSON:
+            case TSDB_DATA_TYPE_VARBINARY:
+            case TSDB_DATA_TYPE_GEOMETRY:{
                 return source;
             }
             case TSDB_DATA_TYPE_USMALLINT: {
