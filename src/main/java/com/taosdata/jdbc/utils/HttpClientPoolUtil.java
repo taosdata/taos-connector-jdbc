@@ -162,10 +162,10 @@ public class HttpClientPoolUtil {
                             responseBody != null && !responseBody.isEmpty() ? responseBody : String.format("http status code: %d, service unavailable!", status));
                 default: // 2**
                     if (httpEntity == null) {
-                        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_HTTP_ENTITY_IS_NULL, "httpEntity is null, sql: " + data);
+                        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_HTTP_ENTITY_IS_NULL, String.format("httpEntity is null, sql: %s, http status code: %d", data, status));
                     }
                     if (responseBody == null || responseBody.isEmpty()) {
-                        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "sql: " + data);
+                        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, String.format("sql: %s, http status code: %d", data, status));
                     }
             }
         } catch (ClientProtocolException e) {
