@@ -93,9 +93,6 @@ public class RestfulStatement extends AbstractStatement {
         } catch (JSONException e) {
             throw new JSONException(String.format("execute sql: %s, response: %s, can not cast to JSONObject.", sql, response), e);
         }
-        if (null == jsonObject) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "sql: " + sql);
-        }
         if (jsonObject.getIntValue("code") != 0) {
             throw TSDBError.createSQLException(jsonObject.getInteger("code"), "sql: " + sql + ", desc: " + jsonObject.getString("desc"));
         }
