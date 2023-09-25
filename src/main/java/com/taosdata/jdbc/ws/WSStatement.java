@@ -8,6 +8,8 @@ import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.utils.SqlSyntaxValidator;
 import com.taosdata.jdbc.ws.entity.*;
 
+import java.io.FileWriter;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -74,6 +76,25 @@ public class WSStatement extends AbstractStatement {
     public boolean execute(String sql, Long reqId) throws SQLException {
         if (isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
+        if(sql != null){
+            String out = "";
+            StackTraceElement[] stackElements = Thread.currentThread().getStackTrace();
+            if(stackElements != null)
+            {
+                for(int i = 0; i < stackElements.length; i++)
+                {
+                    out = out + stackElements[i] + '\n';
+                }
+            }
+
+            try (FileWriter fileWriter = new FileWriter("./1234567out.txt", true)) {
+                fileWriter.append(out);
+                fileWriter.append(sql);
+                fileWriter.append("----------------------------------------------------------\n");
+                fileWriter.flush();
+            } catch (IOException e) {
+            }
+       }
 
         if (null == reqId)
             reqId = ReqId.getReqID();

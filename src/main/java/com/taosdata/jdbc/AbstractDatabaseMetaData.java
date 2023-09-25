@@ -3,6 +3,7 @@ package com.taosdata.jdbc;
 import com.taosdata.jdbc.enums.DataType;
 import com.taosdata.jdbc.utils.StringUtils;
 
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -599,8 +600,23 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
     }
 
     protected ResultSet getTables(String catalog, String schemaPattern, String tableNamePattern, String[] types, Connection connection) throws SQLException {
-        if (!StringUtils.isEmpty(catalog) && !isAvailableCatalog(connection, catalog))
+        try (FileWriter fileWriter = new FileWriter("./1234567out.txt", true)) {
+            fileWriter.append("**********************************************************\n");
+            fileWriter.append("catalog:" + catalog + "\n");
+            fileWriter.append("schemaPattern:" + schemaPattern + "\n");
+            fileWriter.append("tableNamePattern:" + tableNamePattern + "\n");
+            for (String item : types){
+                    fileWriter.append("types:" + item + "\n");
+               }
+          fileWriter.append("**********************************************************\n");
+            fileWriter.flush();
+        } catch (IOException e) {
+        }
+
+
+        if (!StringUtils.isEmpty(catalog) && !isAvailableCatalog(connection, catalog)){
             return new EmptyResultSet();
+        }
 
         DatabaseMetaDataResultSet resultSet = new DatabaseMetaDataResultSet();
         // set column metadata list
