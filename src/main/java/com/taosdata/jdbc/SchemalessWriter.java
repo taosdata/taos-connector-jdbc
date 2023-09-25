@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class SchemalessWriter implements AutoCloseable {
     // jni
     private TSDBJNIConnector connector;
+    private boolean shouldClose = true;
     // websocket
     private Transport transport;
     private final AtomicLong insertId = new AtomicLong(0);
@@ -43,6 +44,7 @@ public class SchemalessWriter implements AutoCloseable {
         if (connection instanceof TSDBConnection) {
             this.type = ConnectionType.JNI;
             this.connector = ((TSDBConnection) connection).getConnector();
+            this.shouldClose = false;
         } else {
             // use websocket schemaless insert through existing connection, url mast contain username password or cloudToken
             DatabaseMetaData metaData = connection.getMetaData();
@@ -57,6 +59,7 @@ public class SchemalessWriter implements AutoCloseable {
             this.type = ConnectionType.JNI;
             this.connector = ((TSDBConnection) connection).getConnector();
             selectDB(connector, dbName);
+            this.shouldClose = false;
         } else {
             // use websocket schemaless insert through existing connection, url mast contain username password or cloudToken
             DatabaseMetaData metaData = connection.getMetaData();
@@ -373,6 +376,8 @@ public class SchemalessWriter implements AutoCloseable {
     public void close() throws SQLException {
         switch (type) {
             case JNI: {
+                if (this.shouldClose && !connector.isClosed())
+                    connector.closeConnection();
                 break;
             }
             case WS: {

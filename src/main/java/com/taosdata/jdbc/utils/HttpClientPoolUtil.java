@@ -6,6 +6,7 @@ import com.taosdata.jdbc.TSDBErrorNumbers;
 import org.apache.http.HeaderElement;
 import org.apache.http.HeaderElementIterator;
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpStatus;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.*;
@@ -127,13 +128,46 @@ public class HttpClientPoolUtil {
         HttpContext context = HttpClientContext.create();
 
         HttpEntity httpEntity = null;
-        String responseBody;
+        String responseBody = null;
         try (CloseableHttpResponse httpResponse = httpClient.execute(method, context)) {
+            // Buffer response content
             httpEntity = httpResponse.getEntity();
-            if (httpEntity == null) {
-                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_HTTP_ENTITY_IS_NULL, "httpEntity is null, sql: " + data);
+            if (httpEntity != null) {
+                responseBody = EntityUtils.toString(httpEntity, StandardCharsets.UTF_8);
             }
-            responseBody = EntityUtils.toString(httpEntity, StandardCharsets.UTF_8);
+
+            int status = httpResponse.getStatusLine().getStatusCode();
+            switch (status) {
+                case HttpStatus.SC_BAD_REQUEST:
+                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFUL_CLIENT_QUERY_EXCEPTION,
+                            responseBody != null && !responseBody.isEmpty() ? responseBody : String.format("http status code: %d, parameter error!", status));
+                case HttpStatus.SC_UNAUTHORIZED:
+                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFUL_CLIENT_QUERY_EXCEPTION,
+                            responseBody != null && !responseBody.isEmpty() ? responseBody : String.format("http status code: %d, authorization error!", status));
+                case HttpStatus.SC_FORBIDDEN:
+                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFUL_CLIENT_QUERY_EXCEPTION,
+                            responseBody != null && !responseBody.isEmpty() ? responseBody : String.format("http status code: %d, access forbidden!", status));
+                case HttpStatus.SC_NOT_FOUND:
+                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFUL_CLIENT_QUERY_EXCEPTION,
+                            responseBody != null && !responseBody.isEmpty() ? responseBody : String.format("http status code: %d, url does not found!", status));
+                case HttpStatus.SC_NOT_ACCEPTABLE:
+                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFUL_CLIENT_QUERY_EXCEPTION,
+                            responseBody != null && !responseBody.isEmpty() ? responseBody : String.format("http status code: %d, not acceptable!", status));
+                case HttpStatus.SC_INTERNAL_SERVER_ERROR:
+                case HttpStatus.SC_BAD_GATEWAY:
+                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFUL_CLIENT_QUERY_EXCEPTION,
+                            responseBody != null && !responseBody.isEmpty() ? responseBody : String.format("http status code: %d, server error!", status));
+                case HttpStatus.SC_SERVICE_UNAVAILABLE:
+                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFUL_CLIENT_QUERY_EXCEPTION,
+                            responseBody != null && !responseBody.isEmpty() ? responseBody : String.format("http status code: %d, service unavailable!", status));
+                default: // 2**
+                    if (httpEntity == null) {
+                        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_HTTP_ENTITY_IS_NULL, String.format("httpEntity is null, sql: %s, http status code: %d", data, status));
+                    }
+                    if (responseBody == null || responseBody.isEmpty()) {
+                        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, String.format("sql: %s, http status code: %d", data, status));
+                    }
+            }
         } catch (ClientProtocolException e) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_Protocol_Exception, e.getMessage());
         } catch (IOException exception) {
