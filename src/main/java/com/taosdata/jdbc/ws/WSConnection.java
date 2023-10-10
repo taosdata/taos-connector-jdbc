@@ -10,11 +10,7 @@ import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.rs.RestfulDatabaseMetaData;
 import com.taosdata.jdbc.utils.ReqId;
-import com.taosdata.jdbc.ws.entity.Code;
-import com.taosdata.jdbc.ws.entity.Request;
-import com.taosdata.jdbc.ws.entity.Response;
-import com.taosdata.jdbc.ws.stmt.entity.ConnReq;
-import com.taosdata.jdbc.ws.stmt.entity.ConnResp;
+import com.taosdata.jdbc.ws.entity.*;
 import com.taosdata.jdbc.ws.stmt.entity.STMTAction;
 
 import java.sql.DatabaseMetaData;
@@ -120,12 +116,17 @@ public class WSConnection extends AbstractConnection {
 
         Transport.checkConnection(ts, param.getConnectTimeout());
 
-        ConnReq connectReq = new ConnReq();
+        ConnectReq connectReq = new ConnectReq();
         connectReq.setReqId(ReqId.getReqID());
         connectReq.setUser(param.getUser());
         connectReq.setPassword(param.getPassword());
         connectReq.setDb(db);
-        ConnResp auth = (ConnResp) ts.send(new Request(STMTAction.CONN.getAction(), connectReq));
+        // 目前仅支持bi模式，下游接口值为0，此处做转换
+        if(param.getConnectMode() == 1){
+            connectReq.setMode(0);
+        }
+
+        ConnectResp auth = (ConnectResp) ts.send(new Request(STMTAction.CONN.getAction(), connectReq));
 
         if (Code.SUCCESS.getCode() != auth.getCode()) {
             ts.close();
@@ -133,5 +134,9 @@ public class WSConnection extends AbstractConnection {
         }
 
         return ts;
+    }
+
+    public ConnectionParam getParam() {
+        return param;
     }
 }
