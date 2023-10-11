@@ -52,7 +52,7 @@ public class WSDatabaseMetaDataTest {
     public void testShowTables() throws SQLException {
 
         Statement stmt = connection.createStatement();
-        ResultSet resultSet = stmt.executeQuery("show  power.tables");
+        ResultSet resultSet = stmt.executeQuery("show  "+ dbName +".tables");
         while (resultSet.next()) {
             System.out.println(resultSet.getString(1));
         }
