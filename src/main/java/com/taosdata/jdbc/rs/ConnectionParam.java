@@ -24,6 +24,9 @@ public class ConnectionParam {
     private int maxRequest;
     private int connectTimeout;
     private int requestTimeout;
+    private int connectMode;
+
+    static public final int CONNECT_MODE_BI = 1;
 
     private ConnectionParam(Builder builder) {
         this.host = builder.host;
@@ -37,6 +40,7 @@ public class ConnectionParam {
         this.maxRequest = builder.maxRequest;
         this.connectTimeout = builder.connectTimeout;
         this.requestTimeout = builder.requestTimeout;
+        this.connectMode = builder.connectMode;
     }
 
     public String getHost() {
@@ -127,6 +131,14 @@ public class ConnectionParam {
         this.requestTimeout = requestTimeout;
     }
 
+    public int getConnectMode() {
+        return connectMode;
+    }
+
+    public void setConnectMode(int connectMode) {
+        this.connectMode = connectMode;
+    }
+
     public static ConnectionParam getParam(Properties properties) throws SQLException {
         String host = properties.getProperty(TSDBDriver.PROPERTY_KEY_HOST);
         String port = properties.getProperty(TSDBDriver.PROPERTY_KEY_PORT);
@@ -174,9 +186,14 @@ public class ConnectionParam {
         int requestTimeout = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT,
                 String.valueOf(Transport.DEFAULT_MESSAGE_WAIT_TIMEOUT)));
 
+        int connectMode = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_CONNECT_MODE,"0"));
+        if (connectMode < 0 || connectMode > 1){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "unsupported connect mode");
+        }
+
         return new ConnectionParam.Builder(host, port).setDatabase(database).setCloudToken(cloudToken)
                 .setUserAndPassword(user, password).setTimeZone(tz).setUseSsl(useSsl).setMaxRequest(maxRequest)
-                .setConnectionTimeout(connectTimeout).setRequestTimeout(requestTimeout).build();
+                .setConnectionTimeout(connectTimeout).setRequestTimeout(requestTimeout).setConnectMode(connectMode).build();
     }
 
     public static class Builder {
@@ -191,6 +208,7 @@ public class ConnectionParam {
         private int maxRequest;
         private int connectTimeout;
         private int requestTimeout;
+        private int connectMode;
 
         public Builder(String host, String port) {
             this.host = host;
@@ -235,6 +253,10 @@ public class ConnectionParam {
 
         public Builder setRequestTimeout(int requestTimeout) {
             this.requestTimeout = requestTimeout;
+            return this;
+        }
+        public Builder setConnectMode(int connectMode) {
+            this.connectMode = connectMode;
             return this;
         }
 
