@@ -12,7 +12,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.stream.IntStream;
 
 @RunWith(CatalogRunner.class)
-@TestTarget(alias = "websocket query test", author = "huolibo", version = "2.0.38")
+@TestTarget(alias = "websocket query test", author = "sheyj", version = "2.3.7")
 @FixMethodOrder
 public class WSQueryBIMode {
     private static final String host = "127.0.0.1";
