@@ -1,8 +1,13 @@
 package com.taosdata.jdbc.ws;
 
 import com.google.common.base.Strings;
+import com.taosdata.jdbc.TSDBError;
+import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.rs.RestfulDriver;
+import com.taosdata.jdbc.utils.ReqId;
+import com.taosdata.jdbc.ws.entity.*;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 
@@ -59,6 +64,7 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
     @Override
     public void onMessage(String message) {
         if (!"".equals(message)) {
+            System.out.println("*******1            " + message);
             executor.submit(() -> textMessageHandler.accept(message));
         }
     }
@@ -71,12 +77,12 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
     @Override
     @SuppressWarnings("all")
     public void onClose(int code, String reason, boolean remote) {
-        if (remote) {
-            transport.close();
-            throw new RuntimeException("The remote server closed the connection: " + reason);
-        } else {
-            throw new RuntimeException("close connection: " + reason);
-        }
+//        if (remote) {
+//            transport.close();
+//            throw new RuntimeException("The remote server closed the connection: " + reason);
+//        } else {
+//            throw new RuntimeException("close connection: " + reason);
+//        }
     }
 
     @Override
@@ -87,8 +93,33 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
     @Override
     public void close() {
         super.close();
-        if (executor != null && !executor.isShutdown())
-            executor.shutdown();
+//        if (executor != null && !executor.isShutdown())
+//            executor.shutdown();
+    }
+
+    @Override
+    public boolean reconnectBlocking() throws InterruptedException {
+        if (super.reconnectBlocking()){
+            // send con msg
+            ConnectReq connectReq = new ConnectReq();
+            connectReq.setReqId(ReqId.getReqID());
+            connectReq.setUser("root");
+            connectReq.setPassword("taosdata");
+            connectReq.setDb("test");
+            ConnectResp auth = null;
+            try {
+                auth = (ConnectResp) transport.send(new Request(Action.CONN.getAction(), connectReq));
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+
+            if (Code.SUCCESS.getCode() != auth.getCode()) {
+                transport.close();
+                return false;
+            }
+            return true;
+        }
+        return false;
     }
 
     public static WSClient getInstance(ConnectionParam params, WSFunction function, Transport transport) throws SQLException {

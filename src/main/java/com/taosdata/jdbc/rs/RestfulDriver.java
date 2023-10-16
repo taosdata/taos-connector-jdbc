@@ -108,12 +108,15 @@ public class RestfulDriver extends AbstractDriver {
         Transport transport = new Transport(WSFunction.WS, param, inFlightRequest);
 
         transport.setTextMessageHandler(message -> {
+            System.out.println("*******2   " +  message);
+
             JSONObject jsonObject = JSON.parseObject(message);
             Action action = Action.of(jsonObject.getString("action"));
             Response response = jsonObject.toJavaObject(action.getResponseClazz());
             FutureResponse remove = inFlightRequest.remove(response.getAction(), response.getReqId());
             if (null != remove) {
                 remove.getFuture().complete(response);
+                System.out.println("*******3   handled" +  response.getReqId());
             }
         });
         transport.setBinaryMessageHandler(byteBuffer -> {
@@ -143,35 +146,5 @@ public class RestfulDriver extends AbstractDriver {
 
         TaosGlobalConfig.setCharset(props.getProperty(TSDBDriver.PROPERTY_KEY_CHARSET));
         return new WSConnection(url, props, transport, param);
-    }
-
-    static class ConnectReq extends Payload {
-        private String user;
-        private String password;
-        private String db;
-
-        public String getUser() {
-            return user;
-        }
-
-        public void setUser(String user) {
-            this.user = user;
-        }
-
-        public String getPassword() {
-            return password;
-        }
-
-        public void setPassword(String password) {
-            this.password = password;
-        }
-
-        public String getDb() {
-            return db;
-        }
-
-        public void setDb(String db) {
-            this.db = db;
-        }
     }
 }

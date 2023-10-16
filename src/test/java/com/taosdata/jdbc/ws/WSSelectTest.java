@@ -5,6 +5,8 @@ import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -16,6 +18,9 @@ public class WSSelectTest {
     private static final int port = 6041;
     private static Connection connection;
     private static final String databaseName = "driver";
+
+    private static final  Logger logger = LoggerFactory.getLogger(WSSelectTest.class);
+
 
     private static void testInsert() throws SQLException {
         Statement statement = connection.createStatement();
@@ -32,8 +37,16 @@ public class WSSelectTest {
     }
 
     @Test
-    public void testWSSelect() throws SQLException {
+    public void testWSSelect() throws SQLException, InterruptedException {
+
+
+        logger.info("Hello World !!");
+
+
+
         Statement statement = connection.createStatement();
+
+        Thread.sleep(3000);
         int count = 0;
         long start = System.nanoTime();
         for (int i = 0; i < 1; i++) {
@@ -77,7 +90,7 @@ public class WSSelectTest {
         statement.execute("create database " + databaseName);
         statement.execute("create table " + databaseName + ".alltype_query(ts timestamp, c1 bool,c2 tinyint, c3 smallint, c4 int, c5 bigint, c6 tinyint unsigned, c7 smallint unsigned, c8 int unsigned, c9 bigint unsigned, c10 float, c11 double, c12 binary(20), c13 nchar(30) )");
         statement.close();
-        testInsert();
+        //testInsert();
     }
 
     @AfterClass

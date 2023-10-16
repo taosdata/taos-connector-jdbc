@@ -8,6 +8,7 @@ import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.CompletableFutureTimeout;
 import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.entity.Response;
+import org.java_websocket.exceptions.WebsocketNotConnectedException;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -57,12 +58,24 @@ public class Transport implements AutoCloseable {
         Response response = null;
         CompletableFuture<Response> completableFuture = new CompletableFuture<>();
         String reqString = request.toString();
+
+        try {
+            client.send(reqString);
+        } catch (WebsocketNotConnectedException e) {
+            try {
+                client.reconnectBlocking();
+                client.send(reqString);
+            } catch (InterruptedException ex){
+                throw new SQLException(ex);
+            }
+        }
+
         try {
             inFlightRequest.put(new FutureResponse(request.getAction(), request.id(), completableFuture));
-            client.send(reqString);
         } catch (InterruptedException | TimeoutException e) {
             throw new SQLException(e);
         }
+
         CompletableFuture<Response> responseFuture = CompletableFutureTimeout.orTimeout(
                 completableFuture, timeout, TimeUnit.MILLISECONDS, reqString);
         try {
@@ -89,10 +102,20 @@ public class Transport implements AutoCloseable {
         CompletableFuture<Response> completableFuture = new CompletableFuture<>();
         try {
             inFlightRequest.put(new FutureResponse(action, reqId, completableFuture));
-            client.send(buffer.toByteArray());
         } catch (InterruptedException | TimeoutException e) {
             throw new SQLException(e);
         }
+        try {
+            client.send(buffer.toByteArray());
+        } catch (WebsocketNotConnectedException e) {
+            try {
+                client.reconnectBlocking();
+                client.send(buffer.toByteArray());
+            } catch (InterruptedException ex){
+                throw new SQLException(ex);
+            }
+        }
+
         String reqString = "action:" + action + ", reqId:" + reqId + ", stmtId:" + stmtId + ", bindType" + type;
         CompletableFuture<Response> responseFuture = CompletableFutureTimeout.orTimeout(completableFuture, timeout, TimeUnit.MILLISECONDS, reqString);
         try {
