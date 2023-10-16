@@ -1,0 +1,1123 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <title>Coverage Report > TSDBPreparedStatement</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.taosdata.jdbc</a>
+</div>
+
+<h1>Coverage Summary for Class: TSDBPreparedStatement (com.taosdata.jdbc)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">TSDBPreparedStatement</td>
+<td class="coverageStat">
+  <span class="percent">
+    65.9%
+  </span>
+  <span class="absValue">
+    (60/91)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    64.5%
+  </span>
+  <span class="absValue">
+    (264/409)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">TSDBPreparedStatement$ColumnInfo</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (5/5)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    88.9%
+  </span>
+  <span class="absValue">
+    (8/9)
+  </span>
+</td>
+  </tr>
+  <tr>
+    <td class="name">TSDBPreparedStatement$TableTagInfo</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (3/3)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (7/7)
+  </span>
+</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    68.7%
+  </span>
+  <span class="absValue">
+    (68/99)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    65.6%
+  </span>
+  <span class="absValue">
+    (279/425)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;/***************************************************************************
+&nbsp; * Copyright (c) 2019 TAOS Data, Inc. &lt;jhtao@taosdata.com&gt;
+&nbsp; *
+&nbsp; * This program is free software: you can use, redistribute, and/or modify
+&nbsp; * it under the terms of the GNU Affero General Public License, version 3
+&nbsp; * or later (&quot;AGPL&quot;), as published by the Free Software Foundation.
+&nbsp; *
+&nbsp; * This program is distributed in the hope that it will be useful, but WITHOUT
+&nbsp; * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+&nbsp; * FITNESS FOR A PARTICULAR PURPOSE.
+&nbsp; *
+&nbsp; * You should have received a copy of the GNU Affero General Public License
+&nbsp; * along with this program. If not, see &lt;http://www.gnu.org/licenses/&gt;.
+&nbsp; *****************************************************************************/
+&nbsp;package com.taosdata.jdbc;
+&nbsp;
+&nbsp;import com.taosdata.jdbc.utils.Utils;
+&nbsp;
+&nbsp;import java.io.InputStream;
+&nbsp;import java.io.Reader;
+&nbsp;import java.io.UnsupportedEncodingException;
+&nbsp;import java.math.BigDecimal;
+&nbsp;import java.net.URL;
+&nbsp;import java.nio.ByteBuffer;
+&nbsp;import java.nio.ByteOrder;
+&nbsp;import java.nio.charset.StandardCharsets;
+&nbsp;import java.sql.*;
+&nbsp;import java.sql.Date;
+&nbsp;import java.util.*;
+&nbsp;
+&nbsp;/*
+&nbsp; * TDengine only supports a subset of the standard SQL, thus this implementation of the
+&nbsp; * standard JDBC API contains more or less some adjustments customized for certain
+&nbsp; * compatibility needs.
+&nbsp; */
+&nbsp;public class TSDBPreparedStatement extends TSDBStatement implements PreparedStatement {
+&nbsp;    // for jdbc preparedStatement interface
+&nbsp;    private String rawSql;
+<b class="fc">&nbsp;    private Object[] parameters = new Object[0];</b>
+&nbsp;    // for parameter binding
+&nbsp;    private long nativeStmtHandle;
+&nbsp;    private String tableName;
+&nbsp;    private ArrayList&lt;TableTagInfo&gt; tableTags;
+&nbsp;    private int tagValueLength;
+<b class="fc">&nbsp;    private PriorityQueue&lt;ColumnInfo&gt; queue = new PriorityQueue&lt;&gt;();</b>
+&nbsp;
+&nbsp;    TSDBPreparedStatement(TSDBConnection connection, String sql) throws SQLException {
+<b class="fc">&nbsp;        super(connection);</b>
+<b class="fc">&nbsp;        this.rawSql = sql;</b>
+<b class="fc">&nbsp;        int parameterCnt = 0;</b>
+<b class="fc">&nbsp;        if (!sql.contains(&quot;?&quot;))</b>
+&nbsp;            return;
+<b class="fc">&nbsp;        for (int i = 0; i &lt; sql.length(); i++) {</b>
+<b class="fc">&nbsp;            if (&#39;?&#39; == sql.charAt(i)) {</b>
+<b class="fc">&nbsp;                parameterCnt++;</b>
+&nbsp;            }
+&nbsp;        }
+<b class="fc">&nbsp;        parameters = new Object[parameterCnt];</b>
+&nbsp;        // for parameter-binding
+<b class="fc">&nbsp;        TSDBJNIConnector connector = ((TSDBConnection) this.getConnection()).getConnector();</b>
+<b class="fc">&nbsp;        this.nativeStmtHandle = connector.prepareStmt(rawSql);</b>
+&nbsp;
+&nbsp;        // the table name is also a parameter, so ignore it.
+<b class="fc">&nbsp;        this.tableTags = new ArrayList&lt;&gt;();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public ResultSet executeQuery() throws SQLException {
+<b class="fc">&nbsp;        final String sql = Utils.getNativeSql(this.rawSql, this.parameters);</b>
+<b class="fc">&nbsp;        return executeQuery(sql);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public int executeUpdate() throws SQLException {
+<b class="fc">&nbsp;        String sql = Utils.getNativeSql(this.rawSql, this.parameters);</b>
+<b class="fc">&nbsp;        return executeUpdate(sql);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setNull(int parameterIndex, int sqlType) throws SQLException {
+<b class="fc">&nbsp;        setObject(parameterIndex, null);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setBoolean(int parameterIndex, boolean x) throws SQLException {
+<b class="fc">&nbsp;        setObject(parameterIndex, x);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setByte(int parameterIndex, byte x) throws SQLException {
+<b class="fc">&nbsp;        setObject(parameterIndex, x);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setShort(int parameterIndex, short x) throws SQLException {
+<b class="fc">&nbsp;        setObject(parameterIndex, x);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setInt(int parameterIndex, int x) throws SQLException {
+<b class="fc">&nbsp;        setObject(parameterIndex, x);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setLong(int parameterIndex, long x) throws SQLException {
+<b class="fc">&nbsp;        setObject(parameterIndex, x);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setFloat(int parameterIndex, float x) throws SQLException {
+<b class="fc">&nbsp;        setObject(parameterIndex, x);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setDouble(int parameterIndex, double x) throws SQLException {
+<b class="fc">&nbsp;        setObject(parameterIndex, x);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setBigDecimal(int parameterIndex, BigDecimal x) throws SQLException {
+<b class="fc">&nbsp;        setObject(parameterIndex, x.doubleValue());</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setString(int parameterIndex, String x) throws SQLException {
+<b class="fc">&nbsp;        setObject(parameterIndex, x);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setBytes(int parameterIndex, byte[] x) throws SQLException {
+<b class="fc">&nbsp;        setObject(parameterIndex, x);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setDate(int parameterIndex, Date x) throws SQLException {
+<b class="fc">&nbsp;        setObject(parameterIndex, new Timestamp(x.getTime()));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setTime(int parameterIndex, Time x) throws SQLException {
+<b class="fc">&nbsp;        setObject(parameterIndex, new Timestamp(x.getTime()));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setTimestamp(int parameterIndex, Timestamp x) throws SQLException {
+<b class="fc">&nbsp;        setObject(parameterIndex, x);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setAsciiStream(int parameterIndex, InputStream x, int length) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setUnicodeStream(int parameterIndex, InputStream x, int length) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setBinaryStream(int parameterIndex, InputStream x, int length) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void clearParameters() throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        parameters = new Object[parameters.length];</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setObject(int parameterIndex, Object x, int targetSqlType) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        setObject(parameterIndex, x);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setObject(int parameterIndex, Object x) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        if (parameterIndex &lt; 1 &amp;&amp; parameterIndex &gt;= parameters.length)</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_PARAMETER_INDEX_OUT_RANGE);</b>
+<b class="fc">&nbsp;        parameters[parameterIndex - 1] = x;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean execute() throws SQLException {
+<b class="nc">&nbsp;        final String sql = Utils.getNativeSql(this.rawSql, this.parameters);</b>
+<b class="nc">&nbsp;        return execute(sql);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void addBatch() throws SQLException {
+<b class="fc">&nbsp;        String sql = Utils.getNativeSql(this.rawSql, this.parameters);</b>
+<b class="fc">&nbsp;        addBatch(sql);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setCharacterStream(int parameterIndex, Reader reader, int length) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+&nbsp;
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setRef(int parameterIndex, Ref x) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed()) {</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setBlob(int parameterIndex, Blob x) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setClob(int parameterIndex, Clob x) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setArray(int parameterIndex, Array x) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public ResultSetMetaData getMetaData() throws SQLException {
+<b class="fc">&nbsp;        if (this.getResultSet() == null)</b>
+<b class="fc">&nbsp;            return null;</b>
+<b class="nc">&nbsp;        return getResultSet().getMetaData();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setDate(int parameterIndex, Date x, Calendar cal) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setTime(int parameterIndex, Time x, Calendar cal) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setTimestamp(int parameterIndex, Timestamp x, Calendar cal) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setNull(int parameterIndex, int sqlType, String typeName) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setURL(int parameterIndex, URL x) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public ParameterMetaData getParameterMetaData() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        return new TSDBParameterMetaData(parameters);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setRowId(int parameterIndex, RowId x) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setNString(int parameterIndex, String value) throws SQLException {
+<b class="nc">&nbsp;        setString(parameterIndex, value);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setNCharacterStream(int parameterIndex, Reader value, long length) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setNClob(int parameterIndex, NClob value) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setClob(int parameterIndex, Reader reader, long length) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setBlob(int parameterIndex, InputStream inputStream, long length) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setNClob(int parameterIndex, Reader reader, long length) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setSQLXML(int parameterIndex, SQLXML xmlObject) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setObject(int parameterIndex, Object x, int targetSqlType, int scaleOrLength) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setAsciiStream(int parameterIndex, InputStream x, long length) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setBinaryStream(int parameterIndex, InputStream x, long length) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setCharacterStream(int parameterIndex, Reader reader, long length) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setAsciiStream(int parameterIndex, InputStream x) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setBinaryStream(int parameterIndex, InputStream x) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setCharacterStream(int parameterIndex, Reader reader) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setNCharacterStream(int parameterIndex, Reader value) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setClob(int parameterIndex, Reader reader) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setBlob(int parameterIndex, InputStream inputStream) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setNClob(int parameterIndex, Reader reader) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    ///////////////////////////////////////////////////////////////////////
+&nbsp;    // NOTE: the following APIs are not JDBC compatible
+&nbsp;    // parameter binding
+<b class="fc">&nbsp;    private static class ColumnInfo implements Comparable&lt;ColumnInfo&gt; {</b>
+&nbsp;        @SuppressWarnings(&quot;rawtypes&quot;)
+&nbsp;        private ArrayList data;
+&nbsp;        private int type;
+&nbsp;        private int bytes;
+&nbsp;        private boolean typeIsSet;
+&nbsp;        private int index;
+&nbsp;
+<b class="fc">&nbsp;        public ColumnInfo() {</b>
+<b class="fc">&nbsp;            this.typeIsSet = false;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        public void setType(int type) throws SQLException {
+<b class="fc">&nbsp;            if (this.isTypeSet()) {</b>
+<b class="nc">&nbsp;                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, &quot;column data type has been set&quot;);</b>
+&nbsp;            }
+&nbsp;
+<b class="fc">&nbsp;            this.typeIsSet = true;</b>
+<b class="fc">&nbsp;            this.type = type;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        public boolean isTypeSet() {
+<b class="fc">&nbsp;            return this.typeIsSet;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        @Override
+&nbsp;        public int compareTo(ColumnInfo c) {
+<b class="fc">&nbsp;            return this.index &gt; c.index ? 1 : -1;</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+<b class="fc">&nbsp;    private static class TableTagInfo {</b>
+&nbsp;        private boolean isNull;
+&nbsp;        private final Object value;
+&nbsp;        private final int type;
+&nbsp;
+<b class="fc">&nbsp;        public TableTagInfo(Object value, int type) {</b>
+<b class="fc">&nbsp;            this.value = value;</b>
+<b class="fc">&nbsp;            this.type = type;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        public static TableTagInfo createNullTag(int type) {
+<b class="fc">&nbsp;            TableTagInfo info = new TableTagInfo(null, type);</b>
+<b class="fc">&nbsp;            info.isNull = true;</b>
+<b class="fc">&nbsp;            return info;</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTableName(String name) throws SQLException {
+&nbsp;
+<b class="fc">&nbsp;        if (this.nativeStmtHandle == 0) {</b>
+<b class="nc">&nbsp;            TSDBJNIConnector connector = ((TSDBConnection) this.getConnection()).getConnector();</b>
+<b class="nc">&nbsp;            this.nativeStmtHandle = connector.prepareStmt(rawSql);</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        if (this.tableName != null) {</b>
+<b class="nc">&nbsp;            this.columnDataAddBatch();</b>
+<b class="nc">&nbsp;            this.columnDataClearBatchInternal();</b>
+&nbsp;        }
+<b class="fc">&nbsp;        this.tableName = name;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    private void ensureTagCapacity(int index) {
+<b class="fc">&nbsp;        if (this.tableTags.size() &lt; index + 1) {</b>
+<b class="fc">&nbsp;            int delta = index + 1 - this.tableTags.size();</b>
+<b class="fc">&nbsp;            this.tableTags.addAll(Collections.nCopies(delta, null));</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTagNull(int index, int type) {
+<b class="fc">&nbsp;        ensureTagCapacity(index);</b>
+<b class="fc">&nbsp;        this.tableTags.set(index, TableTagInfo.createNullTag(type));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTagBoolean(int index, boolean value) {
+<b class="fc">&nbsp;        ensureTagCapacity(index);</b>
+<b class="fc">&nbsp;        this.tableTags.set(index, new TableTagInfo(value, TSDBConstants.TSDB_DATA_TYPE_BOOL));</b>
+<b class="fc">&nbsp;        this.tagValueLength += Byte.BYTES;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTagInt(int index, int value) {
+<b class="fc">&nbsp;        ensureTagCapacity(index);</b>
+<b class="fc">&nbsp;        this.tableTags.set(index, new TableTagInfo(value, TSDBConstants.TSDB_DATA_TYPE_INT));</b>
+<b class="fc">&nbsp;        this.tagValueLength += Integer.BYTES;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTagByte(int index, byte value) {
+<b class="nc">&nbsp;        ensureTagCapacity(index);</b>
+<b class="nc">&nbsp;        this.tableTags.set(index, new TableTagInfo(value, TSDBConstants.TSDB_DATA_TYPE_TINYINT));</b>
+<b class="nc">&nbsp;        this.tagValueLength += Byte.BYTES;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTagShort(int index, short value) {
+<b class="nc">&nbsp;        ensureTagCapacity(index);</b>
+<b class="nc">&nbsp;        this.tableTags.set(index, new TableTagInfo(value, TSDBConstants.TSDB_DATA_TYPE_SMALLINT));</b>
+<b class="nc">&nbsp;        this.tagValueLength += Short.BYTES;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTagLong(int index, long value) {
+<b class="nc">&nbsp;        ensureTagCapacity(index);</b>
+<b class="nc">&nbsp;        this.tableTags.set(index, new TableTagInfo(value, TSDBConstants.TSDB_DATA_TYPE_BIGINT));</b>
+<b class="nc">&nbsp;        this.tagValueLength += Long.BYTES;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTagTimestamp(int index, long value) {
+<b class="nc">&nbsp;        ensureTagCapacity(index);</b>
+<b class="nc">&nbsp;        this.tableTags.set(index, new TableTagInfo(value, TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP));</b>
+<b class="nc">&nbsp;        this.tagValueLength += Long.BYTES;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTagFloat(int index, float value) {
+<b class="fc">&nbsp;        ensureTagCapacity(index);</b>
+<b class="fc">&nbsp;        this.tableTags.set(index, new TableTagInfo(value, TSDBConstants.TSDB_DATA_TYPE_FLOAT));</b>
+<b class="fc">&nbsp;        this.tagValueLength += Float.BYTES;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTagDouble(int index, double value) {
+<b class="fc">&nbsp;        ensureTagCapacity(index);</b>
+<b class="fc">&nbsp;        this.tableTags.set(index, new TableTagInfo(value, TSDBConstants.TSDB_DATA_TYPE_DOUBLE));</b>
+<b class="fc">&nbsp;        this.tagValueLength += Double.BYTES;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTagString(int index, String value) {
+<b class="fc">&nbsp;        ensureTagCapacity(index);</b>
+<b class="fc">&nbsp;        this.tableTags.set(index, new TableTagInfo(value, TSDBConstants.TSDB_DATA_TYPE_BINARY));</b>
+<b class="fc">&nbsp;        this.tagValueLength += value.getBytes().length;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTagNString(int index, String value) {
+<b class="fc">&nbsp;        ensureTagCapacity(index);</b>
+<b class="fc">&nbsp;        this.tableTags.set(index, new TableTagInfo(value, TSDBConstants.TSDB_DATA_TYPE_NCHAR));</b>
+&nbsp;
+<b class="fc">&nbsp;        String charset = TaosGlobalConfig.getCharset();</b>
+&nbsp;        try {
+<b class="fc">&nbsp;            this.tagValueLength += value.getBytes(charset).length;</b>
+<b class="nc">&nbsp;        } catch (UnsupportedEncodingException e) {</b>
+<b class="nc">&nbsp;            throw new RuntimeException(e.getMessage());</b>
+<b class="fc">&nbsp;        }</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTagJson(int index, String value) {
+<b class="fc">&nbsp;        ensureTagCapacity(index);</b>
+<b class="fc">&nbsp;        this.tableTags.set(index, new TableTagInfo(value, TSDBConstants.TSDB_DATA_TYPE_JSON));</b>
+&nbsp;
+<b class="fc">&nbsp;        String charset = TaosGlobalConfig.getCharset();</b>
+&nbsp;        try {
+<b class="fc">&nbsp;            this.tagValueLength += value.getBytes(charset).length;</b>
+<b class="nc">&nbsp;        } catch (UnsupportedEncodingException e) {</b>
+<b class="nc">&nbsp;            throw new RuntimeException(e.getMessage());</b>
+<b class="fc">&nbsp;        }</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTagVarbinary(int index, byte[] value) {
+<b class="fc">&nbsp;        ensureTagCapacity(index);</b>
+<b class="fc">&nbsp;        this.tableTags.set(index, new TableTagInfo(value, TSDBConstants.TSDB_DATA_TYPE_VARBINARY));</b>
+<b class="fc">&nbsp;        this.tagValueLength += value.length;</b>
+&nbsp;     }
+&nbsp;    public void setTagGeometry(int index, byte[] value) {
+<b class="fc">&nbsp;        ensureTagCapacity(index);</b>
+<b class="fc">&nbsp;        this.tableTags.set(index, new TableTagInfo(value, TSDBConstants.TSDB_DATA_TYPE_GEOMETRY));</b>
+<b class="fc">&nbsp;        this.tagValueLength += value.length;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public &lt;T&gt; void setValueImpl(int columnIndex, ArrayList&lt;T&gt; list, int type, int bytes) throws SQLException {
+<b class="fc">&nbsp;        ColumnInfo p = new ColumnInfo();</b>
+<b class="fc">&nbsp;        p.setType(type);</b>
+<b class="fc">&nbsp;        p.bytes = bytes;</b>
+<b class="fc">&nbsp;        p.data = (ArrayList&lt;?&gt;) list.clone();</b>
+<b class="fc">&nbsp;        p.index = columnIndex;</b>
+<b class="fc">&nbsp;        queue.add(p);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setInt(int columnIndex, ArrayList&lt;Integer&gt; list) throws SQLException {
+<b class="fc">&nbsp;        setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_INT, Integer.BYTES);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setFloat(int columnIndex, ArrayList&lt;Float&gt; list) throws SQLException {
+<b class="fc">&nbsp;        setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_FLOAT, Float.BYTES);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTimestamp(int columnIndex, ArrayList&lt;Long&gt; list) throws SQLException {
+<b class="fc">&nbsp;        setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP, Long.BYTES);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setLong(int columnIndex, ArrayList&lt;Long&gt; list) throws SQLException {
+<b class="nc">&nbsp;        setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_BIGINT, Long.BYTES);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setDouble(int columnIndex, ArrayList&lt;Double&gt; list) throws SQLException {
+<b class="fc">&nbsp;        setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_DOUBLE, Double.BYTES);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setBoolean(int columnIndex, ArrayList&lt;Boolean&gt; list) throws SQLException {
+<b class="fc">&nbsp;        setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_BOOL, Byte.BYTES);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setByte(int columnIndex, ArrayList&lt;Byte&gt; list) throws SQLException {
+<b class="nc">&nbsp;        setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_TINYINT, Byte.BYTES);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setShort(int columnIndex, ArrayList&lt;Short&gt; list) throws SQLException {
+<b class="nc">&nbsp;        setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_SMALLINT, Short.BYTES);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setString(int columnIndex, ArrayList&lt;String&gt; list, int size) throws SQLException {
+<b class="fc">&nbsp;        setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_BINARY, size);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setVarbinary(int columnIndex, ArrayList&lt;byte[]&gt; list, int size) throws SQLException {
+<b class="fc">&nbsp;        setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_VARBINARY, size);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setGeometry(int columnIndex, ArrayList&lt;byte[]&gt; list, int size) throws SQLException {
+<b class="fc">&nbsp;        setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_GEOMETRY, size);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // note: expand the required space for each NChar character
+&nbsp;    public void setNString(int columnIndex, ArrayList&lt;String&gt; list, int size) throws SQLException {
+<b class="fc">&nbsp;        setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_NCHAR, size * Integer.BYTES);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void columnDataAddBatch() throws SQLException {
+&nbsp;        // pass the data block to native code
+<b class="fc">&nbsp;        if (rawSql == null) {</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, &quot;sql statement not set yet&quot;);</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        int numOfCols = this.queue.size();</b>
+<b class="fc">&nbsp;        if (numOfCols == 0) {</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, &quot;column data not bind&quot;);</b>
+&nbsp;        }
+<b class="fc">&nbsp;        if (nativeStmtHandle == 0) {</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, &quot;stmt is null&quot;);</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        TSDBJNIConnector connector = ((TSDBConnection) this.getConnection()).getConnector();</b>
+<b class="fc">&nbsp;        if ((this.tableTags == null || this.tableTags.size() == 0) &amp;&amp; this.tableName != null) {</b>
+<b class="fc">&nbsp;            connector.setBindTableName(this.nativeStmtHandle, this.tableName);</b>
+<b class="fc">&nbsp;        } else if (this.tableTags != null &amp;&amp; this.tableTags.size() &gt; 0) {</b>
+<b class="fc">&nbsp;            if (tableName == null){</b>
+<b class="nc">&nbsp;                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, &quot;table name not set yet&quot;);</b>
+&nbsp;            }
+&nbsp;
+<b class="fc">&nbsp;            int tagSize = this.tableTags.size();</b>
+<b class="fc">&nbsp;            ByteBuffer tagDataList = ByteBuffer.allocate(this.tagValueLength);</b>
+<b class="fc">&nbsp;            tagDataList.order(ByteOrder.LITTLE_ENDIAN);</b>
+&nbsp;
+<b class="fc">&nbsp;            ByteBuffer typeList = ByteBuffer.allocate(tagSize);</b>
+<b class="fc">&nbsp;            typeList.order(ByteOrder.LITTLE_ENDIAN);</b>
+&nbsp;
+<b class="fc">&nbsp;            ByteBuffer lengthList = ByteBuffer.allocate(tagSize * Integer.BYTES);</b>
+<b class="fc">&nbsp;            lengthList.order(ByteOrder.LITTLE_ENDIAN);</b>
+&nbsp;
+<b class="fc">&nbsp;            ByteBuffer isNullList = ByteBuffer.allocate(tagSize * Byte.BYTES);</b>
+<b class="fc">&nbsp;            isNullList.order(ByteOrder.LITTLE_ENDIAN);</b>
+&nbsp;
+<b class="fc">&nbsp;            for (TableTagInfo tag : this.tableTags) {</b>
+<b class="fc">&nbsp;                if (tag.isNull) {</b>
+<b class="fc">&nbsp;                    typeList.put((byte) tag.type);</b>
+<b class="fc">&nbsp;                    isNullList.put((byte) 1);</b>
+<b class="fc">&nbsp;                    lengthList.putInt(0);</b>
+<b class="fc">&nbsp;                    continue;</b>
+&nbsp;                }
+&nbsp;
+<b class="fc">&nbsp;                switch (tag.type) {</b>
+&nbsp;                    case TSDBConstants.TSDB_DATA_TYPE_INT: {
+<b class="fc">&nbsp;                        Integer val = (Integer) tag.value;</b>
+<b class="fc">&nbsp;                        tagDataList.putInt(val);</b>
+<b class="fc">&nbsp;                        lengthList.putInt(Integer.BYTES);</b>
+<b class="fc">&nbsp;                        break;</b>
+&nbsp;                    }
+&nbsp;                    case TSDBConstants.TSDB_DATA_TYPE_TINYINT: {
+<b class="nc">&nbsp;                        Byte val = (Byte) tag.value;</b>
+<b class="nc">&nbsp;                        tagDataList.put(val);</b>
+<b class="nc">&nbsp;                        lengthList.putInt(Byte.BYTES);</b>
+<b class="nc">&nbsp;                        break;</b>
+&nbsp;                    }
+&nbsp;                    case TSDBConstants.TSDB_DATA_TYPE_BOOL: {
+<b class="fc">&nbsp;                        Boolean val = (Boolean) tag.value;</b>
+<b class="fc">&nbsp;                        tagDataList.put((byte) (val ? 1 : 0));</b>
+<b class="fc">&nbsp;                        lengthList.putInt(Byte.BYTES);</b>
+<b class="fc">&nbsp;                        break;</b>
+&nbsp;                    }
+&nbsp;                    case TSDBConstants.TSDB_DATA_TYPE_SMALLINT: {
+<b class="nc">&nbsp;                        Short val = (Short) tag.value;</b>
+<b class="nc">&nbsp;                        tagDataList.putShort(val);</b>
+<b class="nc">&nbsp;                        lengthList.putInt(Short.BYTES);</b>
+<b class="nc">&nbsp;                        break;</b>
+&nbsp;                    }
+&nbsp;                    case TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP:
+&nbsp;                    case TSDBConstants.TSDB_DATA_TYPE_BIGINT: {
+<b class="nc">&nbsp;                        Long val = (Long) tag.value;</b>
+<b class="nc">&nbsp;                        tagDataList.putLong(val == null ? 0 : val);</b>
+<b class="nc">&nbsp;                        lengthList.putInt(Long.BYTES);</b>
+<b class="nc">&nbsp;                        break;</b>
+&nbsp;                    }
+&nbsp;                    case TSDBConstants.TSDB_DATA_TYPE_FLOAT: {
+<b class="fc">&nbsp;                        Float val = (Float) tag.value;</b>
+<b class="fc">&nbsp;                        tagDataList.putFloat(val == null ? 0 : val);</b>
+<b class="fc">&nbsp;                        lengthList.putInt(Float.BYTES);</b>
+<b class="fc">&nbsp;                        break;</b>
+&nbsp;                    }
+&nbsp;                    case TSDBConstants.TSDB_DATA_TYPE_DOUBLE: {
+<b class="fc">&nbsp;                        Double val = (Double) tag.value;</b>
+<b class="fc">&nbsp;                        tagDataList.putDouble(val == null ? 0 : val);</b>
+<b class="fc">&nbsp;                        lengthList.putInt(Double.BYTES);</b>
+<b class="fc">&nbsp;                        break;</b>
+&nbsp;                    }
+&nbsp;                    case TSDBConstants.TSDB_DATA_TYPE_NCHAR:
+&nbsp;                    case TSDBConstants.TSDB_DATA_TYPE_JSON:
+&nbsp;                    case TSDBConstants.TSDB_DATA_TYPE_BINARY: {
+<b class="fc">&nbsp;                        String charset = TaosGlobalConfig.getCharset();</b>
+<b class="fc">&nbsp;                        String val = (String) tag.value;</b>
+&nbsp;                        byte[] b;
+&nbsp;                        try {
+<b class="fc">&nbsp;                            if (tag.type == TSDBConstants.TSDB_DATA_TYPE_BINARY) {</b>
+<b class="fc">&nbsp;                                b = val.getBytes();</b>
+&nbsp;                            } else {
+<b class="fc">&nbsp;                                b = val.getBytes(charset);</b>
+&nbsp;                            }
+<b class="nc">&nbsp;                        } catch (UnsupportedEncodingException e) {</b>
+<b class="nc">&nbsp;                            throw new RuntimeException(e.getMessage());</b>
+<b class="fc">&nbsp;                        }</b>
+<b class="fc">&nbsp;                        tagDataList.put(b);</b>
+<b class="fc">&nbsp;                        lengthList.putInt(b.length);</b>
+<b class="fc">&nbsp;                        break;</b>
+&nbsp;                    }
+&nbsp;
+&nbsp;                    case TSDBConstants.TSDB_DATA_TYPE_VARBINARY:
+&nbsp;                    case TSDBConstants.TSDB_DATA_TYPE_GEOMETRY: {
+<b class="fc">&nbsp;                        byte[] val = (byte[]) tag.value;</b>
+<b class="fc">&nbsp;                        tagDataList.put(val);</b>
+<b class="fc">&nbsp;                        lengthList.putInt(val.length);</b>
+<b class="fc">&nbsp;                        break;</b>
+&nbsp;                    }
+&nbsp;                    case TSDBConstants.TSDB_DATA_TYPE_UTINYINT:
+&nbsp;                    case TSDBConstants.TSDB_DATA_TYPE_USMALLINT:
+&nbsp;                    case TSDBConstants.TSDB_DATA_TYPE_UINT:
+&nbsp;                    case TSDBConstants.TSDB_DATA_TYPE_UBIGINT: {
+<b class="nc">&nbsp;                        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, &quot;not support data types&quot;);</b>
+&nbsp;                    }
+&nbsp;                }
+<b class="fc">&nbsp;                typeList.put((byte) tag.type);</b>
+<b class="fc">&nbsp;                isNullList.put(tag.isNull ? (byte) 1 : (byte) 0);</b>
+<b class="fc">&nbsp;            }</b>
+&nbsp;
+<b class="fc">&nbsp;            connector.setBindTableNameAndTags(this.nativeStmtHandle, this.tableName, this.tableTags.size(),</b>
+&nbsp;                    tagDataList, typeList, lengthList, isNullList);
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        ArrayList&lt;ColumnInfo&gt; colData = new ArrayList&lt;&gt;();</b>
+&nbsp;
+<b class="fc">&nbsp;        for (int i = 0; i &lt; numOfCols; i++) {</b>
+<b class="fc">&nbsp;            colData.add(queue.poll());</b>
+&nbsp;        }
+<b class="fc">&nbsp;        ColumnInfo colInfo = colData.get(0);</b>
+<b class="fc">&nbsp;        if (colInfo == null) {</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, &quot;column data not bind&quot;);</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        int rows = colInfo.data.size();</b>
+<b class="fc">&nbsp;        for (int i = 0; i &lt; numOfCols; ++i) {</b>
+<b class="fc">&nbsp;            ColumnInfo col1 = colData.get(i);</b>
+<b class="fc">&nbsp;            if (col1 == null || !col1.isTypeSet()) {</b>
+<b class="nc">&nbsp;                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, &quot;column data not bind&quot;);</b>
+&nbsp;            }
+<b class="fc">&nbsp;            if (rows != col1.data.size()) {</b>
+<b class="nc">&nbsp;                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, &quot;the rows in column data not identical&quot;);</b>
+&nbsp;            }
+&nbsp;
+<b class="fc">&nbsp;            ByteBuffer colDataList = ByteBuffer.allocate(rows * col1.bytes);</b>
+<b class="fc">&nbsp;            colDataList.order(ByteOrder.LITTLE_ENDIAN);</b>
+&nbsp;
+<b class="fc">&nbsp;            ByteBuffer lengthList = ByteBuffer.allocate(rows * Integer.BYTES);</b>
+<b class="fc">&nbsp;            lengthList.order(ByteOrder.LITTLE_ENDIAN);</b>
+&nbsp;
+<b class="fc">&nbsp;            ByteBuffer isNullList = ByteBuffer.allocate(rows * Byte.BYTES);</b>
+<b class="fc">&nbsp;            isNullList.order(ByteOrder.LITTLE_ENDIAN);</b>
+&nbsp;
+<b class="fc">&nbsp;            switch (col1.type) {</b>
+&nbsp;                case TSDBConstants.TSDB_DATA_TYPE_INT: {
+<b class="fc">&nbsp;                    for (int j = 0; j &lt; rows; ++j) {</b>
+<b class="fc">&nbsp;                        Integer val = (Integer) col1.data.get(j);</b>
+<b class="fc">&nbsp;                        colDataList.putInt(val == null ? Integer.MIN_VALUE : val);</b>
+<b class="fc">&nbsp;                        isNullList.put((byte) (val == null ? 1 : 0));</b>
+&nbsp;                    }
+<b class="fc">&nbsp;                    break;</b>
+&nbsp;                }
+&nbsp;
+&nbsp;                case TSDBConstants.TSDB_DATA_TYPE_TINYINT: {
+<b class="nc">&nbsp;                    for (int j = 0; j &lt; rows; ++j) {</b>
+<b class="nc">&nbsp;                        Byte val = (Byte) col1.data.get(j);</b>
+<b class="nc">&nbsp;                        colDataList.put(val == null ? 0 : val);</b>
+<b class="nc">&nbsp;                        isNullList.put((byte) (val == null ? 1 : 0));</b>
+&nbsp;                    }
+<b class="nc">&nbsp;                    break;</b>
+&nbsp;                }
+&nbsp;
+&nbsp;                case TSDBConstants.TSDB_DATA_TYPE_BOOL: {
+<b class="fc">&nbsp;                    for (int j = 0; j &lt; rows; ++j) {</b>
+<b class="fc">&nbsp;                        Boolean val = (Boolean) col1.data.get(j);</b>
+<b class="fc">&nbsp;                        if (val == null) {</b>
+<b class="fc">&nbsp;                            colDataList.put((byte) 0);</b>
+&nbsp;                        } else {
+<b class="fc">&nbsp;                            colDataList.put((byte) (val ? 1 : 0));</b>
+&nbsp;                        }
+&nbsp;
+<b class="fc">&nbsp;                        isNullList.put((byte) (val == null ? 1 : 0));</b>
+&nbsp;                    }
+<b class="fc">&nbsp;                    break;</b>
+&nbsp;                }
+&nbsp;
+&nbsp;                case TSDBConstants.TSDB_DATA_TYPE_SMALLINT: {
+<b class="nc">&nbsp;                    for (int j = 0; j &lt; rows; ++j) {</b>
+<b class="nc">&nbsp;                        Short val = (Short) col1.data.get(j);</b>
+<b class="nc">&nbsp;                        colDataList.putShort(val == null ? 0 : val);</b>
+<b class="nc">&nbsp;                        isNullList.put((byte) (val == null ? 1 : 0));</b>
+&nbsp;                    }
+<b class="nc">&nbsp;                    break;</b>
+&nbsp;                }
+&nbsp;
+&nbsp;                case TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP:
+&nbsp;                case TSDBConstants.TSDB_DATA_TYPE_BIGINT: {
+<b class="fc">&nbsp;                    for (int j = 0; j &lt; rows; ++j) {</b>
+<b class="fc">&nbsp;                        Long val = (Long) col1.data.get(j);</b>
+<b class="fc">&nbsp;                        colDataList.putLong(val == null ? 0 : val);</b>
+<b class="fc">&nbsp;                        isNullList.put((byte) (val == null ? 1 : 0));</b>
+&nbsp;                    }
+<b class="fc">&nbsp;                    break;</b>
+&nbsp;                }
+&nbsp;
+&nbsp;                case TSDBConstants.TSDB_DATA_TYPE_FLOAT: {
+<b class="fc">&nbsp;                    for (int j = 0; j &lt; rows; ++j) {</b>
+<b class="fc">&nbsp;                        Float val = (Float) col1.data.get(j);</b>
+<b class="fc">&nbsp;                        colDataList.putFloat(val == null ? 0 : val);</b>
+<b class="fc">&nbsp;                        isNullList.put((byte) (val == null ? 1 : 0));</b>
+&nbsp;                    }
+<b class="fc">&nbsp;                    break;</b>
+&nbsp;                }
+&nbsp;
+&nbsp;                case TSDBConstants.TSDB_DATA_TYPE_DOUBLE: {
+<b class="fc">&nbsp;                    for (int j = 0; j &lt; rows; ++j) {</b>
+<b class="fc">&nbsp;                        Double val = (Double) col1.data.get(j);</b>
+<b class="fc">&nbsp;                        colDataList.putDouble(val == null ? 0 : val);</b>
+<b class="fc">&nbsp;                        isNullList.put((byte) (val == null ? 1 : 0));</b>
+&nbsp;                    }
+<b class="fc">&nbsp;                    break;</b>
+&nbsp;                }
+&nbsp;
+&nbsp;                case TSDBConstants.TSDB_DATA_TYPE_NCHAR:
+&nbsp;                case TSDBConstants.TSDB_DATA_TYPE_BINARY:{
+<b class="fc">&nbsp;                    String charset = TaosGlobalConfig.getCharset();</b>
+<b class="fc">&nbsp;                    for (int j = 0; j &lt; rows; ++j) {</b>
+<b class="fc">&nbsp;                        String val = (String) col1.data.get(j);</b>
+<b class="fc">&nbsp;                        colDataList.position(j * col1.bytes);  // seek to the correct position</b>
+<b class="fc">&nbsp;                        if (val != null) {</b>
+&nbsp;                            byte[] b;
+&nbsp;                            try {
+<b class="fc">&nbsp;                                if (col1.type == TSDBConstants.TSDB_DATA_TYPE_BINARY) {</b>
+<b class="fc">&nbsp;                                    b = val.getBytes();</b>
+&nbsp;                                } else {
+<b class="fc">&nbsp;                                    b = val.getBytes(charset);</b>
+&nbsp;                                }
+<b class="nc">&nbsp;                            } catch (UnsupportedEncodingException e) {</b>
+<b class="nc">&nbsp;                                throw new RuntimeException(e.getMessage());</b>
+<b class="fc">&nbsp;                            }</b>
+&nbsp;
+<b class="fc">&nbsp;                            if (val.length() &gt; col1.bytes) {</b>
+<b class="nc">&nbsp;                                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, &quot;string data too long&quot;);</b>
+&nbsp;                            }
+&nbsp;
+<b class="fc">&nbsp;                            colDataList.put(b);</b>
+<b class="fc">&nbsp;                            lengthList.putInt(b.length);</b>
+<b class="fc">&nbsp;                            isNullList.put((byte) 0);</b>
+<b class="fc">&nbsp;                        } else {</b>
+<b class="fc">&nbsp;                            lengthList.putInt(0);</b>
+<b class="fc">&nbsp;                            isNullList.put((byte) 1);</b>
+&nbsp;                        }
+&nbsp;                    }
+<b class="fc">&nbsp;                    break;</b>
+&nbsp;                }
+&nbsp;                case TSDBConstants.TSDB_DATA_TYPE_VARBINARY:
+&nbsp;                case TSDBConstants.TSDB_DATA_TYPE_GEOMETRY: {
+<b class="fc">&nbsp;                    for (int j = 0; j &lt; rows; ++j) {</b>
+<b class="fc">&nbsp;                        byte[] val = (byte[]) col1.data.get(j);</b>
+<b class="fc">&nbsp;                        colDataList.position(j * col1.bytes);  // seek to the correct position</b>
+<b class="fc">&nbsp;                        if (val != null) {</b>
+<b class="fc">&nbsp;                            if (val.length &gt; col1.bytes) {</b>
+<b class="nc">&nbsp;                                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, &quot;varbinary/geometry data too long&quot;);</b>
+&nbsp;                            }
+<b class="fc">&nbsp;                            colDataList.put(val);</b>
+<b class="fc">&nbsp;                            lengthList.putInt(val.length);</b>
+<b class="fc">&nbsp;                            isNullList.put((byte) 0);</b>
+&nbsp;                        } else {
+<b class="nc">&nbsp;                            lengthList.putInt(0);</b>
+<b class="nc">&nbsp;                            isNullList.put((byte) 1);</b>
+&nbsp;                        }
+&nbsp;                    }
+<b class="fc">&nbsp;                    break;</b>
+&nbsp;                }
+&nbsp;                case TSDBConstants.TSDB_DATA_TYPE_UTINYINT:
+&nbsp;                case TSDBConstants.TSDB_DATA_TYPE_USMALLINT:
+&nbsp;                case TSDBConstants.TSDB_DATA_TYPE_UINT:
+&nbsp;                case TSDBConstants.TSDB_DATA_TYPE_UBIGINT: {
+<b class="nc">&nbsp;                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, &quot;not support data types&quot;);</b>
+&nbsp;                }
+&nbsp;            }
+&nbsp;
+<b class="fc">&nbsp;            connector.bindColumnDataArray(this.nativeStmtHandle, colDataList, lengthList, isNullList, col1.type, col1.bytes, rows, i);</b>
+&nbsp;        }
+<b class="fc">&nbsp;        connector.addBatch(this.nativeStmtHandle);</b>
+<b class="fc">&nbsp;        this.columnDataClearBatchInternal();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void columnDataExecuteBatch() throws SQLException {
+<b class="fc">&nbsp;        TSDBJNIConnector connector = ((TSDBConnection) this.getConnection()).getConnector();</b>
+<b class="fc">&nbsp;        connector.executeBatch(this.nativeStmtHandle);</b>
+<b class="fc">&nbsp;        this.columnDataClearBatchInternal();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Deprecated
+&nbsp;    public void columnDataClearBatch() {
+<b class="nc">&nbsp;        columnDataClearBatchInternal();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    private void columnDataClearBatchInternal() {
+<b class="fc">&nbsp;        this.tableName = null;</b>
+<b class="fc">&nbsp;        if (this.tableTags != null)</b>
+<b class="fc">&nbsp;            this.tableTags.clear();</b>
+<b class="fc">&nbsp;        tagValueLength = 0;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void columnDataCloseBatch() throws SQLException {
+<b class="fc">&nbsp;        TSDBJNIConnector connector = ((TSDBConnection) this.getConnection()).getConnector();</b>
+<b class="fc">&nbsp;        connector.closeBatch(this.nativeStmtHandle);</b>
+&nbsp;
+<b class="fc">&nbsp;        this.nativeStmtHandle = 0L;</b>
+<b class="fc">&nbsp;        this.tableName = null;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void close() throws SQLException {
+<b class="fc">&nbsp;        if (this.nativeStmtHandle != 0L) {</b>
+<b class="fc">&nbsp;            this.columnDataClearBatchInternal();</b>
+<b class="fc">&nbsp;            this.columnDataCloseBatch();</b>
+&nbsp;        }
+<b class="fc">&nbsp;        super.close();</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2023-10-08 10:56</div>
+</div>
+</body>
+</html>

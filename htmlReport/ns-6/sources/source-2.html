@@ -1,0 +1,275 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <title>Coverage Report > HttpClientPoolUtil</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.taosdata.jdbc.utils</a>
+</div>
+
+<h1>Coverage Summary for Class: HttpClientPoolUtil (com.taosdata.jdbc.utils)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">HttpClientPoolUtil</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    62.5%
+  </span>
+  <span class="absValue">
+    (5/8)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    61.1%
+  </span>
+  <span class="absValue">
+    (55/90)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.taosdata.jdbc.utils;
+&nbsp;
+&nbsp;import com.taosdata.jdbc.TSDBDriver;
+&nbsp;import com.taosdata.jdbc.TSDBError;
+&nbsp;import com.taosdata.jdbc.TSDBErrorNumbers;
+&nbsp;import org.apache.http.HeaderElement;
+&nbsp;import org.apache.http.HeaderElementIterator;
+&nbsp;import org.apache.http.HttpEntity;
+&nbsp;import org.apache.http.client.ClientProtocolException;
+&nbsp;import org.apache.http.client.config.RequestConfig;
+&nbsp;import org.apache.http.client.methods.*;
+&nbsp;import org.apache.http.client.protocol.HttpClientContext;
+&nbsp;import org.apache.http.conn.ConnectionKeepAliveStrategy;
+&nbsp;import org.apache.http.entity.StringEntity;
+&nbsp;import org.apache.http.impl.client.CloseableHttpClient;
+&nbsp;import org.apache.http.impl.client.HttpClients;
+&nbsp;import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+&nbsp;import org.apache.http.message.BasicHeaderElementIterator;
+&nbsp;import org.apache.http.protocol.HTTP;
+&nbsp;import org.apache.http.protocol.HttpContext;
+&nbsp;import org.apache.http.util.EntityUtils;
+&nbsp;
+&nbsp;import java.io.IOException;
+&nbsp;import java.nio.charset.StandardCharsets;
+&nbsp;import java.sql.SQLException;
+&nbsp;import java.util.Properties;
+&nbsp;
+<b class="nc">&nbsp;public class HttpClientPoolUtil {</b>
+&nbsp;
+&nbsp;    private static final String DEFAULT_CONTENT_TYPE = &quot;application/json&quot;;
+&nbsp;    private static final int DEFAULT_MAX_RETRY_COUNT = 5;
+&nbsp;
+&nbsp;    public static final String DEFAULT_HTTP_KEEP_ALIVE = &quot;true&quot;;
+&nbsp;    public static final String DEFAULT_MAX_PER_ROUTE = &quot;20&quot;;
+&nbsp;    private static final int DEFAULT_HTTP_KEEP_TIME = -1;
+&nbsp;    public static final String DEFAULT_CONNECT_TIMEOUT = &quot;60000&quot;;
+&nbsp;    public static final String DEFAULT_SOCKET_TIMEOUT = &quot;60000&quot;;
+&nbsp;    private static String isKeepAlive;
+&nbsp;
+<b class="fc">&nbsp;    private static final ConnectionKeepAliveStrategy DEFAULT_KEEP_ALIVE_STRATEGY = (response, context) -&gt; {</b>
+<b class="fc">&nbsp;        HeaderElementIterator it = new BasicHeaderElementIterator(response.headerIterator(HTTP.CONN_KEEP_ALIVE));</b>
+<b class="fc">&nbsp;        while (it.hasNext()) {</b>
+<b class="nc">&nbsp;            HeaderElement headerElement = it.nextElement();</b>
+<b class="nc">&nbsp;            String param = headerElement.getName();</b>
+<b class="nc">&nbsp;            String value = headerElement.getValue();</b>
+<b class="nc">&nbsp;            if (value != null &amp;&amp; param.equalsIgnoreCase(&quot;timeout&quot;)) {</b>
+&nbsp;                try {
+<b class="nc">&nbsp;                    return Long.parseLong(value) * 1000;</b>
+<b class="nc">&nbsp;                } catch (NumberFormatException ignore) {</b>
+&nbsp;                }
+&nbsp;            }
+<b class="nc">&nbsp;        }</b>
+<b class="fc">&nbsp;        return DEFAULT_HTTP_KEEP_TIME * 1000;</b>
+&nbsp;    };
+&nbsp;
+&nbsp;    private static volatile CloseableHttpClient httpClient;
+<b class="fc">&nbsp;    private static int connectTimeout = 0;</b>
+<b class="fc">&nbsp;    private static int socketTimeout = 0;</b>
+&nbsp;
+&nbsp;    public static void init(Properties props) {
+<b class="fc">&nbsp;        int poolSize = Integer.parseInt(props.getProperty(TSDBDriver.HTTP_POOL_SIZE, HttpClientPoolUtil.DEFAULT_MAX_PER_ROUTE));</b>
+<b class="fc">&nbsp;        boolean keepAlive = Boolean.parseBoolean(props.getProperty(TSDBDriver.HTTP_KEEP_ALIVE, HttpClientPoolUtil.DEFAULT_HTTP_KEEP_ALIVE));</b>
+<b class="fc">&nbsp;        connectTimeout = Integer.parseInt(props.getProperty(TSDBDriver.HTTP_CONNECT_TIMEOUT, HttpClientPoolUtil.DEFAULT_CONNECT_TIMEOUT));</b>
+<b class="fc">&nbsp;        socketTimeout = Integer.parseInt(props.getProperty(TSDBDriver.HTTP_SOCKET_TIMEOUT, HttpClientPoolUtil.DEFAULT_SOCKET_TIMEOUT));</b>
+<b class="fc">&nbsp;        if (httpClient == null) {</b>
+<b class="fc">&nbsp;            synchronized (HttpClientPoolUtil.class) {</b>
+<b class="fc">&nbsp;                if (httpClient == null) {</b>
+<b class="fc">&nbsp;                    isKeepAlive = keepAlive ? HTTP.CONN_KEEP_ALIVE : HTTP.CONN_CLOSE;</b>
+<b class="fc">&nbsp;                    PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();</b>
+<b class="fc">&nbsp;                    connectionManager.setMaxTotal(poolSize * 10);</b>
+<b class="fc">&nbsp;                    connectionManager.setDefaultMaxPerRoute(poolSize);</b>
+<b class="fc">&nbsp;                    httpClient = HttpClients.custom()</b>
+<b class="fc">&nbsp;                            .setKeepAliveStrategy(DEFAULT_KEEP_ALIVE_STRATEGY)</b>
+<b class="fc">&nbsp;                            .setConnectionManager(connectionManager)</b>
+<b class="fc">&nbsp;                            .setRetryHandler((exception, executionCount, httpContext) -&gt; executionCount &lt; DEFAULT_MAX_RETRY_COUNT)</b>
+<b class="fc">&nbsp;                            .build();</b>
+&nbsp;                }
+<b class="fc">&nbsp;            }</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    /*** execute GET request ***/
+&nbsp;    public static String execute(String uri) throws SQLException {
+<b class="nc">&nbsp;        HttpEntity httpEntity = null;</b>
+<b class="nc">&nbsp;        String responseBody = &quot;&quot;;</b>
+<b class="nc">&nbsp;        HttpRequestBase method = getRequest(uri, HttpGet.METHOD_NAME);</b>
+<b class="nc">&nbsp;        HttpContext context = HttpClientContext.create();</b>
+&nbsp;
+<b class="nc">&nbsp;        try (CloseableHttpResponse httpResponse = httpClient.execute(method, context)) {</b>
+<b class="nc">&nbsp;            httpEntity = httpResponse.getEntity();</b>
+<b class="nc">&nbsp;            if (httpEntity != null) {</b>
+<b class="nc">&nbsp;                responseBody = EntityUtils.toString(httpEntity, StandardCharsets.UTF_8);</b>
+&nbsp;            }
+<b class="nc">&nbsp;        } catch (ClientProtocolException e) {</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_Protocol_Exception, e.getMessage());</b>
+<b class="nc">&nbsp;        } catch (IOException exception) {</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, exception.getMessage());</b>
+&nbsp;        } finally {
+<b class="nc">&nbsp;            if (httpEntity != null) {</b>
+<b class="nc">&nbsp;                EntityUtils.consumeQuietly(httpEntity);</b>
+&nbsp;            }
+<b class="nc">&nbsp;        }</b>
+<b class="nc">&nbsp;        return responseBody;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static String execute(String uri, String data, String auth) throws SQLException {
+<b class="nc">&nbsp;        return execute(uri, data, auth, null);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /*** execute POST request ***/
+&nbsp;    public static String execute(String uri, String data, String auth, Long reqId) throws SQLException {
+&nbsp;
+<b class="fc">&nbsp;        if (reqId != null) {</b>
+<b class="fc">&nbsp;            if (uri.contains(&quot;?&quot;))</b>
+<b class="nc">&nbsp;                uri = uri + &quot;&amp;reqId=&quot; + reqId;</b>
+&nbsp;            else
+<b class="fc">&nbsp;                uri = uri + &quot;?reqId=&quot; + reqId;</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        HttpEntityEnclosingRequestBase method = (HttpEntityEnclosingRequestBase) getRequest(uri, HttpPost.METHOD_NAME);</b>
+<b class="fc">&nbsp;        method.setHeader(HTTP.CONTENT_TYPE, &quot;text/plain&quot;);</b>
+<b class="fc">&nbsp;        method.setHeader(HTTP.CONN_DIRECTIVE, isKeepAlive);</b>
+<b class="fc">&nbsp;        if (auth != null) {</b>
+<b class="fc">&nbsp;            method.setHeader(&quot;Authorization&quot;, auth);</b>
+&nbsp;        }
+<b class="fc">&nbsp;        method.setEntity(new StringEntity(data, StandardCharsets.UTF_8));</b>
+<b class="fc">&nbsp;        HttpContext context = HttpClientContext.create();</b>
+&nbsp;
+<b class="fc">&nbsp;        HttpEntity httpEntity = null;</b>
+&nbsp;        String responseBody;
+<b class="fc">&nbsp;        try (CloseableHttpResponse httpResponse = httpClient.execute(method, context)) {</b>
+<b class="fc">&nbsp;            httpEntity = httpResponse.getEntity();</b>
+<b class="fc">&nbsp;            if (httpEntity == null) {</b>
+<b class="nc">&nbsp;                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_HTTP_ENTITY_IS_NULL, &quot;httpEntity is null, sql: &quot; + data);</b>
+&nbsp;            }
+<b class="fc">&nbsp;            responseBody = EntityUtils.toString(httpEntity, StandardCharsets.UTF_8);</b>
+<b class="fc">&nbsp;        } catch (ClientProtocolException e) {</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_Protocol_Exception, e.getMessage());</b>
+<b class="nc">&nbsp;        } catch (IOException exception) {</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, exception.getMessage());</b>
+&nbsp;        } finally {
+<b class="fc">&nbsp;            if (httpEntity != null) {</b>
+<b class="fc">&nbsp;                EntityUtils.consumeQuietly(httpEntity);</b>
+&nbsp;            }
+<b class="nc">&nbsp;        }</b>
+<b class="fc">&nbsp;        return responseBody;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /*** create http request ***/
+&nbsp;    private static HttpRequestBase getRequest(String uri, String methodName) {
+&nbsp;        HttpRequestBase method;
+<b class="fc">&nbsp;        RequestConfig requestConfig = RequestConfig.custom()</b>
+<b class="fc">&nbsp;                .setExpectContinueEnabled(false)</b>
+<b class="fc">&nbsp;                .setConnectTimeout(connectTimeout)</b>
+<b class="fc">&nbsp;                .setConnectionRequestTimeout(1000)</b>
+<b class="fc">&nbsp;                .setSocketTimeout(socketTimeout)</b>
+<b class="fc">&nbsp;                .build();</b>
+<b class="fc">&nbsp;        if (HttpPut.METHOD_NAME.equalsIgnoreCase(methodName)) {</b>
+<b class="nc">&nbsp;            method = new HttpPut(uri);</b>
+<b class="fc">&nbsp;        } else if (HttpPost.METHOD_NAME.equalsIgnoreCase(methodName)) {</b>
+<b class="fc">&nbsp;            method = new HttpPost(uri);</b>
+<b class="nc">&nbsp;        } else if (HttpGet.METHOD_NAME.equalsIgnoreCase(methodName)) {</b>
+<b class="nc">&nbsp;            method = new HttpGet(uri);</b>
+&nbsp;        } else {
+<b class="nc">&nbsp;            method = new HttpPost(uri);</b>
+&nbsp;        }
+<b class="fc">&nbsp;        method.addHeader(HTTP.CONTENT_TYPE, DEFAULT_CONTENT_TYPE);</b>
+<b class="fc">&nbsp;        method.addHeader(&quot;Accept&quot;, DEFAULT_CONTENT_TYPE);</b>
+<b class="fc">&nbsp;        method.setConfig(requestConfig);</b>
+<b class="fc">&nbsp;        return method;</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2023-10-08 10:56</div>
+</div>
+</body>
+</html>

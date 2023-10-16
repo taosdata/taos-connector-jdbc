@@ -1,0 +1,136 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <title>Coverage Report > TableVGroupID</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.taosdata.jdbc</a>
+</div>
+
+<h1>Coverage Summary for Class: TableVGroupID (com.taosdata.jdbc)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">TableVGroupID</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/3)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/6)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.taosdata.jdbc;
+&nbsp;
+&nbsp;import java.sql.Connection;
+&nbsp;import java.sql.SQLException;
+&nbsp;
+&nbsp;public class TableVGroupID {
+<b class="nc">&nbsp;    public TableVGroupID(Connection connection) throws SQLException {</b>
+<b class="nc">&nbsp;        if (!(connection instanceof TSDBConnection)) {</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD, &quot;only supported by TSDBConnection&quot;);</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        this.connection = (TSDBConnection) connection;</b>
+&nbsp;    }
+&nbsp;
+<b class="nc">&nbsp;    private TableVGroupID() {</b>
+&nbsp;    }
+&nbsp;
+&nbsp;
+&nbsp;    /**
+&nbsp;     * getTableVgID. get table&#39;s v-group id.
+&nbsp;     *
+&nbsp;     * @param db    db name
+&nbsp;     * @param table table name
+&nbsp;     * @return v-group id
+&nbsp;     * @throws SQLException throws exception if fail.
+&nbsp;     */
+&nbsp;    public int getTableVgID(String db, String table) throws SQLException {
+<b class="nc">&nbsp;        return this.connection.getConnector().getTableVGroupID(db, table);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    private TSDBConnection connection;
+&nbsp;
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2023-10-08 10:56</div>
+</div>
+</body>
+</html>

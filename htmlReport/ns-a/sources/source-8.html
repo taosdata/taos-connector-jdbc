@@ -1,0 +1,176 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <title>Coverage Report > RequestFactory</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.taosdata.jdbc.ws.stmt.entity</a>
+</div>
+
+<h1>Coverage Summary for Class: RequestFactory (com.taosdata.jdbc.ws.stmt.entity)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">RequestFactory</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    75%
+  </span>
+  <span class="absValue">
+    (6/8)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    71.4%
+  </span>
+  <span class="absValue">
+    (25/35)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.taosdata.jdbc.ws.stmt.entity;
+&nbsp;
+&nbsp;
+&nbsp;import com.taosdata.jdbc.ws.entity.Request;
+&nbsp;
+&nbsp;/**
+&nbsp; * generate id for request
+&nbsp; */
+&nbsp;public class RequestFactory {
+&nbsp;
+&nbsp;    private RequestFactory() {
+&nbsp;    }
+&nbsp;
+&nbsp;    public static Request generateInit(long reqId) {
+<b class="fc">&nbsp;        InitReq initReq = new InitReq();</b>
+<b class="fc">&nbsp;        initReq.setReqId(reqId);</b>
+<b class="fc">&nbsp;        return new Request(STMTAction.INIT.getAction(), initReq);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static Request generatePrepare(long stmtId, long reqId, String sql) {
+<b class="fc">&nbsp;        PrepareReq prepareReq = new PrepareReq();</b>
+<b class="fc">&nbsp;        prepareReq.setReqId(reqId);</b>
+<b class="fc">&nbsp;        prepareReq.setStmtId(stmtId);</b>
+<b class="fc">&nbsp;        prepareReq.setSql(sql);</b>
+<b class="fc">&nbsp;        return new Request(STMTAction.PREPARE.getAction(), prepareReq);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static Request generateSetTableName(long stmtId, long reqId, String tableName) {
+<b class="fc">&nbsp;        SetTableNameReq req = new SetTableNameReq();</b>
+<b class="fc">&nbsp;        req.setReqId(reqId);</b>
+<b class="fc">&nbsp;        req.setStmtId(stmtId);</b>
+<b class="fc">&nbsp;        req.setName(tableName);</b>
+<b class="fc">&nbsp;        return new Request(STMTAction.SET_TABLE_NAME.getAction(), req);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static Request generateSetTags(long stmtId, long reqId, Object[] tags) {
+<b class="nc">&nbsp;        SetTagReq req = new SetTagReq();</b>
+<b class="nc">&nbsp;        req.setReqId(reqId);</b>
+<b class="nc">&nbsp;        req.setStmtId(stmtId);</b>
+<b class="nc">&nbsp;        req.setTags(tags);</b>
+<b class="nc">&nbsp;        return new Request(STMTAction.SET_TAGS.getAction(), req);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static Request generateBind(long stmtId, long reqId, Object[][] columns) {
+<b class="nc">&nbsp;        BindReq req = new BindReq();</b>
+<b class="nc">&nbsp;        req.setReqId(reqId);</b>
+<b class="nc">&nbsp;        req.setStmtId(stmtId);</b>
+<b class="nc">&nbsp;        req.setColumns(columns);</b>
+<b class="nc">&nbsp;        return new Request(STMTAction.BIND.getAction(), req);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static Request generateBatch(long stmtId, long reqId) {
+<b class="fc">&nbsp;        AddBatchReq req = new AddBatchReq();</b>
+<b class="fc">&nbsp;        req.setReqId(reqId);</b>
+<b class="fc">&nbsp;        req.setStmtId(stmtId);</b>
+<b class="fc">&nbsp;        return new Request(STMTAction.ADD_BATCH.getAction(), req);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static Request generateExec(long stmtId, long reqId) {
+<b class="fc">&nbsp;        ExecReq req = new ExecReq();</b>
+<b class="fc">&nbsp;        req.setReqId(reqId);</b>
+<b class="fc">&nbsp;        req.setStmtId(stmtId);</b>
+<b class="fc">&nbsp;        return new Request(STMTAction.EXEC.getAction(), req);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static Request generateClose(long stmtId, long reqId) {
+<b class="fc">&nbsp;        CloseReq req = new CloseReq();</b>
+<b class="fc">&nbsp;        req.setReqId(reqId);</b>
+<b class="fc">&nbsp;        req.setStmtId(stmtId);</b>
+<b class="fc">&nbsp;        return new Request(STMTAction.EXEC.getAction(), req);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2023-10-08 10:56</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,253 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <title>Coverage Report > TSDBError</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.taosdata.jdbc</a>
+</div>
+
+<h1>Coverage Summary for Class: TSDBError (com.taosdata.jdbc)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">TSDBError</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    33.3%
+  </span>
+  <span class="absValue">
+    (4/12)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    74.4%
+  </span>
+  <span class="absValue">
+    (61/82)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.taosdata.jdbc;
+&nbsp;
+&nbsp;import java.sql.SQLClientInfoException;
+&nbsp;import java.sql.SQLException;
+&nbsp;import java.sql.SQLFeatureNotSupportedException;
+&nbsp;import java.sql.SQLWarning;
+&nbsp;import java.util.HashMap;
+&nbsp;import java.util.Map;
+&nbsp;import java.util.concurrent.TimeoutException;
+&nbsp;
+<b class="nc">&nbsp;public class TSDBError {</b>
+<b class="fc">&nbsp;    private static final Map&lt;Integer, String&gt; TSDBErrorMap = new HashMap&lt;&gt;();</b>
+&nbsp;
+&nbsp;    static {
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, &quot;connection already closed&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD, &quot;this operation is NOT supported currently!&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, &quot;invalid variables&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED, &quot;statement is closed&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED, &quot;resultSet is closed&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_BATCH_IS_EMPTY, &quot;Batch is empty!&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_INVALID_WITH_EXECUTEQUERY, &quot;Can not issue data manipulation statements with executeQuery()&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_INVALID_WITH_EXECUTEUPDATE, &quot;Can not issue SELECT via executeUpdate()&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_INVALID_FOR_EXECUTE_QUERY, &quot;invalid sql for executeQuery: (?)&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_DATABASE_NOT_SPECIFIED_OR_AVAILABLE, &quot;Database not specified or available&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_INVALID_FOR_EXECUTE_UPDATE, &quot;invalid sql for executeUpdate: (?)&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_INVALID_FOR_EXECUTE, &quot;invalid sql for execute: (?)&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_PARAMETER_INDEX_OUT_RANGE, &quot;parameter index out of range&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_SQLCLIENT_EXCEPTION_ON_CONNECTION_CLOSED, &quot;connection already closed&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_UNKNOWN_SQL_TYPE_IN_TDENGINE, &quot;unknown sql type in tdengine&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_CANNOT_REGISTER_JNI_DRIVER, &quot;can&#39;t register JDBC-JNI driver&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_CANNOT_REGISTER_RESTFUL_DRIVER, &quot;can&#39;t register JDBC-RESTful driver&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_URL_NOT_SET, &quot;url is not set&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_INVALID_SQL, &quot;invalid sql&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_NUMERIC_VALUE_OUT_OF_RANGE, &quot;numeric value out of range&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_UNKNOWN_TAOS_TYPE, &quot;unknown taos type in tdengine&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_UNKNOWN_TIMESTAMP_PRECISION, &quot;unknown timestamp precision&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_USER_IS_REQUIRED, &quot;user is required&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_PASSWORD_IS_REQUIRED, &quot;password is required&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_INVALID_JSON_FORMAT, &quot;invalid json format&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT, &quot;create connection with server timeout&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_QUERY_TIMEOUT, &quot;query timeout&quot;);</b>
+&nbsp;
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_UNKNOWN, &quot;unknown error&quot;);</b>
+&nbsp;
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_SUBSCRIBE_FAILED, &quot;failed to create subscription&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_UNSUPPORTED_ENCODING, &quot;Unsupported encoding&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_JNI_TDENGINE_ERROR, &quot;internal error of database, please see taoslog for more details&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_JNI_CONNECTION_NULL, &quot;JNI connection is NULL&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_JNI_RESULT_SET_NULL, &quot;JNI result set is NULL&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_JNI_NUM_OF_FIELDS_0, &quot;invalid num of fields&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_JNI_SQL_NULL, &quot;empty sql string&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_JNI_FETCH_END, &quot;fetch to the end of resultSet&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_JNI_OUT_OF_MEMORY, &quot;JNI alloc memory failed, please see taoslog for more details&quot;);</b>
+&nbsp;
+&nbsp;        // consumer
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_CONF_NULL, &quot;consumer config reference has been destroyed&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_CONF_KEY_NULL, &quot;configs contain empty key, failed to set consumer property&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_CONF_VALUE_NULL, &quot;consumer configs contain empty value, failed to set consumer property&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_CONF_ERROR, &quot;consumer config error&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_TOPIC_NULL, &quot;topic reference has been destroyed&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_TOPIC_NAME_NULL, &quot;failed to set consumer topic, topic name is empty&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_CONSUMER_NULL, &quot;consumer reference is null or has been destroyed&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_CONSUMER_CREATE_ERROR, &quot;consumer create error&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_SEEK_OFFSET, &quot;seek offset must not be a negative number&quot;);</b>
+<b class="fc">&nbsp;        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_VGROUP_NOT_FOUND, &quot;vGroup not found in result set&quot;);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static SQLException createSQLException(int errorCode) {
+&nbsp;        String message;
+<b class="fc">&nbsp;        if (TSDBErrorNumbers.contains(errorCode))</b>
+<b class="fc">&nbsp;            message = TSDBErrorMap.get(errorCode);</b>
+&nbsp;        else
+<b class="nc">&nbsp;            message = TSDBErrorMap.get(TSDBErrorNumbers.ERROR_UNKNOWN);</b>
+<b class="fc">&nbsp;        return createSQLException(errorCode, message);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static SQLException createSQLException(int errorCode, String message) {
+&nbsp;        // throw SQLFeatureNotSupportedException
+<b class="fc">&nbsp;        if (errorCode == TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD)</b>
+<b class="fc">&nbsp;            return new SQLFeatureNotSupportedException(message, &quot;&quot;, errorCode);</b>
+&nbsp;        // throw SQLClientInfoException
+<b class="fc">&nbsp;        if (errorCode == TSDBErrorNumbers.ERROR_SQLCLIENT_EXCEPTION_ON_CONNECTION_CLOSED)</b>
+<b class="nc">&nbsp;            return new SQLClientInfoException(message, null);</b>
+&nbsp;
+<b class="fc">&nbsp;        if (errorCode &gt; 0x2300 &amp;&amp; errorCode &lt; 0x2350)</b>
+&nbsp;            // JDBC exception&#39;s error number is less than 0x2350
+<b class="fc">&nbsp;            return new SQLException(&quot;ERROR (0x&quot; + Integer.toHexString(errorCode) + &quot;): &quot; + message, &quot;&quot;, errorCode);</b>
+<b class="fc">&nbsp;        if (errorCode &gt; 0x2350 &amp;&amp; errorCode &lt; 0x2370)</b>
+&nbsp;            // JNI exception&#39;s error number is large than 0x2350
+<b class="fc">&nbsp;            return new SQLException(&quot;JNI ERROR (0x&quot; + Integer.toHexString(errorCode) + &quot;): &quot; + message, &quot;&quot;, errorCode);</b>
+&nbsp;
+<b class="fc">&nbsp;        if (errorCode &gt; 0x2370 &amp;&amp; errorCode &lt; 0x2400)</b>
+<b class="nc">&nbsp;            return new SQLException(&quot;Consumer ERROR (0x&quot; + Integer.toHexString(errorCode) + &quot;): &quot; + message, &quot;&quot;, errorCode);</b>
+&nbsp;
+<b class="fc">&nbsp;        return new SQLException(&quot;TDengine ERROR (0x&quot; + Integer.toHexString(errorCode) + &quot;): &quot; + message, &quot;&quot;, errorCode);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static RuntimeException createRuntimeException(int errorCode, Throwable t) {
+<b class="nc">&nbsp;        String message = TSDBErrorMap.get(errorCode);</b>
+<b class="nc">&nbsp;        return new RuntimeException(&quot;ERROR (0x&quot; + Integer.toHexString(errorCode) + &quot;): &quot; + message, t);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static SQLWarning createSQLWarning(String message) {
+<b class="nc">&nbsp;        return new SQLWarning(message);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;
+&nbsp;    // paramter size is greater than 1
+&nbsp;    public static SQLException undeterminedExecutionError() {
+<b class="nc">&nbsp;        return new SQLException(&quot;Please either call clearBatch() to clean up context first, or use executeBatch() instead&quot;, (String) null);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static IllegalArgumentException createIllegalArgumentException(int errorCode) {
+&nbsp;        String message;
+<b class="nc">&nbsp;        if (TSDBErrorNumbers.contains(errorCode))</b>
+<b class="nc">&nbsp;            message = TSDBErrorMap.get(errorCode);</b>
+&nbsp;        else
+<b class="nc">&nbsp;            message = TSDBErrorMap.get(TSDBErrorNumbers.ERROR_UNKNOWN);</b>
+&nbsp;
+<b class="nc">&nbsp;        return new IllegalArgumentException(&quot;ERROR (0x&quot; + Integer.toHexString(errorCode) + &quot;): &quot; + message);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static RuntimeException createRuntimeException(int errorCode) {
+&nbsp;        String message;
+<b class="nc">&nbsp;        if (TSDBErrorNumbers.contains(errorCode))</b>
+<b class="nc">&nbsp;            message = TSDBErrorMap.get(errorCode);</b>
+&nbsp;        else
+<b class="nc">&nbsp;            message = TSDBErrorMap.get(TSDBErrorNumbers.ERROR_UNKNOWN);</b>
+&nbsp;
+<b class="nc">&nbsp;        return new RuntimeException(&quot;ERROR (0x&quot; + Integer.toHexString(errorCode) + &quot;): &quot; + message);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static RuntimeException createRuntimeException(int errorCode, String message) {
+<b class="nc">&nbsp;        return new RuntimeException(&quot;ERROR (0x&quot; + Integer.toHexString(errorCode) + &quot;): &quot; + message);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static IllegalStateException createIllegalStateException(int errorCode) {
+&nbsp;        String message;
+<b class="nc">&nbsp;        if (TSDBErrorNumbers.contains(errorCode))</b>
+<b class="nc">&nbsp;            message = TSDBErrorMap.get(errorCode);</b>
+&nbsp;        else
+<b class="nc">&nbsp;            message = TSDBErrorMap.get(TSDBErrorNumbers.ERROR_UNKNOWN);</b>
+&nbsp;
+<b class="nc">&nbsp;        return new IllegalStateException(&quot;ERROR (0x&quot; + Integer.toHexString(errorCode) + &quot;): &quot; + message);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static TimeoutException createTimeoutException(int errorCode, String message) {
+<b class="fc">&nbsp;        return new TimeoutException(&quot;ERROR (0x&quot; + Integer.toHexString(errorCode) + &quot;): &quot; + message);</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2023-10-08 10:56</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,192 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <title>Coverage Report > ConsumerManager</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.taosdata.jdbc.common</a>
+</div>
+
+<h1>Coverage Summary for Class: ConsumerManager (com.taosdata.jdbc.common)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">ConsumerManager</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    75%
+  </span>
+  <span class="absValue">
+    (6/8)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    75%
+  </span>
+  <span class="absValue">
+    (24/32)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.taosdata.jdbc.common;
+&nbsp;
+&nbsp;import java.io.PrintWriter;
+&nbsp;import java.security.AccessController;
+&nbsp;import java.security.PrivilegedAction;
+&nbsp;import java.sql.SQLException;
+&nbsp;import java.util.Iterator;
+&nbsp;import java.util.ServiceLoader;
+&nbsp;import java.util.concurrent.CopyOnWriteArrayList;
+&nbsp;
+&nbsp;public class ConsumerManager {
+&nbsp;
+&nbsp;    private ConsumerManager() {
+&nbsp;
+&nbsp;    }
+&nbsp;
+&nbsp;    // List of registered Consumer
+<b class="fc">&nbsp;    private static final CopyOnWriteArrayList&lt;ConsumerFactory&gt; registeredConsumers = new CopyOnWriteArrayList&lt;&gt;();</b>
+<b class="fc">&nbsp;    private static final Object logSync = new Object();</b>
+<b class="fc">&nbsp;    private static PrintWriter logWriter = null;</b>
+&nbsp;
+&nbsp;    static {
+<b class="fc">&nbsp;        loadConsumerFactories();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @SuppressWarnings(&quot;all&quot;)
+&nbsp;    private static void loadConsumerFactories() {
+<b class="fc">&nbsp;        AccessController.doPrivileged((PrivilegedAction&lt;Object&gt;) () -&gt; {</b>
+<b class="fc">&nbsp;            ServiceLoader&lt;ConsumerFactory&gt; consumerFactoryLoader = ServiceLoader.load(ConsumerFactory.class);</b>
+<b class="fc">&nbsp;            Iterator&lt;ConsumerFactory&gt; iterator = consumerFactoryLoader.iterator();</b>
+&nbsp;
+&nbsp;            try {
+<b class="fc">&nbsp;                while (iterator.hasNext()) {</b>
+<b class="fc">&nbsp;                    iterator.next();</b>
+&nbsp;                }
+<b class="nc">&nbsp;            } catch (Throwable t) {</b>
+&nbsp;                // Do nothing
+<b class="fc">&nbsp;            }</b>
+<b class="fc">&nbsp;            return null;</b>
+&nbsp;        });
+&nbsp;    }
+&nbsp;
+&nbsp;    public static void register(ConsumerFactory factory) {
+<b class="fc">&nbsp;        if (factory != null) {</b>
+<b class="fc">&nbsp;            registeredConsumers.addIfAbsent(factory);</b>
+&nbsp;        } else {
+<b class="nc">&nbsp;            throw new NullPointerException();</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        println(&quot;registerConsumerFactory: &quot; + factory);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static Consumer&lt;?&gt; getConsumer(String type) throws SQLException {
+<b class="fc">&nbsp;        for (ConsumerFactory factory : registeredConsumers) {</b>
+<b class="fc">&nbsp;            if (factory.acceptsType(type)) {</b>
+&nbsp;
+<b class="fc">&nbsp;                Consumer&lt;?&gt; consumer = factory.getConsumer();</b>
+<b class="fc">&nbsp;                if (consumer != null) {</b>
+&nbsp;                    // Success!
+<b class="fc">&nbsp;                    println(&quot;getConsumerFactory returning &quot; + factory.getClass().getName());</b>
+<b class="fc">&nbsp;                    return consumer;</b>
+&nbsp;                }
+&nbsp;            }
+<b class="fc">&nbsp;        }</b>
+&nbsp;
+<b class="nc">&nbsp;        println(&quot;getConsumer: no suitable consumer found for &quot; + type);</b>
+<b class="nc">&nbsp;        throw new SQLException(&quot;No suitable consumer found for &quot; + type, &quot;&quot;);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @SuppressWarnings(&quot;unused&quot;)
+&nbsp;    public static PrintWriter getLogWriter() {
+<b class="nc">&nbsp;        return logWriter;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @SuppressWarnings(&quot;unused&quot;)
+&nbsp;    public static void setLogWriter(PrintWriter out) {
+<b class="nc">&nbsp;        logWriter = out;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static void println(String message) {
+<b class="fc">&nbsp;        synchronized (logSync) {</b>
+<b class="fc">&nbsp;            if (logWriter != null) {</b>
+<b class="nc">&nbsp;                logWriter.println(message);</b>
+&nbsp;
+<b class="nc">&nbsp;                logWriter.flush();</b>
+&nbsp;            }
+<b class="fc">&nbsp;        }</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2023-10-08 10:56</div>
+</div>
+</body>
+</html>

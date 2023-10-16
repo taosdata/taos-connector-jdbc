@@ -1,0 +1,176 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <title>Coverage Report > TaosInfo</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.taosdata.jdbc.utils</a>
+</div>
+
+<h1>Coverage Summary for Class: TaosInfo (com.taosdata.jdbc.utils)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">TaosInfo</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    60%
+  </span>
+  <span class="absValue">
+    (6/10)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    73.9%
+  </span>
+  <span class="absValue">
+    (17/23)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.taosdata.jdbc.utils;
+&nbsp;
+&nbsp;import javax.management.*;
+&nbsp;import java.lang.management.ManagementFactory;
+&nbsp;import java.util.concurrent.atomic.AtomicLong;
+&nbsp;
+&nbsp;public class TaosInfo implements TaosInfoMBean {
+&nbsp;
+&nbsp;    private static volatile TaosInfo instance;
+<b class="fc">&nbsp;    private final AtomicLong connect_open = new AtomicLong();</b>
+<b class="fc">&nbsp;    private final AtomicLong connect_close = new AtomicLong();</b>
+<b class="fc">&nbsp;    private final AtomicLong statement_count = new AtomicLong();</b>
+&nbsp;
+&nbsp;    static {
+&nbsp;        try {
+<b class="fc">&nbsp;            MBeanServer server = ManagementFactory.getPlatformMBeanServer();</b>
+<b class="fc">&nbsp;            ObjectName name = new ObjectName(&quot;TaosInfoMBean:name=TaosInfo&quot;);</b>
+<b class="fc">&nbsp;            server.registerMBean(TaosInfo.getInstance(), name);</b>
+<b class="nc">&nbsp;        } catch (MalformedObjectNameException | InstanceAlreadyExistsException | MBeanRegistrationException | NotCompliantMBeanException ignored) {</b>
+<b class="nc">&nbsp;            throw new RuntimeException(&quot;registerMBean failed&quot;);</b>
+<b class="fc">&nbsp;        }</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public long getConnect_open() {
+<b class="nc">&nbsp;        return connect_open.get();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public long getConnect_close() {
+<b class="nc">&nbsp;        return connect_close.get();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public long getConnect_active() {
+<b class="nc">&nbsp;        return connect_open.get() - connect_close.get();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public long getStatement_count() {
+<b class="nc">&nbsp;        return statement_count.get();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /*******************************************************/
+&nbsp;
+&nbsp;    public void conn_open_increment() {
+<b class="fc">&nbsp;        connect_open.incrementAndGet();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void connect_close_increment() {
+<b class="fc">&nbsp;        connect_close.incrementAndGet();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void stmt_count_increment() {
+<b class="fc">&nbsp;        statement_count.incrementAndGet();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /********************************************************************************/
+<b class="fc">&nbsp;    private TaosInfo() {</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static TaosInfo getInstance() {
+<b class="fc">&nbsp;        if (instance == null) {</b>
+<b class="fc">&nbsp;            synchronized (TaosInfo.class) {</b>
+<b class="fc">&nbsp;                if (instance == null) {</b>
+<b class="fc">&nbsp;                    instance = new TaosInfo();</b>
+&nbsp;                }
+<b class="fc">&nbsp;            }</b>
+&nbsp;        }
+<b class="fc">&nbsp;        return instance;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2023-10-08 10:56</div>
+</div>
+</body>
+</html>

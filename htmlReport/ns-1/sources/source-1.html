@@ -1,0 +1,603 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <title>Coverage Report > AbstractConnection</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.taosdata.jdbc</a>
+</div>
+
+<h1>Coverage Summary for Class: AbstractConnection (com.taosdata.jdbc)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">AbstractConnection</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    98%
+  </span>
+  <span class="absValue">
+    (49/50)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    67.2%
+  </span>
+  <span class="absValue">
+    (125/186)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.taosdata.jdbc;
+&nbsp;
+&nbsp;import java.sql.*;
+&nbsp;import java.util.Enumeration;
+&nbsp;import java.util.Map;
+&nbsp;import java.util.Properties;
+&nbsp;import java.util.Set;
+&nbsp;import java.util.concurrent.*;
+&nbsp;
+&nbsp;public abstract class AbstractConnection extends WrapperImpl implements Connection {
+&nbsp;
+&nbsp;    protected volatile boolean isClosed;
+&nbsp;    protected volatile String catalog;
+<b class="fc">&nbsp;    protected final Properties clientInfoProps = new Properties();</b>
+&nbsp;
+<b class="fc">&nbsp;    protected AbstractConnection(Properties properties) {</b>
+<b class="fc">&nbsp;        Set&lt;String&gt; propNames = properties.stringPropertyNames();</b>
+<b class="fc">&nbsp;        for (String propName : propNames) {</b>
+<b class="fc">&nbsp;            clientInfoProps.setProperty(propName, properties.getProperty(propName));</b>
+<b class="fc">&nbsp;        }</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public abstract Statement createStatement() throws SQLException;
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public abstract PreparedStatement prepareStatement(String sql) throws SQLException;
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public CallableStatement prepareCall(String sql) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public String nativeSQL(String sql) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;        // do nothing
+&nbsp;
+<b class="fc">&nbsp;        return sql;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setAutoCommit(boolean autoCommit) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+&nbsp;        //do nothing
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean getAutoCommit() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        return true;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void commit() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+&nbsp;        // do nothing
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void rollback() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+&nbsp;        // do nothing
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public abstract void close() throws SQLException;
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public abstract boolean isClosed() throws SQLException;
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public abstract DatabaseMetaData getMetaData() throws SQLException;
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setReadOnly(boolean readOnly) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+&nbsp;        //do nothing
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean isReadOnly() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+<b class="fc">&nbsp;        return true;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setCatalog(String catalog) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+<b class="fc">&nbsp;        this.catalog = catalog;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public String getCatalog() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        return this.catalog;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setTransactionIsolation(int level) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        switch (level) {</b>
+&nbsp;            case Connection.TRANSACTION_NONE:
+<b class="fc">&nbsp;                break;</b>
+&nbsp;            case Connection.TRANSACTION_READ_UNCOMMITTED:
+&nbsp;            case Connection.TRANSACTION_READ_COMMITTED:
+&nbsp;            case Connection.TRANSACTION_REPEATABLE_READ:
+&nbsp;            case Connection.TRANSACTION_SERIALIZABLE:
+<b class="fc">&nbsp;                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;            default:
+<b class="nc">&nbsp;                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE);</b>
+&nbsp;        }
+&nbsp;        //do nothing
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public int getTransactionIsolation() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        return Connection.TRANSACTION_NONE;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public SQLWarning getWarnings() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        return null;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void clearWarnings() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+&nbsp;        // do nothing
+&nbsp;    }
+&nbsp;
+&nbsp;    private void checkResultSetTypeAndResultSetConcurrency(int resultSetType, int resultSetConcurrency) throws SQLException {
+<b class="fc">&nbsp;        switch (resultSetType) {</b>
+&nbsp;            case ResultSet.TYPE_FORWARD_ONLY:
+<b class="fc">&nbsp;                break;</b>
+&nbsp;            case ResultSet.TYPE_SCROLL_INSENSITIVE:
+&nbsp;            case ResultSet.TYPE_SCROLL_SENSITIVE:
+<b class="fc">&nbsp;                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;            default:
+<b class="nc">&nbsp;                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE);</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        switch (resultSetConcurrency) {</b>
+&nbsp;            case ResultSet.CONCUR_READ_ONLY:
+<b class="fc">&nbsp;                break;</b>
+&nbsp;            case ResultSet.CONCUR_UPDATABLE:
+<b class="nc">&nbsp;                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;            default:
+<b class="nc">&nbsp;                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE);</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public Statement createStatement(int resultSetType, int resultSetConcurrency) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        checkResultSetTypeAndResultSetConcurrency(resultSetType, resultSetConcurrency);</b>
+<b class="fc">&nbsp;        return createStatement();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public PreparedStatement prepareStatement(String sql, int resultSetType, int resultSetConcurrency) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        checkResultSetTypeAndResultSetConcurrency(resultSetType, resultSetConcurrency);</b>
+<b class="fc">&nbsp;        return prepareStatement(sql);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public CallableStatement prepareCall(String sql, int resultSetType, int resultSetConcurrency) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public Map&lt;String, Class&lt;?&gt;&gt; getTypeMap() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setTypeMap(Map&lt;String, Class&lt;?&gt;&gt; map) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setHoldability(int holdability) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        switch (holdability) {</b>
+&nbsp;            case ResultSet.HOLD_CURSORS_OVER_COMMIT:
+<b class="fc">&nbsp;                break;</b>
+&nbsp;            case ResultSet.CLOSE_CURSORS_AT_COMMIT:
+<b class="fc">&nbsp;                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;            default:
+<b class="nc">&nbsp;                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE);</b>
+&nbsp;        }
+&nbsp;        //do nothing
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public int getHoldability() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        return ResultSet.HOLD_CURSORS_OVER_COMMIT;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public Savepoint setSavepoint() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public Savepoint setSavepoint(String name) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void rollback(Savepoint savepoint) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void releaseSavepoint(Savepoint savepoint) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public Statement createStatement(int resultSetType, int resultSetConcurrency, int resultSetHoldability) throws SQLException {
+<b class="fc">&nbsp;        switch (resultSetHoldability) {</b>
+&nbsp;            case ResultSet.HOLD_CURSORS_OVER_COMMIT:
+<b class="fc">&nbsp;                break;</b>
+&nbsp;            case ResultSet.CLOSE_CURSORS_AT_COMMIT:
+<b class="nc">&nbsp;                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;            default:
+<b class="nc">&nbsp;                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE);</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        return createStatement(resultSetType, resultSetConcurrency);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public PreparedStatement prepareStatement(String sql, int resultSetType, int resultSetConcurrency, int resultSetHoldability) throws SQLException {
+<b class="fc">&nbsp;        switch (resultSetHoldability) {</b>
+&nbsp;            case ResultSet.HOLD_CURSORS_OVER_COMMIT:
+<b class="fc">&nbsp;                break;</b>
+&nbsp;            case ResultSet.CLOSE_CURSORS_AT_COMMIT:
+<b class="nc">&nbsp;                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;            default:
+<b class="nc">&nbsp;                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE);</b>
+&nbsp;        }
+<b class="fc">&nbsp;        return prepareStatement(sql, resultSetType, resultSetConcurrency);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public CallableStatement prepareCall(String sql, int resultSetType, int resultSetConcurrency, int resultSetHoldability) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public PreparedStatement prepareStatement(String sql, int autoGeneratedKeys) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        switch (autoGeneratedKeys) {</b>
+&nbsp;            case Statement.RETURN_GENERATED_KEYS:
+<b class="fc">&nbsp;                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;            case Statement.NO_GENERATED_KEYS:
+&nbsp;                break;
+&nbsp;        }
+<b class="nc">&nbsp;        return prepareStatement(sql, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY, ResultSet.HOLD_CURSORS_OVER_COMMIT);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public PreparedStatement prepareStatement(String sql, int[] columnIndexes) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public PreparedStatement prepareStatement(String sql, String[] columnNames) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public Clob createClob() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public Blob createBlob() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public NClob createNClob() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public SQLXML createSQLXML() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean isValid(int timeout) throws SQLException {
+&nbsp;        //true if the connection is valid, false otherwise
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            return false;</b>
+<b class="fc">&nbsp;        if (timeout &lt; 0)    //SQLException - if the value supplied for timeout is less than 0</b>
+<b class="fc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE);</b>
+&nbsp;
+<b class="fc">&nbsp;        ExecutorService executor = Executors.newCachedThreadPool();</b>
+<b class="fc">&nbsp;        Future&lt;Boolean&gt; future = executor.submit(() -&gt; {</b>
+&nbsp;            int status;
+<b class="fc">&nbsp;            try (Statement stmt = createStatement()) {</b>
+<b class="fc">&nbsp;                ResultSet resultSet = stmt.executeQuery(&quot;select server_status()&quot;);</b>
+<b class="fc">&nbsp;                resultSet.next();</b>
+<b class="fc">&nbsp;                status = resultSet.getInt(&quot;server_status()&quot;);</b>
+<b class="fc">&nbsp;                resultSet.close();</b>
+<b class="fc">&nbsp;            }</b>
+<b class="fc">&nbsp;            return status == 1;</b>
+&nbsp;        });
+&nbsp;
+<b class="fc">&nbsp;        boolean status = false;</b>
+&nbsp;        try {
+<b class="fc">&nbsp;            if (timeout == 0)</b>
+<b class="fc">&nbsp;                status = future.get();</b>
+&nbsp;            else
+<b class="fc">&nbsp;                status = future.get(timeout, TimeUnit.SECONDS);</b>
+<b class="nc">&nbsp;        } catch (InterruptedException | ExecutionException ignored) {</b>
+<b class="nc">&nbsp;        } catch (TimeoutException e) {</b>
+<b class="nc">&nbsp;            future.cancel(true);</b>
+&nbsp;        } finally {
+<b class="fc">&nbsp;            executor.shutdownNow();</b>
+<b class="fc">&nbsp;        }</b>
+<b class="fc">&nbsp;        return status;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setClientInfo(String name, String value) throws SQLClientInfoException {
+<b class="fc">&nbsp;        if (isClosed)</b>
+<b class="nc">&nbsp;            throw (SQLClientInfoException) TSDBError.createSQLException(TSDBErrorNumbers.ERROR_SQLCLIENT_EXCEPTION_ON_CONNECTION_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        clientInfoProps.setProperty(name, value);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setClientInfo(Properties properties) throws SQLClientInfoException {
+<b class="fc">&nbsp;        if (isClosed)</b>
+<b class="nc">&nbsp;            throw (SQLClientInfoException) TSDBError.createSQLException(TSDBErrorNumbers.ERROR_SQLCLIENT_EXCEPTION_ON_CONNECTION_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        for (Enumeration&lt;Object&gt; enumeration = properties.keys(); enumeration.hasMoreElements(); ) {</b>
+<b class="fc">&nbsp;            String name = (String) enumeration.nextElement();</b>
+<b class="fc">&nbsp;            clientInfoProps.put(name, properties.getProperty(name));</b>
+<b class="fc">&nbsp;        }</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public String getClientInfo(String name) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed)</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        return clientInfoProps.getProperty(name);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public Properties getClientInfo() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed)</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        return clientInfoProps;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public Array createArrayOf(String typeName, Object[] elements) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public Struct createStruct(String typeName, Object[] attributes) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setSchema(String schema) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;        //do nothing
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public String getSchema() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        return null;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void abort(Executor executor) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;        // do nothing
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setNetworkTimeout(Executor executor, int milliseconds) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+<b class="fc">&nbsp;        if (milliseconds &lt; 0)</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE);</b>
+&nbsp;
+&nbsp;        // do nothing
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public int getNetworkTimeout() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+<b class="fc">&nbsp;        return 0;</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2023-10-08 10:56</div>
+</div>
+</body>
+</html>

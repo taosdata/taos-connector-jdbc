@@ -1,0 +1,241 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <title>Coverage Report > TMQConstants</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.taosdata.jdbc.tmq</a>
+</div>
+
+<h1>Coverage Summary for Class: TMQConstants (com.taosdata.jdbc.tmq)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">TMQConstants</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (12/12)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.taosdata.jdbc.tmq;
+&nbsp;
+&nbsp;import com.taosdata.jdbc.TSDBDriver;
+&nbsp;
+&nbsp;import java.util.HashSet;
+&nbsp;import java.util.Set;
+&nbsp;
+&nbsp;import static com.taosdata.jdbc.TSDBDriver.*;
+&nbsp;
+&nbsp;public class TMQConstants {
+&nbsp;
+&nbsp;    private TMQConstants() {
+&nbsp;    }
+&nbsp;
+<b class="fc">&nbsp;    public static final Set&lt;String&gt; configSet = new HashSet&lt;&gt;();</b>
+&nbsp;
+&nbsp;    public static final String GROUP_ID = &quot;group.id&quot;;
+&nbsp;
+&nbsp;    public static final String CLIENT_ID = &quot;client.id&quot;;
+&nbsp;
+&nbsp;    /**
+&nbsp;     * auto commit default is true then the commitCallback function will be called after 5 seconds
+&nbsp;     */
+&nbsp;    public static final String ENABLE_AUTO_COMMIT = &quot;enable.auto.commit&quot;;
+&nbsp;
+&nbsp;    /**
+&nbsp;     * commit interval. unit milliseconds
+&nbsp;     */
+&nbsp;    public static final String AUTO_COMMIT_INTERVAL = &quot;auto.commit.interval.ms&quot;;
+&nbsp;
+&nbsp;    /**
+&nbsp;     * only valid in first group id create.
+&nbsp;     */
+&nbsp;    public static final String AUTO_OFFSET_RESET = &quot;auto.offset.reset&quot;;
+&nbsp;
+&nbsp;    /**
+&nbsp;     * whether poll result include table name. suggest always true
+&nbsp;     */
+&nbsp;    public static final String MSG_WITH_TABLE_NAME = &quot;msg.with.table.name&quot;;
+&nbsp;
+&nbsp;    /**
+&nbsp;     * indicate host and port of connection
+&nbsp;     */
+&nbsp;    public static final String BOOTSTRAP_SERVERS = &quot;bootstrap.servers&quot;;
+&nbsp;
+&nbsp;    /**
+&nbsp;     * deserializer Bean
+&nbsp;     */
+&nbsp;    public static final String VALUE_DESERIALIZER = &quot;value.deserializer&quot;;
+&nbsp;
+&nbsp;    /**
+&nbsp;     * encode for deserializer String value
+&nbsp;     */
+&nbsp;    public static final String VALUE_DESERIALIZER_ENCODING = &quot;value.deserializer.encoding&quot;;
+&nbsp;
+&nbsp;    /**
+&nbsp;     * connection ip
+&nbsp;     */
+&nbsp;    public static final String CONNECT_IP = &quot;td.connect.ip&quot;;
+&nbsp;
+&nbsp;    /**
+&nbsp;     * connection port
+&nbsp;     */
+&nbsp;    public static final String CONNECT_PORT = &quot;td.connect.port&quot;;
+&nbsp;
+&nbsp;    /**
+&nbsp;     * connection username
+&nbsp;     */
+&nbsp;    public static final String CONNECT_USER = &quot;td.connect.user&quot;;
+&nbsp;
+&nbsp;    /**
+&nbsp;     * connection password
+&nbsp;     */
+&nbsp;    public static final String CONNECT_PASS = &quot;td.connect.pass&quot;;
+&nbsp;
+&nbsp;    /**
+&nbsp;     * connect type websocket or jni, default is jni
+&nbsp;     */
+&nbsp;    public static final String CONNECT_TYPE = &quot;td.connect.type&quot;;
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Key used to retrieve the token value from the properties instance passed to
+&nbsp;     * the driver.
+&nbsp;     * Just for Cloud Service
+&nbsp;     */
+&nbsp;    public static final String CONNECT_TOKEN = TSDBDriver.PROPERTY_KEY_TOKEN;
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Key used to retrieve the token value from the properties instance passed to
+&nbsp;     * the driver.
+&nbsp;     * Just for Cloud Service
+&nbsp;     */
+&nbsp;    public static final String CONNECT_URL = &quot;url&quot;;
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Use SSL (true/false) to communicate with the server. The default value is false.
+&nbsp;     * Just for Cloud Service
+&nbsp;     */
+&nbsp;    public static final String CONNECT_USE_SSL = PROPERTY_KEY_USE_SSL;
+&nbsp;
+&nbsp;    /**
+&nbsp;     * the timeout in milliseconds until a connection is established.
+&nbsp;     * zero is interpreted as an infinite timeout.
+&nbsp;     * only valid in websocket
+&nbsp;     */
+&nbsp;    public static final String CONNECT_TIMEOUT = HTTP_CONNECT_TIMEOUT;
+&nbsp;
+&nbsp;    /**
+&nbsp;     * message receive from server timeout. ms.
+&nbsp;     * only valid in websocket
+&nbsp;     */
+&nbsp;    public static final String CONNECT_MESSAGE_TIMEOUT = PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT;
+&nbsp;
+&nbsp;    /**
+&nbsp;     * the maximum number of request in a single connection.
+&nbsp;     * only valid in websocket
+&nbsp;     */
+&nbsp;    public static final String CONNECT_MAX_REQUEST = HTTP_POOL_SIZE;
+&nbsp;
+&nbsp;    public static final String EXPERIMENTAL_SNAPSHOT_ENABLE = &quot;experimental.snapshot.enable&quot;;
+&nbsp;
+&nbsp;    public static final int INVALID_OFFSET = -2147467247;
+&nbsp;
+&nbsp;
+&nbsp;    static {
+<b class="fc">&nbsp;        configSet.add(GROUP_ID);</b>
+<b class="fc">&nbsp;        configSet.add(CLIENT_ID);</b>
+<b class="fc">&nbsp;        configSet.add(ENABLE_AUTO_COMMIT);</b>
+<b class="fc">&nbsp;        configSet.add(AUTO_COMMIT_INTERVAL);</b>
+<b class="fc">&nbsp;        configSet.add(AUTO_OFFSET_RESET);</b>
+<b class="fc">&nbsp;        configSet.add(MSG_WITH_TABLE_NAME);</b>
+<b class="fc">&nbsp;        configSet.add(CONNECT_IP);</b>
+<b class="fc">&nbsp;        configSet.add(CONNECT_USER);</b>
+<b class="fc">&nbsp;        configSet.add(CONNECT_PASS);</b>
+<b class="fc">&nbsp;        configSet.add(CONNECT_PORT);</b>
+<b class="fc">&nbsp;        configSet.add(EXPERIMENTAL_SNAPSHOT_ENABLE);</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2023-10-08 10:56</div>
+</div>
+</body>
+</html>

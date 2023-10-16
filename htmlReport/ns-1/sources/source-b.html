@@ -1,0 +1,515 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <title>Coverage Report > SchemalessWriter</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.taosdata.jdbc</a>
+</div>
+
+<h1>Coverage Summary for Class: SchemalessWriter (com.taosdata.jdbc)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">SchemalessWriter</td>
+<td class="coverageStat">
+  <span class="percent">
+    52.2%
+  </span>
+  <span class="absValue">
+    (12/23)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    45.8%
+  </span>
+  <span class="absValue">
+    (88/192)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">SchemalessWriter$1</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    54.2%
+  </span>
+  <span class="absValue">
+    (13/24)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    46.1%
+  </span>
+  <span class="absValue">
+    (89/193)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.taosdata.jdbc;
+&nbsp;
+&nbsp;import com.alibaba.fastjson.JSON;
+&nbsp;import com.alibaba.fastjson.JSONObject;
+&nbsp;import com.taosdata.jdbc.enums.ConnectionType;
+&nbsp;import com.taosdata.jdbc.enums.SchemalessProtocolType;
+&nbsp;import com.taosdata.jdbc.enums.SchemalessTimestampType;
+&nbsp;import com.taosdata.jdbc.enums.WSFunction;
+&nbsp;import com.taosdata.jdbc.rs.ConnectionParam;
+&nbsp;import com.taosdata.jdbc.rs.RestfulDriver;
+&nbsp;import com.taosdata.jdbc.utils.HttpClientPoolUtil;
+&nbsp;import com.taosdata.jdbc.utils.StringUtils;
+&nbsp;import com.taosdata.jdbc.ws.FutureResponse;
+&nbsp;import com.taosdata.jdbc.ws.InFlightRequest;
+&nbsp;import com.taosdata.jdbc.ws.Transport;
+&nbsp;import com.taosdata.jdbc.ws.entity.Code;
+&nbsp;import com.taosdata.jdbc.ws.entity.Request;
+&nbsp;import com.taosdata.jdbc.ws.entity.Response;
+&nbsp;import com.taosdata.jdbc.ws.schemaless.CommonResp;
+&nbsp;import com.taosdata.jdbc.ws.schemaless.ConnReq;
+&nbsp;import com.taosdata.jdbc.ws.schemaless.InsertReq;
+&nbsp;import com.taosdata.jdbc.ws.schemaless.SchemalessAction;
+&nbsp;
+&nbsp;import java.sql.Connection;
+&nbsp;import java.sql.DatabaseMetaData;
+&nbsp;import java.sql.SQLException;
+&nbsp;import java.util.List;
+&nbsp;import java.util.Properties;
+&nbsp;import java.util.concurrent.atomic.AtomicLong;
+&nbsp;
+&nbsp;public class SchemalessWriter implements AutoCloseable {
+&nbsp;    // jni
+&nbsp;    private TSDBJNIConnector connector;
+&nbsp;    // websocket
+&nbsp;    private Transport transport;
+<b class="fc">&nbsp;    private final AtomicLong insertId = new AtomicLong(0);</b>
+&nbsp;
+&nbsp;    // meta
+&nbsp;    private String dbName;
+&nbsp;    private ConnectionType type;
+&nbsp;
+<b class="fc">&nbsp;    public SchemalessWriter(Connection connection) throws SQLException {</b>
+<b class="fc">&nbsp;        if (connection instanceof TSDBConnection) {</b>
+<b class="fc">&nbsp;            this.type = ConnectionType.JNI;</b>
+<b class="fc">&nbsp;            this.connector = ((TSDBConnection) connection).getConnector();</b>
+&nbsp;        } else {
+&nbsp;            // use websocket schemaless insert through existing connection, url mast contain username password or cloudToken
+<b class="fc">&nbsp;            DatabaseMetaData metaData = connection.getMetaData();</b>
+<b class="fc">&nbsp;            String url = metaData.getURL();</b>
+<b class="fc">&nbsp;            String db = connection.getCatalog();</b>
+<b class="fc">&nbsp;            init(url, null, null, null, db, null);</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+<b class="nc">&nbsp;    public SchemalessWriter(Connection connection, String dbName) throws SQLException {</b>
+<b class="nc">&nbsp;        if (connection instanceof TSDBConnection) {</b>
+<b class="nc">&nbsp;            this.type = ConnectionType.JNI;</b>
+<b class="nc">&nbsp;            this.connector = ((TSDBConnection) connection).getConnector();</b>
+<b class="nc">&nbsp;            selectDB(connector, dbName);</b>
+&nbsp;        } else {
+&nbsp;            // use websocket schemaless insert through existing connection, url mast contain username password or cloudToken
+<b class="nc">&nbsp;            DatabaseMetaData metaData = connection.getMetaData();</b>
+<b class="nc">&nbsp;            String url = metaData.getURL();</b>
+<b class="nc">&nbsp;            init(url, null, null, null, dbName, null);</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+<b class="nc">&nbsp;    public SchemalessWriter(String url) throws SQLException {</b>
+<b class="nc">&nbsp;        init(url, null, null, null, null, null);</b>
+&nbsp;    }
+&nbsp;
+<b class="nc">&nbsp;    public SchemalessWriter(String url, String cloudToken) throws SQLException {</b>
+<b class="nc">&nbsp;        init(url, null, null, cloudToken, null, null);</b>
+&nbsp;    }
+&nbsp;
+<b class="nc">&nbsp;    public SchemalessWriter(String url, String username, String password) throws SQLException {</b>
+<b class="nc">&nbsp;        init(url, username, password, null, null, null);</b>
+&nbsp;    }
+&nbsp;
+<b class="fc">&nbsp;    public SchemalessWriter(String url, String username, String password, String dbName) throws SQLException {</b>
+<b class="fc">&nbsp;        init(url, username, password, null, dbName, null);</b>
+&nbsp;    }
+&nbsp;
+<b class="nc">&nbsp;    public SchemalessWriter(String url, String user, String password, String cloudToken, String dbName, Boolean useSSL) throws SQLException {</b>
+<b class="nc">&nbsp;        init(url, user, password, cloudToken, dbName, useSSL);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    private void init(String url, String user, String password, String cloudToken, String dbName, Boolean useSSL) throws SQLException {
+&nbsp;        String t;
+<b class="fc">&nbsp;        if (url.startsWith(TSDBDriver.URL_PREFIX)) {</b>
+<b class="fc">&nbsp;            t = &quot;jni&quot;;</b>
+<b class="fc">&nbsp;        } else if (url.startsWith(RestfulDriver.URL_PREFIX)) {</b>
+<b class="fc">&nbsp;            t = &quot;ws&quot;;</b>
+&nbsp;        } else {
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, &quot;unknown url：&quot; + url);</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        Properties properties = StringUtils.parseUrl(url, null);</b>
+<b class="fc">&nbsp;        if (user != null)</b>
+<b class="fc">&nbsp;            properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, user);</b>
+<b class="fc">&nbsp;        if (password != null)</b>
+<b class="fc">&nbsp;            properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, password);</b>
+<b class="fc">&nbsp;        if (cloudToken != null)</b>
+<b class="nc">&nbsp;            properties.setProperty(TSDBDriver.PROPERTY_KEY_TOKEN, cloudToken);</b>
+<b class="fc">&nbsp;        if (dbName != null)</b>
+<b class="fc">&nbsp;            properties.setProperty(TSDBDriver.PROPERTY_KEY_DBNAME, dbName);</b>
+<b class="fc">&nbsp;        if (useSSL != null)</b>
+<b class="nc">&nbsp;            properties.setProperty(TSDBDriver.PROPERTY_KEY_USE_SSL, String.valueOf(useSSL));</b>
+<b class="fc">&nbsp;        ConnectionParam param = ConnectionParam.getParam(properties);</b>
+&nbsp;
+<b class="fc">&nbsp;        this.init(param.getHost(), param.getPort(), param.getUser(), param.getPassword(), param.getDatabase(), param.getCloudToken(), t, param.isUseSsl());</b>
+&nbsp;    }
+&nbsp;
+<b class="nc">&nbsp;    public SchemalessWriter(String host, String port, String cloudToken, String dbName, Boolean useSSL) throws SQLException {</b>
+<b class="nc">&nbsp;        init(host, port, null, null, dbName, cloudToken, &quot;ws&quot;, useSSL);</b>
+&nbsp;    }
+&nbsp;
+<b class="fc">&nbsp;    public SchemalessWriter(String host, String port, String user, String password, String dbName, String type) throws SQLException {</b>
+<b class="fc">&nbsp;        init(host, port, user, password, dbName, null, type, false);</b>
+&nbsp;    }
+&nbsp;
+<b class="nc">&nbsp;    public SchemalessWriter(String host, String port, String user, String password, String dbName, String type, Boolean useSSL) throws SQLException {</b>
+<b class="nc">&nbsp;        init(host, port, user, password, dbName, null, type, useSSL);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    private void init(String host, String port, String user, String password, String dbName, String cloudToken, String type, boolean useSSL) throws SQLException {
+<b class="fc">&nbsp;        this.dbName = dbName;</b>
+<b class="fc">&nbsp;        if (null == type || ConnectionType.JNI.getType().equalsIgnoreCase(type)) {</b>
+<b class="fc">&nbsp;            this.type = ConnectionType.JNI;</b>
+<b class="fc">&nbsp;            int p = Integer.parseInt(port);</b>
+<b class="fc">&nbsp;            this.connector = new TSDBJNIConnector();</b>
+<b class="fc">&nbsp;            this.connector.connect(host, p, dbName, user, password);</b>
+<b class="fc">&nbsp;        } else if (ConnectionType.WEBSOCKET.getType().equalsIgnoreCase(type) || ConnectionType.WS.getType().equalsIgnoreCase(type)) {</b>
+<b class="fc">&nbsp;            this.type = ConnectionType.WS;</b>
+<b class="fc">&nbsp;            int timeout = Integer.parseInt(HttpClientPoolUtil.DEFAULT_SOCKET_TIMEOUT);</b>
+<b class="fc">&nbsp;            int connectTime = Integer.parseInt(HttpClientPoolUtil.DEFAULT_CONNECT_TIMEOUT);</b>
+<b class="fc">&nbsp;            ConnectionParam param = new ConnectionParam.Builder(host, port)</b>
+<b class="fc">&nbsp;                    .setUserAndPassword(user, password)</b>
+<b class="fc">&nbsp;                    .setDatabase(dbName)</b>
+<b class="fc">&nbsp;                    .setCloudToken(cloudToken)</b>
+<b class="fc">&nbsp;                    .setConnectionTimeout(connectTime)</b>
+<b class="fc">&nbsp;                    .setRequestTimeout(timeout)</b>
+<b class="fc">&nbsp;                    .setUseSsl(useSSL)</b>
+<b class="fc">&nbsp;                    .build();</b>
+<b class="fc">&nbsp;            InFlightRequest inFlightRequest = new InFlightRequest(timeout, 20);</b>
+<b class="fc">&nbsp;            this.transport = new Transport(WSFunction.SCHEMALESS, param, inFlightRequest);</b>
+&nbsp;
+<b class="fc">&nbsp;            this.transport.setTextMessageHandler(message -&gt; {</b>
+<b class="fc">&nbsp;                JSONObject jsonObject = JSON.parseObject(message);</b>
+<b class="fc">&nbsp;                Response response = jsonObject.toJavaObject(CommonResp.class);</b>
+<b class="fc">&nbsp;                FutureResponse remove = inFlightRequest.remove(response.getAction(), response.getReqId());</b>
+<b class="fc">&nbsp;                if (null != remove) {</b>
+<b class="fc">&nbsp;                    remove.getFuture().complete(response);</b>
+&nbsp;                }
+&nbsp;            });
+&nbsp;
+<b class="fc">&nbsp;            Transport.checkConnection(transport, connectTime);</b>
+&nbsp;
+<b class="fc">&nbsp;            ConnReq connectReq = new ConnReq();</b>
+<b class="fc">&nbsp;            connectReq.setReqId(1);</b>
+<b class="fc">&nbsp;            connectReq.setUser(param.getUser());</b>
+<b class="fc">&nbsp;            connectReq.setPassword(param.getPassword());</b>
+<b class="fc">&nbsp;            connectReq.setDb(dbName);</b>
+<b class="fc">&nbsp;            CommonResp auth = (CommonResp) transport.send(new Request(SchemalessAction.CONN.getAction(), connectReq));</b>
+&nbsp;
+<b class="fc">&nbsp;            if (Code.SUCCESS.getCode() != auth.getCode()) {</b>
+<b class="nc">&nbsp;                transport.close();</b>
+<b class="nc">&nbsp;                throw new SQLException(&quot;(0x&quot; + Integer.toHexString(auth.getCode()) + &quot;):&quot; + &quot;auth failure: &quot; + auth.getMessage());</b>
+&nbsp;            }
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * batch schemaless lines write to db
+&nbsp;     *
+&nbsp;     * @param lines         schemaless lines
+&nbsp;     * @param protocolType  schemaless type {@link SchemalessProtocolType}
+&nbsp;     * @param timestampType Time precision {@link SchemalessTimestampType}
+&nbsp;     * @throws SQLException execute exception
+&nbsp;     */
+&nbsp;    public void write(String[] lines, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType) throws SQLException {
+<b class="fc">&nbsp;        write(lines, protocolType, timestampType, null, null, null);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Deprecated
+&nbsp;    public void write(String[] lines, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, String dbName, Integer ttl, Long reqId) throws SQLException {
+<b class="fc">&nbsp;        switch (type) {</b>
+&nbsp;            case JNI: {
+<b class="fc">&nbsp;                if (null != dbName &amp;&amp; (this.dbName == null || !this.dbName.endsWith(dbName))) {</b>
+<b class="nc">&nbsp;                    selectDB(connector, dbName);</b>
+&nbsp;                }
+<b class="fc">&nbsp;                if (null == ttl &amp;&amp; null == reqId) {</b>
+<b class="fc">&nbsp;                    connector.insertLines(lines, protocolType, timestampType);</b>
+<b class="nc">&nbsp;                } else if (null == reqId) {</b>
+<b class="nc">&nbsp;                    connector.insertLinesWithTtl(lines, protocolType, timestampType, ttl);</b>
+<b class="nc">&nbsp;                } else if (null == ttl) {</b>
+<b class="nc">&nbsp;                    connector.insertLinesWithReqId(lines, protocolType, timestampType, reqId);</b>
+&nbsp;                } else {
+<b class="nc">&nbsp;                    connector.insertLinesWithTtlAndReqId(lines, protocolType, timestampType, ttl, reqId);</b>
+&nbsp;                }
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            }
+&nbsp;            case WS: {
+<b class="fc">&nbsp;                for (String line : lines) {</b>
+<b class="fc">&nbsp;                    InsertReq insertReq = new InsertReq();</b>
+<b class="fc">&nbsp;                    insertReq.setReqId(insertId.getAndIncrement());</b>
+<b class="fc">&nbsp;                    insertReq.setProtocol(protocolType.ordinal());</b>
+<b class="fc">&nbsp;                    insertReq.setPrecision(timestampType.getType());</b>
+<b class="fc">&nbsp;                    insertReq.setData(line);</b>
+<b class="fc">&nbsp;                    if (ttl != null)</b>
+<b class="fc">&nbsp;                        insertReq.setTtl(ttl);</b>
+<b class="fc">&nbsp;                    if (reqId != null)</b>
+<b class="fc">&nbsp;                        insertReq.setReqId(reqId);</b>
+<b class="fc">&nbsp;                    CommonResp response = (CommonResp) transport.send(new Request(SchemalessAction.INSERT.getAction(), insertReq));</b>
+<b class="fc">&nbsp;                    if (Code.SUCCESS.getCode() != response.getCode()) {</b>
+<b class="nc">&nbsp;                        throw new SQLException(&quot;(0x&quot; + Integer.toHexString(response.getCode()) + &quot;):&quot; + response.getMessage());</b>
+&nbsp;                    }
+&nbsp;                }
+<b class="fc">&nbsp;                break;</b>
+&nbsp;            }
+&nbsp;            default:
+&nbsp;                // nothing
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    public void write(String[] lines, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, Integer ttl, Long reqId) throws SQLException {
+<b class="nc">&nbsp;        switch (type) {</b>
+&nbsp;            case JNI: {
+<b class="nc">&nbsp;                if (null == ttl &amp;&amp; null == reqId) {</b>
+<b class="nc">&nbsp;                    connector.insertLines(lines, protocolType, timestampType);</b>
+<b class="nc">&nbsp;                } else if (null == reqId) {</b>
+<b class="nc">&nbsp;                    connector.insertLinesWithTtl(lines, protocolType, timestampType, ttl);</b>
+<b class="nc">&nbsp;                } else if (null == ttl) {</b>
+<b class="nc">&nbsp;                    connector.insertLinesWithReqId(lines, protocolType, timestampType, reqId);</b>
+&nbsp;                } else {
+<b class="nc">&nbsp;                    connector.insertLinesWithTtlAndReqId(lines, protocolType, timestampType, ttl, reqId);</b>
+&nbsp;                }
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            }
+&nbsp;            case WS: {
+<b class="nc">&nbsp;                for (String line : lines) {</b>
+<b class="nc">&nbsp;                    InsertReq insertReq = new InsertReq();</b>
+<b class="nc">&nbsp;                    insertReq.setReqId(insertId.getAndIncrement());</b>
+<b class="nc">&nbsp;                    insertReq.setProtocol(protocolType.ordinal());</b>
+<b class="nc">&nbsp;                    insertReq.setPrecision(timestampType.getType());</b>
+<b class="nc">&nbsp;                    insertReq.setData(line);</b>
+<b class="nc">&nbsp;                    if (ttl != null)</b>
+<b class="nc">&nbsp;                        insertReq.setTtl(ttl);</b>
+<b class="nc">&nbsp;                    if (reqId != null)</b>
+<b class="nc">&nbsp;                        insertReq.setReqId(reqId);</b>
+<b class="nc">&nbsp;                    CommonResp response = (CommonResp) transport.send(new Request(SchemalessAction.INSERT.getAction(), insertReq));</b>
+<b class="nc">&nbsp;                    if (Code.SUCCESS.getCode() != response.getCode()) {</b>
+<b class="nc">&nbsp;                        throw new SQLException(&quot;0x&quot; + Integer.toHexString(response.getCode()) + &quot;:&quot; + response.getMessage());</b>
+&nbsp;                    }
+&nbsp;                }
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            }
+&nbsp;            default:
+&nbsp;                // nothing
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * only one line writes to db
+&nbsp;     *
+&nbsp;     * @param line          schemaless line
+&nbsp;     * @param protocolType  schemaless type {@link SchemalessProtocolType}
+&nbsp;     * @param timestampType Time precision {@link SchemalessTimestampType}
+&nbsp;     * @throws SQLException execute exception
+&nbsp;     */
+&nbsp;    public void write(String line, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType) throws SQLException {
+<b class="fc">&nbsp;        write(new String[]{line}, protocolType, timestampType);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * batch schemaless lines write to db with list
+&nbsp;     *
+&nbsp;     * @param lines         schemaless list
+&nbsp;     * @param protocolType  schemaless type {@link SchemalessProtocolType}
+&nbsp;     * @param timestampType Time precision {@link SchemalessTimestampType}
+&nbsp;     * @throws SQLException execute exception
+&nbsp;     */
+&nbsp;    public void write(List&lt;String&gt; lines, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType) throws SQLException {
+<b class="fc">&nbsp;        String[] strings = lines.toArray(new String[0]);</b>
+<b class="fc">&nbsp;        write(strings, protocolType, timestampType);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public int writeRaw(String line, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType) throws SQLException {
+<b class="fc">&nbsp;        return this.writeRaw(line, protocolType, timestampType, null, null, null);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Deprecated
+&nbsp;    public int writeRaw(String line, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, String dbName, Integer ttl, Long reqId) throws SQLException {
+<b class="fc">&nbsp;        switch (type) {</b>
+&nbsp;            case JNI: {
+<b class="fc">&nbsp;                if (null != dbName &amp;&amp; (this.dbName == null || !this.dbName.endsWith(dbName))) {</b>
+<b class="nc">&nbsp;                    selectDB(connector, dbName);</b>
+&nbsp;                }
+<b class="fc">&nbsp;                if (null == ttl &amp;&amp; null == reqId) {</b>
+<b class="fc">&nbsp;                    return connector.insertRaw(line, protocolType, timestampType);</b>
+<b class="nc">&nbsp;                } else if (null == reqId) {</b>
+<b class="nc">&nbsp;                    return connector.insertRawWithTtl(line, protocolType, timestampType, ttl);</b>
+<b class="nc">&nbsp;                } else if (null == ttl) {</b>
+<b class="nc">&nbsp;                    return connector.insertRawWithReqId(line, protocolType, timestampType, reqId);</b>
+&nbsp;                } else {
+<b class="nc">&nbsp;                    return connector.insertRawWithTtlAndReqId(line, protocolType, timestampType, ttl, reqId);</b>
+&nbsp;                }
+&nbsp;            }
+&nbsp;            case WS: {
+<b class="nc">&nbsp;                InsertReq insertReq = new InsertReq();</b>
+<b class="nc">&nbsp;                insertReq.setReqId(insertId.getAndIncrement());</b>
+<b class="nc">&nbsp;                insertReq.setProtocol(protocolType.ordinal());</b>
+<b class="nc">&nbsp;                insertReq.setPrecision(timestampType.getType());</b>
+<b class="nc">&nbsp;                insertReq.setData(line);</b>
+<b class="nc">&nbsp;                if (ttl != null)</b>
+<b class="nc">&nbsp;                    insertReq.setTtl(ttl);</b>
+<b class="nc">&nbsp;                if (reqId != null)</b>
+<b class="nc">&nbsp;                    insertReq.setReqId(reqId);</b>
+<b class="nc">&nbsp;                CommonResp response = (CommonResp) transport.send(new Request(SchemalessAction.INSERT.getAction(), insertReq));</b>
+<b class="nc">&nbsp;                if (Code.SUCCESS.getCode() != response.getCode()) {</b>
+<b class="nc">&nbsp;                    throw new SQLException(&quot;(0x&quot; + Integer.toHexString(response.getCode()) + &quot;):&quot; + response.getMessage());</b>
+&nbsp;                }
+&nbsp;                // websocket don&#39;t return the num of schemaless insert
+<b class="nc">&nbsp;                return 0;</b>
+&nbsp;            }
+&nbsp;            default:
+&nbsp;                // nothing
+<b class="nc">&nbsp;                return 0;</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    public int writeRaw(String line, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, Integer ttl, Long reqId) throws SQLException {
+<b class="nc">&nbsp;        switch (type) {</b>
+&nbsp;            case JNI: {
+<b class="nc">&nbsp;                if (null == ttl &amp;&amp; null == reqId) {</b>
+<b class="nc">&nbsp;                    return connector.insertRaw(line, protocolType, timestampType);</b>
+<b class="nc">&nbsp;                } else if (null == reqId) {</b>
+<b class="nc">&nbsp;                    return connector.insertRawWithTtl(line, protocolType, timestampType, ttl);</b>
+<b class="nc">&nbsp;                } else if (null == ttl) {</b>
+<b class="nc">&nbsp;                    return connector.insertRawWithReqId(line, protocolType, timestampType, reqId);</b>
+&nbsp;                } else {
+<b class="nc">&nbsp;                    return connector.insertRawWithTtlAndReqId(line, protocolType, timestampType, ttl, reqId);</b>
+&nbsp;                }
+&nbsp;            }
+&nbsp;            case WS: {
+<b class="nc">&nbsp;                InsertReq insertReq = new InsertReq();</b>
+<b class="nc">&nbsp;                insertReq.setReqId(insertId.getAndIncrement());</b>
+<b class="nc">&nbsp;                insertReq.setProtocol(protocolType.ordinal());</b>
+<b class="nc">&nbsp;                insertReq.setPrecision(timestampType.getType());</b>
+<b class="nc">&nbsp;                insertReq.setData(line);</b>
+<b class="nc">&nbsp;                if (ttl != null)</b>
+<b class="nc">&nbsp;                    insertReq.setTtl(ttl);</b>
+<b class="nc">&nbsp;                if (reqId != null)</b>
+<b class="nc">&nbsp;                    insertReq.setReqId(reqId);</b>
+<b class="nc">&nbsp;                CommonResp response = (CommonResp) transport.send(new Request(SchemalessAction.INSERT.getAction(), insertReq));</b>
+<b class="nc">&nbsp;                if (Code.SUCCESS.getCode() != response.getCode()) {</b>
+<b class="nc">&nbsp;                    throw new SQLException(&quot;(0x&quot; + Integer.toHexString(response.getCode()) + &quot;):&quot; + response.getMessage());</b>
+&nbsp;                }
+&nbsp;                // websocket don&#39;t return the num of schemaless insert
+<b class="nc">&nbsp;                return 0;</b>
+&nbsp;            }
+&nbsp;            default:
+&nbsp;                // nothing
+<b class="nc">&nbsp;                return 0;</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    private void selectDB(TSDBJNIConnector connector, String dbName) throws SQLException {
+<b class="nc">&nbsp;        long pSql = connector.executeQuery(&quot;use &quot; + dbName);</b>
+<b class="nc">&nbsp;        connector.freeResultSet(pSql);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void close() throws SQLException {
+<b class="nc">&nbsp;        switch (type) {</b>
+&nbsp;            case JNI: {
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            }
+&nbsp;            case WS: {
+<b class="nc">&nbsp;                transport.close();</b>
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            }
+&nbsp;            default:
+&nbsp;                // nothing
+&nbsp;        }
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2023-10-08 10:56</div>
+</div>
+</body>
+</html>

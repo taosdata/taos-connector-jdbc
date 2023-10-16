@@ -1,0 +1,257 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <title>Coverage Report > Transport</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.taosdata.jdbc.ws</a>
+</div>
+
+<h1>Coverage Summary for Class: Transport (com.taosdata.jdbc.ws)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">Transport</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    83.3%
+  </span>
+  <span class="absValue">
+    (10/12)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    67.6%
+  </span>
+  <span class="absValue">
+    (48/71)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.taosdata.jdbc.ws;
+&nbsp;
+&nbsp;import com.taosdata.jdbc.TSDBError;
+&nbsp;import com.taosdata.jdbc.TSDBErrorNumbers;
+&nbsp;import com.taosdata.jdbc.common.SerializeBlock;
+&nbsp;import com.taosdata.jdbc.enums.WSFunction;
+&nbsp;import com.taosdata.jdbc.rs.ConnectionParam;
+&nbsp;import com.taosdata.jdbc.utils.CompletableFutureTimeout;
+&nbsp;import com.taosdata.jdbc.ws.entity.Request;
+&nbsp;import com.taosdata.jdbc.ws.entity.Response;
+&nbsp;
+&nbsp;import java.io.ByteArrayOutputStream;
+&nbsp;import java.io.IOException;
+&nbsp;import java.nio.ByteBuffer;
+&nbsp;import java.sql.SQLException;
+&nbsp;import java.util.concurrent.CompletableFuture;
+&nbsp;import java.util.concurrent.ExecutionException;
+&nbsp;import java.util.concurrent.TimeUnit;
+&nbsp;import java.util.concurrent.TimeoutException;
+&nbsp;import java.util.function.Consumer;
+&nbsp;
+&nbsp;import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT;
+&nbsp;
+&nbsp;/**
+&nbsp; * send message
+&nbsp; */
+&nbsp;public class Transport implements AutoCloseable {
+&nbsp;
+&nbsp;    public static final int DEFAULT_MESSAGE_WAIT_TIMEOUT = 60_000;
+&nbsp;
+&nbsp;    private final WSClient client;
+&nbsp;    private final InFlightRequest inFlightRequest;
+&nbsp;    private long timeout;
+<b class="fc">&nbsp;    private boolean closed = false;</b>
+&nbsp;
+<b class="fc">&nbsp;    public Transport(WSFunction function, ConnectionParam param, InFlightRequest inFlightRequest) throws SQLException {</b>
+<b class="fc">&nbsp;        this.client = WSClient.getInstance(param, function, this);</b>
+<b class="fc">&nbsp;        this.inFlightRequest = inFlightRequest;</b>
+<b class="fc">&nbsp;        this.timeout = param.getRequestTimeout();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTextMessageHandler(Consumer&lt;String&gt; textMessageHandler) {
+<b class="fc">&nbsp;        client.setTextMessageHandler(textMessageHandler);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setBinaryMessageHandler(Consumer&lt;ByteBuffer&gt; binaryMessageHandler) {
+<b class="fc">&nbsp;        client.setBinaryMessageHandler(binaryMessageHandler);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTimeout(long timeout) {
+<b class="nc">&nbsp;        this.timeout = timeout;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @SuppressWarnings(&quot;all&quot;)
+&nbsp;    public Response send(Request request) throws SQLException {
+&nbsp;
+<b class="fc">&nbsp;        Response response = null;</b>
+<b class="fc">&nbsp;        CompletableFuture&lt;Response&gt; completableFuture = new CompletableFuture&lt;&gt;();</b>
+<b class="fc">&nbsp;        String reqString = request.toString();</b>
+&nbsp;        try {
+<b class="fc">&nbsp;            inFlightRequest.put(new FutureResponse(request.getAction(), request.id(), completableFuture));</b>
+<b class="fc">&nbsp;            client.send(reqString);</b>
+<b class="nc">&nbsp;        } catch (InterruptedException | TimeoutException e) {</b>
+<b class="nc">&nbsp;            throw new SQLException(e);</b>
+<b class="fc">&nbsp;        }</b>
+<b class="fc">&nbsp;        CompletableFuture&lt;Response&gt; responseFuture = CompletableFutureTimeout.orTimeout(</b>
+&nbsp;                completableFuture, timeout, TimeUnit.MILLISECONDS, reqString);
+&nbsp;        try {
+<b class="fc">&nbsp;            response = responseFuture.get();</b>
+<b class="nc">&nbsp;        } catch (InterruptedException | ExecutionException e) {</b>
+<b class="nc">&nbsp;            inFlightRequest.remove(request.getAction(), request.id());</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());</b>
+<b class="fc">&nbsp;        }</b>
+<b class="fc">&nbsp;        return response;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public Response send(String action, long reqId, long stmtId, long type, byte[] rawData) throws SQLException {
+<b class="fc">&nbsp;        ByteArrayOutputStream buffer = new ByteArrayOutputStream();</b>
+&nbsp;        try {
+<b class="fc">&nbsp;            buffer.write(SerializeBlock.longToBytes(reqId));</b>
+<b class="fc">&nbsp;            buffer.write(SerializeBlock.longToBytes(stmtId));</b>
+<b class="fc">&nbsp;            buffer.write(SerializeBlock.longToBytes(type));</b>
+<b class="fc">&nbsp;            buffer.write(rawData);</b>
+<b class="nc">&nbsp;        } catch (IOException e) {</b>
+<b class="nc">&nbsp;            throw new SQLException(&quot;data serialize error!&quot;, e);</b>
+<b class="fc">&nbsp;        }</b>
+&nbsp;
+<b class="fc">&nbsp;        Response response = null;</b>
+<b class="fc">&nbsp;        CompletableFuture&lt;Response&gt; completableFuture = new CompletableFuture&lt;&gt;();</b>
+&nbsp;        try {
+<b class="fc">&nbsp;            inFlightRequest.put(new FutureResponse(action, reqId, completableFuture));</b>
+<b class="fc">&nbsp;            client.send(buffer.toByteArray());</b>
+<b class="nc">&nbsp;        } catch (InterruptedException | TimeoutException e) {</b>
+<b class="nc">&nbsp;            throw new SQLException(e);</b>
+<b class="fc">&nbsp;        }</b>
+<b class="fc">&nbsp;        String reqString = &quot;action:&quot; + action + &quot;, reqId:&quot; + reqId + &quot;, stmtId:&quot; + stmtId + &quot;, bindType&quot; + type;</b>
+<b class="fc">&nbsp;        CompletableFuture&lt;Response&gt; responseFuture = CompletableFutureTimeout.orTimeout(completableFuture, timeout, TimeUnit.MILLISECONDS, reqString);</b>
+&nbsp;        try {
+<b class="fc">&nbsp;            response = responseFuture.get();</b>
+<b class="nc">&nbsp;        } catch (InterruptedException | ExecutionException e) {</b>
+<b class="nc">&nbsp;            inFlightRequest.remove(action, reqId);</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());</b>
+<b class="fc">&nbsp;        }</b>
+<b class="fc">&nbsp;        return response;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void sendWithoutRep(Request request) {
+<b class="fc">&nbsp;        client.send(request.toString());</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public boolean isClosed() {
+<b class="fc">&nbsp;        return closed;</b>
+&nbsp;    }
+&nbsp;
+<b class="fc">&nbsp;    boolean flag = false;</b>
+&nbsp;    @Override
+&nbsp;    public synchronized void close() {
+<b class="fc">&nbsp;        if (flag) return;</b>
+<b class="fc">&nbsp;        flag = true;</b>
+<b class="fc">&nbsp;        closed = true;</b>
+<b class="fc">&nbsp;        inFlightRequest.close();</b>
+<b class="fc">&nbsp;        client.close();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static void checkConnection(Transport transport, int connectTimeout) throws SQLException {
+&nbsp;        try {
+<b class="fc">&nbsp;            if (!transport.client.connectBlocking(connectTimeout, TimeUnit.MILLISECONDS)) {</b>
+<b class="fc">&nbsp;                transport.close();</b>
+<b class="fc">&nbsp;                throw TSDBError.createSQLException(ERROR_CONNECTION_TIMEOUT,</b>
+&nbsp;                        &quot;can&#39;t create connection with server within: &quot; + connectTimeout + &quot; milliseconds&quot;);
+&nbsp;            }
+<b class="nc">&nbsp;        } catch (InterruptedException e) {</b>
+<b class="nc">&nbsp;            Thread.currentThread().interrupt();</b>
+<b class="nc">&nbsp;            transport.close();</b>
+<b class="nc">&nbsp;            throw new SQLException(&quot;create websocket connection has been Interrupted &quot;, e);</b>
+<b class="fc">&nbsp;        }</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void shutdown() {
+<b class="fc">&nbsp;        closed = true;</b>
+<b class="fc">&nbsp;        if (inFlightRequest.hasInFlightRequest()) {</b>
+<b class="nc">&nbsp;            CompletableFuture&lt;Void&gt; future = CompletableFuture.runAsync(() -&gt; {</b>
+&nbsp;                try {
+<b class="nc">&nbsp;                    TimeUnit.MILLISECONDS.sleep(timeout);</b>
+<b class="nc">&nbsp;                } catch (InterruptedException e) {</b>
+&nbsp;                    // ignore
+<b class="nc">&nbsp;                }</b>
+&nbsp;            });
+<b class="nc">&nbsp;            future.thenRun(this::close);</b>
+<b class="nc">&nbsp;        } else {</b>
+<b class="fc">&nbsp;            close();</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2023-10-08 10:56</div>
+</div>
+</body>
+</html>

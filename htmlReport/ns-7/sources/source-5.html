@@ -1,0 +1,1240 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <title>Coverage Report > TSWSPreparedStatement</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.taosdata.jdbc.ws</a>
+</div>
+
+<h1>Coverage Summary for Class: TSWSPreparedStatement (com.taosdata.jdbc.ws)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">TSWSPreparedStatement</td>
+<td class="coverageStat">
+  <span class="percent">
+    63.6%
+  </span>
+  <span class="absValue">
+    (70/110)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    59.4%
+  </span>
+  <span class="absValue">
+    (314/529)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">TSWSPreparedStatement$Column</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (2/2)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (5/5)
+  </span>
+</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    64.3%
+  </span>
+  <span class="absValue">
+    (72/112)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    59.7%
+  </span>
+  <span class="absValue">
+    (319/534)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.taosdata.jdbc.ws;
+&nbsp;
+&nbsp;import com.taosdata.jdbc.TSDBConstants;
+&nbsp;import com.taosdata.jdbc.TSDBError;
+&nbsp;import com.taosdata.jdbc.TSDBErrorNumbers;
+&nbsp;import com.taosdata.jdbc.TSDBParameterMetaData;
+&nbsp;import com.taosdata.jdbc.common.ColumnInfo;
+&nbsp;import com.taosdata.jdbc.common.SerializeBlock;
+&nbsp;import com.taosdata.jdbc.enums.BindType;
+&nbsp;import com.taosdata.jdbc.enums.TimestampPrecision;
+&nbsp;import com.taosdata.jdbc.rs.ConnectionParam;
+&nbsp;import com.taosdata.jdbc.utils.ReqId;
+&nbsp;import com.taosdata.jdbc.utils.Utils;
+&nbsp;import com.taosdata.jdbc.ws.entity.Code;
+&nbsp;import com.taosdata.jdbc.ws.entity.Request;
+&nbsp;import com.taosdata.jdbc.ws.entity.Response;
+&nbsp;import com.taosdata.jdbc.ws.stmt.entity.ExecResp;
+&nbsp;import com.taosdata.jdbc.ws.stmt.entity.RequestFactory;
+&nbsp;import com.taosdata.jdbc.ws.stmt.entity.STMTAction;
+&nbsp;import com.taosdata.jdbc.ws.stmt.entity.StmtResp;
+&nbsp;
+&nbsp;import java.io.IOException;
+&nbsp;import java.io.InputStream;
+&nbsp;import java.io.Reader;
+&nbsp;import java.math.BigDecimal;
+&nbsp;import java.net.URL;
+&nbsp;import java.nio.charset.StandardCharsets;
+&nbsp;import java.sql.Date;
+&nbsp;import java.sql.*;
+&nbsp;import java.util.*;
+&nbsp;import java.util.regex.Matcher;
+&nbsp;import java.util.regex.Pattern;
+&nbsp;import java.util.stream.Collectors;
+&nbsp;
+&nbsp;import static com.taosdata.jdbc.TSDBConstants.*;
+&nbsp;import static com.taosdata.jdbc.utils.SqlSyntaxValidator.getDatabaseName;
+&nbsp;import static com.taosdata.jdbc.utils.SqlSyntaxValidator.isUseSql;
+&nbsp;
+&nbsp;public class TSWSPreparedStatement extends WSStatement implements PreparedStatement {
+<b class="fc">&nbsp;   public static final Pattern INSERT_PATTERN = Pattern.compile(</b>
+&nbsp;             &quot;insert\\s+into\\s+([.\\w]+|\\?)\\s+(using\\s+([.\\w]+)(\\s*\\(.*\\)\\s*|\\s+)tags\\s*\\(.*\\))?\\s*(\\(.*\\))?\\s*values\\s*\\(.*\\)&quot;
+&nbsp;   );
+&nbsp;    private final ConnectionParam param;
+&nbsp;    private Transport prepareTransport;
+&nbsp;    private long reqId;
+&nbsp;    private long stmtId;
+&nbsp;    private final String rawSql;
+&nbsp;
+<b class="fc">&nbsp;    private int queryTimeout = 0;</b>
+<b class="fc">&nbsp;    private int precision = TimestampPrecision.MS;</b>
+&nbsp;
+<b class="fc">&nbsp;    private final Map&lt;Integer, Column&gt; column = new HashMap&lt;&gt;();</b>
+&nbsp;
+<b class="fc">&nbsp;    private final Map&lt;Integer, Column&gt; tag = new HashMap&lt;&gt;();</b>
+<b class="fc">&nbsp;    private final List&lt;ColumnInfo&gt; data = new ArrayList&lt;&gt;();</b>
+&nbsp;
+<b class="fc">&nbsp;    private final PriorityQueue&lt;ColumnInfo&gt; queue = new PriorityQueue&lt;&gt;();</b>
+&nbsp;
+&nbsp;    public TSWSPreparedStatement(Transport transport, Transport prepareTransport, ConnectionParam param, String database, Connection connection, String sql) throws SQLException {
+<b class="fc">&nbsp;        super(transport, database, connection);</b>
+<b class="fc">&nbsp;        this.prepareTransport = prepareTransport;</b>
+<b class="fc">&nbsp;        this.rawSql = sql;</b>
+<b class="fc">&nbsp;        this.param = param;</b>
+<b class="fc">&nbsp;        if (!sql.contains(&quot;?&quot;))</b>
+&nbsp;            return;
+&nbsp;
+<b class="fc">&nbsp;        String useDb = null;</b>
+<b class="fc">&nbsp;        Matcher matcher = INSERT_PATTERN.matcher(sql);</b>
+<b class="fc">&nbsp;        if (matcher.find()) {</b>
+<b class="fc">&nbsp;            if (matcher.group(1).equals(&quot;?&quot;) &amp;&amp; matcher.group(3) != null) {</b>
+<b class="fc">&nbsp;                String usingGroup = matcher.group(3);</b>
+<b class="fc">&nbsp;                if (usingGroup.contains(&quot;.&quot;)) {</b>
+<b class="fc">&nbsp;                    String[] split = usingGroup.split(&quot;\\.&quot;);</b>
+<b class="fc">&nbsp;                    useDb = split[0];</b>
+&nbsp;                }
+<b class="fc">&nbsp;            } else {</b>
+<b class="fc">&nbsp;                String usingGroup = matcher.group(1);</b>
+<b class="fc">&nbsp;                if (usingGroup.contains(&quot;.&quot;)) {</b>
+<b class="fc">&nbsp;                    String[] split = usingGroup.split(&quot;\\.&quot;);</b>
+<b class="fc">&nbsp;                    useDb = split[0];</b>
+&nbsp;                }
+&nbsp;            }
+&nbsp;        }
+<b class="fc">&nbsp;        if (useDb == null &amp;&amp; database != null) {</b>
+<b class="fc">&nbsp;            useDb = database;</b>
+&nbsp;        }
+<b class="fc">&nbsp;        if (useDb != null) {</b>
+<b class="fc">&nbsp;            try (ResultSet resultSet = this.executeQuery(&quot;select `precision` from information_schema.ins_databases where name = &#39;&quot; + useDb + &quot;&#39;&quot;)) {</b>
+<b class="fc">&nbsp;                while (resultSet.next()) {</b>
+<b class="fc">&nbsp;                    String tmp = resultSet.getString(1);</b>
+<b class="fc">&nbsp;                    precision = TimestampPrecision.getPrecision(tmp);</b>
+<b class="fc">&nbsp;                }</b>
+<b class="fc">&nbsp;            }</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        reqId = ReqId.getReqID();</b>
+<b class="fc">&nbsp;        Request request = RequestFactory.generateInit(reqId);</b>
+<b class="fc">&nbsp;        StmtResp resp = (StmtResp) prepareTransport.send(request);</b>
+<b class="fc">&nbsp;        if (Code.SUCCESS.getCode() != resp.getCode()) {</b>
+<b class="nc">&nbsp;            throw new SQLException(&quot;(0x&quot; + Integer.toHexString(resp.getCode()) + &quot;):&quot; + resp.getMessage());</b>
+&nbsp;        }
+<b class="fc">&nbsp;        stmtId = resp.getStmtId();</b>
+<b class="fc">&nbsp;        Request prepare = RequestFactory.generatePrepare(stmtId, reqId, sql);</b>
+<b class="fc">&nbsp;        StmtResp prepareResp = (StmtResp) prepareTransport.send(prepare);</b>
+<b class="fc">&nbsp;        if (Code.SUCCESS.getCode() != prepareResp.getCode()) {</b>
+<b class="nc">&nbsp;            throw new SQLException(&quot;(0x&quot; + Integer.toHexString(prepareResp.getCode()) + &quot;):&quot; + prepareResp.getMessage());</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public int getQueryTimeout() throws SQLException {
+<b class="nc">&nbsp;        return queryTimeout;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setQueryTimeout(int seconds) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        if (seconds &lt; 0)</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE);</b>
+&nbsp;
+<b class="nc">&nbsp;        this.queryTimeout = seconds;</b>
+<b class="nc">&nbsp;        prepareTransport.setTimeout(seconds * 1000L);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    private void checkUseStatement(String sql) throws SQLException {
+<b class="fc">&nbsp;        if (sql == null || sql.isEmpty()) {</b>
+<b class="nc">&nbsp;            throw new SQLException(&quot;sql is empty&quot;);</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        if (isUseSql(sql)) {</b>
+<b class="fc">&nbsp;            prepareTransport.shutdown();</b>
+<b class="fc">&nbsp;            String database = getDatabaseName(sql);</b>
+<b class="fc">&nbsp;            if (null != database) {</b>
+<b class="fc">&nbsp;                prepareTransport = WSConnection.initPrepareTransport(param, database);</b>
+&nbsp;
+<b class="fc">&nbsp;                try (ResultSet resultSet = this.executeQuery(&quot;select `precision` from information_schema.ins_databases where name = &#39;&quot; + database + &quot;&#39;&quot;)) {</b>
+<b class="fc">&nbsp;                    while (resultSet.next()) {</b>
+<b class="fc">&nbsp;                        String tmp = resultSet.getString(1);</b>
+<b class="fc">&nbsp;                        precision = TimestampPrecision.getPrecision(tmp);</b>
+<b class="fc">&nbsp;                    }</b>
+<b class="fc">&nbsp;                }</b>
+&nbsp;
+<b class="fc">&nbsp;                reqId = ReqId.getReqID();</b>
+<b class="fc">&nbsp;                Request request = RequestFactory.generateInit(reqId);</b>
+<b class="fc">&nbsp;                StmtResp resp = (StmtResp) prepareTransport.send(request);</b>
+<b class="fc">&nbsp;                if (Code.SUCCESS.getCode() != resp.getCode()) {</b>
+<b class="nc">&nbsp;                    throw new SQLException(&quot;(0x&quot; + Integer.toHexString(resp.getCode()) + &quot;):&quot; + resp.getMessage());</b>
+&nbsp;                }
+<b class="fc">&nbsp;                stmtId = resp.getStmtId();</b>
+<b class="fc">&nbsp;                Request prepare = RequestFactory.generatePrepare(stmtId, reqId, rawSql);</b>
+<b class="fc">&nbsp;                StmtResp prepareResp = (StmtResp) prepareTransport.send(prepare);</b>
+<b class="fc">&nbsp;                if (Code.SUCCESS.getCode() != prepareResp.getCode()) {</b>
+<b class="nc">&nbsp;                    throw new SQLException(&quot;(0x&quot; + Integer.toHexString(prepareResp.getCode()) + &quot;):&quot; + prepareResp.getMessage());</b>
+&nbsp;                }
+&nbsp;            }
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean execute(String sql, Long reqId) throws SQLException {
+<b class="fc">&nbsp;        checkUseStatement(sql);</b>
+<b class="fc">&nbsp;        return super.execute(sql, reqId);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public ResultSet executeQuery() throws SQLException {
+<b class="fc">&nbsp;        List&lt;Object&gt; list = new ArrayList&lt;&gt;();</b>
+<b class="fc">&nbsp;        if (!tag.isEmpty()) {</b>
+<b class="nc">&nbsp;            tag.keySet().stream().sorted().forEach(i -&gt; {</b>
+<b class="nc">&nbsp;                Column col = this.tag.get(i);</b>
+<b class="nc">&nbsp;                list.add(col.data);</b>
+&nbsp;            });
+&nbsp;        }
+<b class="fc">&nbsp;        if (!column.isEmpty()) {</b>
+<b class="fc">&nbsp;            column.keySet().stream().sorted().forEach(i -&gt; {</b>
+<b class="fc">&nbsp;                Column col = this.column.get(i);</b>
+<b class="fc">&nbsp;                list.add(col.data);</b>
+&nbsp;            });
+&nbsp;        }
+<b class="fc">&nbsp;        Object[] parameters = list.toArray(new Object[0]);</b>
+<b class="fc">&nbsp;        this.clearParameters();</b>
+&nbsp;
+<b class="fc">&nbsp;        final String sql = Utils.getNativeSql(this.rawSql, parameters);</b>
+<b class="fc">&nbsp;        return executeQuery(sql);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public int executeUpdate() throws SQLException {
+<b class="fc">&nbsp;        if (column.isEmpty())</b>
+<b class="nc">&nbsp;            throw new SQLException(&quot;no parameter to execute&quot;);</b>
+<b class="fc">&nbsp;        if (!data.isEmpty())</b>
+<b class="nc">&nbsp;            throw TSDBError.undeterminedExecutionError();</b>
+&nbsp;
+&nbsp;        //set tag
+<b class="fc">&nbsp;        if (!tag.isEmpty()) {</b>
+<b class="fc">&nbsp;            List&lt;ColumnInfo&gt; collect = tag.keySet().stream().sorted().map(i -&gt; {</b>
+<b class="fc">&nbsp;                Column col = this.tag.get(i);</b>
+<b class="fc">&nbsp;                return new ColumnInfo(i, col.data, col.type);</b>
+<b class="fc">&nbsp;            }).collect(Collectors.toList());</b>
+&nbsp;            byte[] tagBlock;
+&nbsp;            try {
+<b class="fc">&nbsp;                tagBlock = SerializeBlock.getRawBlock(collect, precision);</b>
+<b class="nc">&nbsp;            } catch (IOException e) {</b>
+<b class="nc">&nbsp;                throw new SQLException(&quot;data serialize error!&quot;, e);</b>
+<b class="fc">&nbsp;            }</b>
+<b class="fc">&nbsp;            StmtResp bindResp = (StmtResp) prepareTransport.send(STMTAction.SET_TAGS.getAction(),</b>
+<b class="fc">&nbsp;                    reqId, stmtId, BindType.TAG.get(), tagBlock);</b>
+<b class="fc">&nbsp;            if (Code.SUCCESS.getCode() != bindResp.getCode()) {</b>
+<b class="nc">&nbsp;                throw new SQLException(&quot;(0x&quot; + Integer.toHexString(bindResp.getCode()) + &quot;):&quot; + bindResp.getMessage());</b>
+&nbsp;            }
+&nbsp;        }
+&nbsp;        // bind
+<b class="fc">&nbsp;        List&lt;ColumnInfo&gt; collect = column.keySet().stream().sorted().map(i -&gt; {</b>
+<b class="fc">&nbsp;            Column col = this.column.get(i);</b>
+<b class="fc">&nbsp;            return new ColumnInfo(i, col.data, col.type);</b>
+<b class="fc">&nbsp;        }).collect(Collectors.toList());</b>
+&nbsp;        byte[] rawBlock;
+&nbsp;        try {
+<b class="fc">&nbsp;            rawBlock = SerializeBlock.getRawBlock(collect, precision);</b>
+<b class="nc">&nbsp;        } catch (IOException e) {</b>
+<b class="nc">&nbsp;            throw new SQLException(&quot;data serialize error!&quot;, e);</b>
+<b class="fc">&nbsp;        }</b>
+<b class="fc">&nbsp;        StmtResp bindResp = (StmtResp) prepareTransport.send(STMTAction.BIND.getAction(),</b>
+<b class="fc">&nbsp;                reqId, stmtId, BindType.BIND.get(), rawBlock);</b>
+<b class="fc">&nbsp;        if (Code.SUCCESS.getCode() != bindResp.getCode()) {</b>
+<b class="nc">&nbsp;            throw new SQLException(&quot;(0x&quot; + Integer.toHexString(bindResp.getCode()) + &quot;):&quot; + bindResp.getMessage());</b>
+&nbsp;        }
+&nbsp;        // add batch
+<b class="fc">&nbsp;        Request batch = RequestFactory.generateBatch(stmtId, reqId);</b>
+<b class="fc">&nbsp;        Response send = prepareTransport.send(batch);</b>
+<b class="fc">&nbsp;        StmtResp batchResp = (StmtResp) send;</b>
+<b class="fc">&nbsp;        if (Code.SUCCESS.getCode() != batchResp.getCode()) {</b>
+<b class="nc">&nbsp;            throw new SQLException(&quot;(0x&quot; + Integer.toHexString(batchResp.getCode()) + &quot;):&quot; + batchResp.getMessage());</b>
+&nbsp;        }
+<b class="fc">&nbsp;        this.clearParameters();</b>
+&nbsp;        // send
+<b class="fc">&nbsp;        Request request = RequestFactory.generateExec(stmtId, reqId);</b>
+<b class="fc">&nbsp;        ExecResp resp = (ExecResp) prepareTransport.send(request);</b>
+<b class="fc">&nbsp;        if (Code.SUCCESS.getCode() != resp.getCode()) {</b>
+<b class="nc">&nbsp;            throw new SQLException(&quot;(0x&quot; + Integer.toHexString(resp.getCode()) + &quot;):&quot; + resp.getMessage());</b>
+&nbsp;        }
+&nbsp;        // close
+<b class="fc">&nbsp;        Request close = RequestFactory.generateClose(stmtId, reqId);</b>
+<b class="fc">&nbsp;        prepareTransport.sendWithoutRep(close);</b>
+<b class="fc">&nbsp;        return resp.getAffected();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // set sub-table name
+&nbsp;    public void setTableName(String name) throws SQLException {
+<b class="fc">&nbsp;        Request request = RequestFactory.generateSetTableName(stmtId, reqId, name);</b>
+<b class="fc">&nbsp;        StmtResp resp = (StmtResp) prepareTransport.send(request);</b>
+<b class="fc">&nbsp;        if (Code.SUCCESS.getCode() != resp.getCode()) {</b>
+<b class="fc">&nbsp;            throw new SQLException(&quot;(0x&quot; + Integer.toHexString(resp.getCode()) + &quot;):&quot; + resp.getMessage());</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTagSqlTypeNull(int index, int type) throws SQLException {
+<b class="nc">&nbsp;        switch (type) {</b>
+&nbsp;            case Types.BOOLEAN:
+<b class="nc">&nbsp;                tag.put(index, new Column(null, TSDB_DATA_TYPE_BOOL, index));</b>
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            case Types.TINYINT:
+<b class="nc">&nbsp;                tag.put(index, new Column(null, TSDB_DATA_TYPE_TINYINT, index));</b>
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            case Types.SMALLINT:
+<b class="nc">&nbsp;                tag.put(index, new Column(null, TSDB_DATA_TYPE_SMALLINT, index));</b>
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            case Types.INTEGER:
+<b class="nc">&nbsp;                tag.put(index, new Column(null, TSDB_DATA_TYPE_INT, index));</b>
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            case Types.BIGINT:
+<b class="nc">&nbsp;                tag.put(index, new Column(null, TSDB_DATA_TYPE_BIGINT, index));</b>
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            case Types.FLOAT:
+<b class="nc">&nbsp;                tag.put(index, new Column(null, TSDB_DATA_TYPE_FLOAT, index));</b>
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            case Types.DOUBLE:
+<b class="nc">&nbsp;                tag.put(index, new Column(null, TSDB_DATA_TYPE_DOUBLE, index));</b>
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            case Types.TIMESTAMP:
+<b class="nc">&nbsp;                tag.put(index, new Column(null, TSDB_DATA_TYPE_TIMESTAMP, index));</b>
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            case Types.BINARY:
+&nbsp;            case Types.VARCHAR:
+<b class="nc">&nbsp;                tag.put(index, new Column(null, TSDB_DATA_TYPE_BINARY, index));</b>
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            case Types.VARBINARY:
+<b class="nc">&nbsp;                tag.put(index, new Column(null, TSDB_DATA_TYPE_VARBINARY, index));</b>
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            case Types.NCHAR:
+<b class="nc">&nbsp;                tag.put(index, new Column(null, TSDB_DATA_TYPE_NCHAR, index));</b>
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            // json
+&nbsp;            case Types.OTHER:
+<b class="nc">&nbsp;                tag.put(index, new Column(null, TSDB_DATA_TYPE_JSON, index));</b>
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            default:
+<b class="nc">&nbsp;                throw new SQLException(&quot;unsupported type: &quot; + type);</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTagNull(int index, int type) throws SQLException {
+<b class="fc">&nbsp;        switch (type) {</b>
+&nbsp;            case TSDB_DATA_TYPE_BOOL:
+<b class="fc">&nbsp;                tag.put(index, new Column(null, TSDB_DATA_TYPE_BOOL, index));</b>
+<b class="fc">&nbsp;                break;</b>
+&nbsp;            case TSDB_DATA_TYPE_TINYINT:
+<b class="fc">&nbsp;                tag.put(index, new Column(null, TSDB_DATA_TYPE_TINYINT, index));</b>
+<b class="fc">&nbsp;                break;</b>
+&nbsp;            case TSDB_DATA_TYPE_SMALLINT:
+<b class="fc">&nbsp;                tag.put(index, new Column(null, TSDB_DATA_TYPE_SMALLINT, index));</b>
+<b class="fc">&nbsp;                break;</b>
+&nbsp;            case TSDB_DATA_TYPE_INT:
+<b class="fc">&nbsp;                tag.put(index, new Column(null, TSDB_DATA_TYPE_INT, index));</b>
+<b class="fc">&nbsp;                break;</b>
+&nbsp;            case TSDB_DATA_TYPE_BIGINT:
+<b class="fc">&nbsp;                tag.put(index, new Column(null, TSDB_DATA_TYPE_BIGINT, index));</b>
+<b class="fc">&nbsp;                break;</b>
+&nbsp;            case TSDB_DATA_TYPE_FLOAT:
+<b class="fc">&nbsp;                tag.put(index, new Column(null, TSDB_DATA_TYPE_FLOAT, index));</b>
+<b class="fc">&nbsp;                break;</b>
+&nbsp;            case TSDB_DATA_TYPE_DOUBLE:
+<b class="fc">&nbsp;                tag.put(index, new Column(null, TSDB_DATA_TYPE_DOUBLE, index));</b>
+<b class="fc">&nbsp;                break;</b>
+&nbsp;            case TSDB_DATA_TYPE_TIMESTAMP:
+<b class="nc">&nbsp;                tag.put(index, new Column(null, TSDB_DATA_TYPE_TIMESTAMP, index));</b>
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            case TSDB_DATA_TYPE_BINARY:
+<b class="fc">&nbsp;                tag.put(index, new Column(null, TSDB_DATA_TYPE_BINARY, index));</b>
+<b class="fc">&nbsp;                break;</b>
+&nbsp;            case TSDB_DATA_TYPE_VARBINARY:
+<b class="nc">&nbsp;                tag.put(index, new Column(null, TSDB_DATA_TYPE_VARBINARY, index));</b>
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            case TSDB_DATA_TYPE_GEOMETRY:
+<b class="nc">&nbsp;                tag.put(index, new Column(null, TSDB_DATA_TYPE_GEOMETRY, index));</b>
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            case TSDB_DATA_TYPE_NCHAR:
+<b class="fc">&nbsp;                tag.put(index, new Column(null, TSDB_DATA_TYPE_NCHAR, index));</b>
+<b class="fc">&nbsp;                break;</b>
+&nbsp;            // json
+&nbsp;            case TSDB_DATA_TYPE_JSON:
+<b class="nc">&nbsp;                tag.put(index, new Column(null, TSDB_DATA_TYPE_JSON, index));</b>
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            default:
+<b class="nc">&nbsp;                throw new SQLException(&quot;unsupported type: &quot; + type);</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTagBoolean(int index, boolean value) {
+<b class="fc">&nbsp;        tag.put(index, new Column(value, TSDB_DATA_TYPE_BOOL, index));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTagByte(int index, byte value) {
+<b class="fc">&nbsp;        tag.put(index, new Column(value, TSDB_DATA_TYPE_TINYINT, index));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTagShort(int index, short value) {
+<b class="fc">&nbsp;        tag.put(index, new Column(value, TSDB_DATA_TYPE_SMALLINT, index));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTagInt(int index, int value) {
+<b class="fc">&nbsp;        tag.put(index, new Column(value, TSDB_DATA_TYPE_INT, index));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTagLong(int index, long value) {
+<b class="fc">&nbsp;        tag.put(index, new Column(value, TSDB_DATA_TYPE_BIGINT, index));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTagFloat(int index, float value) {
+<b class="fc">&nbsp;        tag.put(index, new Column(value, TSDB_DATA_TYPE_FLOAT, index));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTagDouble(int index, double value) {
+<b class="fc">&nbsp;        tag.put(index, new Column(value, TSDB_DATA_TYPE_DOUBLE, index));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTagTimestamp(int index, long value) {
+<b class="nc">&nbsp;        tag.put(index, new Column(new Timestamp(value), TSDB_DATA_TYPE_TIMESTAMP, index));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTagTimestamp(int index, Timestamp value) {
+<b class="fc">&nbsp;        tag.put(index, new Column(value, TSDB_DATA_TYPE_TIMESTAMP, index));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTagString(int index, String value) {
+<b class="fc">&nbsp;        byte[] bytes = value.getBytes(StandardCharsets.UTF_8);</b>
+<b class="fc">&nbsp;        tag.put(index, new Column(bytes, TSDB_DATA_TYPE_BINARY, index));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTagVarbinary(int index, byte[] value) {
+<b class="nc">&nbsp;        tag.put(index, new Column(value, TSDB_DATA_TYPE_VARBINARY, index));</b>
+&nbsp;    }
+&nbsp;    public void setTagGeometry(int index, byte[] value) {
+<b class="nc">&nbsp;        tag.put(index, new Column(value, TSDB_DATA_TYPE_GEOMETRY, index));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTagNString(int index, String value) {
+<b class="fc">&nbsp;        tag.put(index, new Column(value, TSDB_DATA_TYPE_NCHAR, index));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTagJson(int index, String value) {
+<b class="fc">&nbsp;        byte[] bytes = value.getBytes(StandardCharsets.UTF_8);</b>
+<b class="fc">&nbsp;        tag.put(index, new Column(bytes, TSDB_DATA_TYPE_JSON, index));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setNull(int parameterIndex, int sqlType) throws SQLException {
+<b class="fc">&nbsp;        switch (sqlType) {</b>
+&nbsp;            case Types.BOOLEAN:
+<b class="fc">&nbsp;                column.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_BOOL, parameterIndex));</b>
+<b class="fc">&nbsp;                break;</b>
+&nbsp;            case Types.TINYINT:
+<b class="fc">&nbsp;                column.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_TINYINT, parameterIndex));</b>
+<b class="fc">&nbsp;                break;</b>
+&nbsp;            case Types.SMALLINT:
+<b class="fc">&nbsp;                column.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_SMALLINT, parameterIndex));</b>
+<b class="fc">&nbsp;                break;</b>
+&nbsp;            case Types.INTEGER:
+<b class="fc">&nbsp;                column.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_INT, parameterIndex));</b>
+<b class="fc">&nbsp;                break;</b>
+&nbsp;            case Types.BIGINT:
+<b class="fc">&nbsp;                column.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_BIGINT, parameterIndex));</b>
+<b class="fc">&nbsp;                break;</b>
+&nbsp;            case Types.FLOAT:
+<b class="fc">&nbsp;                column.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_FLOAT, parameterIndex));</b>
+<b class="fc">&nbsp;                break;</b>
+&nbsp;            case Types.DOUBLE:
+<b class="fc">&nbsp;                column.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_DOUBLE, parameterIndex));</b>
+<b class="fc">&nbsp;                break;</b>
+&nbsp;            case Types.TIMESTAMP:
+<b class="nc">&nbsp;                column.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));</b>
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            case Types.BINARY:
+&nbsp;            case Types.VARCHAR:
+<b class="fc">&nbsp;                column.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_BINARY, parameterIndex));</b>
+<b class="fc">&nbsp;                break;</b>
+&nbsp;            case Types.VARBINARY:
+<b class="nc">&nbsp;                column.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_VARBINARY, parameterIndex));</b>
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            case Types.NCHAR:
+<b class="fc">&nbsp;                column.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_NCHAR, parameterIndex));</b>
+<b class="fc">&nbsp;                break;</b>
+&nbsp;            // json
+&nbsp;            case Types.OTHER:
+<b class="nc">&nbsp;                column.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_JSON, parameterIndex));</b>
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            default:
+<b class="nc">&nbsp;                throw new SQLException(&quot;unsupported type: &quot; + sqlType);</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setBoolean(int parameterIndex, boolean x) throws SQLException {
+<b class="fc">&nbsp;        column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_BOOL, parameterIndex));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setByte(int parameterIndex, byte x) throws SQLException {
+<b class="fc">&nbsp;        column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_TINYINT, parameterIndex));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setShort(int parameterIndex, short x) throws SQLException {
+<b class="fc">&nbsp;        column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_SMALLINT, parameterIndex));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setInt(int parameterIndex, int x) throws SQLException {
+<b class="fc">&nbsp;        column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_INT, parameterIndex));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setLong(int parameterIndex, long x) throws SQLException {
+<b class="fc">&nbsp;        column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_BIGINT, parameterIndex));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setFloat(int parameterIndex, float x) throws SQLException {
+<b class="fc">&nbsp;        column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_FLOAT, parameterIndex));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setDouble(int parameterIndex, double x) throws SQLException {
+<b class="fc">&nbsp;        column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_DOUBLE, parameterIndex));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setBigDecimal(int parameterIndex, BigDecimal x) throws SQLException {
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setString(int parameterIndex, String x) throws SQLException {
+&nbsp;        // UTF-8
+<b class="fc">&nbsp;        if (x == null) {</b>
+<b class="nc">&nbsp;            setNull(parameterIndex, Types.VARCHAR);</b>
+&nbsp;            return;
+&nbsp;        }
+<b class="fc">&nbsp;        byte[] bytes = x.getBytes(StandardCharsets.UTF_8);</b>
+<b class="fc">&nbsp;        setBytes(parameterIndex, bytes);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setBytes(int parameterIndex, byte[] x) throws SQLException {
+<b class="fc">&nbsp;        column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_BINARY, parameterIndex));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setVarbinary(int parameterIndex, byte[] x) throws SQLException {
+&nbsp;        // UTF-8
+<b class="nc">&nbsp;        if (x == null) {</b>
+<b class="nc">&nbsp;            setNull(parameterIndex, Types.VARBINARY);</b>
+&nbsp;            return;
+&nbsp;        }
+<b class="nc">&nbsp;        column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_VARBINARY, parameterIndex));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setGeometry(int parameterIndex, byte[] x) throws SQLException {
+<b class="nc">&nbsp;        column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_GEOMETRY, parameterIndex));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setDate(int parameterIndex, Date x) throws SQLException {
+<b class="fc">&nbsp;        if (x == null) {</b>
+<b class="nc">&nbsp;            setNull(parameterIndex, Types.TIMESTAMP);</b>
+&nbsp;            return;
+&nbsp;        }
+<b class="fc">&nbsp;        Timestamp timestamp = new Timestamp(x.getTime());</b>
+<b class="fc">&nbsp;        setTimestamp(parameterIndex, timestamp);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setTime(int parameterIndex, Time x) throws SQLException {
+<b class="fc">&nbsp;        if (x == null) {</b>
+<b class="nc">&nbsp;            setNull(parameterIndex, Types.TIMESTAMP);</b>
+&nbsp;            return;
+&nbsp;        }
+<b class="fc">&nbsp;        Timestamp timestamp = new Timestamp(x.getTime());</b>
+<b class="fc">&nbsp;        setTimestamp(parameterIndex, timestamp);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setTimestamp(int parameterIndex, Timestamp x) throws SQLException {
+<b class="fc">&nbsp;        column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setAsciiStream(int parameterIndex, InputStream x, int length) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setUnicodeStream(int parameterIndex, InputStream x, int length) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setBinaryStream(int parameterIndex, InputStream x, int length) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void clearParameters() throws SQLException {
+<b class="fc">&nbsp;        column.clear();</b>
+<b class="fc">&nbsp;        tag.clear();</b>
+<b class="fc">&nbsp;        data.clear();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setObject(int parameterIndex, Object x, int targetSqlType) throws SQLException {
+<b class="nc">&nbsp;        switch (targetSqlType) {</b>
+&nbsp;            case Types.BOOLEAN:
+<b class="nc">&nbsp;                column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_BOOL, parameterIndex));</b>
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            case Types.TINYINT:
+<b class="nc">&nbsp;                column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_TINYINT, parameterIndex));</b>
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            case Types.SMALLINT:
+<b class="nc">&nbsp;                column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_SMALLINT, parameterIndex));</b>
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            case Types.INTEGER:
+<b class="nc">&nbsp;                column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_INT, parameterIndex));</b>
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            case Types.BIGINT:
+<b class="nc">&nbsp;                column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_BIGINT, parameterIndex));</b>
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            case Types.FLOAT:
+<b class="nc">&nbsp;                column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_FLOAT, parameterIndex));</b>
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            case Types.DOUBLE:
+<b class="nc">&nbsp;                column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_DOUBLE, parameterIndex));</b>
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            case Types.TIMESTAMP:
+<b class="nc">&nbsp;                column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));</b>
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            case Types.BINARY:
+&nbsp;            case Types.VARCHAR:
+<b class="nc">&nbsp;                column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_BINARY, parameterIndex));</b>
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            case Types.VARBINARY:
+<b class="nc">&nbsp;                column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_VARBINARY, parameterIndex));</b>
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            case Types.NCHAR:
+<b class="nc">&nbsp;                column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_NCHAR, parameterIndex));</b>
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            // json
+&nbsp;            case Types.OTHER:
+<b class="nc">&nbsp;                column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_JSON, parameterIndex));</b>
+<b class="nc">&nbsp;                break;</b>
+&nbsp;            default:
+<b class="nc">&nbsp;                throw new SQLException(&quot;unsupported type: &quot; + targetSqlType);</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setObject(int parameterIndex, Object x) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+&nbsp;
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean execute() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        List&lt;Object&gt; list = new ArrayList&lt;&gt;();</b>
+<b class="fc">&nbsp;        if (!tag.isEmpty()) {</b>
+<b class="nc">&nbsp;            tag.keySet().stream().sorted().forEach(i -&gt; {</b>
+<b class="nc">&nbsp;                Column col = this.tag.get(i);</b>
+<b class="nc">&nbsp;                list.add(col.data);</b>
+&nbsp;            });
+&nbsp;        }
+<b class="fc">&nbsp;        if (!column.isEmpty()) {</b>
+<b class="nc">&nbsp;            column.keySet().stream().sorted().forEach(i -&gt; {</b>
+<b class="nc">&nbsp;                Column col = this.column.get(i);</b>
+<b class="nc">&nbsp;                list.add(col.data);</b>
+&nbsp;            });
+&nbsp;        }
+<b class="fc">&nbsp;        Object[] parameters = list.toArray(new Object[0]);</b>
+<b class="fc">&nbsp;        this.clearParameters();</b>
+<b class="fc">&nbsp;        final String sql = Utils.getNativeSql(this.rawSql, parameters);</b>
+<b class="fc">&nbsp;        return execute(sql);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void addBatch() throws SQLException {
+<b class="fc">&nbsp;        List&lt;Column&gt; collect = column.keySet().stream().sorted().map(column::get).collect(Collectors.toList());</b>
+<b class="fc">&nbsp;        if (data.isEmpty()) {</b>
+<b class="fc">&nbsp;            for (Column col : collect) {</b>
+<b class="fc">&nbsp;                data.add(new ColumnInfo(col.index, col.data, col.type));</b>
+<b class="fc">&nbsp;            }</b>
+&nbsp;        } else {
+<b class="fc">&nbsp;            if (collect.size() != data.size()) {</b>
+<b class="nc">&nbsp;                throw new SQLException(&quot;batch add column size not match, expected: &quot; + data.size() + &quot;, actual: &quot; + collect.size());</b>
+&nbsp;            }
+&nbsp;
+<b class="fc">&nbsp;            for (int i = 0; i &lt; collect.size(); i++) {</b>
+<b class="fc">&nbsp;                Column col = collect.get(i);</b>
+<b class="fc">&nbsp;                ColumnInfo columnInfo = data.get(i);</b>
+<b class="fc">&nbsp;                if (columnInfo.getIndex() != col.index) {</b>
+<b class="nc">&nbsp;                    throw new SQLException(&quot;batch add column index not match, expected: &quot; + columnInfo.getIndex() + &quot;, actual: &quot; + col.index);</b>
+&nbsp;                }
+<b class="fc">&nbsp;                if (columnInfo.getType() != col.type) {</b>
+<b class="nc">&nbsp;                    throw new SQLException(&quot;batch add column type not match, expected type: &quot; + columnInfo.getType() + &quot;, actual type: &quot; + col.type);</b>
+&nbsp;                }
+<b class="fc">&nbsp;                columnInfo.add(col.data);</b>
+&nbsp;            }
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public int[] executeBatch() throws SQLException {
+<b class="fc">&nbsp;        if (column.isEmpty())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_BATCH_IS_EMPTY);</b>
+&nbsp;
+&nbsp;        //set tag
+<b class="fc">&nbsp;        if (!tag.isEmpty()) {</b>
+<b class="fc">&nbsp;            List&lt;ColumnInfo&gt; collect = tag.keySet().stream().sorted().map(i -&gt; {</b>
+<b class="fc">&nbsp;                Column col = this.tag.get(i);</b>
+<b class="fc">&nbsp;                return new ColumnInfo(i, col.data, col.type);</b>
+<b class="fc">&nbsp;            }).collect(Collectors.toList());</b>
+&nbsp;            byte[] tagBlock;
+&nbsp;            try {
+<b class="fc">&nbsp;                tagBlock = SerializeBlock.getRawBlock(collect, precision);</b>
+<b class="nc">&nbsp;            } catch (IOException e) {</b>
+<b class="nc">&nbsp;                throw new SQLException(&quot;data serialize error!&quot;, e);</b>
+<b class="fc">&nbsp;            }</b>
+<b class="fc">&nbsp;            StmtResp bindResp = (StmtResp) prepareTransport.send(STMTAction.SET_TAGS.getAction(),</b>
+<b class="fc">&nbsp;                    reqId, stmtId, BindType.TAG.get(), tagBlock);</b>
+<b class="fc">&nbsp;            if (Code.SUCCESS.getCode() != bindResp.getCode()) {</b>
+<b class="nc">&nbsp;                throw new SQLException(&quot;(0x&quot; + Integer.toHexString(bindResp.getCode()) + &quot;):&quot; + bindResp.getMessage());</b>
+&nbsp;            }
+&nbsp;        }
+&nbsp;        // bind
+&nbsp;        byte[] rawBlock;
+&nbsp;        try {
+<b class="fc">&nbsp;            rawBlock = SerializeBlock.getRawBlock(data, precision);</b>
+<b class="nc">&nbsp;        } catch (IOException e) {</b>
+<b class="nc">&nbsp;            throw new SQLException(&quot;data serialize error!&quot;, e);</b>
+<b class="fc">&nbsp;        }</b>
+<b class="fc">&nbsp;        StmtResp bindResp = (StmtResp) prepareTransport.send(STMTAction.BIND.getAction(),</b>
+<b class="fc">&nbsp;                reqId, stmtId, BindType.BIND.get(), rawBlock);</b>
+<b class="fc">&nbsp;        if (Code.SUCCESS.getCode() != bindResp.getCode()) {</b>
+<b class="nc">&nbsp;            throw new SQLException(&quot;(0x&quot; + Integer.toHexString(bindResp.getCode()) + &quot;):&quot; + bindResp.getMessage());</b>
+&nbsp;        }
+&nbsp;        // add batch
+<b class="fc">&nbsp;        Request batch = RequestFactory.generateBatch(stmtId, reqId);</b>
+<b class="fc">&nbsp;        Response send = prepareTransport.send(batch);</b>
+<b class="fc">&nbsp;        StmtResp batchResp = (StmtResp) send;</b>
+<b class="fc">&nbsp;        if (Code.SUCCESS.getCode() != batchResp.getCode()) {</b>
+<b class="nc">&nbsp;            throw new SQLException(&quot;(0x&quot; + Integer.toHexString(batchResp.getCode()) + &quot;):&quot; + batchResp.getMessage());</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        this.clearParameters();</b>
+&nbsp;        // send
+<b class="fc">&nbsp;        Request request = RequestFactory.generateExec(stmtId, reqId);</b>
+<b class="fc">&nbsp;        ExecResp resp = (ExecResp) prepareTransport.send(request);</b>
+<b class="fc">&nbsp;        if (Code.SUCCESS.getCode() != resp.getCode()) {</b>
+<b class="nc">&nbsp;            throw new SQLException(&quot;(0x&quot; + Integer.toHexString(resp.getCode()) + &quot;):&quot; + resp.getMessage());</b>
+&nbsp;        }
+<b class="fc">&nbsp;        int[] ints = new int[resp.getAffected()];</b>
+<b class="fc">&nbsp;        for (int i = 0, len = ints.length; i &lt; len; i++)</b>
+<b class="fc">&nbsp;            ints[i] = SUCCESS_NO_INFO;</b>
+<b class="fc">&nbsp;        return ints;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void close() throws SQLException {
+<b class="fc">&nbsp;        super.close();</b>
+<b class="fc">&nbsp;        Request close = RequestFactory.generateClose(stmtId, reqId);</b>
+<b class="fc">&nbsp;        prepareTransport.sendWithoutRep(close);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public ResultSetMetaData getMetaData() throws SQLException {
+<b class="nc">&nbsp;        if (this.getResultSet() == null)</b>
+<b class="nc">&nbsp;            return null;</b>
+<b class="nc">&nbsp;        return getResultSet().getMetaData();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public ParameterMetaData getParameterMetaData() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        List&lt;Object&gt; list = new ArrayList&lt;&gt;();</b>
+<b class="fc">&nbsp;        if (!tag.isEmpty()) {</b>
+<b class="nc">&nbsp;            tag.keySet().stream().sorted().forEach(i -&gt; {</b>
+<b class="nc">&nbsp;                Column col = this.tag.get(i);</b>
+<b class="nc">&nbsp;                list.add(col.data);</b>
+&nbsp;            });
+&nbsp;        }
+<b class="fc">&nbsp;        if (!column.isEmpty()) {</b>
+<b class="fc">&nbsp;            column.keySet().stream().sorted().forEach(i -&gt; {</b>
+<b class="fc">&nbsp;                Column col = this.column.get(i);</b>
+<b class="fc">&nbsp;                list.add(col.data);</b>
+&nbsp;            });
+&nbsp;        }
+<b class="fc">&nbsp;        return new TSDBParameterMetaData(list.toArray(new Object[0]));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setCharacterStream(int parameterIndex, Reader reader, int length) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setRef(int parameterIndex, Ref x) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed()) {</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setBlob(int parameterIndex, Blob x) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setClob(int parameterIndex, Clob x) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setArray(int parameterIndex, Array x) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setDate(int parameterIndex, Date x, Calendar cal) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setTime(int parameterIndex, Time x, Calendar cal) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setTimestamp(int parameterIndex, Timestamp x, Calendar cal) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setNull(int parameterIndex, int sqlType, String typeName) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setURL(int parameterIndex, URL x) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setRowId(int parameterIndex, RowId x) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setNString(int parameterIndex, String value) throws SQLException {
+<b class="fc">&nbsp;        column.put(parameterIndex, new Column(value, TSDB_DATA_TYPE_NCHAR, parameterIndex));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setNCharacterStream(int parameterIndex, Reader value, long length) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setNClob(int parameterIndex, NClob value) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setClob(int parameterIndex, Reader reader, long length) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setBlob(int parameterIndex, InputStream inputStream, long length) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setNClob(int parameterIndex, Reader reader, long length) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setSQLXML(int parameterIndex, SQLXML xmlObject) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setObject(int parameterIndex, Object x, int targetSqlType, int scaleOrLength) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setAsciiStream(int parameterIndex, InputStream x, long length) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setBinaryStream(int parameterIndex, InputStream x, long length) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setCharacterStream(int parameterIndex, Reader reader, long length) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setAsciiStream(int parameterIndex, InputStream x) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setBinaryStream(int parameterIndex, InputStream x) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setCharacterStream(int parameterIndex, Reader reader) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setNCharacterStream(int parameterIndex, Reader value) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setClob(int parameterIndex, Reader reader) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setBlob(int parameterIndex, InputStream inputStream) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setNClob(int parameterIndex, Reader reader) throws SQLException {
+<b class="nc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+<b class="fc">&nbsp;    static class Column {</b>
+&nbsp;        private final Object data;
+&nbsp;        // taos data type
+&nbsp;        private final int type;
+&nbsp;        private final int index;
+&nbsp;
+<b class="fc">&nbsp;        public Column(Object data, int type, int index) {</b>
+<b class="fc">&nbsp;            this.data = data;</b>
+<b class="fc">&nbsp;            this.type = type;</b>
+<b class="fc">&nbsp;            this.index = index;</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setInt(int columnIndex, List&lt;Integer&gt; list) throws SQLException {
+<b class="fc">&nbsp;        setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_INT, Integer.BYTES);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setFloat(int columnIndex, List&lt;Float&gt; list) throws SQLException {
+<b class="fc">&nbsp;        setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_FLOAT, Float.BYTES);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTimestamp(int columnIndex, List&lt;Long&gt; list) throws SQLException {
+<b class="fc">&nbsp;        List&lt;Timestamp&gt; collect = list.stream().map(x -&gt; {</b>
+<b class="fc">&nbsp;            if (x == null) {</b>
+<b class="fc">&nbsp;                return null;</b>
+&nbsp;            }
+<b class="fc">&nbsp;            return new Timestamp(x);</b>
+<b class="fc">&nbsp;        }).collect(Collectors.toList());</b>
+<b class="fc">&nbsp;        setValueImpl(columnIndex, collect, TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP, Long.BYTES);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setLong(int columnIndex, List&lt;Long&gt; list) throws SQLException {
+<b class="nc">&nbsp;        setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_BIGINT, Long.BYTES);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setDouble(int columnIndex, List&lt;Double&gt; list) throws SQLException {
+<b class="fc">&nbsp;        setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_DOUBLE, Double.BYTES);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setBoolean(int columnIndex, List&lt;Boolean&gt; list) throws SQLException {
+<b class="fc">&nbsp;        setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_BOOL, Byte.BYTES);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setByte(int columnIndex, List&lt;Byte&gt; list) throws SQLException {
+<b class="nc">&nbsp;        setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_TINYINT, Byte.BYTES);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setShort(int columnIndex, List&lt;Short&gt; list) throws SQLException {
+<b class="nc">&nbsp;        setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_SMALLINT, Short.BYTES);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setString(int columnIndex, List&lt;String&gt; list, int size) throws SQLException {
+<b class="fc">&nbsp;        List&lt;byte[]&gt; collect = list.stream().map(x -&gt; {</b>
+<b class="fc">&nbsp;            if (x == null) {</b>
+<b class="fc">&nbsp;                return null;</b>
+&nbsp;            }
+<b class="fc">&nbsp;            return x.getBytes(StandardCharsets.UTF_8);</b>
+<b class="fc">&nbsp;        }).collect(Collectors.toList());</b>
+<b class="fc">&nbsp;        setValueImpl(columnIndex, collect, TSDBConstants.TSDB_DATA_TYPE_BINARY, size);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setVarbinary(int columnIndex, List&lt;byte[]&gt; list, int size) throws SQLException {
+<b class="nc">&nbsp;        setValueImpl(columnIndex, list, TSDB_DATA_TYPE_VARBINARY, size);</b>
+&nbsp;    }
+&nbsp;    public void setGeometry(int columnIndex, List&lt;byte[]&gt; list, int size) throws SQLException {
+<b class="nc">&nbsp;        setValueImpl(columnIndex, list, TSDB_DATA_TYPE_GEOMETRY, size);</b>
+&nbsp;    }
+&nbsp;    // note: expand the required space for each NChar character
+&nbsp;    public void setNString(int columnIndex, List&lt;String&gt; list, int size) throws SQLException {
+<b class="fc">&nbsp;        setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_NCHAR, size * Integer.BYTES);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public &lt;T&gt; void setValueImpl(int columnIndex, List&lt;T&gt; list, int type, int bytes) throws SQLException {
+<b class="fc">&nbsp;        List&lt;Object&gt; listObject = list.stream()</b>
+<b class="fc">&nbsp;                .map(Object.class::cast)</b>
+<b class="fc">&nbsp;                .collect(Collectors.toList());</b>
+<b class="fc">&nbsp;        ColumnInfo p = new ColumnInfo(columnIndex, listObject, type, null);</b>
+<b class="fc">&nbsp;        queue.add(p);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void columnDataAddBatch() throws SQLException {
+<b class="fc">&nbsp;        while (!queue.isEmpty()) {</b>
+<b class="fc">&nbsp;            data.add(queue.poll());</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    public void columnDataExecuteBatch() throws SQLException {
+&nbsp;        //set tag
+<b class="fc">&nbsp;        if (!tag.isEmpty()) {</b>
+<b class="fc">&nbsp;            List&lt;ColumnInfo&gt; collect = tag.keySet().stream().sorted().map(i -&gt; {</b>
+<b class="fc">&nbsp;                Column col = this.tag.get(i);</b>
+<b class="fc">&nbsp;                return new ColumnInfo(i, col.data, col.type);</b>
+<b class="fc">&nbsp;            }).collect(Collectors.toList());</b>
+&nbsp;            byte[] tagBlock;
+&nbsp;            try {
+<b class="fc">&nbsp;                tagBlock = SerializeBlock.getRawBlock(collect, precision);</b>
+<b class="nc">&nbsp;            } catch (IOException e) {</b>
+<b class="nc">&nbsp;                throw new SQLException(&quot;data serialize error!&quot;, e);</b>
+<b class="fc">&nbsp;            }</b>
+<b class="fc">&nbsp;            StmtResp bindResp = (StmtResp) prepareTransport.send(STMTAction.SET_TAGS.getAction(),</b>
+<b class="fc">&nbsp;                    reqId, stmtId, BindType.TAG.get(), tagBlock);</b>
+<b class="fc">&nbsp;            if (Code.SUCCESS.getCode() != bindResp.getCode()) {</b>
+<b class="nc">&nbsp;                throw new SQLException(&quot;(0x&quot; + Integer.toHexString(bindResp.getCode()) + &quot;):&quot; + bindResp.getMessage());</b>
+&nbsp;            }
+&nbsp;        }
+&nbsp;        // bind
+&nbsp;        byte[] rawBlock;
+&nbsp;        try {
+<b class="fc">&nbsp;            rawBlock = SerializeBlock.getRawBlock(data, precision);</b>
+<b class="nc">&nbsp;        } catch (IOException e) {</b>
+<b class="nc">&nbsp;            throw new SQLException(&quot;data serialize error!&quot;, e);</b>
+<b class="fc">&nbsp;        }</b>
+<b class="fc">&nbsp;        StmtResp bindResp = (StmtResp) prepareTransport.send(STMTAction.BIND.getAction(),</b>
+<b class="fc">&nbsp;                reqId, stmtId, BindType.BIND.get(), rawBlock);</b>
+<b class="fc">&nbsp;        if (Code.SUCCESS.getCode() != bindResp.getCode()) {</b>
+<b class="nc">&nbsp;            throw new SQLException(&quot;(0x&quot; + Integer.toHexString(bindResp.getCode()) + &quot;):&quot; + bindResp.getMessage());</b>
+&nbsp;        }
+&nbsp;        // add batch
+<b class="fc">&nbsp;        Request batch = RequestFactory.generateBatch(stmtId, reqId);</b>
+<b class="fc">&nbsp;        Response send = prepareTransport.send(batch);</b>
+<b class="fc">&nbsp;        StmtResp batchResp = (StmtResp) send;</b>
+<b class="fc">&nbsp;        if (Code.SUCCESS.getCode() != batchResp.getCode()) {</b>
+<b class="nc">&nbsp;            throw new SQLException(&quot;(0x&quot; + Integer.toHexString(batchResp.getCode()) + &quot;):&quot; + batchResp.getMessage());</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        this.clearParameters();</b>
+&nbsp;        // send
+<b class="fc">&nbsp;        Request request = RequestFactory.generateExec(stmtId, reqId);</b>
+<b class="fc">&nbsp;        ExecResp resp = (ExecResp) prepareTransport.send(request);</b>
+<b class="fc">&nbsp;        if (Code.SUCCESS.getCode() != resp.getCode()) {</b>
+<b class="nc">&nbsp;            throw new SQLException(&quot;(0x&quot; + Integer.toHexString(resp.getCode()) + &quot;):&quot; + resp.getMessage());</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    public void columnDataCloseBatch() throws SQLException {
+<b class="fc">&nbsp;        this.close();</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2023-10-08 10:56</div>
+</div>
+</body>
+</html>

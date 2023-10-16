@@ -1,0 +1,239 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <title>Coverage Report > TMQRequestFactory</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.taosdata.jdbc.ws.tmq.entity</a>
+</div>
+
+<h1>Coverage Summary for Class: TMQRequestFactory (com.taosdata.jdbc.ws.tmq.entity)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">TMQRequestFactory</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    92.9%
+  </span>
+  <span class="absValue">
+    (13/14)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    90.8%
+  </span>
+  <span class="absValue">
+    (69/76)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.taosdata.jdbc.ws.tmq.entity;
+&nbsp;
+&nbsp;import com.taosdata.jdbc.tmq.TopicPartition;
+&nbsp;import com.taosdata.jdbc.ws.entity.Request;
+&nbsp;import com.taosdata.jdbc.ws.tmq.ConsumerAction;
+&nbsp;
+&nbsp;import java.util.HashMap;
+&nbsp;import java.util.Map;
+&nbsp;import java.util.concurrent.atomic.AtomicLong;
+&nbsp;
+&nbsp;/**
+&nbsp; * generate id for request
+&nbsp; */
+&nbsp;public class TMQRequestFactory {
+<b class="fc">&nbsp;    private final Map&lt;String, AtomicLong&gt; ids = new HashMap&lt;&gt;();</b>
+&nbsp;
+&nbsp;    public long getId(String action) {
+<b class="fc">&nbsp;        return ids.get(action).incrementAndGet();</b>
+&nbsp;    }
+&nbsp;
+<b class="fc">&nbsp;    public TMQRequestFactory() {</b>
+<b class="fc">&nbsp;        for (ConsumerAction value : ConsumerAction.values()) {</b>
+<b class="fc">&nbsp;            ids.put(value.getAction(), new AtomicLong(0));</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    public Request generateSubscribe(String user, String password, String db, String groupId,
+&nbsp;                                     String clientId, String offsetRest, String[] topics
+&nbsp;            , String enableAutoCommit, String autoCommitIntervalMs, String snapshotEnable, String withTableName) {
+<b class="fc">&nbsp;        long reqId = this.getId(ConsumerAction.SUBSCRIBE.getAction());</b>
+&nbsp;
+<b class="fc">&nbsp;        SubscribeReq subscribeReq = new SubscribeReq();</b>
+<b class="fc">&nbsp;        subscribeReq.setReqId(reqId);</b>
+<b class="fc">&nbsp;        subscribeReq.setUser(user);</b>
+<b class="fc">&nbsp;        subscribeReq.setPassword(password);</b>
+<b class="fc">&nbsp;        subscribeReq.setDb(db);</b>
+<b class="fc">&nbsp;        subscribeReq.setGroupId(groupId);</b>
+<b class="fc">&nbsp;        subscribeReq.setClientId(clientId);</b>
+<b class="fc">&nbsp;        subscribeReq.setOffsetRest(offsetRest);</b>
+<b class="fc">&nbsp;        subscribeReq.setTopics(topics);</b>
+<b class="fc">&nbsp;        subscribeReq.setAutoCommit(enableAutoCommit);</b>
+<b class="fc">&nbsp;        subscribeReq.setAutoCommitIntervalMs(autoCommitIntervalMs);</b>
+<b class="fc">&nbsp;        subscribeReq.setSnapshotEnable(snapshotEnable);</b>
+<b class="fc">&nbsp;        subscribeReq.setWithTableName(withTableName);</b>
+<b class="fc">&nbsp;        return new Request(ConsumerAction.SUBSCRIBE.getAction(), subscribeReq);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public Request generatePoll(long blockingTime) {
+<b class="fc">&nbsp;        long reqId = this.getId(ConsumerAction.POLL.getAction());</b>
+<b class="fc">&nbsp;        PollReq pollReq = new PollReq();</b>
+<b class="fc">&nbsp;        pollReq.setReqId(reqId);</b>
+<b class="fc">&nbsp;        pollReq.setBlockingTime(blockingTime);</b>
+<b class="fc">&nbsp;        return new Request(ConsumerAction.POLL.getAction(), pollReq);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public Request generateFetch(long messageId) {
+<b class="fc">&nbsp;        long reqId = this.getId(ConsumerAction.FETCH.getAction());</b>
+<b class="fc">&nbsp;        FetchReq fetchReq = new FetchReq();</b>
+<b class="fc">&nbsp;        fetchReq.setReqId(reqId);</b>
+<b class="fc">&nbsp;        fetchReq.setMessageId(messageId);</b>
+<b class="fc">&nbsp;        return new Request(ConsumerAction.FETCH.getAction(), fetchReq);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public Request generateFetchBlock(long fetchRequestId, long messageId) {
+<b class="fc">&nbsp;        FetchBlockReq fetchBlockReq = new FetchBlockReq();</b>
+<b class="fc">&nbsp;        fetchBlockReq.setReqId(fetchRequestId);</b>
+<b class="fc">&nbsp;        fetchBlockReq.setMessageId(messageId);</b>
+<b class="fc">&nbsp;        return new Request(ConsumerAction.FETCH_BLOCK.getAction(), fetchBlockReq);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public Request generateCommit(long messageId) {
+<b class="fc">&nbsp;        long reqId = this.getId(ConsumerAction.COMMIT.getAction());</b>
+<b class="fc">&nbsp;        CommitReq commitReq = new CommitReq();</b>
+<b class="fc">&nbsp;        commitReq.setReqId(reqId);</b>
+<b class="fc">&nbsp;        commitReq.setMessageId(messageId);</b>
+<b class="fc">&nbsp;        return new Request(ConsumerAction.COMMIT.getAction(), commitReq);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public Request generateSeek(String topic, int vgId, long offset) {
+<b class="fc">&nbsp;        long reqId = this.getId(ConsumerAction.SEEK.getAction());</b>
+<b class="fc">&nbsp;        SeekReq seekReq = new SeekReq();</b>
+<b class="fc">&nbsp;        seekReq.setReqId(reqId);</b>
+<b class="fc">&nbsp;        seekReq.setTopic(topic);</b>
+<b class="fc">&nbsp;        seekReq.setVgId(vgId);</b>
+<b class="fc">&nbsp;        seekReq.setOffset(offset);</b>
+<b class="fc">&nbsp;        return new Request(ConsumerAction.SEEK.getAction(), seekReq);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public Request generateAssignment(String topic) {
+<b class="fc">&nbsp;        long reqId = this.getId(ConsumerAction.ASSIGNMENT.getAction());</b>
+<b class="fc">&nbsp;        AssignmentReq assignmentReq = new AssignmentReq();</b>
+<b class="fc">&nbsp;        assignmentReq.setReqId(reqId);</b>
+<b class="fc">&nbsp;        assignmentReq.setTopic(topic);</b>
+<b class="fc">&nbsp;        return new Request(ConsumerAction.ASSIGNMENT.getAction(), assignmentReq);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public Request generateUnsubscribe() {
+<b class="fc">&nbsp;        long reqId = this.getId(ConsumerAction.UNSUBSCRIBE.getAction());</b>
+<b class="fc">&nbsp;        UnsubscribeReq unsubscribeReq = new UnsubscribeReq();</b>
+<b class="fc">&nbsp;        unsubscribeReq.setReqId(reqId);</b>
+<b class="fc">&nbsp;        return new Request(ConsumerAction.UNSUBSCRIBE.getAction(), unsubscribeReq);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public Request generateCommitted(TopicPartition[] topicPartitions) {
+<b class="fc">&nbsp;        long reqId = this.getId(ConsumerAction.COMMITTED.getAction());</b>
+<b class="fc">&nbsp;        CommittedReq committedReq = new CommittedReq();</b>
+<b class="fc">&nbsp;        committedReq.setReqId(reqId);</b>
+<b class="fc">&nbsp;        committedReq.setTopicPartitions(topicPartitions);</b>
+<b class="fc">&nbsp;        return new Request(ConsumerAction.COMMITTED.getAction(), committedReq);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public Request generatePosition(TopicPartition[] topicPartitions){
+<b class="fc">&nbsp;        long reqId = this.getId(ConsumerAction.POSITION.getAction());</b>
+<b class="fc">&nbsp;        PositionReq positionReq = new PositionReq();</b>
+<b class="fc">&nbsp;        positionReq.setReqId(reqId);</b>
+<b class="fc">&nbsp;        positionReq.setTopicPartitions(topicPartitions);</b>
+<b class="fc">&nbsp;        return new Request(ConsumerAction.POSITION.getAction(), positionReq);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public Request generateSubscription(){
+<b class="fc">&nbsp;        long reqId = this.getId(ConsumerAction.LIST_TOPICS.getAction());</b>
+<b class="fc">&nbsp;        ListTopicsReq listTopicsReq = new ListTopicsReq();</b>
+<b class="fc">&nbsp;        listTopicsReq.setReqId(reqId);</b>
+<b class="fc">&nbsp;        return new Request(ConsumerAction.LIST_TOPICS.getAction(), listTopicsReq);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public Request generateCommitOffset(TopicPartition topicPartition, long offset){
+<b class="nc">&nbsp;        long reqId = this.getId(ConsumerAction.COMMIT_OFFSET.getAction());</b>
+<b class="nc">&nbsp;        CommitOffsetReq commitOffsetReq = new CommitOffsetReq();</b>
+<b class="nc">&nbsp;        commitOffsetReq.setReqId(reqId);</b>
+<b class="nc">&nbsp;        commitOffsetReq.setTopic(topicPartition.getTopic());</b>
+<b class="nc">&nbsp;        commitOffsetReq.setVgId(topicPartition.getVGroupId());</b>
+<b class="nc">&nbsp;        commitOffsetReq.setOffset(offset);</b>
+<b class="nc">&nbsp;        return new Request(ConsumerAction.COMMIT_OFFSET.getAction(), commitOffsetReq);</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2023-10-08 10:56</div>
+</div>
+</body>
+</html>

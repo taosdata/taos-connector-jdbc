@@ -1,0 +1,397 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <title>Coverage Report > ConnectionParam</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.taosdata.jdbc.rs</a>
+</div>
+
+<h1>Coverage Summary for Class: ConnectionParam (com.taosdata.jdbc.rs)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">ConnectionParam</td>
+<td class="coverageStat">
+  <span class="percent">
+    55.6%
+  </span>
+  <span class="absValue">
+    (15/27)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    75.7%
+  </span>
+  <span class="absValue">
+    (56/74)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">ConnectionParam$1</td>
+  </tr>
+  <tr>
+    <td class="name">ConnectionParam$Builder</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (12/12)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (24/24)
+  </span>
+</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    69.2%
+  </span>
+  <span class="absValue">
+    (27/39)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    81.6%
+  </span>
+  <span class="absValue">
+    (80/98)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.taosdata.jdbc.rs;
+&nbsp;
+&nbsp;import com.taosdata.jdbc.TSDBDriver;
+&nbsp;import com.taosdata.jdbc.TSDBError;
+&nbsp;import com.taosdata.jdbc.TSDBErrorNumbers;
+&nbsp;import com.taosdata.jdbc.utils.HttpClientPoolUtil;
+&nbsp;import com.taosdata.jdbc.ws.Transport;
+&nbsp;
+&nbsp;import java.io.UnsupportedEncodingException;
+&nbsp;import java.net.URLDecoder;
+&nbsp;import java.nio.charset.StandardCharsets;
+&nbsp;import java.sql.SQLException;
+&nbsp;import java.util.Properties;
+&nbsp;
+<b class="fc">&nbsp;public class ConnectionParam {</b>
+&nbsp;    private String host;
+&nbsp;    private String port;
+&nbsp;    private String database;
+&nbsp;    private String cloudToken;
+&nbsp;    private String user;
+&nbsp;    private String password;
+&nbsp;    private String tz;
+&nbsp;    private boolean useSsl;
+&nbsp;    private int maxRequest;
+&nbsp;    private int connectTimeout;
+&nbsp;    private int requestTimeout;
+&nbsp;    private int connectMode;
+&nbsp;
+<b class="fc">&nbsp;    private ConnectionParam(Builder builder) {</b>
+<b class="fc">&nbsp;        this.host = builder.host;</b>
+<b class="fc">&nbsp;        this.port = builder.port;</b>
+<b class="fc">&nbsp;        this.database = builder.database;</b>
+<b class="fc">&nbsp;        this.cloudToken = builder.cloudToken;</b>
+<b class="fc">&nbsp;        this.user = builder.user;</b>
+<b class="fc">&nbsp;        this.password = builder.password;</b>
+<b class="fc">&nbsp;        this.tz = builder.tz;</b>
+<b class="fc">&nbsp;        this.useSsl = builder.useSsl;</b>
+<b class="fc">&nbsp;        this.maxRequest = builder.maxRequest;</b>
+<b class="fc">&nbsp;        this.connectTimeout = builder.connectTimeout;</b>
+<b class="fc">&nbsp;        this.requestTimeout = builder.requestTimeout;</b>
+<b class="fc">&nbsp;        this.connectMode = builder.connectMode;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getHost() {
+<b class="fc">&nbsp;        return host;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setHost(String host) {
+<b class="nc">&nbsp;        this.host = host;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getPort() {
+<b class="fc">&nbsp;        return port;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setPort(String port) {
+<b class="nc">&nbsp;        this.port = port;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getDatabase() {
+<b class="fc">&nbsp;        return database;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setDatabase(String database) {
+<b class="nc">&nbsp;        this.database = database;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getCloudToken() {
+<b class="fc">&nbsp;        return cloudToken;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setCloudToken(String cloudToken) {
+<b class="nc">&nbsp;        this.cloudToken = cloudToken;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getUser() {
+<b class="fc">&nbsp;        return user;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setUser(String user) {
+<b class="nc">&nbsp;        this.user = user;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getPassword() {
+<b class="fc">&nbsp;        return password;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setPassword(String password) {
+<b class="nc">&nbsp;        this.password = password;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getTz() {
+<b class="fc">&nbsp;        return tz;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTz(String tz) {
+<b class="nc">&nbsp;        this.tz = tz;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public boolean isUseSsl() {
+<b class="fc">&nbsp;        return useSsl;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setUseSsl(boolean useSsl) {
+<b class="nc">&nbsp;        this.useSsl = useSsl;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public int getMaxRequest() {
+<b class="fc">&nbsp;        return maxRequest;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setMaxRequest(int maxRequest) {
+<b class="nc">&nbsp;        this.maxRequest = maxRequest;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public int getConnectTimeout() {
+<b class="fc">&nbsp;        return connectTimeout;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setConnectTimeout(int connectTimeout) {
+<b class="nc">&nbsp;        this.connectTimeout = connectTimeout;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public int getRequestTimeout() {
+<b class="fc">&nbsp;        return requestTimeout;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setRequestTimeout(int requestTimeout) {
+<b class="nc">&nbsp;        this.requestTimeout = requestTimeout;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public int getConnectMode() {
+<b class="fc">&nbsp;        return connectMode;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setConnectMode(int connectMode) {
+<b class="nc">&nbsp;        this.connectMode = connectMode;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static ConnectionParam getParam(Properties properties) throws SQLException {
+<b class="fc">&nbsp;        String host = properties.getProperty(TSDBDriver.PROPERTY_KEY_HOST);</b>
+<b class="fc">&nbsp;        String port = properties.getProperty(TSDBDriver.PROPERTY_KEY_PORT);</b>
+<b class="fc">&nbsp;        String database = properties.containsKey(TSDBDriver.PROPERTY_KEY_DBNAME)</b>
+<b class="fc">&nbsp;                ? properties.getProperty(TSDBDriver.PROPERTY_KEY_DBNAME)</b>
+&nbsp;                : null;
+&nbsp;
+<b class="fc">&nbsp;        String cloudToken = null;</b>
+<b class="fc">&nbsp;        if (properties.containsKey(TSDBDriver.PROPERTY_KEY_TOKEN)) {</b>
+<b class="nc">&nbsp;            cloudToken = properties.getProperty(TSDBDriver.PROPERTY_KEY_TOKEN);</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        String user = properties.getProperty(TSDBDriver.PROPERTY_KEY_USER);</b>
+<b class="fc">&nbsp;        String password = properties.getProperty(TSDBDriver.PROPERTY_KEY_PASSWORD);</b>
+&nbsp;
+<b class="fc">&nbsp;        if (user == null &amp;&amp; cloudToken == null) {</b>
+<b class="fc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_USER_IS_REQUIRED);</b>
+&nbsp;        }
+<b class="fc">&nbsp;        if (password == null &amp;&amp; cloudToken == null) {</b>
+<b class="fc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_PASSWORD_IS_REQUIRED);</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        try {
+<b class="fc">&nbsp;            if (user != null) {</b>
+<b class="fc">&nbsp;                user = URLDecoder.decode(user, StandardCharsets.UTF_8.displayName());</b>
+&nbsp;            }
+<b class="fc">&nbsp;            if (password != null) {</b>
+<b class="fc">&nbsp;                password = URLDecoder.decode(password, StandardCharsets.UTF_8.displayName());</b>
+&nbsp;            }
+<b class="nc">&nbsp;        } catch (UnsupportedEncodingException e) {</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE,</b>
+<b class="nc">&nbsp;                    &quot;unsupported UTF-8 concoding, user: &quot; + properties.getProperty(TSDBDriver.PROPERTY_KEY_USER)</b>
+<b class="nc">&nbsp;                            + &quot;, password: &quot; + properties.getProperty(TSDBDriver.PROPERTY_KEY_PASSWORD));</b>
+<b class="fc">&nbsp;        }</b>
+&nbsp;
+<b class="fc">&nbsp;        String tz = properties.getProperty(TSDBDriver.HTTP_TIME_ZONE);</b>
+&nbsp;
+<b class="fc">&nbsp;        boolean useSsl = Boolean.parseBoolean(properties.getProperty(TSDBDriver.PROPERTY_KEY_USE_SSL, &quot;false&quot;));</b>
+&nbsp;
+<b class="fc">&nbsp;        int maxRequest = Integer</b>
+<b class="fc">&nbsp;                .parseInt(properties.getProperty(TSDBDriver.HTTP_POOL_SIZE, HttpClientPoolUtil.DEFAULT_MAX_PER_ROUTE));</b>
+<b class="fc">&nbsp;        int connectTimeout = Integer.parseInt(</b>
+<b class="fc">&nbsp;                properties.getProperty(TSDBDriver.HTTP_CONNECT_TIMEOUT, HttpClientPoolUtil.DEFAULT_CONNECT_TIMEOUT));</b>
+&nbsp;
+<b class="fc">&nbsp;        int requestTimeout = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT,</b>
+<b class="fc">&nbsp;                String.valueOf(Transport.DEFAULT_MESSAGE_WAIT_TIMEOUT)));</b>
+&nbsp;
+<b class="fc">&nbsp;        int connectMode = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_CONNECT_MODE,&quot;0&quot;));</b>
+<b class="fc">&nbsp;        if (connectMode &lt; 0 || connectMode &gt; 1){</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, &quot;unsupported connect mode&quot;);</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        return new ConnectionParam.Builder(host, port).setDatabase(database).setCloudToken(cloudToken)</b>
+<b class="fc">&nbsp;                .setUserAndPassword(user, password).setTimeZone(tz).setUseSsl(useSsl).setMaxRequest(maxRequest)</b>
+<b class="fc">&nbsp;                .setConnectionTimeout(connectTimeout).setRequestTimeout(requestTimeout).setConnectMode(connectMode).build();</b>
+&nbsp;    }
+&nbsp;
+<b class="fc">&nbsp;    public static class Builder {</b>
+&nbsp;        private final String host;
+&nbsp;        private final String port;
+&nbsp;        private String database;
+&nbsp;        private String cloudToken;
+&nbsp;        private String user;
+&nbsp;        private String password;
+&nbsp;        private String tz;
+&nbsp;        private boolean useSsl;
+&nbsp;        private int maxRequest;
+&nbsp;        private int connectTimeout;
+&nbsp;        private int requestTimeout;
+&nbsp;        private int connectMode;
+&nbsp;
+<b class="fc">&nbsp;        public Builder(String host, String port) {</b>
+<b class="fc">&nbsp;            this.host = host;</b>
+<b class="fc">&nbsp;            this.port = port;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        public Builder setDatabase(String database) {
+<b class="fc">&nbsp;            this.database = database;</b>
+<b class="fc">&nbsp;            return this;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        public Builder setCloudToken(String cloudToken) {
+<b class="fc">&nbsp;            this.cloudToken = cloudToken;</b>
+<b class="fc">&nbsp;            return this;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        public Builder setUserAndPassword(String user, String password) {
+<b class="fc">&nbsp;            this.user = user;</b>
+<b class="fc">&nbsp;            this.password = password;</b>
+<b class="fc">&nbsp;            return this;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        public Builder setTimeZone(String timeZone) {
+<b class="fc">&nbsp;            this.tz = timeZone;</b>
+<b class="fc">&nbsp;            return this;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        public Builder setUseSsl(boolean useSsl) {
+<b class="fc">&nbsp;            this.useSsl = useSsl;</b>
+<b class="fc">&nbsp;            return this;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        public Builder setMaxRequest(int maxRequest) {
+<b class="fc">&nbsp;            this.maxRequest = maxRequest;</b>
+<b class="fc">&nbsp;            return this;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        public Builder setConnectionTimeout(int connectTimeout) {
+<b class="fc">&nbsp;            this.connectTimeout = connectTimeout;</b>
+<b class="fc">&nbsp;            return this;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        public Builder setRequestTimeout(int requestTimeout) {
+<b class="fc">&nbsp;            this.requestTimeout = requestTimeout;</b>
+<b class="fc">&nbsp;            return this;</b>
+&nbsp;        }
+&nbsp;        public Builder setConnectMode(int connectMode) {
+<b class="fc">&nbsp;            this.connectMode = connectMode;</b>
+<b class="fc">&nbsp;            return this;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        public ConnectionParam build() {
+<b class="fc">&nbsp;            return new ConnectionParam(this);</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2023-10-08 10:56</div>
+</div>
+</body>
+</html>

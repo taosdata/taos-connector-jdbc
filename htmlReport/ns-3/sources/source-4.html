@@ -1,0 +1,238 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <title>Coverage Report > DataType</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.taosdata.jdbc.enums</a>
+</div>
+
+<h1>Coverage Summary for Class: DataType (com.taosdata.jdbc.enums)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">DataType</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    90.9%
+  </span>
+  <span class="absValue">
+    (10/11)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    84.4%
+  </span>
+  <span class="absValue">
+    (54/64)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.taosdata.jdbc.enums;
+&nbsp;
+&nbsp;import com.taosdata.jdbc.TSDBError;
+&nbsp;import com.taosdata.jdbc.TSDBErrorNumbers;
+&nbsp;import com.taosdata.jdbc.utils.StringUtils;
+&nbsp;
+&nbsp;import java.sql.SQLException;
+&nbsp;import java.sql.Types;
+&nbsp;
+&nbsp;import static com.taosdata.jdbc.TSDBConstants.*;
+&nbsp;
+<b class="fc">&nbsp;public enum DataType {</b>
+<b class="fc">&nbsp;    NULL(&quot;NULL&quot;, Types.NULL, TSDB_DATA_TYPE_NULL, 0),</b>
+<b class="fc">&nbsp;    BOOL(&quot;BOOL&quot;, Types.BOOLEAN, TSDB_DATA_TYPE_BOOL, BOOLEAN_PRECISION),</b>
+<b class="fc">&nbsp;    TINYINT(&quot;TINYINT&quot;, Types.TINYINT, TSDB_DATA_TYPE_TINYINT, TINYINT_PRECISION),</b>
+<b class="fc">&nbsp;    UTINYINT(&quot;TINYINT UNSIGNED&quot;, Types.TINYINT, TSDB_DATA_TYPE_UTINYINT, TINYINT_PRECISION),</b>
+<b class="fc">&nbsp;    USMALLINT(&quot;SMALLINT UNSIGNED&quot;, Types.SMALLINT, TSDB_DATA_TYPE_USMALLINT, SMALLINT_PRECISION),</b>
+<b class="fc">&nbsp;    SMALLINT(&quot;SMALLINT&quot;, Types.SMALLINT, TSDB_DATA_TYPE_SMALLINT, SMALLINT_PRECISION),</b>
+<b class="fc">&nbsp;    UINT(&quot;INT UNSIGNED&quot;, Types.INTEGER, TSDB_DATA_TYPE_UINT, INT_PRECISION),</b>
+<b class="fc">&nbsp;    INT(&quot;INT&quot;, Types.INTEGER, TSDB_DATA_TYPE_INT, INT_PRECISION),</b>
+<b class="fc">&nbsp;    UBIGINT(&quot;BIGINT UNSIGNED&quot;, Types.BIGINT, TSDB_DATA_TYPE_UBIGINT, BIGINT_PRECISION),</b>
+<b class="fc">&nbsp;    BIGINT(&quot;BIGINT&quot;, Types.BIGINT, TSDB_DATA_TYPE_BIGINT, BIGINT_PRECISION),</b>
+<b class="fc">&nbsp;    FLOAT(&quot;FLOAT&quot;, Types.FLOAT, TSDB_DATA_TYPE_FLOAT, FLOAT_PRECISION),</b>
+<b class="fc">&nbsp;    DOUBLE(&quot;DOUBLE&quot;, Types.DOUBLE, TSDB_DATA_TYPE_DOUBLE, DOUBLE_PRECISION),</b>
+<b class="fc">&nbsp;    BINARY(&quot;BINARY&quot;, Types.BINARY, TSDB_DATA_TYPE_BINARY, 0),</b>
+<b class="fc">&nbsp;    VARCHAR(&quot;VARCHAR&quot;, Types.VARCHAR, TSDB_DATA_TYPE_VARCHAR, 0),</b>
+<b class="fc">&nbsp;    TIMESTAMP(&quot;TIMESTAMP&quot;, Types.TIMESTAMP, TSDB_DATA_TYPE_TIMESTAMP, 0),</b>
+<b class="fc">&nbsp;    NCHAR(&quot;NCHAR&quot;, Types.NCHAR, TSDB_DATA_TYPE_NCHAR, 0),</b>
+<b class="fc">&nbsp;    JSON(&quot;JSON&quot;, Types.OTHER, TSDB_DATA_TYPE_JSON, 0),</b>
+<b class="fc">&nbsp;    VARBINARY(&quot;VARBINARY&quot;, Types.VARBINARY, TSDB_DATA_TYPE_VARBINARY, 0),</b>
+<b class="fc">&nbsp;    GEOMETRY(&quot;GEOMETRY&quot;, Types.BINARY, TSDB_DATA_TYPE_GEOMETRY, 0),</b>
+&nbsp;    ;
+&nbsp;
+&nbsp;    private final String typeName;
+&nbsp;    private final int jdbcTypeValue;
+&nbsp;    private final int taosTypeValue;
+&nbsp;    private final int size;
+&nbsp;
+<b class="fc">&nbsp;    DataType(String typeName, int jdbcTypeValue, int taosTypeValue, int size) {</b>
+<b class="fc">&nbsp;        this.typeName = typeName;</b>
+<b class="fc">&nbsp;        this.jdbcTypeValue = jdbcTypeValue;</b>
+<b class="fc">&nbsp;        this.taosTypeValue = taosTypeValue;</b>
+<b class="fc">&nbsp;        this.size = size;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getTypeName() {
+<b class="fc">&nbsp;        return typeName;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public int getTaosTypeValue() {
+<b class="fc">&nbsp;        return taosTypeValue;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public int getJdbcTypeValue() {
+<b class="fc">&nbsp;        return jdbcTypeValue;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public int getSize() {
+<b class="fc">&nbsp;        return size;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static DataType getDataType(String name) {
+<b class="fc">&nbsp;        if (StringUtils.isEmpty(name))</b>
+<b class="nc">&nbsp;            return NULL;</b>
+&nbsp;
+<b class="fc">&nbsp;        name = name.trim().toUpperCase();</b>
+<b class="fc">&nbsp;        for (DataType type : DataType.values()) {</b>
+<b class="fc">&nbsp;            if (name.equals(type.getTypeName())) {</b>
+<b class="fc">&nbsp;                return type;</b>
+&nbsp;            }
+&nbsp;        }
+<b class="nc">&nbsp;        return NULL;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static DataType convertJDBC2DataType(int jdbcType) throws SQLException {
+<b class="nc">&nbsp;        for (DataType type : DataType.values()) {</b>
+<b class="nc">&nbsp;            if (jdbcType == type.getJdbcTypeValue()) {</b>
+<b class="nc">&nbsp;                return type;</b>
+&nbsp;            }
+&nbsp;        }
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN_SQL_TYPE_IN_TDENGINE, &quot;unknown sql type: &quot; + jdbcType + &quot; in tdengine&quot;);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static DataType convertTaosType2DataType(int taosType) throws SQLException {
+<b class="fc">&nbsp;        for (DataType type : DataType.values()) {</b>
+<b class="fc">&nbsp;            if (taosType == type.getTaosTypeValue()) {</b>
+<b class="fc">&nbsp;                return type;</b>
+&nbsp;            }
+&nbsp;        }
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN_TAOS_TYPE, &quot;unknown taos type: &quot; + taosType + &quot; in tdengine&quot;);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static int calculateColumnSize(String typeName, String precisionType, int length) {
+<b class="fc">&nbsp;        if (StringUtils.isEmpty(typeName))</b>
+<b class="nc">&nbsp;            return -1;</b>
+<b class="fc">&nbsp;        DataType tmp = null;</b>
+<b class="fc">&nbsp;        typeName = typeName.trim().toUpperCase();</b>
+<b class="fc">&nbsp;        for (DataType type : DataType.values()) {</b>
+<b class="fc">&nbsp;            if (typeName.equals(type.getTypeName())) {</b>
+<b class="fc">&nbsp;                tmp = type;</b>
+&nbsp;            }
+&nbsp;        }
+<b class="fc">&nbsp;        if (null == tmp) {</b>
+<b class="nc">&nbsp;            return -1;</b>
+&nbsp;        }
+<b class="fc">&nbsp;        if (0 == tmp.getSize()) {</b>
+<b class="fc">&nbsp;            if (tmp == TIMESTAMP) {</b>
+<b class="fc">&nbsp;                return precisionType.equals(&quot;ms&quot;) ? TIMESTAMP_MS_PRECISION : TIMESTAMP_US_PRECISION;</b>
+<b class="fc">&nbsp;            } else if (tmp == NCHAR || tmp == BINARY || tmp == VARCHAR || tmp == VARBINARY  || tmp == GEOMETRY) {</b>
+<b class="fc">&nbsp;                return length;</b>
+&nbsp;            }
+&nbsp;        }
+<b class="fc">&nbsp;        return tmp.getSize();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static Integer calculateDecimalDigits(String typeName) {
+<b class="fc">&nbsp;        switch (typeName) {</b>
+&nbsp;            case &quot;TINYINT&quot;:
+&nbsp;            case &quot;TINYINT UNSIGNED&quot;:
+&nbsp;            case &quot;SMALLINT&quot;:
+&nbsp;            case &quot;SMALLINT UNSIGNED&quot;:
+&nbsp;            case &quot;INT&quot;:
+&nbsp;            case &quot;INT UNSIGNED&quot;:
+&nbsp;            case &quot;BIGINT&quot;:
+&nbsp;            case &quot;BIGINT UNSIGNED&quot;:
+<b class="fc">&nbsp;                return 0;</b>
+&nbsp;            case &quot;FLOAT&quot;:
+<b class="fc">&nbsp;                return 5;</b>
+&nbsp;            case &quot;DOUBLE&quot;:
+<b class="nc">&nbsp;                return 16;</b>
+&nbsp;            default:
+<b class="fc">&nbsp;                return null;</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2023-10-08 10:56</div>
+</div>
+</body>
+</html>

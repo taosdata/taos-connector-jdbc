@@ -1,0 +1,469 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <title>Coverage Report > AbstractStatement</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.taosdata.jdbc</a>
+</div>
+
+<h1>Coverage Summary for Class: AbstractStatement (com.taosdata.jdbc)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">AbstractStatement</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (38/38)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    74.8%
+  </span>
+  <span class="absValue">
+    (104/139)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.taosdata.jdbc;
+&nbsp;
+&nbsp;import java.sql.*;
+&nbsp;import java.util.ArrayList;
+&nbsp;import java.util.Arrays;
+&nbsp;import java.util.List;
+&nbsp;
+<b class="fc">&nbsp;public abstract class AbstractStatement extends WrapperImpl implements Statement {</b>
+&nbsp;
+&nbsp;    protected List&lt;String&gt; batchedArgs;
+&nbsp;    private int fetchSize;
+<b class="fc">&nbsp;    protected int affectedRows = -1;</b>
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public abstract ResultSet executeQuery(String sql) throws SQLException;
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public abstract int executeUpdate(String sql) throws SQLException;
+&nbsp;
+&nbsp;    public abstract ResultSet executeQuery(String sql, Long reqId) throws SQLException;
+&nbsp;
+&nbsp;    public abstract int executeUpdate(String sql, Long reqId) throws SQLException;
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public abstract void close() throws SQLException;
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public int getMaxFieldSize() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        return TSDBConstants.maxFieldSize;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setMaxFieldSize(int max) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        if (max &lt; 0)</b>
+<b class="fc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE);</b>
+&nbsp;        // nothing to do
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public int getMaxRows() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        return 0;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setMaxRows(int max) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        if (max &lt; 0)</b>
+<b class="fc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE);</b>
+&nbsp;        // do nothing
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setEscapeProcessing(boolean enable) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+&nbsp;        // do nothing
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public int getQueryTimeout() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        return 0;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setQueryTimeout(int seconds) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        if (seconds &lt; 0)</b>
+<b class="fc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void cancel() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public SQLWarning getWarnings() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        return null;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void clearWarnings() throws SQLException {
+&nbsp;        // nothing to do
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setCursorName(String name) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public abstract boolean execute(String sql) throws SQLException;
+&nbsp;
+&nbsp;    public abstract boolean execute(String sql, Long reqId) throws SQLException;
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public abstract ResultSet getResultSet() throws SQLException;
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public abstract int getUpdateCount() throws SQLException;
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean getMoreResults() throws SQLException {
+<b class="fc">&nbsp;        return getMoreResults(CLOSE_CURRENT_RESULT);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setFetchDirection(int direction) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        switch (direction) {</b>
+&nbsp;            case ResultSet.FETCH_FORWARD:
+&nbsp;            case ResultSet.FETCH_REVERSE:
+&nbsp;            case ResultSet.FETCH_UNKNOWN:
+<b class="fc">&nbsp;                break;</b>
+&nbsp;            default:
+<b class="fc">&nbsp;                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE);</b>
+&nbsp;        }
+&nbsp;        //nothing to do
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public int getFetchDirection() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        return ResultSet.FETCH_FORWARD;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setFetchSize(int rows) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        if (rows &lt; 0)</b>
+<b class="fc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE);</b>
+&nbsp;        //nothing to do
+<b class="fc">&nbsp;        this.fetchSize = rows;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public int getFetchSize() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        return this.fetchSize;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public int getResultSetConcurrency() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        return ResultSet.CONCUR_READ_ONLY;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public int getResultSetType() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        return ResultSet.TYPE_FORWARD_ONLY;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void addBatch(String sql) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        if (batchedArgs == null) {</b>
+<b class="fc">&nbsp;            batchedArgs = new ArrayList&lt;&gt;();</b>
+&nbsp;        }
+<b class="fc">&nbsp;        batchedArgs.add(sql);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void clearBatch() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        if (batchedArgs != null)</b>
+<b class="fc">&nbsp;            batchedArgs.clear();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public int[] executeBatch() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        if (batchedArgs == null || batchedArgs.isEmpty())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_BATCH_IS_EMPTY);</b>
+&nbsp;
+<b class="fc">&nbsp;        String clientInfo = getConnection().getClientInfo(TSDBDriver.PROPERTY_KEY_BATCH_ERROR_IGNORE);</b>
+<b class="fc">&nbsp;        boolean batchErrorIgnore = clientInfo == null ? TSDBConstants.DEFAULT_BATCH_ERROR_IGNORE : Boolean.parseBoolean(clientInfo);</b>
+&nbsp;
+<b class="fc">&nbsp;        if (batchErrorIgnore) {</b>
+<b class="fc">&nbsp;            return executeBatchIgnoreException();</b>
+&nbsp;        }
+<b class="fc">&nbsp;        return executeBatchThrowException();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    private int[] executeBatchIgnoreException() {
+<b class="fc">&nbsp;        return batchedArgs.stream().mapToInt(sql -&gt; {</b>
+&nbsp;            try {
+<b class="fc">&nbsp;                boolean isSelect = execute(sql);</b>
+<b class="fc">&nbsp;                if (isSelect) {</b>
+<b class="fc">&nbsp;                    return SUCCESS_NO_INFO;</b>
+&nbsp;                } else {
+<b class="fc">&nbsp;                    return getUpdateCount();</b>
+&nbsp;                }
+<b class="fc">&nbsp;            } catch (SQLException e) {</b>
+<b class="fc">&nbsp;                return EXECUTE_FAILED;</b>
+&nbsp;            }
+<b class="fc">&nbsp;        }).toArray();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    private int[] executeBatchThrowException() throws BatchUpdateException {
+<b class="fc">&nbsp;        int[] res = new int[batchedArgs.size()];</b>
+<b class="fc">&nbsp;        for (int i = 0; i &lt; batchedArgs.size(); i++) {</b>
+&nbsp;            try {
+<b class="fc">&nbsp;                boolean isSelect = execute(batchedArgs.get(i));</b>
+<b class="fc">&nbsp;                if (isSelect) {</b>
+<b class="fc">&nbsp;                    res[i] = SUCCESS_NO_INFO;</b>
+&nbsp;                } else {
+<b class="fc">&nbsp;                    res[i] = getUpdateCount();</b>
+&nbsp;                }
+<b class="fc">&nbsp;            } catch (SQLException e) {</b>
+<b class="fc">&nbsp;                String reason = e.getMessage();</b>
+<b class="fc">&nbsp;                int[] updateCounts = Arrays.copyOfRange(res, 0, i);</b>
+<b class="fc">&nbsp;                throw new BatchUpdateException(reason, updateCounts, e);</b>
+<b class="fc">&nbsp;            }</b>
+&nbsp;        }
+<b class="fc">&nbsp;        return res;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public abstract Connection getConnection() throws SQLException;
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean getMoreResults(int current) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        this.affectedRows = -1;</b>
+<b class="fc">&nbsp;        switch (current) {</b>
+&nbsp;            case Statement.CLOSE_CURRENT_RESULT:
+<b class="fc">&nbsp;                return false;</b>
+&nbsp;            case Statement.KEEP_CURRENT_RESULT:
+&nbsp;            case Statement.CLOSE_ALL_RESULTS:
+<b class="fc">&nbsp;                break;</b>
+&nbsp;            default:
+<b class="nc">&nbsp;                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE);</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public ResultSet getGeneratedKeys() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public int executeUpdate(String sql, int autoGeneratedKeys) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public int executeUpdate(String sql, int[] columnIndexes) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public int executeUpdate(String sql, String[] columnNames) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean execute(String sql, int autoGeneratedKeys) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean execute(String sql, int[] columnIndexes) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean execute(String sql, String[] columnNames) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public int getResultSetHoldability() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        return ResultSet.HOLD_CURSORS_OVER_COMMIT;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public abstract boolean isClosed() throws SQLException;
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void setPoolable(boolean poolable) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+&nbsp;        // do nothing
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean isPoolable() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+<b class="fc">&nbsp;        return false;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void closeOnCompletion() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+&nbsp;        // do nothing
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean isCloseOnCompletion() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        return false;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2023-10-08 10:56</div>
+</div>
+</body>
+</html>

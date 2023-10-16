@@ -1,0 +1,206 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <title>Coverage Report > ConsumerParam</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.taosdata.jdbc.ws.tmq.entity</a>
+</div>
+
+<h1>Coverage Summary for Class: ConsumerParam (com.taosdata.jdbc.ws.tmq.entity)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">ConsumerParam</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    56.2%
+  </span>
+  <span class="absValue">
+    (9/16)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    74.3%
+  </span>
+  <span class="absValue">
+    (26/35)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.taosdata.jdbc.ws.tmq.entity;
+&nbsp;
+&nbsp;import com.taosdata.jdbc.TSDBDriver;
+&nbsp;import com.taosdata.jdbc.rs.ConnectionParam;
+&nbsp;import com.taosdata.jdbc.tmq.TMQConstants;
+&nbsp;import com.taosdata.jdbc.utils.StringUtils;
+&nbsp;
+&nbsp;import java.sql.SQLException;
+&nbsp;import java.util.Properties;
+&nbsp;
+&nbsp;public class ConsumerParam {
+&nbsp;    private ConnectionParam connectionParam;
+&nbsp;    private String groupId;
+&nbsp;    private String clientId;
+&nbsp;    private String offsetRest;
+&nbsp;    private final boolean autoCommit;
+&nbsp;    private String autoCommitInterval;
+&nbsp;    private String msgWithTableName;
+&nbsp;    private String snapshotEnable;
+&nbsp;
+<b class="fc">&nbsp;    public ConsumerParam(Properties properties) throws SQLException {</b>
+<b class="fc">&nbsp;        if (null != properties.getProperty(TMQConstants.CONNECT_URL)) {</b>
+<b class="nc">&nbsp;            String url = properties.getProperty(TMQConstants.CONNECT_URL);</b>
+<b class="nc">&nbsp;            StringUtils.parseUrl(url, properties);</b>
+&nbsp;        }
+<b class="fc">&nbsp;        if (null != properties.getProperty(TMQConstants.CONNECT_USER))</b>
+<b class="fc">&nbsp;            properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, properties.getProperty(TMQConstants.CONNECT_USER));</b>
+<b class="fc">&nbsp;        if (null != properties.getProperty(TMQConstants.CONNECT_PASS))</b>
+<b class="fc">&nbsp;            properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, properties.getProperty(TMQConstants.CONNECT_PASS));</b>
+<b class="fc">&nbsp;        if (null != properties.getProperty(TMQConstants.CONNECT_IP))</b>
+<b class="fc">&nbsp;            properties.setProperty(TSDBDriver.PROPERTY_KEY_HOST, properties.getProperty(TMQConstants.CONNECT_IP));</b>
+<b class="fc">&nbsp;        if (null != properties.getProperty(TMQConstants.CONNECT_PORT))</b>
+<b class="fc">&nbsp;            properties.setProperty(TSDBDriver.PROPERTY_KEY_PORT, properties.getProperty(TMQConstants.CONNECT_PORT));</b>
+<b class="fc">&nbsp;        autoCommit = Boolean.parseBoolean(properties.getProperty(TMQConstants.ENABLE_AUTO_COMMIT, &quot;true&quot;));</b>
+<b class="fc">&nbsp;        connectionParam = ConnectionParam.getParam(properties);</b>
+<b class="fc">&nbsp;        groupId = properties.getProperty(TMQConstants.GROUP_ID);</b>
+<b class="fc">&nbsp;        clientId = properties.getProperty(TMQConstants.CLIENT_ID);</b>
+<b class="fc">&nbsp;        offsetRest = properties.getProperty(TMQConstants.AUTO_OFFSET_RESET);</b>
+<b class="fc">&nbsp;        autoCommitInterval = properties.getProperty(TMQConstants.AUTO_COMMIT_INTERVAL);</b>
+<b class="fc">&nbsp;        msgWithTableName = properties.getProperty(TMQConstants.MSG_WITH_TABLE_NAME);</b>
+<b class="fc">&nbsp;        snapshotEnable = properties.getProperty(TMQConstants.EXPERIMENTAL_SNAPSHOT_ENABLE);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public ConnectionParam getConnectionParam() {
+<b class="fc">&nbsp;        return connectionParam;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setConnectionParam(ConnectionParam connectionParam) {
+<b class="nc">&nbsp;        this.connectionParam = connectionParam;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getGroupId() {
+<b class="fc">&nbsp;        return groupId;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setGroupId(String groupId) {
+<b class="nc">&nbsp;        this.groupId = groupId;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getClientId() {
+<b class="fc">&nbsp;        return clientId;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setClientId(String clientId) {
+<b class="nc">&nbsp;        this.clientId = clientId;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getOffsetRest() {
+<b class="fc">&nbsp;        return offsetRest;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setOffsetRest(String offsetRest) {
+<b class="nc">&nbsp;        this.offsetRest = offsetRest;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public boolean isAutoCommit() {
+<b class="fc">&nbsp;        return autoCommit;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getAutoCommitInterval() {
+<b class="fc">&nbsp;        return autoCommitInterval;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setAutoCommitInterval(String autoCommitInterval) {
+<b class="nc">&nbsp;        this.autoCommitInterval = autoCommitInterval;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getMsgWithTableName() {
+<b class="fc">&nbsp;        return msgWithTableName;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setMsgWithTableName(String msgWithTableName) {
+<b class="nc">&nbsp;        this.msgWithTableName = msgWithTableName;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getSnapshotEnable() {
+<b class="fc">&nbsp;        return snapshotEnable;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setSnapshotEnable(String snapshotEnable) {
+<b class="nc">&nbsp;        this.snapshotEnable = snapshotEnable;</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2023-10-08 10:56</div>
+</div>
+</body>
+</html>

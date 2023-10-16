@@ -1,0 +1,134 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <title>Coverage Report > RequestFactory</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.taosdata.jdbc.ws.entity</a>
+</div>
+
+<h1>Coverage Summary for Class: RequestFactory (com.taosdata.jdbc.ws.entity)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">RequestFactory</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (3/3)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (12/12)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.taosdata.jdbc.ws.entity;
+&nbsp;
+&nbsp;/**
+&nbsp; * generate id for request
+&nbsp; */
+&nbsp;public class RequestFactory {
+&nbsp;
+&nbsp;    private RequestFactory() {
+&nbsp;    }
+&nbsp;
+&nbsp;    public static Request generateQuery(String sql, long reqId) {
+<b class="fc">&nbsp;        QueryReq queryReq = new QueryReq();</b>
+<b class="fc">&nbsp;        queryReq.setReqId(reqId);</b>
+<b class="fc">&nbsp;        queryReq.setSql(sql);</b>
+<b class="fc">&nbsp;        return new Request(Action.QUERY.getAction(), queryReq);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static Request generateFetch(long id, long reqId) {
+<b class="fc">&nbsp;        FetchReq fetchReq = new FetchReq();</b>
+<b class="fc">&nbsp;        fetchReq.setReqId(reqId);</b>
+<b class="fc">&nbsp;        fetchReq.setId(id);</b>
+<b class="fc">&nbsp;        return new Request(Action.FETCH.getAction(), fetchReq);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static Request generateFetchBlock(long id) {
+<b class="fc">&nbsp;        FetchReq fetchReq = new FetchReq();</b>
+<b class="fc">&nbsp;        fetchReq.setReqId(id);</b>
+<b class="fc">&nbsp;        fetchReq.setId(id);</b>
+<b class="fc">&nbsp;        return new Request(Action.FETCH_BLOCK.getAction(), fetchReq);</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2023-10-08 10:56</div>
+</div>
+</body>
+</html>

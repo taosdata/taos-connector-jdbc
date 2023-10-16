@@ -1,0 +1,588 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <title>Coverage Report > SerializeBlock</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.taosdata.jdbc.common</a>
+</div>
+
+<h1>Coverage Summary for Class: SerializeBlock (com.taosdata.jdbc.common)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">SerializeBlock</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (7/7)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    89.6%
+  </span>
+  <span class="absValue">
+    (294/328)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.taosdata.jdbc.common;
+&nbsp;
+&nbsp;import com.taosdata.jdbc.enums.DataLength;
+&nbsp;import com.taosdata.jdbc.enums.TimestampPrecision;
+&nbsp;
+&nbsp;import java.io.ByteArrayOutputStream;
+&nbsp;import java.io.IOException;
+&nbsp;import java.sql.SQLException;
+&nbsp;import java.sql.Timestamp;
+&nbsp;import java.util.ArrayList;
+&nbsp;import java.util.List;
+&nbsp;
+&nbsp;import static com.taosdata.jdbc.TSDBConstants.*;
+&nbsp;
+&nbsp;public class SerializeBlock {
+&nbsp;    private SerializeBlock() {
+&nbsp;    }
+&nbsp;
+&nbsp;    private static int bitMapLen(int n) {
+<b class="fc">&nbsp;        return ((n) + ((1 &lt;&lt; 3) - 1)) &gt;&gt; 3;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    private static int bitPos(int n) {
+<b class="fc">&nbsp;        return n &amp; ((1 &lt;&lt; 3) - 1);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    private static int charOffset(int n) {
+<b class="fc">&nbsp;        return n &gt;&gt; 3;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    private static byte bmSetNull(byte c, int n) {
+<b class="fc">&nbsp;        return (byte) (c + (1 &lt;&lt; (7 - bitPos(n))));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static byte[] getRawBlock(List&lt;ColumnInfo&gt; list, int precision) throws IOException, SQLException {
+<b class="fc">&nbsp;        int columns = list.size();</b>
+<b class="fc">&nbsp;        int rows = list.get(0).getDataList().size();</b>
+&nbsp;
+<b class="fc">&nbsp;        ByteArrayOutputStream buffer = new ByteArrayOutputStream();</b>
+&nbsp;        // version int32
+<b class="fc">&nbsp;        buffer.write(intToBytes(1));</b>
+&nbsp;        // length int32
+<b class="fc">&nbsp;        buffer.write(intToBytes(0));</b>
+&nbsp;        // rows int32
+<b class="fc">&nbsp;        buffer.write(intToBytes(rows));</b>
+&nbsp;        // columns int32
+<b class="fc">&nbsp;        buffer.write(intToBytes(columns));</b>
+&nbsp;        // flagSegment int32
+<b class="fc">&nbsp;        buffer.write(intToBytes(0));</b>
+&nbsp;        // groupID uint64
+<b class="fc">&nbsp;        buffer.write(longToBytes(0));</b>
+&nbsp;
+<b class="fc">&nbsp;        byte[] colInfoData = new byte[5 * columns];</b>
+<b class="fc">&nbsp;        byte[] lengthData = new byte[4 * columns];</b>
+&nbsp;
+<b class="fc">&nbsp;        int bitMapLen = bitMapLen(rows);</b>
+<b class="fc">&nbsp;        ByteArrayOutputStream data = new ByteArrayOutputStream();</b>
+<b class="fc">&nbsp;        for (int colIndex = 0; colIndex &lt; list.size(); colIndex++) {</b>
+<b class="fc">&nbsp;            ColumnInfo column = list.get(colIndex);</b>
+<b class="fc">&nbsp;            switch (column.getType()) {</b>
+&nbsp;                case TSDB_DATA_TYPE_BOOL: {
+<b class="fc">&nbsp;                    colInfoData[colIndex * 5] = TSDB_DATA_TYPE_BOOL;</b>
+<b class="fc">&nbsp;                    int typeLen = DataLength.TSDB_DATA_TYPE_BOOL.getLength();</b>
+<b class="fc">&nbsp;                    byte[] typeBytes = intToBytes(typeLen);</b>
+<b class="fc">&nbsp;                    System.arraycopy(typeBytes, 0, colInfoData, colIndex * 5 + 1, 4);</b>
+<b class="fc">&nbsp;                    byte[] array = intToBytes(typeLen * rows);</b>
+<b class="fc">&nbsp;                    System.arraycopy(array, 0, lengthData, colIndex * 4, 4);</b>
+&nbsp;
+<b class="fc">&nbsp;                    byte[] tmp = new byte[bitMapLen + rows];</b>
+<b class="fc">&nbsp;                    List&lt;?&gt; rowData = column.getDataList();</b>
+<b class="fc">&nbsp;                    for (int rowIndex = 0; rowIndex &lt; rows; rowIndex++) {</b>
+<b class="fc">&nbsp;                        if (rowData.get(rowIndex) == null) {</b>
+<b class="fc">&nbsp;                            int charOffset = charOffset(rowIndex);</b>
+<b class="fc">&nbsp;                            tmp[charOffset] = bmSetNull(tmp[charOffset], rowIndex);</b>
+<b class="fc">&nbsp;                        } else {</b>
+<b class="fc">&nbsp;                            boolean v = (Boolean) rowData.get(rowIndex);</b>
+<b class="fc">&nbsp;                            if (v) {</b>
+<b class="fc">&nbsp;                                tmp[bitMapLen + rowIndex] = 1;</b>
+&nbsp;                            }
+&nbsp;                        }
+&nbsp;                    }
+<b class="fc">&nbsp;                    data.write(tmp);</b>
+<b class="fc">&nbsp;                    break;</b>
+&nbsp;                }
+&nbsp;
+&nbsp;                case TSDB_DATA_TYPE_TINYINT: {
+<b class="fc">&nbsp;                    colInfoData[colIndex * 5] = TSDB_DATA_TYPE_TINYINT;</b>
+<b class="fc">&nbsp;                    int typeLen = DataLength.TSDB_DATA_TYPE_TINYINT.getLength();</b>
+<b class="fc">&nbsp;                    byte[] typeBytes = intToBytes(typeLen);</b>
+<b class="fc">&nbsp;                    System.arraycopy(typeBytes, 0, colInfoData, colIndex * 5 + 1, 4);</b>
+<b class="fc">&nbsp;                    byte[] array = intToBytes(typeLen * rows);</b>
+<b class="fc">&nbsp;                    System.arraycopy(array, 0, lengthData, colIndex * 4, 4);</b>
+&nbsp;
+<b class="fc">&nbsp;                    byte[] tmp = new byte[bitMapLen + rows];</b>
+<b class="fc">&nbsp;                    List&lt;?&gt; rowData = column.getDataList();</b>
+<b class="fc">&nbsp;                    for (int rowIndex = 0; rowIndex &lt; rows; rowIndex++) {</b>
+<b class="fc">&nbsp;                        if (rowData.get(rowIndex) == null) {</b>
+<b class="fc">&nbsp;                            int charOffset = charOffset(rowIndex);</b>
+<b class="fc">&nbsp;                            tmp[charOffset] = bmSetNull(tmp[charOffset], rowIndex);</b>
+<b class="fc">&nbsp;                        } else {</b>
+<b class="fc">&nbsp;                            tmp[rowIndex + bitMapLen] = (Byte) rowData.get(rowIndex);</b>
+&nbsp;                        }
+&nbsp;                    }
+<b class="fc">&nbsp;                    data.write(tmp);</b>
+<b class="fc">&nbsp;                    break;</b>
+&nbsp;                }
+&nbsp;                case TSDB_DATA_TYPE_SMALLINT: {
+<b class="fc">&nbsp;                    colInfoData[colIndex * 5] = TSDB_DATA_TYPE_SMALLINT;</b>
+<b class="fc">&nbsp;                    int typeLen = DataLength.TSDB_DATA_TYPE_SMALLINT.getLength();</b>
+<b class="fc">&nbsp;                    byte[] typeBytes = intToBytes(typeLen);</b>
+<b class="fc">&nbsp;                    System.arraycopy(typeBytes, 0, colInfoData, colIndex * 5 + 1, 4);</b>
+<b class="fc">&nbsp;                    byte[] array = intToBytes(typeLen * rows);</b>
+<b class="fc">&nbsp;                    System.arraycopy(array, 0, lengthData, colIndex * 4, 4);</b>
+&nbsp;
+<b class="fc">&nbsp;                    byte[] tmp = new byte[bitMapLen + rows * Short.BYTES];</b>
+<b class="fc">&nbsp;                    List&lt;?&gt; rowData = column.getDataList();</b>
+<b class="fc">&nbsp;                    for (int rowIndex = 0; rowIndex &lt; rows; rowIndex++) {</b>
+<b class="fc">&nbsp;                        if (rowData.get(rowIndex) == null) {</b>
+<b class="fc">&nbsp;                            int charOffset = charOffset(rowIndex);</b>
+<b class="fc">&nbsp;                            tmp[charOffset] = bmSetNull(tmp[charOffset], rowIndex);</b>
+<b class="fc">&nbsp;                        } else {</b>
+<b class="fc">&nbsp;                            short v = (Short) rowData.get(rowIndex);</b>
+<b class="fc">&nbsp;                            int offset = rowIndex * Short.BYTES + bitMapLen;</b>
+<b class="fc">&nbsp;                            tmp[offset] = (byte) (v &amp; 0xFF);</b>
+<b class="fc">&nbsp;                            tmp[offset + 1] = (byte) ((v &gt;&gt; 8) &amp; 0xFF);</b>
+&nbsp;                        }
+&nbsp;                    }
+<b class="fc">&nbsp;                    data.write(tmp);</b>
+<b class="fc">&nbsp;                    break;</b>
+&nbsp;                }
+&nbsp;                case TSDB_DATA_TYPE_INT: {
+<b class="fc">&nbsp;                    colInfoData[colIndex * 5] = TSDB_DATA_TYPE_INT;</b>
+<b class="fc">&nbsp;                    int typeLen = DataLength.TSDB_DATA_TYPE_INT.getLength();</b>
+<b class="fc">&nbsp;                    byte[] typeBytes = intToBytes(typeLen);</b>
+<b class="fc">&nbsp;                    System.arraycopy(typeBytes, 0, colInfoData, colIndex * 5 + 1, 4);</b>
+<b class="fc">&nbsp;                    byte[] array = intToBytes(typeLen * rows);</b>
+<b class="fc">&nbsp;                    System.arraycopy(array, 0, lengthData, colIndex * 4, 4);</b>
+&nbsp;
+<b class="fc">&nbsp;                    byte[] tmp = new byte[bitMapLen + rows * Integer.BYTES];</b>
+<b class="fc">&nbsp;                    List&lt;?&gt; rowData = column.getDataList();</b>
+<b class="fc">&nbsp;                    for (int rowIndex = 0; rowIndex &lt; rows; rowIndex++) {</b>
+&nbsp;
+<b class="fc">&nbsp;                        if (rowData.get(rowIndex) == null) {</b>
+<b class="fc">&nbsp;                            int charOffset = charOffset(rowIndex);</b>
+<b class="fc">&nbsp;                            tmp[charOffset] = bmSetNull(tmp[charOffset], rowIndex);</b>
+<b class="fc">&nbsp;                        } else {</b>
+<b class="fc">&nbsp;                            int v = (Integer) rowData.get(rowIndex);</b>
+<b class="fc">&nbsp;                            int offset = rowIndex * Integer.BYTES + bitMapLen;</b>
+<b class="fc">&nbsp;                            tmp[offset] = (byte) (v &amp; 0xFF);</b>
+<b class="fc">&nbsp;                            tmp[offset + 1] = (byte) ((v &gt;&gt; 8) &amp; 0xFF);</b>
+<b class="fc">&nbsp;                            tmp[offset + 2] = (byte) ((v &gt;&gt; 16) &amp; 0xFF);</b>
+<b class="fc">&nbsp;                            tmp[offset + 3] = (byte) ((v &gt;&gt; 24) &amp; 0xFF);</b>
+&nbsp;                        }
+&nbsp;                    }
+<b class="fc">&nbsp;                    data.write(tmp);</b>
+<b class="fc">&nbsp;                    break;</b>
+&nbsp;                }
+&nbsp;                case TSDB_DATA_TYPE_BIGINT: {
+<b class="fc">&nbsp;                    colInfoData[colIndex * 5] = TSDB_DATA_TYPE_BIGINT;</b>
+<b class="fc">&nbsp;                    int typeLen = DataLength.TSDB_DATA_TYPE_BIGINT.getLength();</b>
+<b class="fc">&nbsp;                    byte[] typeBytes = intToBytes(typeLen);</b>
+<b class="fc">&nbsp;                    System.arraycopy(typeBytes, 0, colInfoData, colIndex * 5 + 1, 4);</b>
+<b class="fc">&nbsp;                    byte[] array = intToBytes(typeLen * rows);</b>
+<b class="fc">&nbsp;                    System.arraycopy(array, 0, lengthData, colIndex * 4, 4);</b>
+&nbsp;
+<b class="fc">&nbsp;                    byte[] tmp = new byte[bitMapLen + rows * Long.BYTES];</b>
+<b class="fc">&nbsp;                    List&lt;?&gt; rowData = column.getDataList();</b>
+<b class="fc">&nbsp;                    for (int rowIndex = 0; rowIndex &lt; rows; rowIndex++) {</b>
+&nbsp;
+<b class="fc">&nbsp;                        if (rowData.get(rowIndex) == null) {</b>
+<b class="fc">&nbsp;                            int charOffset = charOffset(rowIndex);</b>
+<b class="fc">&nbsp;                            tmp[charOffset] = bmSetNull(tmp[charOffset], rowIndex);</b>
+<b class="fc">&nbsp;                        } else {</b>
+<b class="fc">&nbsp;                            long v = (Long) rowData.get(rowIndex);</b>
+<b class="fc">&nbsp;                            int offset = rowIndex * Long.BYTES + bitMapLen;</b>
+<b class="fc">&nbsp;                            tmp[offset] = (byte) (v &amp; 0xFF);</b>
+<b class="fc">&nbsp;                            tmp[offset + 1] = (byte) ((v &gt;&gt; 8) &amp; 0xFF);</b>
+<b class="fc">&nbsp;                            tmp[offset + 2] = (byte) ((v &gt;&gt; 16) &amp; 0xFF);</b>
+<b class="fc">&nbsp;                            tmp[offset + 3] = (byte) ((v &gt;&gt; 24) &amp; 0xFF);</b>
+<b class="fc">&nbsp;                            tmp[offset + 4] = (byte) ((v &gt;&gt; 32) &amp; 0xFF);</b>
+<b class="fc">&nbsp;                            tmp[offset + 5] = (byte) ((v &gt;&gt; 40) &amp; 0xFF);</b>
+<b class="fc">&nbsp;                            tmp[offset + 6] = (byte) ((v &gt;&gt; 48) &amp; 0xFF);</b>
+<b class="fc">&nbsp;                            tmp[offset + 7] = (byte) ((v &gt;&gt; 56) &amp; 0xFF);</b>
+&nbsp;
+&nbsp;                        }
+&nbsp;                    }
+<b class="fc">&nbsp;                    data.write(tmp);</b>
+<b class="fc">&nbsp;                    break;</b>
+&nbsp;                }
+&nbsp;
+&nbsp;                case TSDB_DATA_TYPE_UTINYINT:
+&nbsp;                case TSDB_DATA_TYPE_USMALLINT:
+&nbsp;                case TSDB_DATA_TYPE_UINT:
+&nbsp;                case TSDB_DATA_TYPE_UBIGINT:
+<b class="nc">&nbsp;                    break;</b>
+&nbsp;
+&nbsp;                case TSDB_DATA_TYPE_FLOAT: {
+<b class="fc">&nbsp;                    colInfoData[colIndex * 5] = TSDB_DATA_TYPE_FLOAT;</b>
+<b class="fc">&nbsp;                    int typeLen = DataLength.TSDB_DATA_TYPE_FLOAT.getLength();</b>
+<b class="fc">&nbsp;                    byte[] typeBytes = intToBytes(typeLen);</b>
+<b class="fc">&nbsp;                    System.arraycopy(typeBytes, 0, colInfoData, colIndex * 5 + 1, 4);</b>
+<b class="fc">&nbsp;                    byte[] array = intToBytes(typeLen * rows);</b>
+<b class="fc">&nbsp;                    System.arraycopy(array, 0, lengthData, colIndex * 4, 4);</b>
+&nbsp;
+<b class="fc">&nbsp;                    byte[] tmp = new byte[bitMapLen + rows * Float.BYTES];</b>
+<b class="fc">&nbsp;                    List&lt;?&gt; rowData = column.getDataList();</b>
+<b class="fc">&nbsp;                    for (int rowIndex = 0; rowIndex &lt; rows; rowIndex++) {</b>
+<b class="fc">&nbsp;                        if (rowData.get(rowIndex) == null) {</b>
+<b class="fc">&nbsp;                            int charOffset = charOffset(rowIndex);</b>
+<b class="fc">&nbsp;                            tmp[charOffset] = bmSetNull(tmp[charOffset], rowIndex);</b>
+<b class="fc">&nbsp;                        } else {</b>
+<b class="fc">&nbsp;                            float v = (Float) rowData.get(rowIndex);</b>
+<b class="fc">&nbsp;                            int offset = rowIndex * Float.BYTES + bitMapLen;</b>
+<b class="fc">&nbsp;                            int f = Float.floatToIntBits(v);</b>
+<b class="fc">&nbsp;                            tmp[offset] = (byte) (f &amp; 0xFF);</b>
+<b class="fc">&nbsp;                            tmp[offset + 1] = (byte) ((f &gt;&gt; 8) &amp; 0xFF);</b>
+<b class="fc">&nbsp;                            tmp[offset + 2] = (byte) ((f &gt;&gt; 16) &amp; 0xFF);</b>
+<b class="fc">&nbsp;                            tmp[offset + 3] = (byte) ((f &gt;&gt; 24) &amp; 0xFF);</b>
+&nbsp;
+&nbsp;                        }
+&nbsp;                    }
+<b class="fc">&nbsp;                    data.write(tmp);</b>
+<b class="fc">&nbsp;                    break;</b>
+&nbsp;                }
+&nbsp;                case TSDB_DATA_TYPE_DOUBLE: {
+<b class="fc">&nbsp;                    colInfoData[colIndex * 5] = TSDB_DATA_TYPE_DOUBLE;</b>
+<b class="fc">&nbsp;                    int typeLen = DataLength.TSDB_DATA_TYPE_DOUBLE.getLength();</b>
+<b class="fc">&nbsp;                    byte[] typeBytes = intToBytes(typeLen);</b>
+<b class="fc">&nbsp;                    System.arraycopy(typeBytes, 0, colInfoData, colIndex * 5 + 1, 4);</b>
+<b class="fc">&nbsp;                    byte[] array = intToBytes(typeLen * rows);</b>
+<b class="fc">&nbsp;                    System.arraycopy(array, 0, lengthData, colIndex * 4, 4);</b>
+&nbsp;
+<b class="fc">&nbsp;                    byte[] tmp = new byte[bitMapLen + rows * Double.BYTES];</b>
+<b class="fc">&nbsp;                    List&lt;?&gt; rowData = column.getDataList();</b>
+<b class="fc">&nbsp;                    for (int rowIndex = 0; rowIndex &lt; rows; rowIndex++) {</b>
+<b class="fc">&nbsp;                        if (rowData.get(rowIndex) == null) {</b>
+<b class="fc">&nbsp;                            int charOffset = charOffset(rowIndex);</b>
+<b class="fc">&nbsp;                            tmp[charOffset] = bmSetNull(tmp[charOffset], rowIndex);</b>
+<b class="fc">&nbsp;                        } else {</b>
+<b class="fc">&nbsp;                            double v = (Double) rowData.get(rowIndex);</b>
+<b class="fc">&nbsp;                            int offset = rowIndex * Double.BYTES + bitMapLen;</b>
+<b class="fc">&nbsp;                            long l = Double.doubleToLongBits(v);</b>
+<b class="fc">&nbsp;                            tmp[offset] = (byte) (l &amp; 0xFF);</b>
+<b class="fc">&nbsp;                            tmp[offset + 1] = (byte) ((l &gt;&gt; 8) &amp; 0xFF);</b>
+<b class="fc">&nbsp;                            tmp[offset + 2] = (byte) ((l &gt;&gt; 16) &amp; 0xFF);</b>
+<b class="fc">&nbsp;                            tmp[offset + 3] = (byte) ((l &gt;&gt; 24) &amp; 0xFF);</b>
+<b class="fc">&nbsp;                            tmp[offset + 4] = (byte) ((l &gt;&gt; 32) &amp; 0xFF);</b>
+<b class="fc">&nbsp;                            tmp[offset + 5] = (byte) ((l &gt;&gt; 40) &amp; 0xFF);</b>
+<b class="fc">&nbsp;                            tmp[offset + 6] = (byte) ((l &gt;&gt; 48) &amp; 0xFF);</b>
+<b class="fc">&nbsp;                            tmp[offset + 7] = (byte) ((l &gt;&gt; 56) &amp; 0xFF);</b>
+&nbsp;                        }
+&nbsp;                    }
+<b class="fc">&nbsp;                    data.write(tmp);</b>
+<b class="fc">&nbsp;                    break;</b>
+&nbsp;                }
+&nbsp;
+&nbsp;                case TSDB_DATA_TYPE_BINARY: {
+<b class="fc">&nbsp;                    colInfoData[colIndex * 5] = TSDB_DATA_TYPE_BINARY;</b>
+&nbsp;                    // 4 bytes for 0
+&nbsp;
+<b class="fc">&nbsp;                    int length = 0;</b>
+<b class="fc">&nbsp;                    List&lt;?&gt; rowData = column.getDataList();</b>
+<b class="fc">&nbsp;                    byte[] index = new byte[rows * Integer.BYTES];</b>
+<b class="fc">&nbsp;                    List&lt;Byte&gt; tmp = new ArrayList&lt;&gt;();</b>
+<b class="fc">&nbsp;                    for (int rowIndex = 0; rowIndex &lt; rows; rowIndex++) {</b>
+<b class="fc">&nbsp;                        int offset = rowIndex * Integer.BYTES;</b>
+<b class="fc">&nbsp;                        if (rowData.get(rowIndex) == null) {</b>
+<b class="fc">&nbsp;                            for (int i = 0; i &lt; Integer.BYTES; i++) {</b>
+<b class="fc">&nbsp;                                index[offset + i] = (byte) 0xFF;</b>
+&nbsp;                            }
+&nbsp;                        } else {
+<b class="fc">&nbsp;                            byte[] v = (byte[]) rowData.get(rowIndex);</b>
+<b class="fc">&nbsp;                            for (int i = 0; i &lt; Integer.BYTES; i++) {</b>
+<b class="fc">&nbsp;                                index[offset + i] = (byte) (length &gt;&gt; (8 * i) &amp; 0xFF);</b>
+&nbsp;                            }
+<b class="fc">&nbsp;                            short len = (short) v.length;</b>
+<b class="fc">&nbsp;                            tmp.add((byte) (len &amp; 0xFF));</b>
+<b class="fc">&nbsp;                            tmp.add((byte) ((len &gt;&gt; 8) &amp; 0xFF));</b>
+<b class="fc">&nbsp;                            for (byte b : v) {</b>
+<b class="fc">&nbsp;                                tmp.add(b);</b>
+&nbsp;                            }
+<b class="fc">&nbsp;                            length += v.length + Short.BYTES;</b>
+&nbsp;                        }
+&nbsp;                    }
+<b class="fc">&nbsp;                    byte[] array = intToBytes(length);</b>
+<b class="fc">&nbsp;                    System.arraycopy(array, 0, lengthData, colIndex * 4, 4);</b>
+<b class="fc">&nbsp;                    data.write(index);</b>
+<b class="fc">&nbsp;                    byte[] bytes = new byte[tmp.size()];</b>
+<b class="fc">&nbsp;                    for (int i = 0; i &lt; tmp.size(); i++) {</b>
+<b class="fc">&nbsp;                        bytes[i] = tmp.get(i);</b>
+&nbsp;                    }
+<b class="fc">&nbsp;                    data.write(bytes);</b>
+<b class="fc">&nbsp;                    break;</b>
+&nbsp;                }
+&nbsp;                case TSDB_DATA_TYPE_VARBINARY: {
+<b class="nc">&nbsp;                    colInfoData[colIndex * 5] = TSDB_DATA_TYPE_VARBINARY;</b>
+&nbsp;                    // 4 bytes for 0
+&nbsp;
+<b class="nc">&nbsp;                    int length = 0;</b>
+<b class="nc">&nbsp;                    List&lt;?&gt; rowData = column.getDataList();</b>
+<b class="nc">&nbsp;                    byte[] index = new byte[rows * Integer.BYTES];</b>
+<b class="nc">&nbsp;                    List&lt;Byte&gt; tmp = new ArrayList&lt;&gt;();</b>
+<b class="nc">&nbsp;                    for (int rowIndex = 0; rowIndex &lt; rows; rowIndex++) {</b>
+<b class="nc">&nbsp;                        int offset = rowIndex * Integer.BYTES;</b>
+<b class="nc">&nbsp;                        if (rowData.get(rowIndex) == null) {</b>
+<b class="nc">&nbsp;                            for (int i = 0; i &lt; Integer.BYTES; i++) {</b>
+<b class="nc">&nbsp;                                index[offset + i] = (byte) 0xFF;</b>
+&nbsp;                            }
+&nbsp;                        } else {
+<b class="nc">&nbsp;                            byte[] v = (byte[]) rowData.get(rowIndex);</b>
+<b class="nc">&nbsp;                            for (int i = 0; i &lt; Integer.BYTES; i++) {</b>
+<b class="nc">&nbsp;                                index[offset + i] = (byte) (length &gt;&gt; (8 * i) &amp; 0xFF);</b>
+&nbsp;                            }
+<b class="nc">&nbsp;                            short len = (short) v.length;</b>
+<b class="nc">&nbsp;                            tmp.add((byte) (len &amp; 0xFF));</b>
+<b class="nc">&nbsp;                            tmp.add((byte) ((len &gt;&gt; 8) &amp; 0xFF));</b>
+<b class="nc">&nbsp;                            for (byte b : v) {</b>
+<b class="nc">&nbsp;                                tmp.add(b);</b>
+&nbsp;                            }
+<b class="nc">&nbsp;                            length += v.length + Short.BYTES;</b>
+&nbsp;                        }
+&nbsp;                    }
+<b class="nc">&nbsp;                    byte[] array = intToBytes(length);</b>
+<b class="nc">&nbsp;                    System.arraycopy(array, 0, lengthData, colIndex * 4, 4);</b>
+<b class="nc">&nbsp;                    data.write(index);</b>
+<b class="nc">&nbsp;                    byte[] bytes = new byte[tmp.size()];</b>
+<b class="nc">&nbsp;                    for (int i = 0; i &lt; tmp.size(); i++) {</b>
+<b class="nc">&nbsp;                        bytes[i] = tmp.get(i);</b>
+&nbsp;                    }
+<b class="nc">&nbsp;                    data.write(bytes);</b>
+<b class="nc">&nbsp;                    break;</b>
+&nbsp;                }
+&nbsp;                case TSDB_DATA_TYPE_NCHAR: {
+<b class="fc">&nbsp;                    colInfoData[colIndex * 5] = TSDB_DATA_TYPE_NCHAR;</b>
+&nbsp;                    // 4 bytes for 0
+&nbsp;
+<b class="fc">&nbsp;                    int length = 0;</b>
+<b class="fc">&nbsp;                    byte[] index = new byte[rows * Integer.BYTES];</b>
+<b class="fc">&nbsp;                    ByteArrayOutputStream tmp = new ByteArrayOutputStream();</b>
+<b class="fc">&nbsp;                    List&lt;?&gt; rowData = column.getDataList();</b>
+<b class="fc">&nbsp;                    for (int rowIndex = 0; rowIndex &lt; rows; rowIndex++) {</b>
+<b class="fc">&nbsp;                        int offset = rowIndex * Integer.BYTES;</b>
+<b class="fc">&nbsp;                        if (rowData.get(rowIndex) == null) {</b>
+<b class="fc">&nbsp;                            for (int i = 0; i &lt; Integer.BYTES; i++) {</b>
+<b class="fc">&nbsp;                                index[offset + i] = (byte) 0xFF;</b>
+&nbsp;                            }
+&nbsp;                        } else {
+<b class="fc">&nbsp;                            String v = (String) rowData.get(rowIndex);</b>
+<b class="fc">&nbsp;                            for (int i = 0; i &lt; Integer.BYTES; i++) {</b>
+<b class="fc">&nbsp;                                index[offset + i] = (byte) ((length &gt;&gt; (8 * i)) &amp; 0xFF);</b>
+&nbsp;                            }
+<b class="fc">&nbsp;                            short len = (short) (v.length() * 4);</b>
+<b class="fc">&nbsp;                            tmp.write((byte) (len &amp; 0xFF));</b>
+<b class="fc">&nbsp;                            tmp.write((byte) ((len &gt;&gt; 8) &amp; 0xFF));</b>
+<b class="fc">&nbsp;                            int[] t = v.codePoints().toArray();</b>
+<b class="fc">&nbsp;                            for (int i : t) {</b>
+<b class="fc">&nbsp;                                tmp.write(intToBytes(i));</b>
+&nbsp;                            }
+<b class="fc">&nbsp;                            length += t.length * 4 + Short.BYTES;</b>
+&nbsp;                        }
+&nbsp;                    }
+<b class="fc">&nbsp;                    byte[] array = intToBytes(length);</b>
+<b class="fc">&nbsp;                    System.arraycopy(array, 0, lengthData, colIndex * 4, 4);</b>
+<b class="fc">&nbsp;                    data.write(index);</b>
+<b class="fc">&nbsp;                    data.write(tmp.toByteArray());</b>
+<b class="fc">&nbsp;                    break;</b>
+&nbsp;                }
+&nbsp;
+&nbsp;                case TSDB_DATA_TYPE_TIMESTAMP: {
+<b class="fc">&nbsp;                    colInfoData[colIndex * 5] = TSDB_DATA_TYPE_TIMESTAMP;</b>
+<b class="fc">&nbsp;                    int typeLen = DataLength.TSDB_DATA_TYPE_TIMESTAMP.getLength();</b>
+<b class="fc">&nbsp;                    byte[] typeBytes = intToBytes(typeLen);</b>
+<b class="fc">&nbsp;                    System.arraycopy(typeBytes, 0, colInfoData, colIndex * 5 + 1, 4);</b>
+<b class="fc">&nbsp;                    byte[] array = intToBytes(typeLen * rows);</b>
+<b class="fc">&nbsp;                    System.arraycopy(array, 0, lengthData, colIndex * 4, 4);</b>
+&nbsp;
+<b class="fc">&nbsp;                    byte[] tmp = new byte[bitMapLen + rows * Long.BYTES];</b>
+<b class="fc">&nbsp;                    List&lt;?&gt; rowData = column.getDataList();</b>
+<b class="fc">&nbsp;                    for (int rowIndex = 0; rowIndex &lt; rows; rowIndex++) {</b>
+<b class="fc">&nbsp;                        if (rowData.get(rowIndex) == null) {</b>
+<b class="fc">&nbsp;                            int charOffset = charOffset(rowIndex);</b>
+<b class="fc">&nbsp;                            tmp[charOffset] = bmSetNull(tmp[charOffset], rowIndex);</b>
+<b class="fc">&nbsp;                        } else {</b>
+<b class="fc">&nbsp;                            Timestamp t = (Timestamp) rowData.get(rowIndex);</b>
+&nbsp;                            long v;
+<b class="fc">&nbsp;                            if (precision == TimestampPrecision.MS) {</b>
+<b class="fc">&nbsp;                                v = t.getTime();</b>
+<b class="nc">&nbsp;                            } else if (precision == TimestampPrecision.US) {</b>
+<b class="nc">&nbsp;                                v = t.getTime() * 1000L + t.getNanos() / 1000 % 1000;</b>
+&nbsp;                            } else {
+<b class="nc">&nbsp;                                v = t.getTime() * 1000_000L + t.getNanos() % 1000_000L;</b>
+&nbsp;                            }
+&nbsp;
+<b class="fc">&nbsp;                            int offset = rowIndex * Long.BYTES + bitMapLen;</b>
+<b class="fc">&nbsp;                            tmp[offset] = (byte) (v &amp; 0xFF);</b>
+<b class="fc">&nbsp;                            tmp[offset + 1] = (byte) ((v &gt;&gt; 8) &amp; 0xFF);</b>
+<b class="fc">&nbsp;                            tmp[offset + 2] = (byte) ((v &gt;&gt; 16) &amp; 0xFF);</b>
+<b class="fc">&nbsp;                            tmp[offset + 3] = (byte) ((v &gt;&gt; 24) &amp; 0xFF);</b>
+<b class="fc">&nbsp;                            tmp[offset + 4] = (byte) ((v &gt;&gt; 32) &amp; 0xFF);</b>
+<b class="fc">&nbsp;                            tmp[offset + 5] = (byte) ((v &gt;&gt; 40) &amp; 0xFF);</b>
+<b class="fc">&nbsp;                            tmp[offset + 6] = (byte) ((v &gt;&gt; 48) &amp; 0xFF);</b>
+<b class="fc">&nbsp;                            tmp[offset + 7] = (byte) ((v &gt;&gt; 56) &amp; 0xFF);</b>
+&nbsp;
+&nbsp;                        }
+&nbsp;                    }
+<b class="fc">&nbsp;                    data.write(tmp);</b>
+<b class="fc">&nbsp;                    break;</b>
+&nbsp;                }
+&nbsp;
+&nbsp;                case TSDB_DATA_TYPE_JSON: {
+<b class="fc">&nbsp;                    colInfoData[colIndex * 5] = TSDB_DATA_TYPE_JSON;</b>
+&nbsp;                    // 4 bytes for 0
+&nbsp;
+<b class="fc">&nbsp;                    int length = 0;</b>
+<b class="fc">&nbsp;                    List&lt;?&gt; rowData = column.getDataList();</b>
+<b class="fc">&nbsp;                    byte[] index = new byte[rows * Integer.BYTES];</b>
+<b class="fc">&nbsp;                    List&lt;Byte&gt; tmp = new ArrayList&lt;&gt;();</b>
+<b class="fc">&nbsp;                    for (int rowIndex = 0; rowIndex &lt; rows; rowIndex++) {</b>
+<b class="fc">&nbsp;                        int offset = rowIndex * Integer.BYTES;</b>
+<b class="fc">&nbsp;                        if (rowData.get(rowIndex) == null) {</b>
+<b class="nc">&nbsp;                            for (int i = 0; i &lt; Integer.BYTES; i++) {</b>
+<b class="nc">&nbsp;                                index[offset + i] = (byte) 0xFF;</b>
+&nbsp;                            }
+&nbsp;                        } else {
+<b class="fc">&nbsp;                            byte[] v = (byte[]) rowData.get(rowIndex);</b>
+<b class="fc">&nbsp;                            for (int i = 0; i &lt; Integer.BYTES; i++) {</b>
+<b class="fc">&nbsp;                                index[offset + i] = (byte) (length &gt;&gt; (8 * i) &amp; 0xFF);</b>
+&nbsp;                            }
+<b class="fc">&nbsp;                            short len = (short) v.length;</b>
+<b class="fc">&nbsp;                            tmp.add((byte) (len &amp; 0xFF));</b>
+<b class="fc">&nbsp;                            tmp.add((byte) ((len &gt;&gt; 8) &amp; 0xFF));</b>
+<b class="fc">&nbsp;                            for (byte b : v) {</b>
+<b class="fc">&nbsp;                                tmp.add(b);</b>
+&nbsp;                            }
+<b class="fc">&nbsp;                            length += v.length + Short.BYTES;</b>
+&nbsp;                        }
+&nbsp;                    }
+<b class="fc">&nbsp;                    byte[] array = intToBytes(length);</b>
+<b class="fc">&nbsp;                    System.arraycopy(array, 0, lengthData, colIndex * 4, 4);</b>
+<b class="fc">&nbsp;                    data.write(index);</b>
+<b class="fc">&nbsp;                    byte[] bytes = new byte[tmp.size()];</b>
+<b class="fc">&nbsp;                    for (int i = 0; i &lt; tmp.size(); i++) {</b>
+<b class="fc">&nbsp;                        bytes[i] = tmp.get(i);</b>
+&nbsp;                    }
+<b class="fc">&nbsp;                    data.write(bytes);</b>
+<b class="fc">&nbsp;                    break;</b>
+&nbsp;                }
+&nbsp;                default:
+<b class="nc">&nbsp;                    throw new SQLException(&quot;unsupported data type : &quot; + column.getType());</b>
+&nbsp;            }
+&nbsp;        }
+<b class="fc">&nbsp;        buffer.write(colInfoData);</b>
+<b class="fc">&nbsp;        buffer.write(lengthData);</b>
+<b class="fc">&nbsp;        buffer.write(data.toByteArray());</b>
+<b class="fc">&nbsp;        byte[] block = buffer.toByteArray();</b>
+<b class="fc">&nbsp;        for (int i = 0; i &lt; Integer.BYTES; i++) {</b>
+<b class="fc">&nbsp;            block[4 + i] = (byte) (block.length &gt;&gt; (8 * i));</b>
+&nbsp;        }
+<b class="fc">&nbsp;        return block;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // little endian
+&nbsp;    public static byte[] intToBytes(int v) {
+<b class="fc">&nbsp;        byte[] result = new byte[4];</b>
+<b class="fc">&nbsp;        result[0] = (byte) (v &amp; 0xFF);</b>
+<b class="fc">&nbsp;        result[1] = (byte) ((v &gt;&gt; 8) &amp; 0xFF);</b>
+<b class="fc">&nbsp;        result[2] = (byte) ((v &gt;&gt; 16) &amp; 0xFF);</b>
+<b class="fc">&nbsp;        result[3] = (byte) ((v &gt;&gt; 24) &amp; 0xFF);</b>
+<b class="fc">&nbsp;        return result;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // little endian
+&nbsp;    public static byte[] longToBytes(long v) {
+<b class="fc">&nbsp;        byte[] result = new byte[8];</b>
+<b class="fc">&nbsp;        result[0] = (byte) (v &amp; 0xFF);</b>
+<b class="fc">&nbsp;        result[1] = (byte) ((v &gt;&gt; 8) &amp; 0xFF);</b>
+<b class="fc">&nbsp;        result[2] = (byte) ((v &gt;&gt; 16) &amp; 0xFF);</b>
+<b class="fc">&nbsp;        result[3] = (byte) ((v &gt;&gt; 24) &amp; 0xFF);</b>
+<b class="fc">&nbsp;        result[4] = (byte) ((v &gt;&gt; 32) &amp; 0xFF);</b>
+<b class="fc">&nbsp;        result[5] = (byte) ((v &gt;&gt; 40) &amp; 0xFF);</b>
+<b class="fc">&nbsp;        result[6] = (byte) ((v &gt;&gt; 48) &amp; 0xFF);</b>
+<b class="fc">&nbsp;        result[7] = (byte) ((v &gt;&gt; 56) &amp; 0xFF);</b>
+<b class="fc">&nbsp;        return result;</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2023-10-08 10:56</div>
+</div>
+</body>
+</html>

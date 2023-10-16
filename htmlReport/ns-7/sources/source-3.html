@@ -1,0 +1,146 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <title>Coverage Report > FutureResponse</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.taosdata.jdbc.ws</a>
+</div>
+
+<h1>Coverage Summary for Class: FutureResponse (com.taosdata.jdbc.ws)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">FutureResponse</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    66.7%
+  </span>
+  <span class="absValue">
+    (4/6)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    61.5%
+  </span>
+  <span class="absValue">
+    (8/13)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.taosdata.jdbc.ws;
+&nbsp;
+&nbsp;import com.taosdata.jdbc.ws.entity.Response;
+&nbsp;
+&nbsp;import java.util.concurrent.CompletableFuture;
+&nbsp;
+&nbsp;public class FutureResponse implements Comparable&lt;FutureResponse&gt; {
+&nbsp;    private final String action;
+&nbsp;    private final Long id;
+&nbsp;    private final CompletableFuture&lt;Response&gt; future;
+&nbsp;    private final long timestamp;
+&nbsp;
+<b class="fc">&nbsp;    public FutureResponse(String action, Long id, CompletableFuture&lt;Response&gt; future) {</b>
+<b class="fc">&nbsp;        this.action = action;</b>
+<b class="fc">&nbsp;        this.id = id;</b>
+<b class="fc">&nbsp;        this.future = future;</b>
+<b class="fc">&nbsp;        timestamp = System.nanoTime();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getAction() {
+<b class="fc">&nbsp;        return action;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public Long getId() {
+<b class="fc">&nbsp;        return id;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public CompletableFuture&lt;Response&gt; getFuture() {
+<b class="fc">&nbsp;        return future;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    long getTimestamp() {
+<b class="nc">&nbsp;        return timestamp;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public int compareTo(FutureResponse fr) {
+<b class="nc">&nbsp;        long r = this.timestamp - fr.timestamp;</b>
+<b class="nc">&nbsp;        if (r &gt; 0) return 1;</b>
+<b class="nc">&nbsp;        if (r &lt; 0) return -1;</b>
+<b class="nc">&nbsp;        return 0;</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2023-10-08 10:56</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,766 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <title>Coverage Report > RestfulResultSet</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.taosdata.jdbc.rs</a>
+</div>
+
+<h1>Coverage Summary for Class: RestfulResultSet (com.taosdata.jdbc.rs)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">RestfulResultSet</td>
+<td class="coverageStat">
+  <span class="percent">
+    97.5%
+  </span>
+  <span class="absValue">
+    (39/40)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    81.7%
+  </span>
+  <span class="absValue">
+    (272/333)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">RestfulResultSet$Field</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (2/2)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (7/7)
+  </span>
+</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    97.6%
+  </span>
+  <span class="absValue">
+    (41/42)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    82.1%
+  </span>
+  <span class="absValue">
+    (279/340)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.taosdata.jdbc.rs;
+&nbsp;
+&nbsp;import com.alibaba.fastjson.JSON;
+&nbsp;import com.alibaba.fastjson.JSONArray;
+&nbsp;import com.alibaba.fastjson.JSONObject;
+&nbsp;import com.alibaba.fastjson.serializer.SerializerFeature;
+&nbsp;import com.google.common.primitives.Ints;
+&nbsp;import com.google.common.primitives.Longs;
+&nbsp;import com.google.common.primitives.Shorts;
+&nbsp;import com.taosdata.jdbc.AbstractResultSet;
+&nbsp;import com.taosdata.jdbc.TSDBConstants;
+&nbsp;import com.taosdata.jdbc.TSDBError;
+&nbsp;import com.taosdata.jdbc.TSDBErrorNumbers;
+&nbsp;import com.taosdata.jdbc.enums.DataType;
+&nbsp;import com.taosdata.jdbc.enums.TimestampPrecision;
+&nbsp;import com.taosdata.jdbc.utils.Utils;
+&nbsp;
+&nbsp;import java.math.BigDecimal;
+&nbsp;import java.sql.*;
+&nbsp;import java.time.Instant;
+&nbsp;import java.time.ZonedDateTime;
+&nbsp;import java.time.chrono.IsoChronology;
+&nbsp;import java.time.format.DateTimeFormatter;
+&nbsp;import java.time.format.DateTimeFormatterBuilder;
+&nbsp;import java.time.format.DateTimeParseException;
+&nbsp;import java.time.format.ResolverStyle;
+&nbsp;import java.time.temporal.ChronoField;
+&nbsp;import java.util.ArrayList;
+&nbsp;import java.util.Calendar;
+&nbsp;import java.util.List;
+&nbsp;import java.util.regex.Matcher;
+&nbsp;import java.util.regex.Pattern;
+&nbsp;
+&nbsp;public class RestfulResultSet extends AbstractResultSet {
+&nbsp;
+<b class="fc">&nbsp;    public static DateTimeFormatter rfc3339Parser = new DateTimeFormatterBuilder()</b>
+<b class="fc">&nbsp;            .parseCaseInsensitive()</b>
+<b class="fc">&nbsp;            .appendValue(ChronoField.YEAR, 4)</b>
+<b class="fc">&nbsp;            .appendLiteral(&#39;-&#39;)</b>
+<b class="fc">&nbsp;            .appendValue(ChronoField.MONTH_OF_YEAR, 2)</b>
+<b class="fc">&nbsp;            .appendLiteral(&#39;-&#39;)</b>
+<b class="fc">&nbsp;            .appendValue(ChronoField.DAY_OF_MONTH, 2)</b>
+<b class="fc">&nbsp;            .appendLiteral(&#39;T&#39;)</b>
+<b class="fc">&nbsp;            .appendValue(ChronoField.HOUR_OF_DAY, 2)</b>
+<b class="fc">&nbsp;            .appendLiteral(&#39;:&#39;)</b>
+<b class="fc">&nbsp;            .appendValue(ChronoField.MINUTE_OF_HOUR, 2)</b>
+<b class="fc">&nbsp;            .appendLiteral(&#39;:&#39;)</b>
+<b class="fc">&nbsp;            .appendValue(ChronoField.SECOND_OF_MINUTE, 2)</b>
+<b class="fc">&nbsp;            .optionalStart()</b>
+<b class="fc">&nbsp;            .appendFraction(ChronoField.NANO_OF_SECOND, 0, 9, true)</b>
+<b class="fc">&nbsp;            .optionalEnd()</b>
+<b class="fc">&nbsp;            .appendOffset(&quot;+HHMM&quot;, &quot;Z&quot;).toFormatter()</b>
+<b class="fc">&nbsp;            .withResolverStyle(ResolverStyle.STRICT)</b>
+<b class="fc">&nbsp;            .withChronology(IsoChronology.INSTANCE);</b>
+&nbsp;
+<b class="fc">&nbsp;    Pattern pattern = Pattern.compile(&quot;^[0-9a-zT\\-:]+\\.([0-9]+).*$&quot;);</b>
+&nbsp;
+&nbsp;    private final Statement statement;
+&nbsp;    // data
+<b class="fc">&nbsp;    private final List&lt;List&lt;Object&gt;&gt; resultSet = new ArrayList&lt;&gt;();</b>
+&nbsp;    // meta
+<b class="fc">&nbsp;    private final List&lt;String&gt; columnNames = new ArrayList&lt;&gt;();</b>
+<b class="fc">&nbsp;    private final List&lt;Field&gt; columns = new ArrayList&lt;&gt;();</b>
+&nbsp;    private final RestfulResultSetMetaData metaData;
+&nbsp;
+&nbsp;    private volatile boolean isClosed;
+<b class="fc">&nbsp;    private int pos = -1;</b>
+&nbsp;
+&nbsp;    /**
+&nbsp;     * 由一个result的Json构造结果集，对应执行show databases, show tables等这些语句，返回结果集，但无法获取结果集对应的meta，统一当成String处理
+&nbsp;     *
+&nbsp;     * @param resultJson: 包含data信息的结果集，有sql返回的结果集
+&nbsp;     ***/
+<b class="fc">&nbsp;    public RestfulResultSet(String database, Statement statement, JSONObject resultJson) throws SQLException {</b>
+<b class="fc">&nbsp;        this.statement = statement;</b>
+&nbsp;
+&nbsp;        // get column metadata
+<b class="fc">&nbsp;        JSONArray columnMeta = resultJson.getJSONArray(&quot;column_meta&quot;);</b>
+&nbsp;        // get row data
+<b class="fc">&nbsp;        JSONArray data = resultJson.getJSONArray(&quot;data&quot;);</b>
+&nbsp;
+&nbsp;        // parse column_meta
+<b class="fc">&nbsp;        parseColumnMeta_new(columnMeta);</b>
+<b class="fc">&nbsp;        this.metaData = new RestfulResultSetMetaData(database, columns);</b>
+&nbsp;
+<b class="fc">&nbsp;        if (data == null || data.isEmpty())</b>
+&nbsp;            return;
+&nbsp;        // parse row data
+<b class="fc">&nbsp;        for (int rowIndex = 0; rowIndex &lt; data.size(); rowIndex++) {</b>
+<b class="fc">&nbsp;            List&lt;Object&gt; row = new ArrayList&lt;&gt;();</b>
+<b class="fc">&nbsp;            JSONArray jsonRow = data.getJSONArray(rowIndex);</b>
+<b class="fc">&nbsp;            for (int colIndex = 0; colIndex &lt; this.metaData.getColumnCount(); colIndex++) {</b>
+<b class="fc">&nbsp;                row.add(parseColumnData(jsonRow, colIndex, columns.get(colIndex)));</b>
+&nbsp;            }
+<b class="fc">&nbsp;            resultSet.add(row);</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    /***
+&nbsp;     * use this method after TDengine-2.0.18.0 to parse column meta, restful add column_meta in resultSet
+&nbsp;     * @Param columnMeta
+&nbsp;     */
+&nbsp;    private void parseColumnMeta_new(JSONArray columnMeta) {
+<b class="fc">&nbsp;        columnNames.clear();</b>
+<b class="fc">&nbsp;        columns.clear();</b>
+<b class="fc">&nbsp;        for (int colIndex = 0; colIndex &lt; columnMeta.size(); colIndex++) {</b>
+<b class="fc">&nbsp;            JSONArray col = columnMeta.getJSONArray(colIndex);</b>
+<b class="fc">&nbsp;            String col_name = col.getString(0);</b>
+<b class="fc">&nbsp;            String typeName = col.getString(1);</b>
+<b class="fc">&nbsp;            DataType type = DataType.getDataType(typeName);</b>
+<b class="fc">&nbsp;            int col_type = type.getJdbcTypeValue();</b>
+<b class="fc">&nbsp;            int col_length = col.getInteger(2);</b>
+<b class="fc">&nbsp;            columnNames.add(col_name);</b>
+<b class="fc">&nbsp;            columns.add(new Field(col_name, col_type, col_length, &quot;&quot;, type.getTaosTypeValue()));</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    private Object parseColumnData(JSONArray row, int colIndex, Field field) throws SQLException {
+<b class="fc">&nbsp;        int taosType = field.taos_type;</b>
+<b class="fc">&nbsp;        switch (taosType) {</b>
+&nbsp;            case TSDBConstants.TSDB_DATA_TYPE_NULL:
+<b class="nc">&nbsp;                return null;</b>
+&nbsp;            case TSDBConstants.TSDB_DATA_TYPE_BOOL:
+<b class="fc">&nbsp;                return row.getBoolean(colIndex);</b>
+&nbsp;            case TSDBConstants.TSDB_DATA_TYPE_TINYINT:
+<b class="fc">&nbsp;                return row.getByte(colIndex);</b>
+&nbsp;            case TSDBConstants.TSDB_DATA_TYPE_SMALLINT:
+<b class="fc">&nbsp;                return row.getShort(colIndex);</b>
+&nbsp;            case TSDBConstants.TSDB_DATA_TYPE_INT:
+<b class="fc">&nbsp;                return row.getInteger(colIndex);</b>
+&nbsp;            case TSDBConstants.TSDB_DATA_TYPE_BIGINT:
+<b class="fc">&nbsp;                return row.getLong(colIndex);</b>
+&nbsp;            case TSDBConstants.TSDB_DATA_TYPE_FLOAT:
+<b class="fc">&nbsp;                return row.getFloat(colIndex);</b>
+&nbsp;            case TSDBConstants.TSDB_DATA_TYPE_DOUBLE:
+<b class="fc">&nbsp;                return row.getDouble(colIndex);</b>
+&nbsp;            case TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP:
+<b class="fc">&nbsp;                return parseTimestampColumnData(row, colIndex);</b>
+&nbsp;            case TSDBConstants.TSDB_DATA_TYPE_BINARY:
+&nbsp;
+<b class="fc">&nbsp;                int type = field.type;</b>
+<b class="fc">&nbsp;                if (Types.BINARY == type) {</b>
+<b class="nc">&nbsp;                    return row.getString(colIndex) == null ? null : row.getString(colIndex).getBytes();</b>
+&nbsp;                }else {
+<b class="fc">&nbsp;                    return row.getString(colIndex) == null ? null : row.getString(colIndex);</b>
+&nbsp;                }
+&nbsp;            case TSDBConstants.TSDB_DATA_TYPE_NCHAR:
+<b class="fc">&nbsp;                return row.getString(colIndex) == null ? null : row.getString(colIndex);</b>
+&nbsp;            case TSDBConstants.TSDB_DATA_TYPE_JSON:
+&nbsp;                //  all json tag or just a json tag value
+<b class="fc">&nbsp;                return row.get(colIndex) != null &amp;&amp; (row.get(colIndex) instanceof String || row.get(colIndex) instanceof JSONObject)</b>
+<b class="fc">&nbsp;                        ? JSON.toJSONString(row.get(colIndex), SerializerFeature.WriteMapNullValue)</b>
+<b class="fc">&nbsp;                        : row.get(colIndex);</b>
+&nbsp;            default:
+<b class="fc">&nbsp;                return row.get(colIndex);</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    public Timestamp parseTimestampColumnData(JSONArray row, int colIndex) throws SQLException {
+<b class="fc">&nbsp;        if (row.get(colIndex) == null)</b>
+<b class="fc">&nbsp;            return null;</b>
+&nbsp;
+<b class="fc">&nbsp;        String value = row.getString(colIndex);</b>
+<b class="fc">&nbsp;        int index = value.lastIndexOf(&quot;:&quot;);</b>
+&nbsp;        // ns timestamp: yyyy-MM-ddTHH:mm:ss.SSSSSSSSS+0x:00
+<b class="fc">&nbsp;        if (index &gt; 19) {</b>
+&nbsp;            // ns timestamp: yyyy-MM-ddTHH:mm:ss.SSSSSSSSS+0x00
+<b class="nc">&nbsp;            value = value.substring(0, index) + value.substring(index + 1);</b>
+&nbsp;        }
+<b class="fc">&nbsp;        ZonedDateTime parse = ZonedDateTime.parse(value, rfc3339Parser);</b>
+<b class="fc">&nbsp;        Matcher matcher = pattern.matcher(value);</b>
+<b class="fc">&nbsp;        int len = 0;</b>
+<b class="fc">&nbsp;        if (matcher.find()) {</b>
+<b class="fc">&nbsp;            len = matcher.group(1).length();</b>
+&nbsp;        }
+<b class="fc">&nbsp;        if (len &gt; 6) {</b>
+<b class="fc">&nbsp;            this.timestampPrecision = TimestampPrecision.NS;</b>
+<b class="fc">&nbsp;        } else if (len &gt; 3) {</b>
+<b class="fc">&nbsp;            this.timestampPrecision = TimestampPrecision.US;</b>
+&nbsp;        } else {
+<b class="fc">&nbsp;            this.timestampPrecision = TimestampPrecision.MS;</b>
+&nbsp;        }
+<b class="fc">&nbsp;        return Timestamp.from(parse.toInstant());</b>
+&nbsp;
+&nbsp;    }
+&nbsp;
+&nbsp;    public static class Field {
+&nbsp;        String name;
+&nbsp;        int type;
+&nbsp;        int length;
+&nbsp;        String note;
+&nbsp;        int taos_type;
+&nbsp;
+<b class="fc">&nbsp;        public Field(String name, int type, int length, String note, int taos_type) {</b>
+<b class="fc">&nbsp;            this.name = name;</b>
+<b class="fc">&nbsp;            this.type = type;</b>
+<b class="fc">&nbsp;            this.length = length;</b>
+<b class="fc">&nbsp;            this.note = note;</b>
+<b class="fc">&nbsp;            this.taos_type = taos_type;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        public int getTaosType() {
+<b class="fc">&nbsp;            return taos_type;</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean next() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);</b>
+<b class="fc">&nbsp;        pos++;</b>
+<b class="fc">&nbsp;        return pos &lt;= resultSet.size() - 1;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void close() throws SQLException {
+<b class="fc">&nbsp;        synchronized (RestfulResultSet.class) {</b>
+<b class="fc">&nbsp;            this.isClosed = true;</b>
+<b class="fc">&nbsp;        }</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public String getString(int columnIndex) throws SQLException {
+<b class="fc">&nbsp;        checkAvailability(columnIndex, resultSet.get(pos).size());</b>
+&nbsp;
+<b class="fc">&nbsp;        Object value = resultSet.get(pos).get(columnIndex - 1);</b>
+<b class="fc">&nbsp;        wasNull = value == null;</b>
+<b class="fc">&nbsp;        if (value == null)</b>
+<b class="fc">&nbsp;            return null;</b>
+<b class="fc">&nbsp;        if (value instanceof byte[])</b>
+<b class="nc">&nbsp;            return new String((byte[]) value);</b>
+<b class="fc">&nbsp;        return value.toString();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean getBoolean(int columnIndex) throws SQLException {
+<b class="fc">&nbsp;        checkAvailability(columnIndex, resultSet.get(pos).size());</b>
+&nbsp;
+<b class="fc">&nbsp;        Object value = resultSet.get(pos).get(columnIndex - 1);</b>
+<b class="fc">&nbsp;        wasNull = value == null;</b>
+<b class="fc">&nbsp;        if (value == null)</b>
+<b class="nc">&nbsp;            return false;</b>
+<b class="fc">&nbsp;        if (value instanceof Boolean)</b>
+<b class="fc">&nbsp;            return (boolean) value;</b>
+<b class="nc">&nbsp;        return Boolean.parseBoolean(value.toString());</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public byte getByte(int columnIndex) throws SQLException {
+<b class="fc">&nbsp;        checkAvailability(columnIndex, resultSet.get(pos).size());</b>
+&nbsp;
+<b class="fc">&nbsp;        Object value = resultSet.get(pos).get(columnIndex - 1);</b>
+<b class="fc">&nbsp;        wasNull = value == null;</b>
+<b class="fc">&nbsp;        if (value == null)</b>
+<b class="fc">&nbsp;            return 0;</b>
+<b class="fc">&nbsp;        long valueAsLong = Long.parseLong(value.toString());</b>
+<b class="fc">&nbsp;        if (valueAsLong == Byte.MIN_VALUE)</b>
+<b class="nc">&nbsp;            return 0;</b>
+<b class="fc">&nbsp;        if (valueAsLong &lt; Byte.MIN_VALUE || valueAsLong &gt; Byte.MAX_VALUE)</b>
+<b class="fc">&nbsp;            throwRangeException(value.toString(), columnIndex, Types.TINYINT);</b>
+&nbsp;
+<b class="fc">&nbsp;        return (byte) valueAsLong;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    private void throwRangeException(String valueAsString, int columnIndex, int jdbcType) throws SQLException {
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_NUMERIC_VALUE_OUT_OF_RANGE,</b>
+<b class="fc">&nbsp;                &quot;&#39;&quot; + valueAsString + &quot;&#39; in column &#39;&quot; + columnIndex + &quot;&#39; is outside valid range for the jdbcType &quot; + TSDBConstants.jdbcType2TaosTypeName(jdbcType));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public short getShort(int columnIndex) throws SQLException {
+<b class="fc">&nbsp;        checkAvailability(columnIndex, resultSet.get(pos).size());</b>
+&nbsp;
+<b class="fc">&nbsp;        Object value = resultSet.get(pos).get(columnIndex - 1);</b>
+<b class="fc">&nbsp;        wasNull = value == null;</b>
+<b class="fc">&nbsp;        if (value == null)</b>
+<b class="fc">&nbsp;            return 0;</b>
+<b class="fc">&nbsp;        long valueAsLong = Long.parseLong(value.toString());</b>
+<b class="fc">&nbsp;        if (valueAsLong == Short.MIN_VALUE)</b>
+<b class="nc">&nbsp;            return 0;</b>
+<b class="fc">&nbsp;        if (valueAsLong &lt; Short.MIN_VALUE || valueAsLong &gt; Short.MAX_VALUE)</b>
+<b class="fc">&nbsp;            throwRangeException(value.toString(), columnIndex, Types.SMALLINT);</b>
+<b class="fc">&nbsp;        return (short) valueAsLong;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public int getInt(int columnIndex) throws SQLException {
+<b class="fc">&nbsp;        checkAvailability(columnIndex, resultSet.get(pos).size());</b>
+&nbsp;
+<b class="fc">&nbsp;        Object value = resultSet.get(pos).get(columnIndex - 1);</b>
+<b class="fc">&nbsp;        wasNull = value == null;</b>
+<b class="fc">&nbsp;        if (value == null)</b>
+<b class="fc">&nbsp;            return 0;</b>
+<b class="fc">&nbsp;        long valueAsLong = Long.parseLong(value.toString());</b>
+<b class="fc">&nbsp;        if (valueAsLong == Integer.MIN_VALUE)</b>
+<b class="nc">&nbsp;            return 0;</b>
+<b class="fc">&nbsp;        if (valueAsLong &lt; Integer.MIN_VALUE || valueAsLong &gt; Integer.MAX_VALUE)</b>
+<b class="fc">&nbsp;            throwRangeException(value.toString(), columnIndex, Types.INTEGER);</b>
+<b class="fc">&nbsp;        return (int) valueAsLong;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public long getLong(int columnIndex) throws SQLException {
+<b class="fc">&nbsp;        checkAvailability(columnIndex, resultSet.get(pos).size());</b>
+&nbsp;
+<b class="fc">&nbsp;        Object value = resultSet.get(pos).get(columnIndex - 1);</b>
+<b class="fc">&nbsp;        wasNull = value == null;</b>
+<b class="fc">&nbsp;        if (value == null)</b>
+<b class="fc">&nbsp;            return 0;</b>
+<b class="fc">&nbsp;        if (value instanceof Timestamp) {</b>
+<b class="fc">&nbsp;            Timestamp ts = (Timestamp) value;</b>
+<b class="fc">&nbsp;            switch (this.timestampPrecision) {</b>
+&nbsp;                case TimestampPrecision.MS:
+&nbsp;                default:
+<b class="fc">&nbsp;                    return ts.getTime();</b>
+&nbsp;                case TimestampPrecision.US:
+<b class="fc">&nbsp;                    return ts.getTime() * 1000 + ts.getNanos() / 1000 % 1000;</b>
+&nbsp;                case TimestampPrecision.NS:
+<b class="fc">&nbsp;                    return ts.getTime() * 1000_000 + ts.getNanos() % 1000_000;</b>
+&nbsp;            }
+&nbsp;        }
+<b class="fc">&nbsp;        long valueAsLong = 0;</b>
+&nbsp;        try {
+<b class="fc">&nbsp;            valueAsLong = Long.parseLong(value.toString());</b>
+<b class="fc">&nbsp;            if (valueAsLong == Long.MIN_VALUE)</b>
+<b class="nc">&nbsp;                return 0;</b>
+<b class="fc">&nbsp;        } catch (NumberFormatException e) {</b>
+<b class="fc">&nbsp;            throwRangeException(value.toString(), columnIndex, Types.BIGINT);</b>
+<b class="fc">&nbsp;        }</b>
+<b class="fc">&nbsp;        return valueAsLong;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public float getFloat(int columnIndex) throws SQLException {
+<b class="fc">&nbsp;        checkAvailability(columnIndex, resultSet.get(pos).size());</b>
+&nbsp;
+<b class="fc">&nbsp;        Object value = resultSet.get(pos).get(columnIndex - 1);</b>
+<b class="fc">&nbsp;        wasNull = value == null;</b>
+<b class="fc">&nbsp;        if (value == null)</b>
+<b class="fc">&nbsp;            return 0;</b>
+<b class="fc">&nbsp;        if (value instanceof Float)</b>
+<b class="fc">&nbsp;            return (float) value;</b>
+<b class="nc">&nbsp;        if (value instanceof Double)</b>
+<b class="nc">&nbsp;            return new Float((Double) value);</b>
+<b class="nc">&nbsp;        return Float.parseFloat(value.toString());</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public double getDouble(int columnIndex) throws SQLException {
+<b class="fc">&nbsp;        checkAvailability(columnIndex, resultSet.get(pos).size());</b>
+&nbsp;
+<b class="fc">&nbsp;        Object value = resultSet.get(pos).get(columnIndex - 1);</b>
+<b class="fc">&nbsp;        wasNull = value == null;</b>
+<b class="fc">&nbsp;        if (value == null) {</b>
+<b class="fc">&nbsp;            return 0;</b>
+&nbsp;        }
+<b class="fc">&nbsp;        if (value instanceof Double)</b>
+<b class="fc">&nbsp;            return (double) value;</b>
+<b class="fc">&nbsp;        if (value instanceof Float)</b>
+<b class="nc">&nbsp;            return (float) value;</b>
+<b class="fc">&nbsp;        return Double.parseDouble(value.toString());</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public byte[] getBytes(int columnIndex) throws SQLException {
+<b class="fc">&nbsp;        checkAvailability(columnIndex, resultSet.get(pos).size());</b>
+&nbsp;
+<b class="fc">&nbsp;        Object value = resultSet.get(pos).get(columnIndex - 1);</b>
+<b class="fc">&nbsp;        wasNull = value == null;</b>
+<b class="fc">&nbsp;        if (value == null)</b>
+<b class="fc">&nbsp;            return null;</b>
+<b class="fc">&nbsp;        if (value instanceof byte[])</b>
+<b class="nc">&nbsp;            return (byte[]) value;</b>
+<b class="fc">&nbsp;        if (value instanceof String)</b>
+<b class="fc">&nbsp;            return ((String) value).getBytes();</b>
+<b class="fc">&nbsp;        if (value instanceof Long)</b>
+<b class="fc">&nbsp;            return Longs.toByteArray((long) value);</b>
+<b class="fc">&nbsp;        if (value instanceof Integer)</b>
+<b class="fc">&nbsp;            return Ints.toByteArray((int) value);</b>
+<b class="fc">&nbsp;        if (value instanceof Short)</b>
+<b class="fc">&nbsp;            return Shorts.toByteArray((short) value);</b>
+<b class="fc">&nbsp;        if (value instanceof Byte)</b>
+<b class="fc">&nbsp;            return new byte[]{(byte) value};</b>
+&nbsp;
+<b class="fc">&nbsp;        return value.toString().getBytes();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public Date getDate(int columnIndex) throws SQLException {
+<b class="fc">&nbsp;        checkAvailability(columnIndex, resultSet.get(pos).size());</b>
+&nbsp;
+<b class="fc">&nbsp;        Object value = resultSet.get(pos).get(columnIndex - 1);</b>
+<b class="fc">&nbsp;        wasNull = value == null;</b>
+<b class="fc">&nbsp;        if (value == null)</b>
+<b class="nc">&nbsp;            return null;</b>
+<b class="fc">&nbsp;        if (value instanceof Timestamp)</b>
+<b class="fc">&nbsp;            return new Date(((Timestamp) value).getTime());</b>
+<b class="nc">&nbsp;        return Utils.parseDate(value.toString());</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public Time getTime(int columnIndex) throws SQLException {
+<b class="fc">&nbsp;        checkAvailability(columnIndex, resultSet.get(pos).size());</b>
+&nbsp;
+<b class="fc">&nbsp;        Object value = resultSet.get(pos).get(columnIndex - 1);</b>
+<b class="fc">&nbsp;        wasNull = value == null;</b>
+<b class="fc">&nbsp;        if (value == null)</b>
+<b class="nc">&nbsp;            return null;</b>
+<b class="fc">&nbsp;        if (value instanceof Timestamp)</b>
+<b class="fc">&nbsp;            return new Time(((Timestamp) value).getTime());</b>
+<b class="nc">&nbsp;        Time time = null;</b>
+&nbsp;        try {
+<b class="nc">&nbsp;            time = Utils.parseTime(value.toString());</b>
+<b class="nc">&nbsp;        } catch (DateTimeParseException ignored) {</b>
+<b class="nc">&nbsp;        }</b>
+<b class="nc">&nbsp;        return time;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public Timestamp getTimestamp(int columnIndex) throws SQLException {
+<b class="fc">&nbsp;        checkAvailability(columnIndex, resultSet.get(pos).size());</b>
+&nbsp;
+<b class="fc">&nbsp;        Object value = resultSet.get(pos).get(columnIndex - 1);</b>
+<b class="fc">&nbsp;        wasNull = value == null;</b>
+<b class="fc">&nbsp;        if (value == null)</b>
+<b class="fc">&nbsp;            return null;</b>
+<b class="fc">&nbsp;        if (value instanceof Timestamp)</b>
+<b class="fc">&nbsp;            return (Timestamp) value;</b>
+<b class="nc">&nbsp;        if (value instanceof Long) {</b>
+<b class="nc">&nbsp;            if (1_0000_0000_0000_0L &gt; (long) value)</b>
+<b class="nc">&nbsp;                return Timestamp.from(Instant.ofEpochMilli((long) value));</b>
+<b class="nc">&nbsp;            long epochSec = (long) value / 1000_000L;</b>
+<b class="nc">&nbsp;            long nanoAdjustment = (long) value % 1000_000L * 1000;</b>
+<b class="nc">&nbsp;            return Timestamp.from(Instant.ofEpochSecond(epochSec, nanoAdjustment));</b>
+&nbsp;        }
+&nbsp;        Timestamp ret;
+&nbsp;        try {
+<b class="nc">&nbsp;            ret = Utils.parseTimestamp(value.toString());</b>
+<b class="nc">&nbsp;        } catch (Exception e) {</b>
+<b class="nc">&nbsp;            ret = null;</b>
+<b class="nc">&nbsp;            wasNull = true;</b>
+<b class="nc">&nbsp;        }</b>
+<b class="nc">&nbsp;        return ret;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public ResultSetMetaData getMetaData() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);</b>
+<b class="fc">&nbsp;        return this.metaData;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public Object getObject(int columnIndex) throws SQLException {
+<b class="fc">&nbsp;        checkAvailability(columnIndex, resultSet.get(pos).size());</b>
+&nbsp;
+<b class="fc">&nbsp;        Object value = resultSet.get(pos).get(columnIndex - 1);</b>
+<b class="fc">&nbsp;        wasNull = value == null;</b>
+<b class="fc">&nbsp;        return value;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public int findColumn(String columnLabel) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        int columnIndex = columnNames.indexOf(columnLabel);</b>
+<b class="fc">&nbsp;        if (columnIndex == -1)</b>
+<b class="fc">&nbsp;            throw new SQLException(&quot;cannot find Column in resultSet&quot;);</b>
+<b class="fc">&nbsp;        return columnIndex + 1;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public BigDecimal getBigDecimal(int columnIndex) throws SQLException {
+<b class="fc">&nbsp;        checkAvailability(columnIndex, resultSet.get(pos).size());</b>
+&nbsp;
+<b class="fc">&nbsp;        Object value = resultSet.get(pos).get(columnIndex - 1);</b>
+<b class="fc">&nbsp;        wasNull = value == null;</b>
+<b class="fc">&nbsp;        if (value == null)</b>
+<b class="nc">&nbsp;            return null;</b>
+<b class="fc">&nbsp;        if (value instanceof Long || value instanceof Integer || value instanceof Short || value instanceof Byte)</b>
+<b class="fc">&nbsp;            return new BigDecimal(Long.parseLong(value.toString()));</b>
+<b class="fc">&nbsp;        if (value instanceof Double || value instanceof Float)</b>
+<b class="fc">&nbsp;            return BigDecimal.valueOf(Double.parseDouble(value.toString()));</b>
+<b class="fc">&nbsp;        if (value instanceof Timestamp)</b>
+<b class="fc">&nbsp;            return new BigDecimal(((Timestamp) value).getTime());</b>
+&nbsp;        BigDecimal ret;
+&nbsp;        try {
+<b class="nc">&nbsp;            ret = new BigDecimal(value.toString());</b>
+<b class="nc">&nbsp;        } catch (Exception e) {</b>
+<b class="nc">&nbsp;            ret = null;</b>
+<b class="nc">&nbsp;        }</b>
+<b class="nc">&nbsp;        return ret;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean isBeforeFirst() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);</b>
+<b class="fc">&nbsp;        return this.pos == -1 &amp;&amp; this.resultSet.size() != 0;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean isAfterLast() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        return this.pos &gt;= resultSet.size() &amp;&amp; this.resultSet.size() != 0;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean isFirst() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);</b>
+<b class="fc">&nbsp;        return this.pos == 0;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean isLast() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);</b>
+<b class="fc">&nbsp;        if (this.resultSet.size() == 0)</b>
+<b class="nc">&nbsp;            return false;</b>
+<b class="fc">&nbsp;        return this.pos == (this.resultSet.size() - 1);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void beforeFirst() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        synchronized (this) {</b>
+<b class="fc">&nbsp;            if (this.resultSet.size() &gt; 0) {</b>
+<b class="fc">&nbsp;                this.pos = -1;</b>
+&nbsp;            }
+<b class="fc">&nbsp;        }</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void afterLast() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);</b>
+<b class="fc">&nbsp;        synchronized (this) {</b>
+<b class="fc">&nbsp;            if (this.resultSet.size() &gt; 0) {</b>
+<b class="fc">&nbsp;                this.pos = this.resultSet.size();</b>
+&nbsp;            }
+<b class="fc">&nbsp;        }</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean first() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        if (this.resultSet.size() == 0)</b>
+<b class="nc">&nbsp;            return false;</b>
+&nbsp;
+<b class="fc">&nbsp;        synchronized (this) {</b>
+<b class="fc">&nbsp;            this.pos = 0;</b>
+<b class="fc">&nbsp;        }</b>
+<b class="fc">&nbsp;        return true;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean last() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);</b>
+<b class="fc">&nbsp;        if (this.resultSet.size() == 0)</b>
+<b class="nc">&nbsp;            return false;</b>
+<b class="fc">&nbsp;        synchronized (this) {</b>
+<b class="fc">&nbsp;            this.pos = this.resultSet.size() - 1;</b>
+<b class="fc">&nbsp;        }</b>
+<b class="fc">&nbsp;        return true;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public int getRow() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);</b>
+&nbsp;        int row;
+<b class="fc">&nbsp;        synchronized (this) {</b>
+<b class="fc">&nbsp;            if (this.pos &lt; 0 || this.pos &gt;= this.resultSet.size())</b>
+<b class="fc">&nbsp;                return 0;</b>
+<b class="fc">&nbsp;            row = this.pos + 1;</b>
+<b class="fc">&nbsp;        }</b>
+<b class="fc">&nbsp;        return row;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean absolute(int row) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean relative(int rows) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean previous() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public String getNString(int columnIndex) throws SQLException {
+<b class="fc">&nbsp;        return getString(columnIndex);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public Statement getStatement() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        return this.statement;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public Timestamp getTimestamp(int columnIndex, Calendar cal) throws SQLException {
+&nbsp;        // TODO：did not use the specified timezone in cal
+<b class="nc">&nbsp;        return getTimestamp(columnIndex);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean isClosed() throws SQLException {
+<b class="fc">&nbsp;        return isClosed;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2023-10-08 10:56</div>
+</div>
+</body>
+</html>

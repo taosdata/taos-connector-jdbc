@@ -1,0 +1,186 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <title>Coverage Report > ReqId</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.taosdata.jdbc.utils</a>
+</div>
+
+<h1>Coverage Summary for Class: ReqId (com.taosdata.jdbc.utils)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">ReqId</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (3/3)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    95.1%
+  </span>
+  <span class="absValue">
+    (39/41)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.taosdata.jdbc.utils;
+&nbsp;
+&nbsp;import java.lang.management.ManagementFactory;
+&nbsp;import java.lang.management.RuntimeMXBean;
+&nbsp;import java.nio.ByteBuffer;
+&nbsp;import java.nio.ByteOrder;
+&nbsp;import java.nio.charset.StandardCharsets;
+&nbsp;import java.util.UUID;
+&nbsp;import java.util.concurrent.atomic.AtomicLong;
+&nbsp;
+&nbsp;public class ReqId {
+&nbsp;
+&nbsp;    private ReqId() {
+&nbsp;    }
+&nbsp;
+&nbsp;    private static final long tUUIDHashId;
+&nbsp;    private static final long pid;
+<b class="fc">&nbsp;    private static AtomicLong serialNo = new AtomicLong(0);</b>
+&nbsp;
+&nbsp;    static {
+<b class="fc">&nbsp;        String uuid = UUID.randomUUID().toString();</b>
+<b class="fc">&nbsp;        long hash = murmurHash32(uuid.getBytes(StandardCharsets.UTF_8), uuid.length());</b>
+<b class="fc">&nbsp;        tUUIDHashId = (hash &amp; 0x07ff) &lt;&lt; 52;</b>
+<b class="fc">&nbsp;        RuntimeMXBean runtimeMXBean = ManagementFactory.getRuntimeMXBean();</b>
+<b class="fc">&nbsp;        pid = (long) (Long.valueOf(runtimeMXBean.getName().split(&quot;@&quot;)[0]).intValue() &amp; 0x0f) &lt;&lt; 48;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static long getReqID() {
+<b class="fc">&nbsp;        long ts = (System.currentTimeMillis() &gt;&gt; 8) &amp; 0x3ffffff;</b>
+<b class="fc">&nbsp;        long val = serialNo.incrementAndGet();</b>
+<b class="fc">&nbsp;        return tUUIDHashId | pid | (ts &lt;&lt; 20) | (val &amp; 0xfffff);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public static long murmurHash32(byte[] data, int seed) {
+<b class="fc">&nbsp;        final int c1 = 0xcc9e2d51;</b>
+<b class="fc">&nbsp;        final int c2 = 0x1b873593;</b>
+<b class="fc">&nbsp;        final int r1 = 15;</b>
+<b class="fc">&nbsp;        final int r2 = 13;</b>
+<b class="fc">&nbsp;        final int m = 5;</b>
+<b class="fc">&nbsp;        final int n = 0xe6546b64;</b>
+&nbsp;
+<b class="fc">&nbsp;        int hash = seed;</b>
+<b class="fc">&nbsp;        int length = data.length;</b>
+&nbsp;
+<b class="fc">&nbsp;        for (int i = 0; i &lt; length / 4; i++) {</b>
+<b class="fc">&nbsp;            int k = ByteBuffer.wrap(data, i * 4, 4).order(ByteOrder.LITTLE_ENDIAN).getInt();</b>
+&nbsp;
+<b class="fc">&nbsp;            k *= c1;</b>
+<b class="fc">&nbsp;            k = Integer.rotateLeft(k, r1);</b>
+<b class="fc">&nbsp;            k *= c2;</b>
+&nbsp;
+<b class="fc">&nbsp;            hash ^= k;</b>
+<b class="fc">&nbsp;            hash = Integer.rotateLeft(hash, r2);</b>
+<b class="fc">&nbsp;            hash = hash * m + n;</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        int k = 0;</b>
+&nbsp;        // TODO : check this
+<b class="fc">&nbsp;        switch (length &amp; 3) {</b>
+&nbsp;            case 3:
+<b class="nc">&nbsp;                k ^= data[length - 3] &lt;&lt; 16;</b>
+&nbsp;            case 2:
+<b class="nc">&nbsp;                k ^= data[length - 2] &lt;&lt; 8;</b>
+&nbsp;            case 1:
+<b class="fc">&nbsp;                k ^= data[length - 1];</b>
+<b class="fc">&nbsp;                k *= c1;</b>
+<b class="fc">&nbsp;                k = Integer.rotateLeft(k, r1);</b>
+<b class="fc">&nbsp;                k *= c2;</b>
+<b class="fc">&nbsp;                hash ^= k;</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        hash ^= length;</b>
+&nbsp;
+<b class="fc">&nbsp;        hash ^= hash &gt;&gt;&gt; 16;</b>
+<b class="fc">&nbsp;        hash *= 0x85ebca6b;</b>
+<b class="fc">&nbsp;        hash ^= hash &gt;&gt;&gt; 13;</b>
+<b class="fc">&nbsp;        hash *= 0xc2b2ae35;</b>
+<b class="fc">&nbsp;        hash ^= hash &gt;&gt;&gt; 16;</b>
+&nbsp;
+<b class="fc">&nbsp;        return Integer.toUnsignedLong(hash);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2023-10-08 10:56</div>
+</div>
+</body>
+</html>

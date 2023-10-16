@@ -1,0 +1,342 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <title>Coverage Report > DatabaseMetaDataResultSet</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.taosdata.jdbc</a>
+</div>
+
+<h1>Coverage Summary for Class: DatabaseMetaDataResultSet (com.taosdata.jdbc)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">DatabaseMetaDataResultSet</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    25%
+  </span>
+  <span class="absValue">
+    (9/36)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    36.1%
+  </span>
+  <span class="absValue">
+    (22/61)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;/***************************************************************************
+&nbsp; * Copyright (c) 2019 TAOS Data, Inc. &lt;jhtao@taosdata.com&gt;
+&nbsp; *
+&nbsp; * This program is free software: you can use, redistribute, and/or modify
+&nbsp; * it under the terms of the GNU Affero General Public License, version 3
+&nbsp; * or later (&quot;AGPL&quot;), as published by the Free Software Foundation.
+&nbsp; *
+&nbsp; * This program is distributed in the hope that it will be useful, but WITHOUT
+&nbsp; * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+&nbsp; * FITNESS FOR A PARTICULAR PURPOSE.
+&nbsp; *
+&nbsp; * You should have received a copy of the GNU Affero General Public License
+&nbsp; * along with this program. If not, see &lt;http://www.gnu.org/licenses/&gt;.
+&nbsp; *****************************************************************************/
+&nbsp;package com.taosdata.jdbc;
+&nbsp;
+&nbsp;import java.math.BigDecimal;
+&nbsp;import java.sql.ResultSetMetaData;
+&nbsp;import java.sql.SQLException;
+&nbsp;import java.sql.Statement;
+&nbsp;import java.sql.Timestamp;
+&nbsp;import java.util.ArrayList;
+&nbsp;import java.util.Calendar;
+&nbsp;import java.util.List;
+&nbsp;
+&nbsp;/*
+&nbsp; * TDengine only supports a subset of the standard SQL, thus this implementation of the
+&nbsp; * standard JDBC API contains more or less some adjustments customized for certain
+&nbsp; * compatibility needs.
+&nbsp; */
+<b class="fc">&nbsp;public class DatabaseMetaDataResultSet extends AbstractResultSet {</b>
+&nbsp;
+<b class="fc">&nbsp;    private List&lt;ColumnMetaData&gt; columnMetaDataList = new ArrayList&lt;&gt;();</b>
+<b class="fc">&nbsp;    private List&lt;TSDBResultSetRowData&gt; rowDataList = new ArrayList&lt;&gt;();</b>
+&nbsp;    private TSDBResultSetRowData rowCursor;
+&nbsp;
+&nbsp;    // position of cursor, starts from 0 as beforeFirst, increases as next() is called
+<b class="fc">&nbsp;    private int cursorRowNumber = 0;</b>
+&nbsp;
+&nbsp;    public void setRowDataList(List&lt;TSDBResultSetRowData&gt; rowDataList) {
+<b class="fc">&nbsp;        this.rowDataList = rowDataList;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setColumnMetaDataList(List&lt;ColumnMetaData&gt; columnMetaDataList) {
+<b class="fc">&nbsp;        this.columnMetaDataList = columnMetaDataList;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean next() throws SQLException {
+<b class="fc">&nbsp;        boolean ret = false;</b>
+<b class="fc">&nbsp;        if (!rowDataList.isEmpty() &amp;&amp; cursorRowNumber &lt; rowDataList.size()) {</b>
+<b class="fc">&nbsp;            rowCursor = rowDataList.get(cursorRowNumber++);</b>
+<b class="fc">&nbsp;            ret = true;</b>
+&nbsp;        }
+<b class="fc">&nbsp;        return ret;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void close() throws SQLException {
+&nbsp;
+<b class="nc">&nbsp;    }</b>
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean wasNull() throws SQLException {
+<b class="nc">&nbsp;        return false;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public String getString(int columnIndex) throws SQLException {
+<b class="fc">&nbsp;        int colType = columnMetaDataList.get(columnIndex - 1).getColType();</b>
+<b class="fc">&nbsp;        return rowCursor.getString(columnIndex, colType);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean getBoolean(int columnIndex) throws SQLException {
+<b class="nc">&nbsp;        int colType = columnMetaDataList.get(columnIndex - 1).getColType();</b>
+<b class="nc">&nbsp;        return rowCursor.getBoolean(columnIndex, colType);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public byte getByte(int columnIndex) throws SQLException {
+<b class="nc">&nbsp;        int colType = columnMetaDataList.get(columnIndex - 1).getColType();</b>
+<b class="nc">&nbsp;        return (byte) rowCursor.getInt(columnIndex, colType);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public short getShort(int columnIndex) throws SQLException {
+<b class="fc">&nbsp;        int colType = columnMetaDataList.get(columnIndex - 1).getColType();</b>
+<b class="fc">&nbsp;        return (short) rowCursor.getInt(columnIndex, colType);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public int getInt(int columnIndex) throws SQLException {
+<b class="fc">&nbsp;        int colType = columnMetaDataList.get(columnIndex - 1).getColType();</b>
+<b class="fc">&nbsp;        return rowCursor.getInt(columnIndex, colType);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public long getLong(int columnIndex) throws SQLException {
+<b class="nc">&nbsp;        int colType = columnMetaDataList.get(columnIndex - 1).getColType();</b>
+<b class="nc">&nbsp;        return rowCursor.getLong(columnIndex, colType);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public float getFloat(int columnIndex) throws SQLException {
+<b class="nc">&nbsp;        int colType = columnMetaDataList.get(columnIndex - 1).getColType();</b>
+<b class="nc">&nbsp;        return rowCursor.getFloat(columnIndex, colType);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public double getDouble(int columnIndex) throws SQLException {
+<b class="nc">&nbsp;        int colType = columnMetaDataList.get(columnIndex - 1).getColType();</b>
+<b class="nc">&nbsp;        return rowCursor.getDouble(columnIndex, colType);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public byte[] getBytes(int columnIndex) throws SQLException {
+<b class="nc">&nbsp;        int colType = columnMetaDataList.get(columnIndex - 1).getColType();</b>
+<b class="nc">&nbsp;        return (rowCursor.getString(columnIndex, colType)).getBytes();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public Timestamp getTimestamp(int columnIndex) throws SQLException {
+<b class="nc">&nbsp;        int colType = columnMetaDataList.get(columnIndex - 1).getColType();</b>
+<b class="nc">&nbsp;        return rowCursor.getTimestamp(columnIndex, colType);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public ResultSetMetaData getMetaData() throws SQLException {
+<b class="fc">&nbsp;        return new TSDBResultSetMetaData(this.columnMetaDataList);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public Object getObject(int columnIndex) throws SQLException {
+<b class="nc">&nbsp;        return rowCursor.getObject(columnIndex);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public int findColumn(String columnLabel) throws SQLException {
+<b class="fc">&nbsp;        for (ColumnMetaData colMetaData : this.columnMetaDataList) {</b>
+<b class="fc">&nbsp;            if (colMetaData.getColName() != null &amp;&amp; colMetaData.getColName().equals(columnLabel)) {</b>
+<b class="fc">&nbsp;                return colMetaData.getColIndex();</b>
+&nbsp;            }
+<b class="fc">&nbsp;        }</b>
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public BigDecimal getBigDecimal(int columnIndex) throws SQLException {
+<b class="nc">&nbsp;        int colType = columnMetaDataList.get(columnIndex - 1).getColType();</b>
+<b class="nc">&nbsp;        double value = rowCursor.getDouble(columnIndex, colType);</b>
+<b class="nc">&nbsp;        return BigDecimal.valueOf(value);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean isBeforeFirst() throws SQLException {
+<b class="nc">&nbsp;        return cursorRowNumber == 0;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean isAfterLast() throws SQLException {
+<b class="nc">&nbsp;        return rowDataList.iterator().hasNext();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean isFirst() throws SQLException {
+<b class="nc">&nbsp;        return cursorRowNumber == 1;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean isLast() throws SQLException {
+<b class="nc">&nbsp;        return cursorRowNumber == rowDataList.size();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void beforeFirst() throws SQLException {
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void afterLast() throws SQLException {
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean first() throws SQLException {
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean last() throws SQLException {
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public int getRow() throws SQLException {
+<b class="nc">&nbsp;        if (cursorRowNumber &gt; 0 &amp;&amp; cursorRowNumber &lt;= rowDataList.size()) {</b>
+<b class="nc">&nbsp;            return cursorRowNumber;</b>
+&nbsp;        } else {
+<b class="nc">&nbsp;            return 0;</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean absolute(int row) throws SQLException {
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean relative(int rows) throws SQLException {
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean previous() throws SQLException {
+<b class="nc">&nbsp;        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public Statement getStatement() throws SQLException {
+<b class="nc">&nbsp;        return null;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public Timestamp getTimestamp(int columnIndex, Calendar cal) throws SQLException {
+&nbsp;        //TODO: calendar is not used
+<b class="nc">&nbsp;        return getTimestamp(columnIndex);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean isClosed() throws SQLException {
+<b class="nc">&nbsp;        return false;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public String getNString(int columnIndex) throws SQLException {
+<b class="nc">&nbsp;        return getString(columnIndex);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2023-10-08 10:56</div>
+</div>
+</body>
+</html>

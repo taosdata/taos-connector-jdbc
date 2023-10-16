@@ -1,0 +1,168 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <title>Coverage Report > ColumnMetaData</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.taosdata.jdbc</a>
+</div>
+
+<h1>Coverage Summary for Class: ColumnMetaData (com.taosdata.jdbc)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">ColumnMetaData</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    80%
+  </span>
+  <span class="absValue">
+    (8/10)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    85.7%
+  </span>
+  <span class="absValue">
+    (12/14)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;/***************************************************************************
+&nbsp; * Copyright (c) 2019 TAOS Data, Inc. &lt;jhtao@taosdata.com&gt;
+&nbsp; *
+&nbsp; * This program is free software: you can use, redistribute, and/or modify
+&nbsp; * it under the terms of the GNU Affero General Public License, version 3
+&nbsp; * or later (&quot;AGPL&quot;), as published by the Free Software Foundation.
+&nbsp; *
+&nbsp; * This program is distributed in the hope that it will be useful, but WITHOUT
+&nbsp; * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+&nbsp; * FITNESS FOR A PARTICULAR PURPOSE.
+&nbsp; *
+&nbsp; * You should have received a copy of the GNU Affero General Public License
+&nbsp; * along with this program. If not, see &lt;http://www.gnu.org/licenses/&gt;.
+&nbsp; *****************************************************************************/
+&nbsp;package com.taosdata.jdbc;
+&nbsp;
+<b class="fc">&nbsp;public class ColumnMetaData {</b>
+&nbsp;
+<b class="fc">&nbsp;    private int colType = 0;         //taosType</b>
+<b class="fc">&nbsp;    private String colName = null;</b>
+<b class="fc">&nbsp;    private int colSize = -1;</b>
+<b class="fc">&nbsp;    private int colIndex = 0;</b>
+&nbsp;
+&nbsp;    public int getColSize() {
+<b class="nc">&nbsp;        return colSize;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setColSize(int colSize) {
+<b class="fc">&nbsp;        this.colSize = colSize;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public int getColType() {
+<b class="fc">&nbsp;        return colType;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setColType(int colType) {
+<b class="fc">&nbsp;        this.colType = colType;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getColName() {
+<b class="fc">&nbsp;        return colName;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setColName(String colName) {
+<b class="fc">&nbsp;        this.colName = colName;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public int getColIndex() {
+<b class="fc">&nbsp;        return colIndex;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setColIndex(int colIndex) {
+<b class="fc">&nbsp;        this.colIndex = colIndex;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public String toString() {
+<b class="nc">&nbsp;        return &quot;ColumnMetaData{&quot; +</b>
+&nbsp;                &quot;colType=&quot; + colType +
+&nbsp;                &quot;, colName=&#39;&quot; + colName + &#39;\&#39;&#39; +
+&nbsp;                &quot;, colSize=&quot; + colSize +
+&nbsp;                &quot;, colIndex=&quot; + colIndex +
+&nbsp;                &#39;}&#39;;
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2023-10-08 10:56</div>
+</div>
+</body>
+</html>

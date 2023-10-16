@@ -1,0 +1,410 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <title>Coverage Report > WSConsumer</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.taosdata.jdbc.ws.tmq</a>
+</div>
+
+<h1>Coverage Summary for Class: WSConsumer (com.taosdata.jdbc.ws.tmq)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">WSConsumer</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    70.8%
+  </span>
+  <span class="absValue">
+    (17/24)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    68.5%
+  </span>
+  <span class="absValue">
+    (113/165)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.taosdata.jdbc.ws.tmq;
+&nbsp;
+&nbsp;import com.alibaba.fastjson.JSON;
+&nbsp;import com.alibaba.fastjson.JSONObject;
+&nbsp;import com.taosdata.jdbc.TSDBError;
+&nbsp;import com.taosdata.jdbc.TSDBErrorNumbers;
+&nbsp;import com.taosdata.jdbc.common.Consumer;
+&nbsp;import com.taosdata.jdbc.enums.WSFunction;
+&nbsp;import com.taosdata.jdbc.tmq.*;
+&nbsp;import com.taosdata.jdbc.ws.FutureResponse;
+&nbsp;import com.taosdata.jdbc.ws.InFlightRequest;
+&nbsp;import com.taosdata.jdbc.ws.Transport;
+&nbsp;import com.taosdata.jdbc.ws.entity.Code;
+&nbsp;import com.taosdata.jdbc.ws.entity.FetchBlockResp;
+&nbsp;import com.taosdata.jdbc.ws.entity.Request;
+&nbsp;import com.taosdata.jdbc.ws.entity.Response;
+&nbsp;import com.taosdata.jdbc.ws.tmq.entity.*;
+&nbsp;
+&nbsp;import java.nio.ByteOrder;
+&nbsp;import java.sql.SQLException;
+&nbsp;import java.time.Duration;
+&nbsp;import java.util.*;
+&nbsp;import java.util.stream.Collectors;
+&nbsp;
+<b class="fc">&nbsp;public class WSConsumer&lt;V&gt; implements Consumer&lt;V&gt; {</b>
+&nbsp;    private Transport transport;
+&nbsp;    private ConsumerParam param;
+&nbsp;    private TMQRequestFactory factory;
+<b class="fc">&nbsp;    private long messageId = 0L;</b>
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void create(Properties properties) throws SQLException {
+<b class="fc">&nbsp;        factory = new TMQRequestFactory();</b>
+<b class="fc">&nbsp;        param = new ConsumerParam(properties);</b>
+<b class="fc">&nbsp;        InFlightRequest inFlightRequest = new InFlightRequest(param.getConnectionParam().getRequestTimeout()</b>
+<b class="fc">&nbsp;                , param.getConnectionParam().getMaxRequest());</b>
+<b class="fc">&nbsp;        transport = new Transport(WSFunction.TMQ, param.getConnectionParam(), inFlightRequest);</b>
+&nbsp;
+<b class="fc">&nbsp;        transport.setTextMessageHandler(message -&gt; {</b>
+<b class="fc">&nbsp;            JSONObject jsonObject = JSON.parseObject(message);</b>
+<b class="fc">&nbsp;            ConsumerAction action = ConsumerAction.of(jsonObject.getString(&quot;action&quot;));</b>
+<b class="fc">&nbsp;            Response response = jsonObject.toJavaObject(action.getResponseClazz());</b>
+<b class="fc">&nbsp;            FutureResponse remove = inFlightRequest.remove(response.getAction(), response.getReqId());</b>
+<b class="fc">&nbsp;            if (null != remove) {</b>
+<b class="fc">&nbsp;                remove.getFuture().complete(response);</b>
+&nbsp;            }
+&nbsp;        });
+<b class="fc">&nbsp;        transport.setBinaryMessageHandler(byteBuffer -&gt; {</b>
+<b class="fc">&nbsp;            byteBuffer.order(ByteOrder.LITTLE_ENDIAN);</b>
+<b class="fc">&nbsp;            byteBuffer.position(8);</b>
+&nbsp;            // request_id
+<b class="fc">&nbsp;            long id = byteBuffer.getLong();</b>
+<b class="fc">&nbsp;            byteBuffer.position(24);</b>
+<b class="fc">&nbsp;            FutureResponse remove = inFlightRequest.remove(ConsumerAction.FETCH_BLOCK.getAction(), id);</b>
+<b class="fc">&nbsp;            if (null != remove) {</b>
+<b class="fc">&nbsp;                FetchBlockResp fetchBlockResp = new FetchBlockResp(id, byteBuffer);</b>
+<b class="fc">&nbsp;                remove.getFuture().complete(fetchBlockResp);</b>
+&nbsp;            }
+&nbsp;        });
+&nbsp;
+<b class="fc">&nbsp;        Transport.checkConnection(transport, param.getConnectionParam().getConnectTimeout());</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void subscribe(Collection&lt;String&gt; topics) throws SQLException {
+<b class="fc">&nbsp;        Request request = factory.generateSubscribe(param.getConnectionParam().getUser()</b>
+<b class="fc">&nbsp;                , param.getConnectionParam().getPassword()</b>
+<b class="fc">&nbsp;                , param.getConnectionParam().getDatabase()</b>
+<b class="fc">&nbsp;                , param.getGroupId()</b>
+<b class="fc">&nbsp;                , param.getClientId()</b>
+<b class="fc">&nbsp;                , param.getOffsetRest()</b>
+<b class="fc">&nbsp;                , topics.toArray(new String[0])</b>
+<b class="fc">&nbsp;                , String.valueOf(param.isAutoCommit())</b>
+<b class="fc">&nbsp;                , param.getAutoCommitInterval()</b>
+<b class="fc">&nbsp;                , param.getSnapshotEnable()</b>
+<b class="fc">&nbsp;                , param.getMsgWithTableName()</b>
+&nbsp;        );
+<b class="fc">&nbsp;        SubscribeResp response = (SubscribeResp) transport.send(request);</b>
+<b class="fc">&nbsp;        if (Code.SUCCESS.getCode() != response.getCode()) {</b>
+<b class="nc">&nbsp;            throw new SQLException(&quot;subscribe topic error, code: (0x&quot; + Integer.toHexString(response.getCode())</b>
+<b class="nc">&nbsp;                    + &quot;), message: &quot; + response.getMessage());</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void unsubscribe() throws SQLException {
+<b class="fc">&nbsp;        Request request = factory.generateUnsubscribe();</b>
+<b class="fc">&nbsp;        UnsubscribeResp response = (UnsubscribeResp) transport.send(request);</b>
+<b class="fc">&nbsp;        if (Code.SUCCESS.getCode() != response.getCode()) {</b>
+<b class="nc">&nbsp;            throw new SQLException(&quot;unsubscribe topic error, code: (0x&quot; + Integer.toHexString(response.getCode())</b>
+<b class="nc">&nbsp;                    + &quot;), message: &quot; + response.getMessage() + &quot;, timing: &quot; + response.getTiming());</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public Set&lt;String&gt; subscription() throws SQLException {
+<b class="fc">&nbsp;        Request request = factory.generateSubscription();</b>
+<b class="fc">&nbsp;        ListTopicsResp response = (ListTopicsResp) transport.send(request);</b>
+<b class="fc">&nbsp;        if (Code.SUCCESS.getCode() != response.getCode()) {</b>
+<b class="nc">&nbsp;            throw new SQLException(&quot;get subscription error, code: (0x&quot; + Integer.toHexString(response.getCode())</b>
+<b class="nc">&nbsp;                    + &quot;), message: &quot; + response.getMessage());</b>
+&nbsp;        }
+<b class="fc">&nbsp;        return Arrays.stream(response.getTopics()).collect(Collectors.toSet());</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public ConsumerRecords&lt;V&gt; poll(Duration timeout, Deserializer&lt;V&gt; deserializer) throws SQLException {
+<b class="fc">&nbsp;        Request request = factory.generatePoll(timeout.toMillis());</b>
+<b class="fc">&nbsp;        PollResp pollResp = (PollResp) transport.send(request);</b>
+<b class="fc">&nbsp;        if (Code.SUCCESS.getCode() != pollResp.getCode()) {</b>
+<b class="nc">&nbsp;            throw new SQLException(&quot;consumer poll error, code: (0x&quot; + Integer.toHexString(pollResp.getCode()) + &quot;), message: &quot; + pollResp.getMessage());</b>
+&nbsp;        }
+<b class="fc">&nbsp;        if (!pollResp.isHaveMessage())</b>
+<b class="fc">&nbsp;            return ConsumerRecords.emptyRecord();</b>
+&nbsp;
+<b class="fc">&nbsp;        messageId = pollResp.getMessageId();</b>
+<b class="fc">&nbsp;        ConsumerRecords&lt;V&gt; records = new ConsumerRecords&lt;&gt;();</b>
+<b class="fc">&nbsp;        try (WSConsumerResultSet rs = new WSConsumerResultSet(transport, factory, pollResp.getMessageId(), pollResp.getDatabase())) {</b>
+<b class="fc">&nbsp;            while (rs.next()) {</b>
+<b class="fc">&nbsp;                String topic = pollResp.getTopic();</b>
+<b class="fc">&nbsp;                String dbName = pollResp.getDatabase();</b>
+<b class="fc">&nbsp;                int vGroupId = pollResp.getVgroupId();</b>
+<b class="fc">&nbsp;                TopicPartition tp = new TopicPartition(topic, vGroupId);</b>
+&nbsp;
+<b class="fc">&nbsp;                V v = deserializer.deserialize(rs, topic, dbName);</b>
+<b class="fc">&nbsp;                ConsumerRecord&lt;V&gt; r = new ConsumerRecord&lt;&gt;(topic, dbName, vGroupId, pollResp.getOffset(), v);</b>
+<b class="fc">&nbsp;                records.put(tp, r);</b>
+<b class="fc">&nbsp;            }</b>
+<b class="fc">&nbsp;        }</b>
+<b class="fc">&nbsp;        return records;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public synchronized void commitSync() throws SQLException {
+<b class="fc">&nbsp;        if (0 != messageId) {</b>
+<b class="fc">&nbsp;            CommitResp commitResp = (CommitResp) transport.send(factory.generateCommit(messageId));</b>
+<b class="fc">&nbsp;            if (Code.SUCCESS.getCode() != commitResp.getCode())</b>
+<b class="nc">&nbsp;                throw new SQLException(&quot;consumer commit error. code: (0x&quot; + Integer.toHexString(commitResp.getCode()) + &quot;), message: &quot; + commitResp.getMessage());</b>
+<b class="fc">&nbsp;            messageId = 0;</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void close() throws SQLException {
+<b class="fc">&nbsp;        transport.close();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void commitAsync(OffsetCommitCallback&lt;V&gt; callback) {
+&nbsp;        // nothing to do
+<b class="nc">&nbsp;    }</b>
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void seek(TopicPartition partition, long offset) throws SQLException {
+<b class="fc">&nbsp;        Request request = factory.generateSeek(partition.getTopic(), partition.getVGroupId(), offset);</b>
+<b class="fc">&nbsp;        SeekResp resp = (SeekResp) transport.send(request);</b>
+<b class="fc">&nbsp;        if (Code.SUCCESS.getCode() != resp.getCode()) {</b>
+<b class="nc">&nbsp;            throw new SQLException(&quot;consumer seek error, code: (0x&quot; + Integer.toHexString(resp.getCode())</b>
+<b class="nc">&nbsp;                    + &quot;), message: &quot; + resp.getMessage() + &quot;, timing: &quot; + resp.getTiming());</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public long position(TopicPartition partition) throws SQLException {
+<b class="nc">&nbsp;        Request request = factory.generatePosition(new TopicPartition[]{partition});</b>
+<b class="nc">&nbsp;        PositionResp resp = (PositionResp) transport.send(request);</b>
+<b class="nc">&nbsp;        if (Code.SUCCESS.getCode() != resp.getCode()) {</b>
+<b class="nc">&nbsp;            throw new SQLException(&quot;consumer position error, code: (0x&quot; + Integer.toHexString(resp.getCode())</b>
+<b class="nc">&nbsp;                    + &quot;), message: &quot; + resp.getMessage() + &quot;, timing: &quot; + resp.getTiming());</b>
+&nbsp;        }
+<b class="nc">&nbsp;        return resp.getPosition()[0];</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public Map&lt;TopicPartition, Long&gt; position(String topic) throws SQLException {
+<b class="fc">&nbsp;        TopicPartition[] topicPartitions = Arrays.stream(getAssignment(topic))</b>
+<b class="fc">&nbsp;                .map(a -&gt; new TopicPartition(topic, a.getVgId()))</b>
+<b class="fc">&nbsp;                .toArray(TopicPartition[]::new);</b>
+<b class="fc">&nbsp;        Request request = factory.generatePosition(topicPartitions);</b>
+<b class="fc">&nbsp;        PositionResp resp = (PositionResp) transport.send(request);</b>
+<b class="fc">&nbsp;        if (Code.SUCCESS.getCode() != resp.getCode()) {</b>
+<b class="nc">&nbsp;            throw new SQLException(&quot;consumer position error, code: (0x&quot; + Integer.toHexString(resp.getCode())</b>
+<b class="nc">&nbsp;                    + &quot;), message: &quot; + resp.getMessage() + &quot;, timing: &quot; + resp.getTiming());</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        return Arrays.stream(topicPartitions)</b>
+<b class="fc">&nbsp;                .collect(Collectors.toMap(tp -&gt; tp, tp -&gt; resp.getPosition()[Arrays.asList(topicPartitions).indexOf(tp)]));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public Map&lt;TopicPartition, Long&gt; beginningOffsets(String topic) throws SQLException {
+<b class="nc">&nbsp;        return Arrays.stream(getAssignment(topic))</b>
+<b class="nc">&nbsp;                .collect(HashMap::new, (m, a) -&gt; m.put(new TopicPartition(topic, a.getVgId()), a.getBegin()), HashMap::putAll);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public Map&lt;TopicPartition, Long&gt; endOffsets(String topic) throws SQLException {
+<b class="fc">&nbsp;        return Arrays.stream(getAssignment(topic))</b>
+<b class="fc">&nbsp;                .collect(HashMap::new, (m, a) -&gt; m.put(new TopicPartition(topic, a.getVgId()), a.getEnd()), HashMap::putAll);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void seekToBeginning(Collection&lt;TopicPartition&gt; partitions) throws SQLException {
+<b class="nc">&nbsp;        Map&lt;TopicPartition, Long&gt; beginningOffsets = new HashMap&lt;&gt;();</b>
+<b class="nc">&nbsp;        for (TopicPartition partition : partitions) {</b>
+<b class="nc">&nbsp;            if (beginningOffsets.containsKey(partition)) {</b>
+<b class="nc">&nbsp;                Long aLong = beginningOffsets.get(partition);</b>
+<b class="nc">&nbsp;                seek(partition, aLong);</b>
+<b class="nc">&nbsp;            } else {</b>
+<b class="nc">&nbsp;                Map&lt;TopicPartition, Long&gt; map = beginningOffsets(partition.getTopic());</b>
+<b class="nc">&nbsp;                for (Map.Entry&lt;TopicPartition, Long&gt; entry : map.entrySet()) {</b>
+<b class="nc">&nbsp;                    if (entry.getKey().getVGroupId() == partition.getVGroupId()) {</b>
+<b class="nc">&nbsp;                        seek(entry.getKey(), entry.getValue());</b>
+&nbsp;                    } else {
+<b class="nc">&nbsp;                        beginningOffsets.put(entry.getKey(), entry.getValue());</b>
+&nbsp;                    }
+<b class="nc">&nbsp;                }</b>
+&nbsp;            }
+<b class="nc">&nbsp;        }</b>
+&nbsp;
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void seekToEnd(Collection&lt;TopicPartition&gt; partitions) throws SQLException {
+<b class="fc">&nbsp;        Map&lt;TopicPartition, Long&gt; endOffsets = new HashMap&lt;&gt;();</b>
+<b class="fc">&nbsp;        for (TopicPartition partition : partitions) {</b>
+<b class="fc">&nbsp;            if (endOffsets.containsKey(partition)) {</b>
+<b class="fc">&nbsp;                Long aLong = endOffsets.get(partition);</b>
+<b class="fc">&nbsp;                seek(partition, aLong);</b>
+<b class="fc">&nbsp;            } else {</b>
+<b class="fc">&nbsp;                Map&lt;TopicPartition, Long&gt; map = endOffsets(partition.getTopic());</b>
+<b class="fc">&nbsp;                for (Map.Entry&lt;TopicPartition, Long&gt; entry : map.entrySet()) {</b>
+<b class="fc">&nbsp;                    if (entry.getKey().getVGroupId() == partition.getVGroupId()) {</b>
+<b class="fc">&nbsp;                        seek(entry.getKey(), entry.getValue());</b>
+&nbsp;                    } else {
+<b class="fc">&nbsp;                        endOffsets.put(entry.getKey(), entry.getValue());</b>
+&nbsp;                    }
+<b class="fc">&nbsp;                }</b>
+&nbsp;            }
+<b class="fc">&nbsp;        }</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public Set&lt;TopicPartition&gt; assignment() throws SQLException {
+<b class="fc">&nbsp;        Set&lt;TopicPartition&gt; set = new HashSet&lt;&gt;();</b>
+<b class="fc">&nbsp;        for (String topic : subscription()) {</b>
+<b class="fc">&nbsp;            Assignment[] topicAssignment = getAssignment(topic);</b>
+<b class="fc">&nbsp;            set.addAll(Arrays.stream(topicAssignment).map(a -&gt; new TopicPartition(topic, a.getVgId()))</b>
+<b class="fc">&nbsp;                    .collect(Collectors.toSet()));</b>
+<b class="fc">&nbsp;        }</b>
+<b class="fc">&nbsp;        return set;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public OffsetAndMetadata committed(TopicPartition partition) throws SQLException {
+<b class="nc">&nbsp;        Request request = factory.generateCommitted(new TopicPartition[]{partition});</b>
+<b class="nc">&nbsp;        CommittedResp resp = (CommittedResp) transport.send(request);</b>
+<b class="nc">&nbsp;        if (Code.SUCCESS.getCode() != resp.getCode()) {</b>
+<b class="nc">&nbsp;            throw new SQLException(&quot;consumer committed error, code: (0x&quot; + Integer.toHexString(resp.getCode())</b>
+<b class="nc">&nbsp;                    + &quot;), message: &quot; + resp.getMessage() + &quot;, timing: &quot; + resp.getTiming());</b>
+&nbsp;        }
+<b class="nc">&nbsp;        return new OffsetAndMetadata(resp.getCommitted()[0], null);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public Map&lt;TopicPartition, OffsetAndMetadata&gt; committed(Set&lt;TopicPartition&gt; partitions) throws SQLException {
+<b class="fc">&nbsp;        Map&lt;TopicPartition, OffsetAndMetadata&gt; map = new HashMap&lt;&gt;();</b>
+<b class="fc">&nbsp;        TopicPartition[] topicPartitions = partitions.toArray(new TopicPartition[0]);</b>
+<b class="fc">&nbsp;        Request request = factory.generateCommitted(topicPartitions);</b>
+<b class="fc">&nbsp;        CommittedResp resp = (CommittedResp) transport.send(request);</b>
+<b class="fc">&nbsp;        if (Code.SUCCESS.getCode() != resp.getCode()) {</b>
+<b class="nc">&nbsp;            throw new SQLException(&quot;consumer committed error, code: (0x&quot; + Integer.toHexString(resp.getCode())</b>
+<b class="nc">&nbsp;                    + &quot;), message: &quot; + resp.getMessage() + &quot;, timing: &quot; + resp.getTiming());</b>
+&nbsp;        }
+<b class="fc">&nbsp;        for (int i = 0; i &lt; topicPartitions.length; i++) {</b>
+<b class="fc">&nbsp;            map.put(topicPartitions[i], new OffsetAndMetadata(resp.getCommitted()[i], null));</b>
+&nbsp;        }
+<b class="fc">&nbsp;        return map;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void commitSync(Map&lt;TopicPartition, OffsetAndMetadata&gt; offsets) throws SQLException {
+<b class="nc">&nbsp;        for (Map.Entry&lt;TopicPartition, OffsetAndMetadata&gt; entry : offsets.entrySet()) {</b>
+<b class="nc">&nbsp;            Request request = factory.generateCommitOffset(entry.getKey(), entry.getValue().offset());</b>
+<b class="nc">&nbsp;            CommitOffsetResp resp = (CommitOffsetResp) transport.send(request);</b>
+<b class="nc">&nbsp;            if (Code.SUCCESS.getCode() != resp.getCode()) {</b>
+<b class="nc">&nbsp;                throw new SQLException(&quot;consumer commit offset error, code: (0x&quot; + Integer.toHexString(resp.getCode())</b>
+<b class="nc">&nbsp;                        + &quot;), message: &quot; + resp.getMessage() + &quot;, timing: &quot; + resp.getTiming());</b>
+&nbsp;            }
+<b class="nc">&nbsp;        }</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void commitAsync(Map&lt;TopicPartition, OffsetAndMetadata&gt; offsets, OffsetCommitCallback&lt;V&gt; callback) {
+<b class="nc">&nbsp;        callback.onComplete(offsets, TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    private Assignment[] getAssignment(String topic) throws SQLException {
+<b class="fc">&nbsp;        Request request = factory.generateAssignment(topic);</b>
+<b class="fc">&nbsp;        AssignmentResp resp = (AssignmentResp) transport.send(request);</b>
+<b class="fc">&nbsp;        if (Code.SUCCESS.getCode() != resp.getCode()) {</b>
+<b class="nc">&nbsp;            throw new SQLException(&quot;consumer assignment error, code: (0x&quot; + Integer.toHexString(resp.getCode())</b>
+<b class="nc">&nbsp;                    + &quot;), message: &quot; + resp.getMessage() + &quot;, timing: &quot; + resp.getTiming());</b>
+&nbsp;        }
+<b class="fc">&nbsp;        return resp.getAssignment();</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2023-10-08 10:56</div>
+</div>
+</body>
+</html>

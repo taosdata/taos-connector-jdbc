@@ -1,0 +1,213 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <title>Coverage Report > RestfulConnection</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.taosdata.jdbc.rs</a>
+</div>
+
+<h1>Coverage Summary for Class: RestfulConnection (com.taosdata.jdbc.rs)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">RestfulConnection</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    85.7%
+  </span>
+  <span class="absValue">
+    (12/14)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    83.3%
+  </span>
+  <span class="absValue">
+    (25/30)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.taosdata.jdbc.rs;
+&nbsp;
+&nbsp;import com.taosdata.jdbc.AbstractConnection;
+&nbsp;import com.taosdata.jdbc.TSDBDriver;
+&nbsp;import com.taosdata.jdbc.TSDBError;
+&nbsp;import com.taosdata.jdbc.TSDBErrorNumbers;
+&nbsp;
+&nbsp;import java.sql.DatabaseMetaData;
+&nbsp;import java.sql.PreparedStatement;
+&nbsp;import java.sql.SQLException;
+&nbsp;import java.sql.Statement;
+&nbsp;import java.util.Properties;
+&nbsp;
+&nbsp;public class RestfulConnection extends AbstractConnection {
+&nbsp;
+&nbsp;    private final String host;
+&nbsp;    private final String port;
+&nbsp;    private final String url;
+&nbsp;    private final String database;
+&nbsp;    private final String auth;
+&nbsp;    private final boolean useSsl;
+&nbsp;    private final String token;
+&nbsp;    private final String tz;
+&nbsp;
+&nbsp;    private boolean isClosed;
+&nbsp;    private final DatabaseMetaData metadata;
+&nbsp;
+&nbsp;    public RestfulConnection(String host, String port, Properties props, String database, String url, String auth, boolean useSsl, String token, String tz) {
+<b class="fc">&nbsp;        super(props);</b>
+<b class="fc">&nbsp;        this.host = host;</b>
+<b class="fc">&nbsp;        this.port = port;</b>
+<b class="fc">&nbsp;        this.database = database;</b>
+<b class="fc">&nbsp;        this.url = url;</b>
+<b class="fc">&nbsp;        this.auth = auth == null ? null : &quot;Basic &quot; + auth;</b>
+<b class="fc">&nbsp;        this.useSsl = useSsl;</b>
+<b class="fc">&nbsp;        this.token = token;</b>
+<b class="fc">&nbsp;        this.tz = tz;</b>
+<b class="fc">&nbsp;        this.metadata = new RestfulDatabaseMetaData(url, props.getProperty(TSDBDriver.PROPERTY_KEY_USER), this);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public Statement createStatement() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        return new RestfulStatement(this, database);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public PreparedStatement prepareStatement(String sql) throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+<b class="fc">&nbsp;        return new RestfulPreparedStatement(this, database, sql);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public void close() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed)</b>
+&nbsp;            return;
+&nbsp;        // TODO: release all resources
+<b class="fc">&nbsp;        isClosed = true;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean isClosed() throws SQLException {
+<b class="fc">&nbsp;        return isClosed;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public DatabaseMetaData getMetaData() throws SQLException {
+<b class="fc">&nbsp;        if (isClosed())</b>
+<b class="nc">&nbsp;            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);</b>
+&nbsp;
+<b class="fc">&nbsp;        return this.metadata;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // getters
+&nbsp;    public String getHost() {
+<b class="fc">&nbsp;        return host;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getPort() {
+<b class="fc">&nbsp;        return port;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getDatabase() {
+<b class="nc">&nbsp;        return database;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getUrl() {
+<b class="nc">&nbsp;        return url;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getToken() {
+<b class="fc">&nbsp;        return token;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getAuth() {
+<b class="fc">&nbsp;        return auth;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public boolean isUseSsl() {
+<b class="fc">&nbsp;        return useSsl;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getTz() {
+<b class="fc">&nbsp;        return tz;</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2023-10-08 10:56</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,158 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <title>Coverage Report > ConsumerAction</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.taosdata.jdbc.ws.tmq</a>
+</div>
+
+<h1>Coverage Summary for Class: ConsumerAction (com.taosdata.jdbc.ws.tmq)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">ConsumerAction</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (5/5)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    95.8%
+  </span>
+  <span class="absValue">
+    (23/24)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.taosdata.jdbc.ws.tmq;
+&nbsp;
+&nbsp;import com.taosdata.jdbc.ws.entity.Response;
+&nbsp;import com.taosdata.jdbc.ws.tmq.entity.*;
+&nbsp;
+&nbsp;import java.util.HashMap;
+&nbsp;import java.util.Map;
+&nbsp;
+<b class="fc">&nbsp;public enum ConsumerAction {</b>
+&nbsp;    // subscribe
+<b class="fc">&nbsp;    SUBSCRIBE(&quot;subscribe&quot;, SubscribeResp.class),</b>
+<b class="fc">&nbsp;    POLL(&quot;poll&quot;, PollResp.class),</b>
+<b class="fc">&nbsp;    FETCH(&quot;fetch&quot;, FetchResp.class),</b>
+<b class="fc">&nbsp;    FETCH_BLOCK(&quot;fetch_block&quot;, FetchBlockResp.class),</b>
+<b class="fc">&nbsp;    COMMIT(&quot;commit&quot;, CommitResp.class),</b>
+<b class="fc">&nbsp;    ASSIGNMENT(&quot;assignment&quot;, AssignmentResp.class),</b>
+<b class="fc">&nbsp;    SEEK(&quot;seek&quot;, SeekResp.class),</b>
+<b class="fc">&nbsp;    UNSUBSCRIBE(&quot;unsubscribe&quot;, UnsubscribeResp.class),</b>
+<b class="fc">&nbsp;    COMMIT_OFFSET(&quot;commit_offset&quot;, CommitOffsetResp.class),</b>
+<b class="fc">&nbsp;    COMMITTED(&quot;committed&quot;, CommittedResp.class),</b>
+<b class="fc">&nbsp;    POSITION(&quot;position&quot;, PositionResp.class),</b>
+<b class="fc">&nbsp;    LIST_TOPICS(&quot;list_topics&quot;, ListTopicsResp.class),</b>
+&nbsp;    ;
+&nbsp;
+&nbsp;    private final String action;
+&nbsp;    private final Class&lt;? extends Response&gt; clazz;
+&nbsp;
+<b class="fc">&nbsp;    ConsumerAction(String action, Class&lt;? extends Response&gt; clazz) {</b>
+<b class="fc">&nbsp;        this.action = action;</b>
+<b class="fc">&nbsp;        this.clazz = clazz;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getAction() {
+<b class="fc">&nbsp;        return action;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public Class&lt;? extends Response&gt; getResponseClazz() {
+<b class="fc">&nbsp;        return clazz;</b>
+&nbsp;    }
+&nbsp;
+<b class="fc">&nbsp;    private static final Map&lt;String, ConsumerAction&gt; actions = new HashMap&lt;&gt;();</b>
+&nbsp;
+&nbsp;    static {
+<b class="fc">&nbsp;        for (ConsumerAction value : ConsumerAction.values()) {</b>
+<b class="fc">&nbsp;            actions.put(value.action, value);</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    public static ConsumerAction of(String action) {
+<b class="fc">&nbsp;        if (null == action || action.equals(&quot;&quot;)) {</b>
+<b class="nc">&nbsp;            return null;</b>
+&nbsp;        }
+<b class="fc">&nbsp;        return actions.get(action);</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2023-10-08 10:56</div>
+</div>
+</body>
+</html>
