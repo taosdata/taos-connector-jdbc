@@ -19,8 +19,6 @@ public class SubscribeReq extends Payload {
     private String autoCommit;
     @JSONField(name = "auto_commit_interval_ms")
     private String autoCommitIntervalMs;
-    @JSONField(name = "snapshot_enable")
-    private String snapshotEnable;
     @JSONField(name = "with_table_name")
     private String withTableName;
 
@@ -94,14 +92,6 @@ public class SubscribeReq extends Payload {
 
     public void setAutoCommitIntervalMs(String autoCommitIntervalMs) {
         this.autoCommitIntervalMs = autoCommitIntervalMs;
-    }
-
-    public String getSnapshotEnable() {
-        return snapshotEnable;
-    }
-
-    public void setSnapshotEnable(String snapshotEnable) {
-        this.snapshotEnable = snapshotEnable;
     }
 
     public String getWithTableName() {

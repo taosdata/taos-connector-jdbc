@@ -41,6 +41,7 @@ public class ConsumerCommittedTest {
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "false");
         properties.setProperty(TMQConstants.GROUP_ID, "g_ws");
+        properties.setProperty(TMQConstants.AUTO_OFFSET_RESET, "earliest");
         properties.setProperty(TMQConstants.VALUE_DESERIALIZER, "com.taosdata.jdbc.tmq.ResultDeserializer");
 
         try (TaosConsumer<ResultBean> consumer = new TaosConsumer<>(properties)) {
@@ -91,6 +92,7 @@ public class ConsumerCommittedTest {
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "false");
         properties.setProperty(TMQConstants.GROUP_ID, "g_jni");
+        properties.setProperty(TMQConstants.AUTO_OFFSET_RESET, "earliest");
         properties.setProperty(TMQConstants.VALUE_DESERIALIZER, "com.taosdata.jdbc.tmq.ResultDeserializer");
 
         try (TaosConsumer<ResultBean> consumer = new TaosConsumer<>(properties)) {

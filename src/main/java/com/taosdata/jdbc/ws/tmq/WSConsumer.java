@@ -72,7 +72,6 @@ public class WSConsumer<V> implements Consumer<V> {
                 , topics.toArray(new String[0])
                 , String.valueOf(param.isAutoCommit())
                 , param.getAutoCommitInterval()
-                , param.getSnapshotEnable()
                 , param.getMsgWithTableName()
         );
         SubscribeResp response = (SubscribeResp) transport.send(request);
