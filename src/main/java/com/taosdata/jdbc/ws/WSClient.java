@@ -37,10 +37,7 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
 
     private Consumer<String> textMessageHandler;
     private Consumer<ByteBuffer> binaryMessageHandler;
-
-    private final int MAX_CONNECT_RETRY_TIME = 3;
-
-    private WSFunction wsFunction = null;
+    private final WSFunction wsFunction;
 
     public void setTextMessageHandler(Consumer<String> textMessageHandler) {
         this.textMessageHandler = textMessageHandler;
@@ -111,7 +108,8 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
             return false;
         }
 
-        for (int retryTimes = 0; retryTimes < MAX_CONNECT_RETRY_TIME; retryTimes++){
+        final int MAX_CONNECT_RETRY_COUNT = 3;
+        for (int retryTimes = 0; retryTimes < MAX_CONNECT_RETRY_COUNT; retryTimes++){
             try {
                 Thread.sleep(2000);
                 if (super.reconnectBlocking()) {
