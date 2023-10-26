@@ -5,11 +5,9 @@ import com.alibaba.fastjson.JSONObject;
 import com.taosdata.jdbc.*;
 import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.utils.HttpClientPoolUtil;
-import com.taosdata.jdbc.ws.FutureResponse;
-import com.taosdata.jdbc.ws.InFlightRequest;
-import com.taosdata.jdbc.ws.Transport;
-import com.taosdata.jdbc.ws.WSConnection;
+import com.taosdata.jdbc.ws.*;
 import com.taosdata.jdbc.ws.entity.*;
+import org.slf4j.LoggerFactory;
 
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
@@ -19,6 +17,7 @@ import java.util.Properties;
 import java.util.logging.Logger;
 
 public class RestfulDriver extends AbstractDriver {
+    private final org.slf4j.Logger log = LoggerFactory.getLogger(RestfulDriver.class);
 
     public static final String URL_PREFIX = "jdbc:TAOS-RS://";
 
@@ -108,15 +107,12 @@ public class RestfulDriver extends AbstractDriver {
         Transport transport = new Transport(WSFunction.WS, param, inFlightRequest);
 
         transport.setTextMessageHandler(message -> {
-            System.out.println("*******2   " +  message);
-
             JSONObject jsonObject = JSON.parseObject(message);
             Action action = Action.of(jsonObject.getString("action"));
             Response response = jsonObject.toJavaObject(action.getResponseClazz());
             FutureResponse remove = inFlightRequest.remove(response.getAction(), response.getReqId());
             if (null != remove) {
                 remove.getFuture().complete(response);
-                System.out.println("*******3   handled" +  response.getReqId());
             }
         });
         transport.setBinaryMessageHandler(byteBuffer -> {
@@ -137,6 +133,11 @@ public class RestfulDriver extends AbstractDriver {
         connectReq.setUser(param.getUser());
         connectReq.setPassword(param.getPassword());
         connectReq.setDb(param.getDatabase());
+        // 目前仅支持bi模式，下游接口值为0，此处做转换
+        if(param.getConnectMode() == ConnectionParam.CONNECT_MODE_BI){
+            connectReq.setMode(0);
+        }
+
         ConnectResp auth = (ConnectResp) transport.send(new Request(Action.CONN.getAction(), connectReq));
 
         if (Code.SUCCESS.getCode() != auth.getCode()) {

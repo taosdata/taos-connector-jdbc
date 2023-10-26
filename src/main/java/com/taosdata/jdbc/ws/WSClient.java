@@ -8,8 +8,12 @@ import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.rs.RestfulDriver;
 import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.ws.entity.*;
+import org.java_websocket.WebSocketImpl;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import sun.rmi.runtime.Log;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -23,11 +27,20 @@ import java.util.function.Consumer;
 
 public class WSClient extends WebSocketClient implements AutoCloseable {
 
+    private final Logger log = LoggerFactory.getLogger(WSClient.class);
+
+
     ThreadPoolExecutor executor;
     Transport transport;
 
+    ConnectionParam connectionParam;
+
     private Consumer<String> textMessageHandler;
     private Consumer<ByteBuffer> binaryMessageHandler;
+
+    private final int MAX_CONNECT_RETRY_TIME = 3;
+
+    private WSFunction wsFunction = null;
 
     public void setTextMessageHandler(Consumer<String> textMessageHandler) {
         this.textMessageHandler = textMessageHandler;
@@ -42,9 +55,11 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
      *
      * @param serverUri connection url
      */
-    public WSClient(URI serverUri, Transport transport) {
+    public WSClient(URI serverUri, Transport transport, ConnectionParam connectionParam, WSFunction function) {
         super(serverUri, new HashMap<>());
         this.transport = transport;
+        this.connectionParam = connectionParam;
+        this.wsFunction = function;
         executor = new ThreadPoolExecutor(1, 1,
                 0L, TimeUnit.MILLISECONDS,
                 new LinkedBlockingQueue<>(),
@@ -64,7 +79,6 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
     @Override
     public void onMessage(String message) {
         if (!"".equals(message)) {
-            System.out.println("*******1            " + message);
             executor.submit(() -> textMessageHandler.accept(message));
         }
     }
@@ -77,12 +91,7 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
     @Override
     @SuppressWarnings("all")
     public void onClose(int code, String reason, boolean remote) {
-//        if (remote) {
-//            transport.close();
-//            throw new RuntimeException("The remote server closed the connection: " + reason);
-//        } else {
-//            throw new RuntimeException("close connection: " + reason);
-//        }
+        // do nothing, wait next send to retry.
     }
 
     @Override
@@ -90,34 +99,43 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
         this.close();
     }
 
-    @Override
-    public void close() {
+    public void shutdown() {
         super.close();
-//        if (executor != null && !executor.isShutdown())
-//            executor.shutdown();
+        if (executor != null && !executor.isShutdown())
+            executor.shutdown();
     }
 
     @Override
-    public boolean reconnectBlocking() throws InterruptedException {
-        if (super.reconnectBlocking()){
-            // send con msg
-            ConnectReq connectReq = new ConnectReq();
-            connectReq.setReqId(ReqId.getReqID());
-            connectReq.setUser("root");
-            connectReq.setPassword("taosdata");
-            connectReq.setDb("test");
-            ConnectResp auth = null;
-            try {
-                auth = (ConnectResp) transport.send(new Request(Action.CONN.getAction(), connectReq));
-            } catch (SQLException e) {
-                throw new RuntimeException(e);
-            }
+    public boolean reconnectBlocking(){
+        if (WSFunction.TMQ.equals(this.wsFunction)){
+            return false;
+        }
 
-            if (Code.SUCCESS.getCode() != auth.getCode()) {
-                transport.close();
-                return false;
+        for (int retryTimes = 0; retryTimes < MAX_CONNECT_RETRY_TIME; retryTimes++){
+            try {
+                Thread.sleep(2000);
+                if (super.reconnectBlocking()) {
+                    // send con msgs
+                    ConnectReq connectReq = new ConnectReq();
+                    connectReq.setReqId(ReqId.getReqID());
+                    connectReq.setUser(connectionParam.getUser());
+                    connectReq.setPassword(connectionParam.getPassword());
+                    connectReq.setDb(connectionParam.getDatabase());
+
+                    if (connectionParam.getConnectMode() != 0){
+                        connectReq.setMode(connectionParam.getConnectMode());
+                    }
+
+                    ConnectResp auth;
+                    auth = (ConnectResp) transport.send(new Request(Action.CONN.getAction(), connectReq));
+
+                    if (Code.SUCCESS.getCode() == auth.getCode()) {
+                        return true;
+                    }
+                }
+            }catch (Exception e){
+                log.error("try connect remote server failed!", e);
             }
-            return true;
         }
         return false;
     }
@@ -140,6 +158,7 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
             wsFunction = "/rest/tmq";
         }
         String loginUrl = protocol + "://" + params.getHost() + port + wsFunction;
+        //        String loginUrl = protocol + "://" + params.getHost() + port + "/rest/" + function.getFunction();
 
         if (null != params.getCloudToken()) {
             loginUrl = loginUrl + "?token=" + params.getCloudToken();
@@ -151,6 +170,6 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
         } catch (URISyntaxException e) {
             throw new SQLException("Websocket url parse error: " + loginUrl, e);
         }
-        return new WSClient(urlPath, transport);
+        return new WSClient(urlPath, transport, params, function);
     }
 }

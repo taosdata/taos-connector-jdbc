@@ -104,6 +104,11 @@ public class TSDBDriver extends AbstractDriver {
     public static final String PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT = "messageWaitTimeout";
 
     /**
+     * connect mode
+     */
+    public static final String PROPERTY_KEY_CONNECT_MODE = "conmode";
+
+    /**
      * max message number send to server concurrently
      */
     public static final String PROPERTY_KEY_MAX_CONCURRENT_REQUEST = "maxConcurrentRequest";

@@ -1,6 +1,5 @@
 package com.taosdata.jdbc.common;
 
-import com.taosdata.jdbc.enums.DataLength;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 
 import java.io.ByteArrayOutputStream;
@@ -32,6 +31,97 @@ public class SerializeBlock {
         return (byte) (c + (1 << (7 - bitPos(n))));
     }
 
+    private static void handleBoolean(byte[] buf, int rowIndex, int offset, Object o){
+        boolean v = (Boolean) o;
+        if (v) {
+            buf[offset + rowIndex] = 1;
+        }else {
+            buf[offset + rowIndex] = 0;
+        }
+    }
+    private static void SerializeInt(byte[] buf, int offset, int v){
+        buf[offset] = (byte) (v & 0xFF);
+        buf[offset + 1] = (byte) ((v >> 8) & 0xFF);
+        buf[offset + 2] = (byte) ((v >> 16) & 0xFF);
+        buf[offset + 3] = (byte) ((v >> 24) & 0xFF);
+    }
+    private static void SerializeLong(byte[] buf, int offset, long v){
+        buf[offset] = (byte) (v & 0xFF);
+        buf[offset + 1] = (byte) ((v >> 8) & 0xFF);
+        buf[offset + 2] = (byte) ((v >> 16) & 0xFF);
+        buf[offset + 3] = (byte) ((v >> 24) & 0xFF);
+        buf[offset + 4] = (byte) ((v >> 32) & 0xFF);
+        buf[offset + 5] = (byte) ((v >> 40) & 0xFF);
+        buf[offset + 6] = (byte) ((v >> 48) & 0xFF);
+        buf[offset + 7] = (byte) ((v >> 56) & 0xFF);
+    }
+    private static void SerializeShort(byte[] buf, int offset, short v){
+        buf[offset] = (byte) (v & 0xFF);
+        buf[offset + 1] = (byte) ((v >> 8) & 0xFF);
+    }
+    private static void handleNormalDataType(int dataType ,byte[] buf, int rowIndex, int startOffset, Object o, int precision) throws SQLException {
+        switch (dataType) {
+            case TSDB_DATA_TYPE_BOOL: {
+                handleBoolean(buf, rowIndex, startOffset, o);
+                break;
+            }
+            case TSDB_DATA_TYPE_TINYINT: {
+                buf[rowIndex + startOffset] = (Byte) o;
+                break;
+            }
+            case TSDB_DATA_TYPE_SMALLINT: {
+                short v = (Short) o;
+                int offset = rowIndex * Short.BYTES + startOffset;
+                SerializeShort(buf, offset, v);
+                break;
+            }
+            case TSDB_DATA_TYPE_INT: {
+                int v = (Integer) o;
+                int offset = rowIndex * Integer.BYTES + startOffset;
+                SerializeInt(buf, offset, v);
+                break;
+            }
+            case TSDB_DATA_TYPE_BIGINT: {
+                long v = (Long) o;
+                int offset = rowIndex * Long.BYTES + startOffset;
+                SerializeLong(buf, offset, v);
+                break;
+            }
+            case TSDB_DATA_TYPE_FLOAT: {
+                float v = (Float) o;
+                int offset = rowIndex * Float.BYTES + startOffset;
+                int f = Float.floatToIntBits(v);
+                SerializeInt(buf, offset, f);
+                break;
+            }
+            case TSDB_DATA_TYPE_DOUBLE: {
+                double v = (Double) o;
+                int offset = rowIndex * Double.BYTES + startOffset;
+                long l = Double.doubleToLongBits(v);
+                SerializeLong(buf, offset, l);
+                break;
+            }
+            case TSDB_DATA_TYPE_TIMESTAMP: {
+                Timestamp t = (Timestamp) o;
+                long v;
+                if (precision == TimestampPrecision.MS) {
+                    v = t.getTime();
+                } else if (precision == TimestampPrecision.US) {
+                    v = t.getTime() * 1000L + t.getNanos() / 1000 % 1000;
+                } else {
+                    v = t.getTime() * 1000_000L + t.getNanos() % 1000_000L;
+                }
+
+                int offset = rowIndex * Long.BYTES + startOffset;
+                SerializeLong(buf, offset, v);
+                break;
+            }
+            default:
+                throw new SQLException("unsupported data type : " + dataType);
+        }
+    }
+
+
     public static byte[] getRawBlock(List<ColumnInfo> list, int precision) throws IOException, SQLException {
         int columns = list.size();
         int rows = list.get(0).getDataList().size();
@@ -57,396 +147,123 @@ public class SerializeBlock {
         ByteArrayOutputStream data = new ByteArrayOutputStream();
         for (int colIndex = 0; colIndex < list.size(); colIndex++) {
             ColumnInfo column = list.get(colIndex);
-            switch (column.getType()) {
-                case TSDB_DATA_TYPE_BOOL: {
-                    colInfoData[colIndex * 5] = TSDB_DATA_TYPE_BOOL;
-                    int typeLen = DataLength.TSDB_DATA_TYPE_BOOL.getLength();
-                    byte[] typeBytes = intToBytes(typeLen);
-                    System.arraycopy(typeBytes, 0, colInfoData, colIndex * 5 + 1, 4);
-                    byte[] array = intToBytes(typeLen * rows);
-                    System.arraycopy(array, 0, lengthData, colIndex * 4, 4);
 
-                    byte[] tmp = new byte[bitMapLen + rows];
-                    List<?> rowData = column.getDataList();
-                    for (int rowIndex = 0; rowIndex < rows; rowIndex++) {
-                        if (rowData.get(rowIndex) == null) {
-                            int charOffset = charOffset(rowIndex);
-                            tmp[charOffset] = bmSetNull(tmp[charOffset], rowIndex);
-                        } else {
-                            boolean v = (Boolean) rowData.get(rowIndex);
-                            if (v) {
-                                tmp[bitMapLen + rowIndex] = 1;
-                            }
-                        }
+            Integer dataLen = DataLengthCfg.getDataLength(column.getType());
+
+            // 不支持的数据类型
+            if (column.getType() == TSDB_DATA_TYPE_UTINYINT
+                    || column.getType() == TSDB_DATA_TYPE_USMALLINT
+                    || column.getType() == TSDB_DATA_TYPE_UINT
+                    || column.getType() == TSDB_DATA_TYPE_UBIGINT
+            ) {
+                break;
+            }
+
+            //非数组类型
+            if (dataLen != null){
+                colInfoData[colIndex * 5] = (byte) column.getType();
+                int typeLen = dataLen;
+
+                byte[] typeBytes = intToBytes(typeLen);
+                System.arraycopy(typeBytes, 0, colInfoData, colIndex * 5 + 1, 4);
+                byte[] array = intToBytes(typeLen * rows);
+                System.arraycopy(array, 0, lengthData, colIndex * 4, 4);
+
+                byte[] tmp = new byte[bitMapLen + rows * dataLen];
+                List<?> rowData = column.getDataList();
+
+                for (int rowIndex = 0; rowIndex < rows; rowIndex++) {
+                    if (rowData.get(rowIndex) == null) {
+                        int charOffset = charOffset(rowIndex);
+                        tmp[charOffset] = bmSetNull(tmp[charOffset], rowIndex);
+                    } else {
+                        handleNormalDataType(column.getType(), tmp, rowIndex, bitMapLen, rowData.get(rowIndex), precision);
                     }
-                    data.write(tmp);
-                    break;
                 }
+                data.write(tmp);
+            }else{
+                // 数组类型
+                switch (column.getType()) {
+                    case TSDB_DATA_TYPE_BINARY:
+                    case TSDB_DATA_TYPE_JSON:
+                    case TSDB_DATA_TYPE_VARBINARY:
+                    case TSDB_DATA_TYPE_GEOMETRY:
+                    {
+                        colInfoData[colIndex * 5] = (byte) column.getType();
+                        // 4 bytes for 0
 
-                case TSDB_DATA_TYPE_TINYINT: {
-                    colInfoData[colIndex * 5] = TSDB_DATA_TYPE_TINYINT;
-                    int typeLen = DataLength.TSDB_DATA_TYPE_TINYINT.getLength();
-                    byte[] typeBytes = intToBytes(typeLen);
-                    System.arraycopy(typeBytes, 0, colInfoData, colIndex * 5 + 1, 4);
-                    byte[] array = intToBytes(typeLen * rows);
-                    System.arraycopy(array, 0, lengthData, colIndex * 4, 4);
-
-                    byte[] tmp = new byte[bitMapLen + rows];
-                    List<?> rowData = column.getDataList();
-                    for (int rowIndex = 0; rowIndex < rows; rowIndex++) {
-                        if (rowData.get(rowIndex) == null) {
-                            int charOffset = charOffset(rowIndex);
-                            tmp[charOffset] = bmSetNull(tmp[charOffset], rowIndex);
-                        } else {
-                            tmp[rowIndex + bitMapLen] = (Byte) rowData.get(rowIndex);
-                        }
-                    }
-                    data.write(tmp);
-                    break;
-                }
-                case TSDB_DATA_TYPE_SMALLINT: {
-                    colInfoData[colIndex * 5] = TSDB_DATA_TYPE_SMALLINT;
-                    int typeLen = DataLength.TSDB_DATA_TYPE_SMALLINT.getLength();
-                    byte[] typeBytes = intToBytes(typeLen);
-                    System.arraycopy(typeBytes, 0, colInfoData, colIndex * 5 + 1, 4);
-                    byte[] array = intToBytes(typeLen * rows);
-                    System.arraycopy(array, 0, lengthData, colIndex * 4, 4);
-
-                    byte[] tmp = new byte[bitMapLen + rows * Short.BYTES];
-                    List<?> rowData = column.getDataList();
-                    for (int rowIndex = 0; rowIndex < rows; rowIndex++) {
-                        if (rowData.get(rowIndex) == null) {
-                            int charOffset = charOffset(rowIndex);
-                            tmp[charOffset] = bmSetNull(tmp[charOffset], rowIndex);
-                        } else {
-                            short v = (Short) rowData.get(rowIndex);
-                            int offset = rowIndex * Short.BYTES + bitMapLen;
-                            tmp[offset] = (byte) (v & 0xFF);
-                            tmp[offset + 1] = (byte) ((v >> 8) & 0xFF);
-                        }
-                    }
-                    data.write(tmp);
-                    break;
-                }
-                case TSDB_DATA_TYPE_INT: {
-                    colInfoData[colIndex * 5] = TSDB_DATA_TYPE_INT;
-                    int typeLen = DataLength.TSDB_DATA_TYPE_INT.getLength();
-                    byte[] typeBytes = intToBytes(typeLen);
-                    System.arraycopy(typeBytes, 0, colInfoData, colIndex * 5 + 1, 4);
-                    byte[] array = intToBytes(typeLen * rows);
-                    System.arraycopy(array, 0, lengthData, colIndex * 4, 4);
-
-                    byte[] tmp = new byte[bitMapLen + rows * Integer.BYTES];
-                    List<?> rowData = column.getDataList();
-                    for (int rowIndex = 0; rowIndex < rows; rowIndex++) {
-
-                        if (rowData.get(rowIndex) == null) {
-                            int charOffset = charOffset(rowIndex);
-                            tmp[charOffset] = bmSetNull(tmp[charOffset], rowIndex);
-                        } else {
-                            int v = (Integer) rowData.get(rowIndex);
-                            int offset = rowIndex * Integer.BYTES + bitMapLen;
-                            tmp[offset] = (byte) (v & 0xFF);
-                            tmp[offset + 1] = (byte) ((v >> 8) & 0xFF);
-                            tmp[offset + 2] = (byte) ((v >> 16) & 0xFF);
-                            tmp[offset + 3] = (byte) ((v >> 24) & 0xFF);
-                        }
-                    }
-                    data.write(tmp);
-                    break;
-                }
-                case TSDB_DATA_TYPE_BIGINT: {
-                    colInfoData[colIndex * 5] = TSDB_DATA_TYPE_BIGINT;
-                    int typeLen = DataLength.TSDB_DATA_TYPE_BIGINT.getLength();
-                    byte[] typeBytes = intToBytes(typeLen);
-                    System.arraycopy(typeBytes, 0, colInfoData, colIndex * 5 + 1, 4);
-                    byte[] array = intToBytes(typeLen * rows);
-                    System.arraycopy(array, 0, lengthData, colIndex * 4, 4);
-
-                    byte[] tmp = new byte[bitMapLen + rows * Long.BYTES];
-                    List<?> rowData = column.getDataList();
-                    for (int rowIndex = 0; rowIndex < rows; rowIndex++) {
-
-                        if (rowData.get(rowIndex) == null) {
-                            int charOffset = charOffset(rowIndex);
-                            tmp[charOffset] = bmSetNull(tmp[charOffset], rowIndex);
-                        } else {
-                            long v = (Long) rowData.get(rowIndex);
-                            int offset = rowIndex * Long.BYTES + bitMapLen;
-                            tmp[offset] = (byte) (v & 0xFF);
-                            tmp[offset + 1] = (byte) ((v >> 8) & 0xFF);
-                            tmp[offset + 2] = (byte) ((v >> 16) & 0xFF);
-                            tmp[offset + 3] = (byte) ((v >> 24) & 0xFF);
-                            tmp[offset + 4] = (byte) ((v >> 32) & 0xFF);
-                            tmp[offset + 5] = (byte) ((v >> 40) & 0xFF);
-                            tmp[offset + 6] = (byte) ((v >> 48) & 0xFF);
-                            tmp[offset + 7] = (byte) ((v >> 56) & 0xFF);
-
-                        }
-                    }
-                    data.write(tmp);
-                    break;
-                }
-
-                case TSDB_DATA_TYPE_UTINYINT:
-                case TSDB_DATA_TYPE_USMALLINT:
-                case TSDB_DATA_TYPE_UINT:
-                case TSDB_DATA_TYPE_UBIGINT:
-                    break;
-
-                case TSDB_DATA_TYPE_FLOAT: {
-                    colInfoData[colIndex * 5] = TSDB_DATA_TYPE_FLOAT;
-                    int typeLen = DataLength.TSDB_DATA_TYPE_FLOAT.getLength();
-                    byte[] typeBytes = intToBytes(typeLen);
-                    System.arraycopy(typeBytes, 0, colInfoData, colIndex * 5 + 1, 4);
-                    byte[] array = intToBytes(typeLen * rows);
-                    System.arraycopy(array, 0, lengthData, colIndex * 4, 4);
-
-                    byte[] tmp = new byte[bitMapLen + rows * Float.BYTES];
-                    List<?> rowData = column.getDataList();
-                    for (int rowIndex = 0; rowIndex < rows; rowIndex++) {
-                        if (rowData.get(rowIndex) == null) {
-                            int charOffset = charOffset(rowIndex);
-                            tmp[charOffset] = bmSetNull(tmp[charOffset], rowIndex);
-                        } else {
-                            float v = (Float) rowData.get(rowIndex);
-                            int offset = rowIndex * Float.BYTES + bitMapLen;
-                            int f = Float.floatToIntBits(v);
-                            tmp[offset] = (byte) (f & 0xFF);
-                            tmp[offset + 1] = (byte) ((f >> 8) & 0xFF);
-                            tmp[offset + 2] = (byte) ((f >> 16) & 0xFF);
-                            tmp[offset + 3] = (byte) ((f >> 24) & 0xFF);
-
-                        }
-                    }
-                    data.write(tmp);
-                    break;
-                }
-                case TSDB_DATA_TYPE_DOUBLE: {
-                    colInfoData[colIndex * 5] = TSDB_DATA_TYPE_DOUBLE;
-                    int typeLen = DataLength.TSDB_DATA_TYPE_DOUBLE.getLength();
-                    byte[] typeBytes = intToBytes(typeLen);
-                    System.arraycopy(typeBytes, 0, colInfoData, colIndex * 5 + 1, 4);
-                    byte[] array = intToBytes(typeLen * rows);
-                    System.arraycopy(array, 0, lengthData, colIndex * 4, 4);
-
-                    byte[] tmp = new byte[bitMapLen + rows * Double.BYTES];
-                    List<?> rowData = column.getDataList();
-                    for (int rowIndex = 0; rowIndex < rows; rowIndex++) {
-                        if (rowData.get(rowIndex) == null) {
-                            int charOffset = charOffset(rowIndex);
-                            tmp[charOffset] = bmSetNull(tmp[charOffset], rowIndex);
-                        } else {
-                            double v = (Double) rowData.get(rowIndex);
-                            int offset = rowIndex * Double.BYTES + bitMapLen;
-                            long l = Double.doubleToLongBits(v);
-                            tmp[offset] = (byte) (l & 0xFF);
-                            tmp[offset + 1] = (byte) ((l >> 8) & 0xFF);
-                            tmp[offset + 2] = (byte) ((l >> 16) & 0xFF);
-                            tmp[offset + 3] = (byte) ((l >> 24) & 0xFF);
-                            tmp[offset + 4] = (byte) ((l >> 32) & 0xFF);
-                            tmp[offset + 5] = (byte) ((l >> 40) & 0xFF);
-                            tmp[offset + 6] = (byte) ((l >> 48) & 0xFF);
-                            tmp[offset + 7] = (byte) ((l >> 56) & 0xFF);
-                        }
-                    }
-                    data.write(tmp);
-                    break;
-                }
-
-                case TSDB_DATA_TYPE_BINARY: {
-                    colInfoData[colIndex * 5] = TSDB_DATA_TYPE_BINARY;
-                    // 4 bytes for 0
-
-                    int length = 0;
-                    List<?> rowData = column.getDataList();
-                    byte[] index = new byte[rows * Integer.BYTES];
-                    List<Byte> tmp = new ArrayList<>();
-                    for (int rowIndex = 0; rowIndex < rows; rowIndex++) {
-                        int offset = rowIndex * Integer.BYTES;
-                        if (rowData.get(rowIndex) == null) {
-                            for (int i = 0; i < Integer.BYTES; i++) {
-                                index[offset + i] = (byte) 0xFF;
-                            }
-                        } else {
-                            byte[] v = (byte[]) rowData.get(rowIndex);
-                            for (int i = 0; i < Integer.BYTES; i++) {
-                                index[offset + i] = (byte) (length >> (8 * i) & 0xFF);
-                            }
-                            short len = (short) v.length;
-                            tmp.add((byte) (len & 0xFF));
-                            tmp.add((byte) ((len >> 8) & 0xFF));
-                            for (byte b : v) {
-                                tmp.add(b);
-                            }
-                            length += v.length + Short.BYTES;
-                        }
-                    }
-                    byte[] array = intToBytes(length);
-                    System.arraycopy(array, 0, lengthData, colIndex * 4, 4);
-                    data.write(index);
-                    byte[] bytes = new byte[tmp.size()];
-                    for (int i = 0; i < tmp.size(); i++) {
-                        bytes[i] = tmp.get(i);
-                    }
-                    data.write(bytes);
-                    break;
-                }
-                case TSDB_DATA_TYPE_VARBINARY: {
-                    colInfoData[colIndex * 5] = TSDB_DATA_TYPE_VARBINARY;
-                    // 4 bytes for 0
-
-                    int length = 0;
-                    List<?> rowData = column.getDataList();
-                    byte[] index = new byte[rows * Integer.BYTES];
-                    List<Byte> tmp = new ArrayList<>();
-                    for (int rowIndex = 0; rowIndex < rows; rowIndex++) {
-                        int offset = rowIndex * Integer.BYTES;
-                        if (rowData.get(rowIndex) == null) {
-                            for (int i = 0; i < Integer.BYTES; i++) {
-                                index[offset + i] = (byte) 0xFF;
-                            }
-                        } else {
-                            byte[] v = (byte[]) rowData.get(rowIndex);
-                            for (int i = 0; i < Integer.BYTES; i++) {
-                                index[offset + i] = (byte) (length >> (8 * i) & 0xFF);
-                            }
-                            short len = (short) v.length;
-                            tmp.add((byte) (len & 0xFF));
-                            tmp.add((byte) ((len >> 8) & 0xFF));
-                            for (byte b : v) {
-                                tmp.add(b);
-                            }
-                            length += v.length + Short.BYTES;
-                        }
-                    }
-                    byte[] array = intToBytes(length);
-                    System.arraycopy(array, 0, lengthData, colIndex * 4, 4);
-                    data.write(index);
-                    byte[] bytes = new byte[tmp.size()];
-                    for (int i = 0; i < tmp.size(); i++) {
-                        bytes[i] = tmp.get(i);
-                    }
-                    data.write(bytes);
-                    break;
-                }
-                case TSDB_DATA_TYPE_NCHAR: {
-                    colInfoData[colIndex * 5] = TSDB_DATA_TYPE_NCHAR;
-                    // 4 bytes for 0
-
-                    int length = 0;
-                    byte[] index = new byte[rows * Integer.BYTES];
-                    ByteArrayOutputStream tmp = new ByteArrayOutputStream();
-                    List<?> rowData = column.getDataList();
-                    for (int rowIndex = 0; rowIndex < rows; rowIndex++) {
-                        int offset = rowIndex * Integer.BYTES;
-                        if (rowData.get(rowIndex) == null) {
-                            for (int i = 0; i < Integer.BYTES; i++) {
-                                index[offset + i] = (byte) 0xFF;
-                            }
-                        } else {
-                            String v = (String) rowData.get(rowIndex);
-                            for (int i = 0; i < Integer.BYTES; i++) {
-                                index[offset + i] = (byte) ((length >> (8 * i)) & 0xFF);
-                            }
-                            short len = (short) (v.length() * 4);
-                            tmp.write((byte) (len & 0xFF));
-                            tmp.write((byte) ((len >> 8) & 0xFF));
-                            int[] t = v.codePoints().toArray();
-                            for (int i : t) {
-                                tmp.write(intToBytes(i));
-                            }
-                            length += t.length * 4 + Short.BYTES;
-                        }
-                    }
-                    byte[] array = intToBytes(length);
-                    System.arraycopy(array, 0, lengthData, colIndex * 4, 4);
-                    data.write(index);
-                    data.write(tmp.toByteArray());
-                    break;
-                }
-
-                case TSDB_DATA_TYPE_TIMESTAMP: {
-                    colInfoData[colIndex * 5] = TSDB_DATA_TYPE_TIMESTAMP;
-                    int typeLen = DataLength.TSDB_DATA_TYPE_TIMESTAMP.getLength();
-                    byte[] typeBytes = intToBytes(typeLen);
-                    System.arraycopy(typeBytes, 0, colInfoData, colIndex * 5 + 1, 4);
-                    byte[] array = intToBytes(typeLen * rows);
-                    System.arraycopy(array, 0, lengthData, colIndex * 4, 4);
-
-                    byte[] tmp = new byte[bitMapLen + rows * Long.BYTES];
-                    List<?> rowData = column.getDataList();
-                    for (int rowIndex = 0; rowIndex < rows; rowIndex++) {
-                        if (rowData.get(rowIndex) == null) {
-                            int charOffset = charOffset(rowIndex);
-                            tmp[charOffset] = bmSetNull(tmp[charOffset], rowIndex);
-                        } else {
-                            Timestamp t = (Timestamp) rowData.get(rowIndex);
-                            long v;
-                            if (precision == TimestampPrecision.MS) {
-                                v = t.getTime();
-                            } else if (precision == TimestampPrecision.US) {
-                                v = t.getTime() * 1000L + t.getNanos() / 1000 % 1000;
+                        int length = 0;
+                        List<?> rowData = column.getDataList();
+                        byte[] index = new byte[rows * Integer.BYTES];
+                        List<Byte> tmp = new ArrayList<>();
+                        for (int rowIndex = 0; rowIndex < rows; rowIndex++) {
+                            int offset = rowIndex * Integer.BYTES;
+                            if (rowData.get(rowIndex) == null) {
+                                for (int i = 0; i < Integer.BYTES; i++) {
+                                    index[offset + i] = (byte) 0xFF;
+                                }
                             } else {
-                                v = t.getTime() * 1000_000L + t.getNanos() % 1000_000L;
+                                byte[] v = (byte[]) rowData.get(rowIndex);
+                                for (int i = 0; i < Integer.BYTES; i++) {
+                                    index[offset + i] = (byte) (length >> (8 * i) & 0xFF);
+                                }
+                                short len = (short) v.length;
+                                tmp.add((byte) (len & 0xFF));
+                                tmp.add((byte) ((len >> 8) & 0xFF));
+                                for (byte b : v) {
+                                    tmp.add(b);
+                                }
+                                length += v.length + Short.BYTES;
                             }
-
-                            int offset = rowIndex * Long.BYTES + bitMapLen;
-                            tmp[offset] = (byte) (v & 0xFF);
-                            tmp[offset + 1] = (byte) ((v >> 8) & 0xFF);
-                            tmp[offset + 2] = (byte) ((v >> 16) & 0xFF);
-                            tmp[offset + 3] = (byte) ((v >> 24) & 0xFF);
-                            tmp[offset + 4] = (byte) ((v >> 32) & 0xFF);
-                            tmp[offset + 5] = (byte) ((v >> 40) & 0xFF);
-                            tmp[offset + 6] = (byte) ((v >> 48) & 0xFF);
-                            tmp[offset + 7] = (byte) ((v >> 56) & 0xFF);
-
                         }
-                    }
-                    data.write(tmp);
-                    break;
-                }
-
-                case TSDB_DATA_TYPE_JSON: {
-                    colInfoData[colIndex * 5] = TSDB_DATA_TYPE_JSON;
-                    // 4 bytes for 0
-
-                    int length = 0;
-                    List<?> rowData = column.getDataList();
-                    byte[] index = new byte[rows * Integer.BYTES];
-                    List<Byte> tmp = new ArrayList<>();
-                    for (int rowIndex = 0; rowIndex < rows; rowIndex++) {
-                        int offset = rowIndex * Integer.BYTES;
-                        if (rowData.get(rowIndex) == null) {
-                            for (int i = 0; i < Integer.BYTES; i++) {
-                                index[offset + i] = (byte) 0xFF;
-                            }
-                        } else {
-                            byte[] v = (byte[]) rowData.get(rowIndex);
-                            for (int i = 0; i < Integer.BYTES; i++) {
-                                index[offset + i] = (byte) (length >> (8 * i) & 0xFF);
-                            }
-                            short len = (short) v.length;
-                            tmp.add((byte) (len & 0xFF));
-                            tmp.add((byte) ((len >> 8) & 0xFF));
-                            for (byte b : v) {
-                                tmp.add(b);
-                            }
-                            length += v.length + Short.BYTES;
+                        byte[] array = intToBytes(length);
+                        System.arraycopy(array, 0, lengthData, colIndex * 4, 4);
+                        data.write(index);
+                        byte[] bytes = new byte[tmp.size()];
+                        for (int i = 0; i < tmp.size(); i++) {
+                            bytes[i] = tmp.get(i);
                         }
+                        data.write(bytes);
+                        break;
                     }
-                    byte[] array = intToBytes(length);
-                    System.arraycopy(array, 0, lengthData, colIndex * 4, 4);
-                    data.write(index);
-                    byte[] bytes = new byte[tmp.size()];
-                    for (int i = 0; i < tmp.size(); i++) {
-                        bytes[i] = tmp.get(i);
+                    case TSDB_DATA_TYPE_NCHAR: {
+                        colInfoData[colIndex * 5] = (byte) column.getType();;
+                        // 4 bytes for 0
+
+                        int length = 0;
+                        byte[] index = new byte[rows * Integer.BYTES];
+                        ByteArrayOutputStream tmp = new ByteArrayOutputStream();
+                        List<?> rowData = column.getDataList();
+                        for (int rowIndex = 0; rowIndex < rows; rowIndex++) {
+                            int offset = rowIndex * Integer.BYTES;
+                            if (rowData.get(rowIndex) == null) {
+                                for (int i = 0; i < Integer.BYTES; i++) {
+                                    index[offset + i] = (byte) 0xFF;
+                                }
+                            } else {
+                                String v = (String) rowData.get(rowIndex);
+                                for (int i = 0; i < Integer.BYTES; i++) {
+                                    index[offset + i] = (byte) ((length >> (8 * i)) & 0xFF);
+                                }
+                                short len = (short) (v.length() * 4);
+                                tmp.write((byte) (len & 0xFF));
+                                tmp.write((byte) ((len >> 8) & 0xFF));
+                                int[] t = v.codePoints().toArray();
+                                for (int i : t) {
+                                    tmp.write(intToBytes(i));
+                                }
+                                length += t.length * 4 + Short.BYTES;
+                            }
+                        }
+                        byte[] array = intToBytes(length);
+                        System.arraycopy(array, 0, lengthData, colIndex * 4, 4);
+                        data.write(index);
+                        data.write(tmp.toByteArray());
+                        break;
                     }
-                    data.write(bytes);
-                    break;
+                    default:
+                        throw new SQLException("unsupported data type : " + column.getType());
                 }
-                default:
-                    throw new SQLException("unsupported data type : " + column.getType());
             }
         }
         buffer.write(colInfoData);

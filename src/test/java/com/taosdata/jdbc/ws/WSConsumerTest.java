@@ -155,8 +155,8 @@ public class WSConsumerTest {
                     for (String topic : topics) {
                         TimeUnit.SECONDS.sleep(3);
                         statement.executeUpdate("drop topic if exists " + topic);
-                        statement.executeUpdate("drop database if exists " + dbName);
                     }
+                    statement.executeUpdate("drop database if exists " + dbName);
                     statement.close();
                 }
                 connection.close();

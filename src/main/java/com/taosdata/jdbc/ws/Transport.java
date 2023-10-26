@@ -60,20 +60,25 @@ public class Transport implements AutoCloseable {
         String reqString = request.toString();
 
         try {
-            client.send(reqString);
-        } catch (WebsocketNotConnectedException e) {
-            try {
-                client.reconnectBlocking();
-                client.send(reqString);
-            } catch (InterruptedException ex){
-                throw new SQLException(ex);
-            }
-        }
-
-        try {
             inFlightRequest.put(new FutureResponse(request.getAction(), request.id(), completableFuture));
         } catch (InterruptedException | TimeoutException e) {
             throw new SQLException(e);
+        }
+
+        try {
+            client.send(reqString);
+        } catch (WebsocketNotConnectedException e) {
+            if (!client.reconnectBlocking()) {
+                inFlightRequest.remove(request.getAction(), request.id());
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, "Websocket Not Connected Exception");
+            }
+
+            try {
+                client.send(reqString);
+            }catch (Exception ex){
+                inFlightRequest.remove(request.getAction(), request.id());
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());
+            }
         }
 
         CompletableFuture<Response> responseFuture = CompletableFutureTimeout.orTimeout(
@@ -105,14 +110,20 @@ public class Transport implements AutoCloseable {
         } catch (InterruptedException | TimeoutException e) {
             throw new SQLException(e);
         }
+
         try {
             client.send(buffer.toByteArray());
         } catch (WebsocketNotConnectedException e) {
+            if (!client.reconnectBlocking()) {
+                inFlightRequest.remove(action, reqId);
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, "Websocket Not Connected Exception");
+            }
+
             try {
-                client.reconnectBlocking();
                 client.send(buffer.toByteArray());
-            } catch (InterruptedException ex){
-                throw new SQLException(ex);
+            }catch (Exception ex){
+                inFlightRequest.remove(action, reqId);
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());
             }
         }
 
@@ -134,15 +145,11 @@ public class Transport implements AutoCloseable {
     public boolean isClosed() {
         return closed;
     }
-
-    boolean flag = false;
     @Override
     public synchronized void close() {
-        if (flag) return;
-        flag = true;
         closed = true;
         inFlightRequest.close();
-        client.close();
+        client.shutdown();
     }
 
     public static void checkConnection(Transport transport, int connectTimeout) throws SQLException {

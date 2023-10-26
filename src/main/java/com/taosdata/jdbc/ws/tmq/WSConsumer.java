@@ -72,7 +72,6 @@ public class WSConsumer<V> implements Consumer<V> {
                 , topics.toArray(new String[0])
                 , String.valueOf(param.isAutoCommit())
                 , param.getAutoCommitInterval()
-                , param.getSnapshotEnable()
                 , param.getMsgWithTableName()
         );
         SubscribeResp response = (SubscribeResp) transport.send(request);
@@ -110,8 +109,10 @@ public class WSConsumer<V> implements Consumer<V> {
         if (Code.SUCCESS.getCode() != pollResp.getCode()) {
             throw new SQLException("consumer poll error, code: (0x" + Integer.toHexString(pollResp.getCode()) + "), message: " + pollResp.getMessage());
         }
-        if (!pollResp.isHaveMessage())
+        if (!pollResp.isHaveMessage()) {
+
             return ConsumerRecords.emptyRecord();
+        }
 
         messageId = pollResp.getMessageId();
         ConsumerRecords<V> records = new ConsumerRecords<>();

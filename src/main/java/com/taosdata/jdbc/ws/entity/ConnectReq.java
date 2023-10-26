@@ -1,12 +1,15 @@
 package com.taosdata.jdbc.ws.entity;
 
 /**
- * connection result pojo
+ * connection request pojo
  */
+
 public class ConnectReq extends Payload {
+
     private String user;
     private String password;
     private String db;
+    private Integer mode;
 
     public String getUser() {
         return user;
@@ -30,5 +33,13 @@ public class ConnectReq extends Payload {
 
     public void setDb(String db) {
         this.db = db;
+    }
+
+    public Integer getMode() {
+        return mode;
+    }
+
+    public void setMode(Integer mode) {
+        this.mode = mode;
     }
 }

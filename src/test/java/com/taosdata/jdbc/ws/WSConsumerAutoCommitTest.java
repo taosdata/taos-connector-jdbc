@@ -47,6 +47,7 @@ public class WSConsumerAutoCommitTest {
                     }
                 }
             }
+            consumer.unsubscribe();
         }
     }
 
@@ -75,21 +76,13 @@ public class WSConsumerAutoCommitTest {
     }
 
     @AfterClass
-    public static void after() {
-        try (Statement statement = connection.createStatement()) {
-            TimeUnit.SECONDS.sleep(1);
-            statement.executeUpdate("drop topic if exists " + topic);
-            statement.executeUpdate("drop database if exists " + dbName);
-            TimeUnit.SECONDS.sleep(3);
-        } catch (SQLException | InterruptedException e) {
-            // nothing
-        }
-        try {
-            connection.close();
-        } catch (SQLException e) {
-            // nothing
-        }
-    }
+    public static void after() throws InterruptedException, SQLException {
+        Statement statement = connection.createStatement();
+        statement.executeUpdate("drop topic if exists " + topic);
+        statement.executeUpdate("drop database if exists " + dbName);
+        TimeUnit.SECONDS.sleep(3);
+        connection.close();
+       }
 
     static class BeanDeserializer extends ReferenceDeserializer<Bean> {
     }

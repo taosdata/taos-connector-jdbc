@@ -1,8 +1,11 @@
 package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.enums.DataType;
+import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.StringUtils;
+import com.taosdata.jdbc.ws.WSConnection;
 
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -35,7 +38,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
 
     private static InputStream loadProperties() throws IOException {
         String currentJar = AbstractDatabaseMetaData.class.getProtectionDomain().getCodeSource().getLocation().getFile();
-        Enumeration<URL> urls = AbstractDatabaseMetaData.class.getClassLoader().getResources("version.properties");
+        Enumeration<URL> urls = AbstractDatabaseMetaData.class.getClassLoader().getResources("taos-jdbc-version.properties");
         while (urls.hasMoreElements()) {
             URL url = urls.nextElement();
             if (url.getFile().contains(currentJar)) {
@@ -599,8 +602,21 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
     }
 
     protected ResultSet getTables(String catalog, String schemaPattern, String tableNamePattern, String[] types, Connection connection) throws SQLException {
-        if (!StringUtils.isEmpty(catalog) && !isAvailableCatalog(connection, catalog))
+        String dbHelperStr = "";
+        String tableHelperStr = "";
+
+        if (connection instanceof WSConnection) {
+            WSConnection wsConnection = (WSConnection) connection;
+            //BI模式，只查询用户表，只查表，不查询子表
+            if (wsConnection.getParam().getConnectMode() == ConnectionParam.CONNECT_MODE_BI){
+                dbHelperStr = " user ";
+                tableHelperStr = " normal ";
+            }
+        }
+
+        if (!StringUtils.isEmpty(catalog) && !isAvailableCatalog(connection, catalog)){
             return new EmptyResultSet();
+        }
 
         DatabaseMetaDataResultSet resultSet = new DatabaseMetaDataResultSet();
         // set column metadata list
@@ -612,7 +628,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
             if (!StringUtils.isEmpty(catalog)) {
                 dbs.add(catalog);
             } else {
-                try (ResultSet dbRs = stmt.executeQuery("show databases")) {
+                try (ResultSet dbRs = stmt.executeQuery("show " + dbHelperStr + " databases")) {
                     while (dbRs.next()) {
                         dbs.add(dbRs.getString("name"));
                     }
@@ -622,7 +638,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                 return new EmptyResultSet();
             }
             for (String db : dbs) {
-                StringBuilder sql = new StringBuilder().append("show ").append(db).append(".tables ");
+                StringBuilder sql = new StringBuilder().append("show ").append(tableHelperStr).append(db).append(".tables ");
                 StringBuilder Ssql = new StringBuilder().append("show ").append(db).append(".stables ");
                 if (!StringUtils.isEmpty(tableNamePattern)) {
                     sql.append("like '").append(tableNamePattern).append("'");
@@ -1514,8 +1530,18 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
         columnMetaDataList.add(buildTableCatalogMeta(1));       // 1. TABLE_CAT
         resultSet.setColumnMetaDataList(columnMetaDataList);
 
+        String dbHelperStr = "";
+
+        if (conn instanceof WSConnection) {
+            WSConnection wsConnection = (WSConnection) conn;
+            //BI模式，只查询用户表，只查表，不查询子表
+            if (wsConnection.getParam().getConnectMode() == 1){
+                dbHelperStr = " user ";
+            }
+        }
+
         try (Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("show databases")) {
+             ResultSet rs = stmt.executeQuery("show " + dbHelperStr + " databases")) {
             List<TSDBResultSetRowData> rowDataList = new ArrayList<>();
             while (rs.next()) {
                 TSDBResultSetRowData rowData = new TSDBResultSetRowData(1);
