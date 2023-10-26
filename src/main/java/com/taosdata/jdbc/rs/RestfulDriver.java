@@ -7,7 +7,6 @@ import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.utils.HttpClientPoolUtil;
 import com.taosdata.jdbc.ws.*;
 import com.taosdata.jdbc.ws.entity.*;
-import org.slf4j.LoggerFactory;
 
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
@@ -17,7 +16,6 @@ import java.util.Properties;
 import java.util.logging.Logger;
 
 public class RestfulDriver extends AbstractDriver {
-    private final org.slf4j.Logger log = LoggerFactory.getLogger(RestfulDriver.class);
 
     public static final String URL_PREFIX = "jdbc:TAOS-RS://";
 
