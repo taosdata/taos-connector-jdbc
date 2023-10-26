@@ -38,28 +38,14 @@ public class SQLTest {
 
     @Test
     public void testCase003() {
-        for (int i = 0; i < 100; i++) {
-            // given
-            String sql = "show databases";
-            boolean execute = false;
+        // given
+        String sql = "show databases";
 
-            try {
-                Thread.sleep(3000);
-                // when
-                execute = execute(connection, sql);
-            }catch (Exception e){
+        // when
+        boolean execute = execute(connection, sql);
 
-            }
-
-            System.out.println("execute = " + execute);
-
-
-            // then
-//            Assert.assertTrue(execute);
-        }
-
-
-
+        // then
+        Assert.assertTrue(execute);
     }
 
     @Test
