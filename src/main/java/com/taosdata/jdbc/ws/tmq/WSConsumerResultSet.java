@@ -79,7 +79,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
         Request request = factory.generateFetch(messageId);
         FetchResp fetchResp = (FetchResp) transport.send(request);
         if (Code.SUCCESS.getCode() != fetchResp.getCode())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, fetchResp.getMessage());
+            throw TSDBError.createSQLException(fetchResp.getCode(), fetchResp.getMessage());
 
         this.reset();
         if (fetchResp.isCompleted() || fetchResp.getRows() == 0)
