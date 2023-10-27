@@ -5,10 +5,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.taosdata.jdbc.*;
 import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.utils.HttpClientPoolUtil;
-import com.taosdata.jdbc.ws.FutureResponse;
-import com.taosdata.jdbc.ws.InFlightRequest;
-import com.taosdata.jdbc.ws.Transport;
-import com.taosdata.jdbc.ws.WSConnection;
+import com.taosdata.jdbc.ws.*;
 import com.taosdata.jdbc.ws.entity.*;
 
 import java.nio.ByteOrder;

@@ -110,8 +110,10 @@ public class WSConsumer<V> implements Consumer<V> {
         if (Code.SUCCESS.getCode() != pollResp.getCode()) {
             throw new SQLException("consumer poll error, code: (0x" + Integer.toHexString(pollResp.getCode()) + "), message: " + pollResp.getMessage());
         }
-        if (!pollResp.isHaveMessage())
+        if (!pollResp.isHaveMessage()) {
+
             return ConsumerRecords.emptyRecord();
+        }
 
         if (pollResp.getMessageType() != TmqMessageType.TMQ_RES_DATA.getCode()) {
             // TODO handle other message type
