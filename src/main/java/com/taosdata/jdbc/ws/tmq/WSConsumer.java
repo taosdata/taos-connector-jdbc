@@ -5,6 +5,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.common.Consumer;
+import com.taosdata.jdbc.enums.TmqMessageType;
 import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.ws.FutureResponse;
@@ -114,6 +115,10 @@ public class WSConsumer<V> implements Consumer<V> {
             return ConsumerRecords.emptyRecord();
         }
 
+        if (pollResp.getMessageType() != TmqMessageType.TMQ_RES_DATA.getCode()) {
+            // TODO handle other message type
+            return ConsumerRecords.emptyRecord();
+        }
         messageId = pollResp.getMessageId();
         ConsumerRecords<V> records = new ConsumerRecords<>();
         try (WSConsumerResultSet rs = new WSConsumerResultSet(transport, factory, pollResp.getMessageId(), pollResp.getDatabase())) {
