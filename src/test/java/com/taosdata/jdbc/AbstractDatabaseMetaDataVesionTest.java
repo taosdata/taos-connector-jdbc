@@ -24,7 +24,7 @@ public class AbstractDatabaseMetaDataVesionTest {
         connection = DriverManager.getConnection(url);
         DatabaseMetaData metaData = connection.getMetaData();
         Properties properties = new Properties();
-        properties.load(AbstractDatabaseMetaDataVesionTest.class.getClassLoader().getResourceAsStream("version.properties"));
+        properties.load(AbstractDatabaseMetaDataVesionTest.class.getClassLoader().getResourceAsStream("taos-jdbc-version.properties"));
         String productName = properties.getProperty("PRODUCT_NAME");
         String driverVersion = properties.getProperty("DRIVER_VERSION");
         Assert.assertNotNull(metaData.getDatabaseProductVersion());
@@ -43,7 +43,7 @@ public class AbstractDatabaseMetaDataVesionTest {
         connection = DriverManager.getConnection(url);
         DatabaseMetaData metaData = connection.getMetaData();
         Properties properties = new Properties();
-        properties.load(AbstractDatabaseMetaDataVesionTest.class.getClassLoader().getResourceAsStream("version.properties"));
+        properties.load(AbstractDatabaseMetaDataVesionTest.class.getClassLoader().getResourceAsStream("taos-jdbc-version.properties"));
         String productName = properties.getProperty("PRODUCT_NAME");
         String driverVersion = properties.getProperty("DRIVER_VERSION");
         Assert.assertNotNull(metaData.getDatabaseProductVersion());
@@ -64,7 +64,7 @@ public class AbstractDatabaseMetaDataVesionTest {
         connection = DriverManager.getConnection(url, config);
         DatabaseMetaData metaData = connection.getMetaData();
         Properties properties = new Properties();
-        properties.load(AbstractDatabaseMetaDataVesionTest.class.getClassLoader().getResourceAsStream("version.properties"));
+        properties.load(AbstractDatabaseMetaDataVesionTest.class.getClassLoader().getResourceAsStream("taos-jdbc-version.properties"));
         String productName = properties.getProperty("PRODUCT_NAME");
         String driverVersion = properties.getProperty("DRIVER_VERSION");
         Assert.assertNotNull(metaData.getDatabaseProductVersion());

@@ -135,6 +135,9 @@ public class WSConsumerTest {
         // properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
         connection = DriverManager.getConnection(url, properties);
         statement = connection.createStatement();
+        for (String topic : topics) {
+            statement.executeUpdate("drop topic if exists " + topic);
+        }
         statement.execute("drop database if exists " + dbName);
         statement.execute("create database if not exists " + dbName + " WAL_RETENTION_PERIOD 3650");
         statement.execute("use " + dbName);
@@ -151,9 +154,9 @@ public class WSConsumerTest {
                 if (statement != null) {
                     for (String topic : topics) {
                         TimeUnit.SECONDS.sleep(3);
-                        statement.executeUpdate("drop topic " + topic);
-                        statement.executeUpdate("drop database if exists " + dbName);
+                        statement.executeUpdate("drop topic if exists " + topic);
                     }
+                    statement.executeUpdate("drop database if exists " + dbName);
                     statement.close();
                 }
                 connection.close();

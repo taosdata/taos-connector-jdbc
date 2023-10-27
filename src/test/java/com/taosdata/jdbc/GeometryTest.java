@@ -6,52 +6,59 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Properties;
 
-public class VarbinaryTest {
+public class GeometryTest {
     static String host = "127.0.0.1";
-    static String dbName = "varbinary_test";
-    static String tableNative = "varbinary_noraml";
-    static String tableStmt = "varbinary_stmt";
+    static String dbName = "geometry_test";
+    static String tableNative = "geometry_noraml";
+    static String tableStmt = "geometry_stmt";
     static Connection connection;
     static Statement statement;
-
-    static String testStr = "20160601";
-    static byte[] expectedArray = StringUtils.hexToBytes(testStr);
+    byte[] expectedArray = StringUtils.hexToBytes("0101000000000000000000F03F0000000000000040");
 
 
     @Test
     public void testInsert() throws Exception {
-        statement.executeUpdate("insert into subt_a using " + dbName + "." + tableNative + "  tags( \"\\x123456abcdef\")  values(now, \"\\x" + testStr + "\")");
-        ResultSet resultSet = statement.executeQuery("select c1, t1 from " + dbName + "." + tableNative);
+        String sql = "insert into ? using stable3 tags(?) values(?,?)";
+
+        statement.executeUpdate("insert into subt_a using " + dbName + "." + tableNative + " tags( \"POINT(3 5)\") values(now, \"POINT(1 2)\")");
+        ResultSet resultSet = statement.executeQuery("select c1 from subt_a");
+
         resultSet.next();
-        Assert.assertArrayEquals(expectedArray, resultSet.getBytes(1));
+        byte[] result1 = resultSet.getBytes(1);
+        Assert.assertArrayEquals(expectedArray, result1);
     }
+
 
     @Test
     public void testPrepare() throws SQLException {
-        TSDBPreparedStatement preparedStatement = (TSDBPreparedStatement) connection.prepareStatement("insert into ? using " + dbName + "." + tableStmt + "   tags(?)  values (?, ?)");
+        TSDBPreparedStatement preparedStatement = (TSDBPreparedStatement) connection.prepareStatement("insert into ? using  " + dbName + "." + tableStmt + "  tags(?) values (?, ?)");
         preparedStatement.setTableName("subt_b");
-        preparedStatement.setTagVarbinary(0, new byte[]{1,2,3,4,5,6});
-
+        preparedStatement.setTagGeometry(0, expectedArray);
 
         long current = System.currentTimeMillis();
         ArrayList<Long> tsList = new ArrayList<>();
         tsList.add(current);
+        tsList.add(current + 1);
+
         preparedStatement.setTimestamp(0, tsList);
 
         ArrayList<byte[]> list = new ArrayList<>();
-        list.add(expectedArray);
-        preparedStatement.setVarbinary(1, list, 20);
+        byte[] byteArray = StringUtils.hexToBytes("0101000020E6100000000000000000F03F0000000000000040");
+        list.add(byteArray);
+        byte[] byteArray1 = StringUtils.hexToBytes("0102000020E610000002000000000000000000F03F000000000000004000000000000008400000000000001040");
+        list.add(byteArray1);
+
+        preparedStatement.setGeometry(1, list, 50);
 
         preparedStatement.columnDataAddBatch();
         preparedStatement.columnDataExecuteBatch();
-        ResultSet resultSet = statement.executeQuery("select c1 from " + dbName + "." + tableStmt);
-        while (resultSet.next()) {
-            Assert.assertArrayEquals(expectedArray, resultSet.getBytes(1));
+        ResultSet resultSet = statement.executeQuery("select c1 from subt_b order by ts asc");
+        if (resultSet.next()) {
+            Assert.assertArrayEquals(byteArray, resultSet.getBytes(1));
         }
     }
 
@@ -69,8 +76,8 @@ public class VarbinaryTest {
         statement.executeUpdate("drop database if exists " + dbName);
         statement.executeUpdate("create database if not exists " + dbName);
         statement.executeUpdate("use " + dbName);
-        statement.executeUpdate("create table " + tableNative + " (ts timestamp, c1 varbinary(20))  tags(t1 varbinary(20))");
-        statement.executeUpdate("create table " + tableStmt + " (ts timestamp, c1 varbinary(20)) tags(t1 varbinary(20))");
+        statement.executeUpdate("create table " + tableNative + " (ts timestamp, c1 GEOMETRY(50))  tags(t1 GEOMETRY(50))");
+        statement.executeUpdate("create table " + tableStmt + " (ts timestamp, c1 GEOMETRY(50))    tags(t1 GEOMETRY(50))");
     }
 
     @AfterClass

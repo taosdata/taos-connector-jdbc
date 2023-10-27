@@ -1,13 +1,14 @@
 package com.taosdata.jdbc.ws.stmt.entity;
 
 
+import com.taosdata.jdbc.ws.entity.ConnectResp;
 import com.taosdata.jdbc.ws.entity.Response;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public enum STMTAction {
-    CONN("conn", ConnResp.class),
+    CONN("conn", ConnectResp.class),
     INIT("init", StmtResp.class),
     PREPARE("prepare", StmtResp.class),
     SET_TABLE_NAME("set_table_name", StmtResp.class),

@@ -5,10 +5,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.taosdata.jdbc.*;
 import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.utils.HttpClientPoolUtil;
-import com.taosdata.jdbc.ws.FutureResponse;
-import com.taosdata.jdbc.ws.InFlightRequest;
-import com.taosdata.jdbc.ws.Transport;
-import com.taosdata.jdbc.ws.WSConnection;
+import com.taosdata.jdbc.ws.*;
 import com.taosdata.jdbc.ws.entity.*;
 
 import java.nio.ByteOrder;
@@ -134,6 +131,11 @@ public class RestfulDriver extends AbstractDriver {
         connectReq.setUser(param.getUser());
         connectReq.setPassword(param.getPassword());
         connectReq.setDb(param.getDatabase());
+        // 目前仅支持bi模式，下游接口值为0，此处做转换
+        if(param.getConnectMode() == ConnectionParam.CONNECT_MODE_BI){
+            connectReq.setMode(0);
+        }
+
         ConnectResp auth = (ConnectResp) transport.send(new Request(Action.CONN.getAction(), connectReq));
 
         if (Code.SUCCESS.getCode() != auth.getCode()) {
@@ -143,35 +145,5 @@ public class RestfulDriver extends AbstractDriver {
 
         TaosGlobalConfig.setCharset(props.getProperty(TSDBDriver.PROPERTY_KEY_CHARSET));
         return new WSConnection(url, props, transport, param);
-    }
-
-    static class ConnectReq extends Payload {
-        private String user;
-        private String password;
-        private String db;
-
-        public String getUser() {
-            return user;
-        }
-
-        public void setUser(String user) {
-            this.user = user;
-        }
-
-        public String getPassword() {
-            return password;
-        }
-
-        public void setPassword(String password) {
-            this.password = password;
-        }
-
-        public String getDb() {
-            return db;
-        }
-
-        public void setDb(String db) {
-            this.db = db;
-        }
     }
 }

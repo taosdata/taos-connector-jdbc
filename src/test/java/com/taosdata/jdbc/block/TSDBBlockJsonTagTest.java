@@ -1114,7 +1114,7 @@ public class TSDBBlockJsonTagTest {
     public void case20_batchInsert() throws SQLException {
         String jsonTag = "{\"tag1\":\"fff\",\"tag2\":5,\"tag3\":true}";
         statement.execute("drop table if exists jsons5");
-        statement.execute("CREATE STABLE IF NOT EXISTS jsons5 (ts timestamp, dataInt int, dataStr nchar(20)) TAGS(jtag json)");
+        statement.execute("CREATE STABLE IF NOT EXISTS jsons5 (ts timestamp, dataInt int, dataStr nchar(20)) TAGS(jsons5_jtag json)");
 
         String sql = "INSERT INTO ? USING jsons5 TAGS (?) VALUES ( ?,?,? )";
 
@@ -1158,16 +1158,16 @@ public class TSDBBlockJsonTagTest {
             ps.columnDataExecuteBatch();
         }
 
-        ResultSet resultSet = statement.executeQuery("select jtag from batch_test");
+        ResultSet resultSet = statement.executeQuery("select jsons5_jtag from batch_test");
         ResultSetMetaData metaData = resultSet.getMetaData();
         String columnName = metaData.getColumnName(1);
-        Assert.assertEquals("jtag", columnName);
+        Assert.assertEquals("jsons5_jtag", columnName);
         Assert.assertEquals("JSON", metaData.getColumnTypeName(1));
         resultSet.next();
         String string = resultSet.getString(1);
         Assert.assertEquals(jsonTag, string);
         resultSet.close();
-        resultSet = statement.executeQuery("select jtag->'tag2' from batch_test");
+        resultSet = statement.executeQuery("select jsons5_jtag->'tag2' from batch_test");
         resultSet.next();
         Double d = resultSet.getDouble(1);
         Assert.assertEquals(5.0, d, 0);

@@ -212,7 +212,8 @@ public class WSConsumerResultSet extends AbstractResultSet {
                     }
                     case TSDB_DATA_TYPE_BINARY:
                     case TSDB_DATA_TYPE_JSON:
-                    case TSDB_DATA_TYPE_VARBINARY: {
+                    case TSDB_DATA_TYPE_VARBINARY:
+                    case TSDB_DATA_TYPE_GEOMETRY:{
                         length = numOfRows * 4;
                         List<Integer> offset = new ArrayList<>(numOfRows);
                         for (int m = 0; m < numOfRows; m++) {
@@ -1111,7 +1112,8 @@ public class WSConsumerResultSet extends AbstractResultSet {
             case TSDB_DATA_TYPE_DOUBLE:
             case TSDB_DATA_TYPE_BINARY:
             case TSDB_DATA_TYPE_JSON:
-            case TSDB_DATA_TYPE_VARBINARY: {
+            case TSDB_DATA_TYPE_VARBINARY:
+            case TSDB_DATA_TYPE_GEOMETRY:{
                 return source;
             }
             case TSDB_DATA_TYPE_USMALLINT: {

@@ -16,7 +16,6 @@ public class ConsumerParam {
     private final boolean autoCommit;
     private String autoCommitInterval;
     private String msgWithTableName;
-    private String snapshotEnable;
 
     public ConsumerParam(Properties properties) throws SQLException {
         if (null != properties.getProperty(TMQConstants.CONNECT_URL)) {
@@ -38,7 +37,6 @@ public class ConsumerParam {
         offsetRest = properties.getProperty(TMQConstants.AUTO_OFFSET_RESET);
         autoCommitInterval = properties.getProperty(TMQConstants.AUTO_COMMIT_INTERVAL);
         msgWithTableName = properties.getProperty(TMQConstants.MSG_WITH_TABLE_NAME);
-        snapshotEnable = properties.getProperty(TMQConstants.EXPERIMENTAL_SNAPSHOT_ENABLE);
     }
 
     public ConnectionParam getConnectionParam() {
@@ -91,13 +89,5 @@ public class ConsumerParam {
 
     public void setMsgWithTableName(String msgWithTableName) {
         this.msgWithTableName = msgWithTableName;
-    }
-
-    public String getSnapshotEnable() {
-        return snapshotEnable;
-    }
-
-    public void setSnapshotEnable(String snapshotEnable) {
-        this.snapshotEnable = snapshotEnable;
     }
 }

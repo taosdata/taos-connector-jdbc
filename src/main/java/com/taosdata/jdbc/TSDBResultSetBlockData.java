@@ -19,7 +19,6 @@ import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.utils.Utils;
-
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
@@ -207,7 +206,8 @@ public class TSDBResultSetBlockData {
                 }
                 case TSDB_DATA_TYPE_BINARY:
                 case TSDB_DATA_TYPE_JSON:
-                case TSDB_DATA_TYPE_VARBINARY: {
+                case TSDB_DATA_TYPE_VARBINARY:
+                case TSDB_DATA_TYPE_GEOMETRY:{
                     length = numOfRows * 4;
                     List<Integer> offset = new ArrayList<>(numOfRows);
                     for (int m = 0; m < numOfRows; m++) {
@@ -620,7 +620,8 @@ public class TSDBResultSetBlockData {
             case TSDB_DATA_TYPE_NCHAR:
             case TSDB_DATA_TYPE_BINARY:
             case TSDB_DATA_TYPE_JSON:
-            case TSDB_DATA_TYPE_VARBINARY: {
+            case TSDB_DATA_TYPE_VARBINARY:
+            case TSDB_DATA_TYPE_GEOMETRY:{
                 return source;
             }
             case TSDB_DATA_TYPE_UTINYINT: {
@@ -641,7 +642,6 @@ public class TSDBResultSetBlockData {
 
                 return parseTimestampColumnData(val);
             }
-
             case TSDB_DATA_TYPE_UBIGINT: {
                 long val = (long) source;
                 return parseUBigInt(val);

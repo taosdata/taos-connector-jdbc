@@ -22,12 +22,13 @@ public enum DataType {
     BIGINT("BIGINT", Types.BIGINT, TSDB_DATA_TYPE_BIGINT, BIGINT_PRECISION),
     FLOAT("FLOAT", Types.FLOAT, TSDB_DATA_TYPE_FLOAT, FLOAT_PRECISION),
     DOUBLE("DOUBLE", Types.DOUBLE, TSDB_DATA_TYPE_DOUBLE, DOUBLE_PRECISION),
-    BINARY("BINARY", Types.BINARY, TSDB_DATA_TYPE_BINARY, 0),
+    BINARY("BINARY", Types.VARCHAR, TSDB_DATA_TYPE_BINARY, 0),
     VARCHAR("VARCHAR", Types.VARCHAR, TSDB_DATA_TYPE_VARCHAR, 0),
     TIMESTAMP("TIMESTAMP", Types.TIMESTAMP, TSDB_DATA_TYPE_TIMESTAMP, 0),
     NCHAR("NCHAR", Types.NCHAR, TSDB_DATA_TYPE_NCHAR, 0),
     JSON("JSON", Types.OTHER, TSDB_DATA_TYPE_JSON, 0),
     VARBINARY("VARBINARY", Types.VARBINARY, TSDB_DATA_TYPE_VARBINARY, 0),
+    GEOMETRY("GEOMETRY", Types.BINARY, TSDB_DATA_TYPE_GEOMETRY, 0),
     ;
 
     private final String typeName;
@@ -105,7 +106,7 @@ public enum DataType {
         if (0 == tmp.getSize()) {
             if (tmp == TIMESTAMP) {
                 return precisionType.equals("ms") ? TIMESTAMP_MS_PRECISION : TIMESTAMP_US_PRECISION;
-            } else if (tmp == NCHAR || tmp == BINARY || tmp == VARCHAR || tmp == VARBINARY) {
+            } else if (tmp == NCHAR || tmp == BINARY || tmp == VARCHAR || tmp == VARBINARY  || tmp == GEOMETRY) {
                 return length;
             }
         }
