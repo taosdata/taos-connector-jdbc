@@ -111,7 +111,6 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
         final int MAX_CONNECT_RETRY_COUNT = 3;
         for (int retryTimes = 0; retryTimes < MAX_CONNECT_RETRY_COUNT; retryTimes++){
             try {
-                Thread.sleep(2000);
                 if (super.reconnectBlocking()) {
                     // send con msgs
                     ConnectReq connectReq = new ConnectReq();
@@ -131,6 +130,7 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
                         return true;
                     }
                 }
+                Thread.sleep(2000);
             }catch (Exception e){
                 log.error("try connect remote server failed!", e);
             }
