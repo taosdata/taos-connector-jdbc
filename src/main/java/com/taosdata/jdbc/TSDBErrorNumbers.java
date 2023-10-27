@@ -35,6 +35,7 @@ public class TSDBErrorNumbers {
     public static final int ERROR_HTTP_ENTITY_IS_NULL = 0x231c; //http entity is null
     public static final int ERROR_CONNECTION_TIMEOUT = 0x231d;
     public static final int ERROR_QUERY_TIMEOUT = 0x231e;
+    public static final int ERROR_RESTFUL_CLIENT_QUERY_EXCEPTION = 0x231f;
 
     public static final int ERROR_UNKNOWN = 0x2350;    //unknown error
 
@@ -91,6 +92,7 @@ public class TSDBErrorNumbers {
         errorNumbers.add(ERROR_HTTP_ENTITY_IS_NULL);
         errorNumbers.add(ERROR_CONNECTION_TIMEOUT);
         errorNumbers.add(ERROR_QUERY_TIMEOUT);
+        errorNumbers.add(ERROR_RESTFUL_CLIENT_QUERY_EXCEPTION);
 
         errorNumbers.add(ERROR_RESTFul_Client_Protocol_Exception);
 
