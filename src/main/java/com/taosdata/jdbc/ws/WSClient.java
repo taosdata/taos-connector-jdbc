@@ -89,6 +89,7 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
     @SuppressWarnings("all")
     public void onClose(int code, String reason, boolean remote) {
         // do nothing, wait next send to retry.
+        log.error("code : " + code + " , reason: " + reason + " remote:" + remote + " wsclient:" + this );
     }
 
     @Override
@@ -100,6 +101,10 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
         super.close();
         if (executor != null && !executor.isShutdown())
             executor.shutdown();
+    }
+
+    public boolean reconnectBlockingWithoutRetry() throws InterruptedException {
+        return super.reconnectBlocking();
     }
 
     @Override
