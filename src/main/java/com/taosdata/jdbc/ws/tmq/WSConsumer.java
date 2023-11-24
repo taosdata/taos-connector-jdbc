@@ -27,6 +27,7 @@ public class WSConsumer<V> implements Consumer<V> {
     private Transport transport;
     private ConsumerParam param;
     private TMQRequestFactory factory;
+    private long lastCommitTime = 0;
     private long messageId = 0L;
 
     @Override
@@ -71,8 +72,7 @@ public class WSConsumer<V> implements Consumer<V> {
                 , param.getClientId()
                 , param.getOffsetRest()
                 , topics.toArray(new String[0])
-                , String.valueOf(param.isAutoCommit())
-                , param.getAutoCommitInterval()
+                , String.valueOf(false)
                 , param.getMsgWithTableName()
         );
         SubscribeResp response = (SubscribeResp) transport.send(request);
@@ -105,6 +105,14 @@ public class WSConsumer<V> implements Consumer<V> {
 
     @Override
     public ConsumerRecords<V> poll(Duration timeout, Deserializer<V> deserializer) throws SQLException {
+        if (param.isAutoCommit() && (0 != messageId)) {
+            long now = System.currentTimeMillis();
+            if (now - lastCommitTime > param.getAutoCommitInterval()) {
+                commitSync();
+                lastCommitTime = now;
+            }
+        }
+
         Request request = factory.generatePoll(timeout.toMillis());
         PollResp pollResp = (PollResp) transport.send(request);
         if (Code.SUCCESS.getCode() != pollResp.getCode()) {
@@ -142,7 +150,6 @@ public class WSConsumer<V> implements Consumer<V> {
             CommitResp commitResp = (CommitResp) transport.send(factory.generateCommit(messageId));
             if (Code.SUCCESS.getCode() != commitResp.getCode())
                 throw new SQLException("consumer commit error. code: (0x" + Integer.toHexString(commitResp.getCode()) + "), message: " + commitResp.getMessage());
-            messageId = 0;
         }
     }
 
