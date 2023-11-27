@@ -6,6 +6,7 @@ import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.rs.RestfulDatabaseMetaData;
+import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.ws.entity.*;
 
 import java.sql.DatabaseMetaData;
@@ -83,7 +84,7 @@ public class WSConnection extends AbstractConnection {
         transport.disconnectAndReconnect();
 
         ConnectReq connectReq = new ConnectReq();
-        connectReq.setReqId(1);
+        connectReq.setReqId(ReqId.getReqID());
         connectReq.setUser(param.getUser());
         connectReq.setPassword(param.getPassword());
         connectReq.setDb(db);
