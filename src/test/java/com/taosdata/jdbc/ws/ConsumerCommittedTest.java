@@ -40,7 +40,8 @@ public class ConsumerCommittedTest {
         properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "false");
-        properties.setProperty(TMQConstants.GROUP_ID, "g_ws");
+        properties.setProperty(TMQConstants.GROUP_ID, "g_jni");
+        properties.setProperty(TMQConstants.AUTO_OFFSET_RESET, "earliest");
         properties.setProperty(TMQConstants.VALUE_DESERIALIZER, "com.taosdata.jdbc.tmq.ResultDeserializer");
 
         try (TaosConsumer<ResultBean> consumer = new TaosConsumer<>(properties)) {
@@ -90,7 +91,8 @@ public class ConsumerCommittedTest {
         properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "false");
-        properties.setProperty(TMQConstants.GROUP_ID, "g_jni");
+        properties.setProperty(TMQConstants.GROUP_ID, "g_ws");
+        properties.setProperty(TMQConstants.AUTO_OFFSET_RESET, "earliest");
         properties.setProperty(TMQConstants.VALUE_DESERIALIZER, "com.taosdata.jdbc.tmq.ResultDeserializer");
 
         try (TaosConsumer<ResultBean> consumer = new TaosConsumer<>(properties)) {
@@ -122,8 +124,8 @@ public class ConsumerCommittedTest {
                 System.out.println(topicPartition + " : " + committed.get(topicPartition));
             });
             Assert.assertFalse(committed.isEmpty());
-            // TODO sync commit with offset
-//            consumer.commitSync(committed);
+            // sync commit with offset
+            consumer.commitSync(committed);
             // unsubscribe
             consumer.unsubscribe();
         }
@@ -140,6 +142,7 @@ public class ConsumerCommittedTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
         connection = DriverManager.getConnection(url, properties);
         statement = connection.createStatement();
+        statement.executeUpdate("drop topic if exists " + topic);
         statement.execute("drop database if exists " + dbName);
         statement.execute("create database if not exists " + dbName + " WAL_RETENTION_PERIOD 3650");
         statement.execute("use " + dbName);
@@ -184,8 +187,8 @@ public class ConsumerCommittedTest {
         }
         if (connection != null) {
             if (statement != null) {
-                statement.executeUpdate("drop topic if exists " + topic);
-                statement.executeUpdate("drop database if exists " + dbName);
+//                statement.executeUpdate("drop topic if exists " + topic);
+//                statement.executeUpdate("drop database if exists " + dbName);
                 statement.close();
             }
             connection.close();

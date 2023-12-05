@@ -6,8 +6,8 @@ import com.taosdata.jdbc.ws.entity.Payload;
 public class CommitOffsetReq extends Payload {
     private String topic;
 
-    @JSONField(name = "vg_id")
-    private int vgId;
+    @JSONField(name = "vgroup_id")
+    private int vgroupId;
 
     private long offset;
 
@@ -19,12 +19,12 @@ public class CommitOffsetReq extends Payload {
         this.topic = topic;
     }
 
-    public int getVgId() {
-        return vgId;
+    public int getVgroupId() {
+        return vgroupId;
     }
 
-    public void setVgId(int vgId) {
-        this.vgId = vgId;
+    public void setVgroupId(int vgId) {
+        this.vgroupId = vgId;
     }
 
     public long getOffset() {

@@ -40,6 +40,7 @@ public class WSConsumerOffsetSeekTest {
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
         properties.setProperty(TMQConstants.GROUP_ID, "gId");
+        properties.setProperty(TMQConstants.AUTO_OFFSET_RESET, "earliest");
         properties.setProperty(TMQConstants.VALUE_DESERIALIZER, "com.taosdata.jdbc.tmq.ResultDeserializer");
 
         Map<TopicPartition, Long> offset = null;
@@ -93,6 +94,7 @@ public class WSConsumerOffsetSeekTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
         connection = DriverManager.getConnection(url, properties);
         statement = connection.createStatement();
+        statement.execute("drop topic if exists " + topic);
         statement.execute("drop database if exists " + dbName);
         statement.execute("create database if not exists " + dbName + " WAL_RETENTION_PERIOD 3650");
         statement.execute("use " + dbName);
