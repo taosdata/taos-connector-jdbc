@@ -128,7 +128,7 @@ public class TMQRequestFactory {
         CommitOffsetReq commitOffsetReq = new CommitOffsetReq();
         commitOffsetReq.setReqId(reqId);
         commitOffsetReq.setTopic(topicPartition.getTopic());
-        commitOffsetReq.setVgId(topicPartition.getVGroupId());
+        commitOffsetReq.setVgroupId(topicPartition.getVGroupId());
         commitOffsetReq.setOffset(offset);
         return new Request(ConsumerAction.COMMIT_OFFSET.getAction(), commitOffsetReq);
     }

@@ -287,6 +287,9 @@ public class WSConsumer<V> implements Consumer<V> {
     @Override
     public void commitSync(Map<TopicPartition, OffsetAndMetadata> offsets) throws SQLException {
         for (Map.Entry<TopicPartition, OffsetAndMetadata> entry : offsets.entrySet()) {
+            if (entry.getValue().offset() < 0) {
+                continue;
+            }
             Request request = factory.generateCommitOffset(entry.getKey(), entry.getValue().offset());
             CommitOffsetResp resp = (CommitOffsetResp) transport.send(request);
             if (Code.SUCCESS.getCode() != resp.getCode()) {
