@@ -185,7 +185,7 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
     public void setObject(int parameterIndex, Object x) throws SQLException {
         if (isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
-        if (parameterIndex < 1 || parameterIndex >= parameters.length)
+        if (parameterIndex < 1 || parameterIndex > parameters.length)
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_PARAMETER_INDEX_OUT_RANGE);
         parameters[parameterIndex - 1] = x;
     }
