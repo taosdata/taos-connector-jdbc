@@ -10,6 +10,9 @@ import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.ws.entity.*;
 import org.java_websocket.WebSocketImpl;
 import org.java_websocket.client.WebSocketClient;
+import org.java_websocket.drafts.Draft;
+import org.java_websocket.drafts.Draft_6455;
+import org.java_websocket.extensions.permessage_deflate.PerMessageDeflateExtension;
 import org.java_websocket.handshake.ServerHandshake;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,7 +32,8 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
 
     private final Logger log = LoggerFactory.getLogger(WSClient.class);
 
-
+    private static final Draft perMessageDeflateDraft = new Draft_6455(
+            new PerMessageDeflateExtension());
     ThreadPoolExecutor executor;
     Transport transport;
 
@@ -53,7 +57,7 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
      * @param serverUri connection url
      */
     public WSClient(URI serverUri, Transport transport, ConnectionParam connectionParam, WSFunction function) {
-        super(serverUri, new HashMap<>());
+        super(serverUri, perMessageDeflateDraft, new HashMap<>());
         this.transport = transport;
         this.connectionParam = connectionParam;
         this.wsFunction = function;

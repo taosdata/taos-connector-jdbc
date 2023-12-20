@@ -29,6 +29,7 @@ import java.util.Properties;
 public class HttpClientPoolUtil {
 
     private static final String DEFAULT_CONTENT_TYPE = "application/json";
+    private static final String DEFAULT_ACCEPT_ENCODING = "gzip, deflate";
     private static final int DEFAULT_MAX_RETRY_COUNT = 5;
 
     public static final String DEFAULT_HTTP_KEEP_ALIVE = "true";
@@ -200,6 +201,8 @@ public class HttpClientPoolUtil {
         }
         method.addHeader(HTTP.CONTENT_TYPE, DEFAULT_CONTENT_TYPE);
         method.addHeader("Accept", DEFAULT_CONTENT_TYPE);
+        method.addHeader("Accept-Encoding", DEFAULT_ACCEPT_ENCODING);
+
         method.setConfig(requestConfig);
         return method;
     }
