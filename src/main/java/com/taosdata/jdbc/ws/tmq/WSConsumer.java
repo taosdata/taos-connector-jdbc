@@ -148,8 +148,10 @@ public class WSConsumer<V> implements Consumer<V> {
     public synchronized void commitSync() throws SQLException {
         if (0 != messageId) {
             CommitResp commitResp = (CommitResp) transport.send(factory.generateCommit(messageId));
-            if (Code.SUCCESS.getCode() != commitResp.getCode())
+            if (Code.SUCCESS.getCode() != commitResp.getCode()) {
                 throw new SQLException("consumer commit error. code: (0x" + Integer.toHexString(commitResp.getCode()) + "), message: " + commitResp.getMessage());
+            }
+            messageId = 0;
         }
     }
 
