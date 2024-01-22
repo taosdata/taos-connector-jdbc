@@ -1,5 +1,9 @@
 package com.taosdata.jdbc.ws.entity;
 
+import com.taosdata.jdbc.ws.schemaless.CommonResp;
+import com.taosdata.jdbc.ws.stmt.entity.ExecResp;
+import com.taosdata.jdbc.ws.stmt.entity.StmtResp;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -14,6 +18,18 @@ public enum Action {
     FETCH_BLOCK("fetch_block", FetchBlockResp.class),
     // free_result's class is meaningless
     FREE_RESULT("free_result", Response.class),
+
+    // stmt
+    INIT("init", StmtResp.class),
+    PREPARE("prepare", StmtResp.class),
+    SET_TABLE_NAME("set_table_name", StmtResp.class),
+    SET_TAGS("set_tags", StmtResp.class),
+    BIND("bind", StmtResp.class),
+    ADD_BATCH("add_batch", StmtResp.class),
+    EXEC("exec", ExecResp.class),
+    // response means nothing
+    CLOSE("close", StmtResp.class),
+    ;
     ;
     private final String action;
     private final Class<? extends Response> clazz;

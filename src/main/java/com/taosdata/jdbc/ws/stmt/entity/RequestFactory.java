@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.ws.stmt.entity;
 
 
+import com.taosdata.jdbc.ws.entity.Action;
 import com.taosdata.jdbc.ws.entity.Request;
 
 /**
@@ -14,7 +15,7 @@ public class RequestFactory {
     public static Request generateInit(long reqId) {
         InitReq initReq = new InitReq();
         initReq.setReqId(reqId);
-        return new Request(STMTAction.INIT.getAction(), initReq);
+        return new Request(Action.INIT.getAction(), initReq);
     }
 
     public static Request generatePrepare(long stmtId, long reqId, String sql) {
@@ -22,7 +23,7 @@ public class RequestFactory {
         prepareReq.setReqId(reqId);
         prepareReq.setStmtId(stmtId);
         prepareReq.setSql(sql);
-        return new Request(STMTAction.PREPARE.getAction(), prepareReq);
+        return new Request(Action.PREPARE.getAction(), prepareReq);
     }
 
     public static Request generateSetTableName(long stmtId, long reqId, String tableName) {
@@ -30,7 +31,7 @@ public class RequestFactory {
         req.setReqId(reqId);
         req.setStmtId(stmtId);
         req.setName(tableName);
-        return new Request(STMTAction.SET_TABLE_NAME.getAction(), req);
+        return new Request(Action.SET_TABLE_NAME.getAction(), req);
     }
 
     public static Request generateSetTags(long stmtId, long reqId, Object[] tags) {
@@ -38,7 +39,7 @@ public class RequestFactory {
         req.setReqId(reqId);
         req.setStmtId(stmtId);
         req.setTags(tags);
-        return new Request(STMTAction.SET_TAGS.getAction(), req);
+        return new Request(Action.SET_TAGS.getAction(), req);
     }
 
     public static Request generateBind(long stmtId, long reqId, Object[][] columns) {
@@ -46,28 +47,28 @@ public class RequestFactory {
         req.setReqId(reqId);
         req.setStmtId(stmtId);
         req.setColumns(columns);
-        return new Request(STMTAction.BIND.getAction(), req);
+        return new Request(Action.BIND.getAction(), req);
     }
 
     public static Request generateBatch(long stmtId, long reqId) {
         AddBatchReq req = new AddBatchReq();
         req.setReqId(reqId);
         req.setStmtId(stmtId);
-        return new Request(STMTAction.ADD_BATCH.getAction(), req);
+        return new Request(Action.ADD_BATCH.getAction(), req);
     }
 
     public static Request generateExec(long stmtId, long reqId) {
         ExecReq req = new ExecReq();
         req.setReqId(reqId);
         req.setStmtId(stmtId);
-        return new Request(STMTAction.EXEC.getAction(), req);
+        return new Request(Action.EXEC.getAction(), req);
     }
 
     public static Request generateClose(long stmtId, long reqId) {
         CloseReq req = new CloseReq();
         req.setReqId(reqId);
         req.setStmtId(stmtId);
-        return new Request(STMTAction.EXEC.getAction(), req);
+        return new Request(Action.EXEC.getAction(), req);
     }
 
 }

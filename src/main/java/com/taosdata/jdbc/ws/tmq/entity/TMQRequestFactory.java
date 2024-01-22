@@ -26,7 +26,7 @@ public class TMQRequestFactory {
 
     public Request generateSubscribe(String user, String password, String db, String groupId,
                                      String clientId, String offsetRest, String[] topics
-            , String enableAutoCommit, String autoCommitIntervalMs, String withTableName) {
+            , String enableAutoCommit, String withTableName) {
         long reqId = this.getId(ConsumerAction.SUBSCRIBE.getAction());
 
         SubscribeReq subscribeReq = new SubscribeReq();
@@ -39,7 +39,6 @@ public class TMQRequestFactory {
         subscribeReq.setOffsetRest(offsetRest);
         subscribeReq.setTopics(topics);
         subscribeReq.setAutoCommit(enableAutoCommit);
-        subscribeReq.setAutoCommitIntervalMs(autoCommitIntervalMs);
         subscribeReq.setWithTableName(withTableName);
         return new Request(ConsumerAction.SUBSCRIBE.getAction(), subscribeReq);
     }
@@ -128,7 +127,7 @@ public class TMQRequestFactory {
         CommitOffsetReq commitOffsetReq = new CommitOffsetReq();
         commitOffsetReq.setReqId(reqId);
         commitOffsetReq.setTopic(topicPartition.getTopic());
-        commitOffsetReq.setVgId(topicPartition.getVGroupId());
+        commitOffsetReq.setVgroupId(topicPartition.getVGroupId());
         commitOffsetReq.setOffset(offset);
         return new Request(ConsumerAction.COMMIT_OFFSET.getAction(), commitOffsetReq);
     }

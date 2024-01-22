@@ -7,9 +7,6 @@ import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.utils.SqlSyntaxValidator;
 import com.taosdata.jdbc.ws.entity.*;
-
-import java.io.FileWriter;
-import java.io.IOException;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -17,7 +14,7 @@ import java.sql.SQLException;
 import static com.taosdata.jdbc.utils.SqlSyntaxValidator.getDatabaseName;
 
 public class WSStatement extends AbstractStatement {
-    private final Transport transport;
+    protected Transport transport;
     private String database;
     private final Connection connection;
 
@@ -80,6 +77,7 @@ public class WSStatement extends AbstractStatement {
 
         if (null == reqId)
             reqId = ReqId.getReqID();
+
         Request request = RequestFactory.generateQuery(sql, reqId);
         Response response = transport.send(request);
 

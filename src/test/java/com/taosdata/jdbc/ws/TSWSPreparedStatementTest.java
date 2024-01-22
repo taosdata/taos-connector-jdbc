@@ -294,6 +294,7 @@ public class TSWSPreparedStatementTest {
             s.columnDataAddBatch();
             s.columnDataExecuteBatch();
             s.columnDataCloseBatch();
+            s.close();
 
             String sql = "select * from weather_test";
             PreparedStatement statement = conn.prepareStatement(sql);

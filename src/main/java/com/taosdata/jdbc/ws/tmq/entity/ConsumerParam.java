@@ -1,6 +1,8 @@
 package com.taosdata.jdbc.ws.tmq.entity;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.TSDBError;
+import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.tmq.TMQConstants;
 import com.taosdata.jdbc.utils.StringUtils;
@@ -14,7 +16,7 @@ public class ConsumerParam {
     private String clientId;
     private String offsetRest;
     private final boolean autoCommit;
-    private String autoCommitInterval;
+    private long autoCommitInterval;
     private String msgWithTableName;
 
     public ConsumerParam(Properties properties) throws SQLException {
@@ -35,7 +37,10 @@ public class ConsumerParam {
         groupId = properties.getProperty(TMQConstants.GROUP_ID);
         clientId = properties.getProperty(TMQConstants.CLIENT_ID);
         offsetRest = properties.getProperty(TMQConstants.AUTO_OFFSET_RESET);
-        autoCommitInterval = properties.getProperty(TMQConstants.AUTO_COMMIT_INTERVAL);
+        autoCommitInterval = Long.parseLong(properties.getProperty(TMQConstants.AUTO_COMMIT_INTERVAL, "5000"));
+        if (autoCommitInterval < 0){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TMQ_CONF_ERROR, "autoCommitInterval must be greater than 0");
+        }
         msgWithTableName = properties.getProperty(TMQConstants.MSG_WITH_TABLE_NAME);
     }
 
@@ -75,11 +80,11 @@ public class ConsumerParam {
         return autoCommit;
     }
 
-    public String getAutoCommitInterval() {
+    public long getAutoCommitInterval() {
         return autoCommitInterval;
     }
 
-    public void setAutoCommitInterval(String autoCommitInterval) {
+    public void setAutoCommitInterval(long autoCommitInterval) {
         this.autoCommitInterval = autoCommitInterval;
     }
 

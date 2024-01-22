@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.ws;
 
+import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
@@ -21,38 +22,37 @@ public class WSQueryBIMode {
     private static final String tableName = "wq";
     private Connection connection;
 
-    @Ignore
     @Description("query")
     @Test
-    public void queryBlock() throws InterruptedException {
-        int num = 10;
-        CountDownLatch latch = new CountDownLatch(num);
-        IntStream.range(0, num).parallel().forEach(x -> {
-            try (Statement statement = connection.createStatement()) {
-                ResultSet resultSet = statement.executeQuery("SELECT ts, `current`, voltage, phase, location\n" +
-                        "\t, groupid\n" +
-                        "FROM (SELECT phase, `current`, groupid, location, ts, voltage FROM power.bmeters\n" +
-                        ") SUB_QRY\n" +
-                        "LIMIT 200");
-                resultSet.next();
-                Assert.assertEquals(219, resultSet.getInt(3));
-            } catch (SQLException e) {
-                e.printStackTrace();
-            } finally {
-                latch.countDown();
-            }
-        });
-        latch.await();
+    @Ignore
+    public void queryTbname() throws InterruptedException {
+        try (Statement statement = connection.createStatement()) {
+            ResultSet resultSet = statement.executeQuery("SELECT * FROM ws_bi_mode.meters LIMIT 1");
+            resultSet.next();
+           Assert.assertEquals(7, resultSet.getMetaData().getColumnCount());
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
+
 
     @Before
     public void before() throws SQLException {
-        String url = "jdbc:TAOS-RS://192.168.1.98:7541/?user=root&password=taosdata&batchfetch=true&conmode=1";
-//        String url = "jdbc:TAOS-RS://192.168.1.98:7541/?user=root&password=taosdata";
-
-
+        String url = "jdbc:TAOS-RS://192.168.1.98:6041/?user=root&password=taosdata&batchfetch=true&conmode=1";
         Properties properties = new Properties();
         connection = DriverManager.getConnection(url, properties);
+        Statement statement = connection.createStatement();
+
+        statement.executeQuery("drop database if exists ws_bi_mode");
+        statement.executeQuery("create database ws_bi_mode keep 36500");
+        statement.executeQuery("use ws_bi_mode");
+
+        statement.executeQuery("CREATE STABLE meters (ts timestamp, current float, voltage int, phase float) TAGS (location binary(64), groupId int)");
+        statement.executeQuery("CREATE TABLE d1001 USING meters TAGS ('California.SanFrancisco', 2)");
+        statement.executeQuery("INSERT INTO d1001 USING meters TAGS ('California.SanFrancisco', 2) VALUES (NOW, 10.2, 219, 0.32)");
+
+        statement.close();
+
     }
 
     @After
