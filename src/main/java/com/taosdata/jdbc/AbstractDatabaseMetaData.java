@@ -643,8 +643,11 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
             }
             for (String db : dbs) {
 
-                if (types.length == 0){
-                    types = tableTypeSet.toArray(new String[0]);
+                Set<String> tempTableTypeSet;
+                if (types == null || types.length == 0) {
+                    tempTableTypeSet = tableTypeSet;
+                } else {
+                    tempTableTypeSet = new HashSet<>(Arrays.asList(types));
                 }
 
                 StringBuilder sql = new StringBuilder().append("show ").append(tableHelperStr).append(db).append(".tables ");
@@ -657,7 +660,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                     // vsql.append("like '").append(tableNamePattern).append("'");
                 }
 
-                if (tableTypeSet.contains("TABLE")) {
+                if (tempTableTypeSet.contains("TABLE")) {
                     try (ResultSet rs = stmt.executeQuery(sql.toString())) {
                         while (rs.next()) {
                             TSDBResultSetRowData rowData = new TSDBResultSetRowData(10);
@@ -669,8 +672,6 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                             rowDataList.add(rowData);
                         }
                     }
-                }
-                if (tableTypeSet.contains("STABLE")) {
                     try (ResultSet rs = stmt.executeQuery(Ssql.toString())) {
                         while (rs.next()) {
                             TSDBResultSetRowData rowData = new TSDBResultSetRowData(10);
@@ -683,7 +684,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                         }
                     }
                 }
-                if (tableTypeSet.contains("VIEW")) {
+                if (tempTableTypeSet.contains("VIEW")) {
                     try (ResultSet rs = stmt.executeQuery(vsql.toString())) {
                         while (rs.next()) {
                             TSDBResultSetRowData rowData = new TSDBResultSetRowData(10);
