@@ -13,6 +13,8 @@ import java.sql.*;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public abstract class AbstractDatabaseMetaData extends WrapperImpl implements DatabaseMetaData {
 
@@ -21,6 +23,8 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
     private static final String DRIVER_VERSION;
     private static final int DRIVER_MAJAR_VERSION;
     private static final int DRIVER_MINOR_VERSION;
+
+    private static final Set<String> tableTypeSet = Stream.of("TABLE", "STABLE", "VIEW").collect(Collectors.toSet());
 
     static {
         Properties props = System.getProperties();
@@ -638,32 +642,58 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                 return new EmptyResultSet();
             }
             for (String db : dbs) {
+
+                if (types.length == 0){
+                    types = tableTypeSet.toArray(new String[0]);
+                }
+
                 StringBuilder sql = new StringBuilder().append("show ").append(tableHelperStr).append(db).append(".tables ");
                 StringBuilder Ssql = new StringBuilder().append("show ").append(db).append(".stables ");
+                StringBuilder vsql = new StringBuilder().append("show ").append(db).append(".views ");
+
                 if (!StringUtils.isEmpty(tableNamePattern)) {
                     sql.append("like '").append(tableNamePattern).append("'");
                     Ssql.append("like '").append(tableNamePattern).append("'");
+                    // vsql.append("like '").append(tableNamePattern).append("'");
                 }
-                try (ResultSet tables = stmt.executeQuery(sql.toString())) {
-                    while (tables.next()) {
-                        TSDBResultSetRowData rowData = new TSDBResultSetRowData(10);
-                        rowData.setStringValue(1, db);                                     //TABLE_CAT
-                        rowData.setStringValue(2, null);                                 //TABLE_SCHEM
-                        rowData.setStringValue(3, tables.getString("table_name"));  //TABLE_NAME
-                        rowData.setStringValue(4, "TABLE");                              //TABLE_TYPE
-                        rowData.setStringValue(5, "");                                   //REMARKS
-                        rowDataList.add(rowData);
+
+                if (tableTypeSet.contains("TABLE")) {
+                    try (ResultSet rs = stmt.executeQuery(sql.toString())) {
+                        while (rs.next()) {
+                            TSDBResultSetRowData rowData = new TSDBResultSetRowData(10);
+                            rowData.setStringValue(1, db);                                     //TABLE_CAT
+                            rowData.setStringValue(2, null);                                 //TABLE_SCHEM
+                            rowData.setStringValue(3, rs.getString("table_name"));  //TABLE_NAME
+                            rowData.setStringValue(4, "TABLE");                              //TABLE_TYPE
+                            rowData.setStringValue(5, "");                                   //REMARKS
+                            rowDataList.add(rowData);
+                        }
                     }
                 }
-                try (ResultSet stables = stmt.executeQuery(Ssql.toString())) {
-                    while (stables.next()) {
-                        TSDBResultSetRowData rowData = new TSDBResultSetRowData(10);
-                        rowData.setStringValue(1, db);                                  //TABLE_CAT
-                        rowData.setStringValue(2, null);                              //TABLE_SCHEM
-                        rowData.setStringValue(3, stables.getString("stable_name"));    //TABLE_NAME
-                        rowData.setStringValue(4, "TABLE");                           //TABLE_TYPE
-                        rowData.setStringValue(5, "STABLE");                          //REMARKS
-                        rowDataList.add(rowData);
+                if (tableTypeSet.contains("STABLE")) {
+                    try (ResultSet rs = stmt.executeQuery(Ssql.toString())) {
+                        while (rs.next()) {
+                            TSDBResultSetRowData rowData = new TSDBResultSetRowData(10);
+                            rowData.setStringValue(1, db);                                  //TABLE_CAT
+                            rowData.setStringValue(2, null);                              //TABLE_SCHEM
+                            rowData.setStringValue(3, rs.getString("stable_name"));    //TABLE_NAME
+                            rowData.setStringValue(4, "TABLE");                           //TABLE_TYPE
+                            rowData.setStringValue(5, "STABLE");                          //REMARKS
+                            rowDataList.add(rowData);
+                        }
+                    }
+                }
+                if (tableTypeSet.contains("VIEW")) {
+                    try (ResultSet rs = stmt.executeQuery(vsql.toString())) {
+                        while (rs.next()) {
+                            TSDBResultSetRowData rowData = new TSDBResultSetRowData(10);
+                            rowData.setStringValue(1, db);                                  //TABLE_CAT
+                            rowData.setStringValue(2, null);                          //TABLE_SCHEM
+                            rowData.setStringValue(3, rs.getString("view_name"));    //TABLE_NAME
+                            rowData.setStringValue(4, "VIEW");                           //TABLE_TYPE
+                            rowData.setStringValue(5, "VIEW");                          //REMARKS
+                            rowDataList.add(rowData);
+                        }
                     }
                 }
             }
@@ -699,14 +729,13 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
 
         // set up rowDataList
         List<TSDBResultSetRowData> rowDataList = new ArrayList<>();
-        TSDBResultSetRowData rowData = new TSDBResultSetRowData(1);
-        rowData.setStringValue(1, "TABLE");
-        rowDataList.add(rowData);
-        rowData = new TSDBResultSetRowData(1);
-        rowData.setStringValue(1, "STABLE");
-        rowDataList.add(rowData);
-        resultSet.setRowDataList(rowDataList);
+        for (String tableType : tableTypeSet){
+            TSDBResultSetRowData rowData = new TSDBResultSetRowData(1);
+            rowData.setStringValue(1, tableType);
+            rowDataList.add(rowData);
+        }
 
+        resultSet.setRowDataList(rowDataList);
         return resultSet;
     }
 
