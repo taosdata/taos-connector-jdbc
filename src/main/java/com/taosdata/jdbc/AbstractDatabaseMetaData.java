@@ -169,19 +169,19 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
     }
 
     public String getNumericFunctions() throws SQLException {
-        return null;
+        return "ABS,ACOS,ASIN,ATAN,CEIL,COS,FLOOR,LOG,POW,ROUND,SIN,SQRT,TAN";
     }
 
     public String getStringFunctions() throws SQLException {
-        return null;
+        return "CHAR_LENGTH,CONCAT,CONCAT_WS,LENGTH,LOWER,LTRIM,RTRIM,SUBSTR,UPPER";
     }
 
     public String getSystemFunctions() throws SQLException {
-        return null;
+        return "DATABASE,CLIENT_VERSION,SERVER_VERSION,SERVER_STATUS,CURRENT_USER";
     }
 
     public String getTimeDateFunctions() throws SQLException {
-        return null;
+        return "NOW,TIMEDIFF,TIMETRUNCATE,TIMEZONE,TODAY";
     }
 
     public String getSearchStringEscape() throws SQLException {

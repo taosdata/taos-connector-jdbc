@@ -160,22 +160,22 @@ public class TSDBDatabaseMetaDataTest {
 
     @Test
     public void getNumericFunctions() throws SQLException {
-        Assert.assertEquals(null, metaData.getNumericFunctions());
+        Assert.assertEquals("ABS,ACOS,ASIN,ATAN,CEIL,COS,FLOOR,LOG,POW,ROUND,SIN,SQRT,TAN", metaData.getNumericFunctions());
     }
 
     @Test
     public void getStringFunctions() throws SQLException {
-        Assert.assertEquals(null, metaData.getStringFunctions());
+        Assert.assertEquals("CHAR_LENGTH,CONCAT,CONCAT_WS,LENGTH,LOWER,LTRIM,RTRIM,SUBSTR,UPPER", metaData.getStringFunctions());
     }
 
     @Test
     public void getSystemFunctions() throws SQLException {
-        Assert.assertEquals(null, metaData.getSystemFunctions());
+        Assert.assertEquals("DATABASE,CLIENT_VERSION,SERVER_VERSION,SERVER_STATUS,CURRENT_USER", metaData.getSystemFunctions());
     }
 
     @Test
     public void getTimeDateFunctions() throws SQLException {
-        Assert.assertEquals(null, metaData.getTimeDateFunctions());
+        Assert.assertEquals("NOW,TIMEDIFF,TIMETRUNCATE,TIMEZONE,TODAY", metaData.getTimeDateFunctions());
     }
 
     @Test
