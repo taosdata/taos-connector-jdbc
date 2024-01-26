@@ -152,7 +152,7 @@ public class RestfulDatabaseMetaDataTest {
 
     @Test
     public void getIdentifierQuoteString() throws SQLException {
-        Assert.assertEquals(" ", metaData.getIdentifierQuoteString());
+        Assert.assertEquals("`", metaData.getIdentifierQuoteString());
     }
 
     @Test

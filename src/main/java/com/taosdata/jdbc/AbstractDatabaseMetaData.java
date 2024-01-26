@@ -161,7 +161,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
     }
 
     public String getIdentifierQuoteString() throws SQLException {
-        return " ";
+        return "`";
     }
 
     public String getSQLKeywords() throws SQLException {
