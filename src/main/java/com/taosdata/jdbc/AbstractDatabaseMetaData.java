@@ -811,6 +811,31 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
         return result;
     }
 
+    private Map<String, Set<String>> getViewMate(Connection connection, String viewName, String db) throws SQLException {
+        Map<String, Set<String>> result = new HashMap<>();
+        String sql = "select view_name, db_name from information_schema.ins_views where 1 = 1 ";
+        if (viewName != null)
+            sql += " and view_name='" + viewName + "'";
+        if (db != null)
+            sql += " and db_name= '" + db + "'";
+        try (Statement stmt = connection.createStatement();
+             ResultSet databases = stmt.executeQuery(sql)) {
+            while (databases.next()) {
+                String name = databases.getString("view_name");
+                String dbName = databases.getString("db_name");
+                Set<String> views;
+                if (result.containsKey(dbName)) {
+                    views = result.get(dbName);
+                } else {
+                    views = new HashSet<>();
+                    result.put(dbName, views);
+                }
+                views.add(name);
+            }
+        }
+        return result;
+    }
+
     // super table
     private void show2RowData(ResultSet rs, List<TSDBResultSetRowData> rowDataList, String precision, String db, String tableName, String colName) throws SQLException {
         int rowIndex = 0;
@@ -1112,21 +1137,18 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                 }
             } else {
                 Map<String, Set<String>> sTableMate = getSTableMate(conn, tableNamePattern, catalog);
-                for (String db : sTableMate.keySet()) {
-                    for (String s : sTableMate.get(db)) {
-                        try (Statement stmt = conn.createStatement();
-                             ResultSet rs = stmt.executeQuery("describe " + catalog + "." + s)) {
-                            show2RowData(rs, rowDataList, precisions.get(catalog), catalog, s, columnNamePattern);
-                        }
-                    }
-                }
-
                 Map<String, Set<String>> tableMate = getTableMate(conn, tableNamePattern, catalog);
-                for (Map.Entry<String, Set<String>> dbs : tableMate.entrySet()) {
-                    for (String table : dbs.getValue()) {
-                        try (Statement stmt = conn.createStatement();
-                             ResultSet rs = stmt.executeQuery("describe " + catalog + "." + table)) {
-                            show2RowData(rs, rowDataList, precisions.get(catalog), catalog, table, columnNamePattern);
+                Map<String, Set<String>> viewMate = getViewMate(conn, tableNamePattern, catalog);
+
+                List<Map<String, Set<String>>> mapList = new ArrayList<>(Arrays.asList(sTableMate, tableMate, viewMate));
+
+                for (Map<String, Set<String>> tmpMap : mapList){
+                    for (Map.Entry<String, Set<String>> dbs : tmpMap.entrySet()) {
+                        for (String table : dbs.getValue()) {
+                            try (Statement stmt = conn.createStatement();
+                                 ResultSet rs = stmt.executeQuery("describe " + catalog + "." + table)) {
+                                show2RowData(rs, rowDataList, precisions.get(catalog), catalog, table, columnNamePattern);
+                            }
                         }
                     }
                 }
