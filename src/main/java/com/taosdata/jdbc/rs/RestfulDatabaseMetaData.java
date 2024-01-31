@@ -42,17 +42,6 @@ public class RestfulDatabaseMetaData extends AbstractDatabaseMetaData {
         if (connection == null || connection.isClosed()) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
         }
-
-        if (connection instanceof WSConnection) {
-            WSConnection wsConnection = (WSConnection) connection;
-            //BI模式，只有VIEW类型时，不返回任何结果
-            if (wsConnection.getParam().getConnectMode() == wsConnection.getParam().CONNECT_MODE_BI
-                    && types.length == 1
-                    && types[0].equals("VIEW")) {
-                return new EmptyResultSet();
-            }
-        }
-
         return super.getTables(catalog, schemaPattern, tableNamePattern, types, connection);
     }
 
