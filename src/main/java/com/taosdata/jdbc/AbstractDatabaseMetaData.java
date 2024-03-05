@@ -13,6 +13,8 @@ import java.sql.*;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public abstract class AbstractDatabaseMetaData extends WrapperImpl implements DatabaseMetaData {
 
@@ -21,6 +23,8 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
     private static final String DRIVER_VERSION;
     private static final int DRIVER_MAJAR_VERSION;
     private static final int DRIVER_MINOR_VERSION;
+
+    private static final Set<String> tableTypeSet = Stream.of("TABLE", "STABLE", "VIEW").collect(Collectors.toSet());
 
     static {
         Properties props = System.getProperties();
@@ -638,32 +642,59 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                 return new EmptyResultSet();
             }
             for (String db : dbs) {
+
+                Set<String> tempTableTypeSet;
+                if (types == null || types.length == 0) {
+                    tempTableTypeSet = tableTypeSet;
+                } else {
+                    tempTableTypeSet = new HashSet<>(Arrays.asList(types));
+                }
+
                 StringBuilder sql = new StringBuilder().append("show ").append(tableHelperStr).append(db).append(".tables ");
                 StringBuilder Ssql = new StringBuilder().append("show ").append(db).append(".stables ");
+                StringBuilder vsql = new StringBuilder().append("show ").append(db).append(".views ");
+
                 if (!StringUtils.isEmpty(tableNamePattern)) {
                     sql.append("like '").append(tableNamePattern).append("'");
                     Ssql.append("like '").append(tableNamePattern).append("'");
+                    // vsql.append("like '").append(tableNamePattern).append("'");
                 }
-                try (ResultSet tables = stmt.executeQuery(sql.toString())) {
-                    while (tables.next()) {
-                        TSDBResultSetRowData rowData = new TSDBResultSetRowData(10);
-                        rowData.setStringValue(1, db);                                     //TABLE_CAT
-                        rowData.setStringValue(2, null);                                 //TABLE_SCHEM
-                        rowData.setStringValue(3, tables.getString("table_name"));  //TABLE_NAME
-                        rowData.setStringValue(4, "TABLE");                              //TABLE_TYPE
-                        rowData.setStringValue(5, "");                                   //REMARKS
-                        rowDataList.add(rowData);
+
+                if (tempTableTypeSet.contains("TABLE")) {
+                    try (ResultSet rs = stmt.executeQuery(sql.toString())) {
+                        while (rs.next()) {
+                            TSDBResultSetRowData rowData = new TSDBResultSetRowData(10);
+                            rowData.setStringValue(1, db);                                     //TABLE_CAT
+                            rowData.setStringValue(2, null);                                 //TABLE_SCHEM
+                            rowData.setStringValue(3, rs.getString("table_name"));  //TABLE_NAME
+                            rowData.setStringValue(4, "TABLE");                              //TABLE_TYPE
+                            rowData.setStringValue(5, "");                                   //REMARKS
+                            rowDataList.add(rowData);
+                        }
+                    }
+                    try (ResultSet rs = stmt.executeQuery(Ssql.toString())) {
+                        while (rs.next()) {
+                            TSDBResultSetRowData rowData = new TSDBResultSetRowData(10);
+                            rowData.setStringValue(1, db);                                  //TABLE_CAT
+                            rowData.setStringValue(2, null);                              //TABLE_SCHEM
+                            rowData.setStringValue(3, rs.getString("stable_name"));    //TABLE_NAME
+                            rowData.setStringValue(4, "TABLE");                           //TABLE_TYPE
+                            rowData.setStringValue(5, "STABLE");                          //REMARKS
+                            rowDataList.add(rowData);
+                        }
                     }
                 }
-                try (ResultSet stables = stmt.executeQuery(Ssql.toString())) {
-                    while (stables.next()) {
-                        TSDBResultSetRowData rowData = new TSDBResultSetRowData(10);
-                        rowData.setStringValue(1, db);                                  //TABLE_CAT
-                        rowData.setStringValue(2, null);                              //TABLE_SCHEM
-                        rowData.setStringValue(3, stables.getString("stable_name"));    //TABLE_NAME
-                        rowData.setStringValue(4, "TABLE");                           //TABLE_TYPE
-                        rowData.setStringValue(5, "STABLE");                          //REMARKS
-                        rowDataList.add(rowData);
+                if (tempTableTypeSet.contains("VIEW")) {
+                    try (ResultSet rs = stmt.executeQuery(vsql.toString())) {
+                        while (rs.next()) {
+                            TSDBResultSetRowData rowData = new TSDBResultSetRowData(10);
+                            rowData.setStringValue(1, db);                                  //TABLE_CAT
+                            rowData.setStringValue(2, null);                          //TABLE_SCHEM
+                            rowData.setStringValue(3, rs.getString("view_name"));    //TABLE_NAME
+                            rowData.setStringValue(4, "VIEW");                           //TABLE_TYPE
+                            rowData.setStringValue(5, "VIEW");                          //REMARKS
+                            rowDataList.add(rowData);
+                        }
                     }
                 }
             }
@@ -699,14 +730,13 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
 
         // set up rowDataList
         List<TSDBResultSetRowData> rowDataList = new ArrayList<>();
-        TSDBResultSetRowData rowData = new TSDBResultSetRowData(1);
-        rowData.setStringValue(1, "TABLE");
-        rowDataList.add(rowData);
-        rowData = new TSDBResultSetRowData(1);
-        rowData.setStringValue(1, "STABLE");
-        rowDataList.add(rowData);
-        resultSet.setRowDataList(rowDataList);
+        for (String tableType : tableTypeSet){
+            TSDBResultSetRowData rowData = new TSDBResultSetRowData(1);
+            rowData.setStringValue(1, tableType);
+            rowDataList.add(rowData);
+        }
 
+        resultSet.setRowDataList(rowDataList);
         return resultSet;
     }
 
@@ -776,6 +806,31 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                     set.add(name);
                     result.put(dbName, set);
                 }
+            }
+        }
+        return result;
+    }
+
+    private Map<String, Set<String>> getViewMate(Connection connection, String viewName, String db) throws SQLException {
+        Map<String, Set<String>> result = new HashMap<>();
+        String sql = "select view_name, db_name from information_schema.ins_views where 1 = 1 ";
+        if (viewName != null)
+            sql += " and view_name='" + viewName + "'";
+        if (db != null)
+            sql += " and db_name= '" + db + "'";
+        try (Statement stmt = connection.createStatement();
+             ResultSet databases = stmt.executeQuery(sql)) {
+            while (databases.next()) {
+                String name = databases.getString("view_name");
+                String dbName = databases.getString("db_name");
+                Set<String> views;
+                if (result.containsKey(dbName)) {
+                    views = result.get(dbName);
+                } else {
+                    views = new HashSet<>();
+                    result.put(dbName, views);
+                }
+                views.add(name);
             }
         }
         return result;
@@ -1082,21 +1137,18 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                 }
             } else {
                 Map<String, Set<String>> sTableMate = getSTableMate(conn, tableNamePattern, catalog);
-                for (String db : sTableMate.keySet()) {
-                    for (String s : sTableMate.get(db)) {
-                        try (Statement stmt = conn.createStatement();
-                             ResultSet rs = stmt.executeQuery("describe " + catalog + "." + s)) {
-                            show2RowData(rs, rowDataList, precisions.get(catalog), catalog, s, columnNamePattern);
-                        }
-                    }
-                }
-
                 Map<String, Set<String>> tableMate = getTableMate(conn, tableNamePattern, catalog);
-                for (Map.Entry<String, Set<String>> dbs : tableMate.entrySet()) {
-                    for (String table : dbs.getValue()) {
-                        try (Statement stmt = conn.createStatement();
-                             ResultSet rs = stmt.executeQuery("describe " + catalog + "." + table)) {
-                            show2RowData(rs, rowDataList, precisions.get(catalog), catalog, table, columnNamePattern);
+                Map<String, Set<String>> viewMate = getViewMate(conn, tableNamePattern, catalog);
+
+                List<Map<String, Set<String>>> mapList = new ArrayList<>(Arrays.asList(sTableMate, tableMate, viewMate));
+
+                for (Map<String, Set<String>> tmpMap : mapList){
+                    for (Map.Entry<String, Set<String>> dbs : tmpMap.entrySet()) {
+                        for (String table : dbs.getValue()) {
+                            try (Statement stmt = conn.createStatement();
+                                 ResultSet rs = stmt.executeQuery("describe " + catalog + "." + table)) {
+                                show2RowData(rs, rowDataList, precisions.get(catalog), catalog, table, columnNamePattern);
+                            }
                         }
                     }
                 }
