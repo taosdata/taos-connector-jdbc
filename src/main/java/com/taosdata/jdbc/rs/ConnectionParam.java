@@ -25,6 +25,7 @@ public class ConnectionParam {
     private int connectTimeout;
     private int requestTimeout;
     private int connectMode;
+    private boolean enableCompression;
 
     static public final int CONNECT_MODE_BI = 1;
 
@@ -41,6 +42,7 @@ public class ConnectionParam {
         this.connectTimeout = builder.connectTimeout;
         this.requestTimeout = builder.requestTimeout;
         this.connectMode = builder.connectMode;
+        this.enableCompression = builder.enableCompression;
     }
 
     public String getHost() {
@@ -139,6 +141,13 @@ public class ConnectionParam {
         this.connectMode = connectMode;
     }
 
+    public boolean isEnableCompression() {
+        return enableCompression;
+    }
+    public void setEnableCompression(boolean enableCompression) {
+        this.enableCompression = enableCompression;
+    }
+
     public static ConnectionParam getParam(Properties properties) throws SQLException {
         String host = properties.getProperty(TSDBDriver.PROPERTY_KEY_HOST);
         String port = properties.getProperty(TSDBDriver.PROPERTY_KEY_PORT);
@@ -191,9 +200,20 @@ public class ConnectionParam {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "unsupported connect mode");
         }
 
-        return new ConnectionParam.Builder(host, port).setDatabase(database).setCloudToken(cloudToken)
-                .setUserAndPassword(user, password).setTimeZone(tz).setUseSsl(useSsl).setMaxRequest(maxRequest)
-                .setConnectionTimeout(connectTimeout).setRequestTimeout(requestTimeout).setConnectMode(connectMode).build();
+        boolean enableCompression = Boolean.parseBoolean(properties.getProperty(TSDBDriver.PROPERTY_KEY_ENABLE_COMPRESSION,"false"));
+
+        return new ConnectionParam.Builder(host, port)
+                .setDatabase(database)
+                .setCloudToken(cloudToken)
+                .setUserAndPassword(user, password)
+                .setTimeZone(tz)
+                .setUseSsl(useSsl)
+                .setMaxRequest(maxRequest)
+                .setConnectionTimeout(connectTimeout)
+                .setRequestTimeout(requestTimeout)
+                .setConnectMode(connectMode)
+                .setEnableCompression(enableCompression)
+                .build();
     }
 
     public static class Builder {
@@ -209,6 +229,8 @@ public class ConnectionParam {
         private int connectTimeout;
         private int requestTimeout;
         private int connectMode;
+
+        private boolean enableCompression;
 
         public Builder(String host, String port) {
             this.host = host;
@@ -260,6 +282,10 @@ public class ConnectionParam {
             return this;
         }
 
+        public Builder setEnableCompression(boolean enableCompression) {
+            this.enableCompression = enableCompression;
+            return this;
+        }
         public ConnectionParam build() {
             return new ConnectionParam(this);
         }

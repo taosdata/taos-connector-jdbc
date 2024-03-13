@@ -57,7 +57,7 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
      * @param serverUri connection url
      */
     public WSClient(URI serverUri, Transport transport, ConnectionParam connectionParam, WSFunction function) {
-        super(serverUri, perMessageDeflateDraft, new HashMap<>());
+        super(serverUri, connectionParam.isEnableCompression() ? perMessageDeflateDraft : new Draft_6455(), new HashMap<>());
         this.transport = transport;
         this.connectionParam = connectionParam;
         this.wsFunction = function;

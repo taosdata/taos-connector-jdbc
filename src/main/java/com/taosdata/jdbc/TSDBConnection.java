@@ -1,5 +1,24 @@
 package com.taosdata.jdbc;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
+import com.taosdata.jdbc.enums.ConnectionType;
+import com.taosdata.jdbc.enums.SchemalessProtocolType;
+import com.taosdata.jdbc.enums.SchemalessTimestampType;
+import com.taosdata.jdbc.enums.WSFunction;
+import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.utils.HttpClientPoolUtil;
+import com.taosdata.jdbc.ws.FutureResponse;
+import com.taosdata.jdbc.ws.InFlightRequest;
+import com.taosdata.jdbc.ws.Transport;
+import com.taosdata.jdbc.ws.entity.Code;
+import com.taosdata.jdbc.ws.entity.Request;
+import com.taosdata.jdbc.ws.entity.Response;
+import com.taosdata.jdbc.ws.schemaless.CommonResp;
+import com.taosdata.jdbc.ws.schemaless.ConnReq;
+import com.taosdata.jdbc.ws.schemaless.InsertReq;
+import com.taosdata.jdbc.ws.schemaless.SchemalessAction;
+
 import java.sql.*;
 import java.time.ZoneId;
 import java.util.*;
@@ -92,4 +111,28 @@ public class TSDBConnection extends AbstractConnection {
         return this.databaseMetaData;
     }
 
+    @Override
+    public void write(String[] lines, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, Integer ttl, Long reqId) throws SQLException {
+        if (null == ttl && null == reqId) {
+            connector.insertLines(lines, protocolType, timestampType);
+        } else if (null == reqId) {
+            connector.insertLinesWithTtl(lines, protocolType, timestampType, ttl);
+        } else if (null == ttl) {
+            connector.insertLinesWithReqId(lines, protocolType, timestampType, reqId);
+        } else {
+            connector.insertLinesWithTtlAndReqId(lines, protocolType, timestampType, ttl, reqId);
+        }
+    }
+    @Override
+    public int writeRaw(String line, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, Integer ttl, Long reqId) throws SQLException {
+        if (null == ttl && null == reqId) {
+            return connector.insertRaw(line, protocolType, timestampType);
+        } else if (null == reqId) {
+            return connector.insertRawWithTtl(line, protocolType, timestampType, ttl);
+        } else if (null == ttl) {
+            return connector.insertRawWithReqId(line, protocolType, timestampType, reqId);
+        } else {
+            return connector.insertRawWithTtlAndReqId(line, protocolType, timestampType, ttl, reqId);
+        }
+    }
 }

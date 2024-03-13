@@ -657,7 +657,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                 if (!StringUtils.isEmpty(tableNamePattern)) {
                     sql.append("like '").append(tableNamePattern).append("'");
                     Ssql.append("like '").append(tableNamePattern).append("'");
-                    // vsql.append("like '").append(tableNamePattern).append("'");
+                    vsql.append("like '").append(tableNamePattern).append("'");
                 }
 
                 if (tempTableTypeSet.contains("TABLE")) {
