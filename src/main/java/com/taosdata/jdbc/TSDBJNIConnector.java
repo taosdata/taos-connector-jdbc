@@ -5,6 +5,7 @@ import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.utils.TaosInfo;
 
+import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.sql.SQLException;
@@ -32,7 +33,30 @@ public class TSDBJNIConnector {
     private int affectedRows = -1;
 
     static {
-        System.loadLibrary("taos");
+        boolean loaded = false;
+        try {
+            String lp = System.getProperty("taos.library.path");
+
+            if (lp == null) {
+                System.getenv("TAOS_LIBRARY_PATH");
+            }
+
+            if (lp != null) {
+                File lib = new File(lp);
+                if (lib.exists()
+                    && lib.isFile()
+                    && lib.canRead()) {
+                    System.load(lp);
+                    loaded = true;
+                }
+            }
+        } finally {
+            if (!loaded) {
+                // todo print warning?
+                // fallback to system library
+                System.loadLibrary("taos");
+            }
+        }
     }
 
     /***********************************************************************/
