@@ -1,27 +1,24 @@
 package com.taosdata.jdbc.ws;
 
-import com.taosdata.jdbc.SchemalessWriter;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
-import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
-import com.taosdata.jdbc.tmq.*;
+import com.taosdata.jdbc.tmq.ConsumerRecord;
+import com.taosdata.jdbc.tmq.ConsumerRecords;
+import com.taosdata.jdbc.tmq.TMQConstants;
+import com.taosdata.jdbc.tmq.TaosConsumer;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.*;
 import org.junit.runner.RunWith;
 
-import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.IntStream;
 
 @RunWith(CatalogRunner.class)
 @FixMethodOrder

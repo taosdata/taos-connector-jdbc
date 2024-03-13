@@ -1,10 +1,8 @@
 package com.taosdata.jdbc.rs;
 
 import com.taosdata.jdbc.AbstractDatabaseMetaData;
-import com.taosdata.jdbc.EmptyResultSet;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
-import com.taosdata.jdbc.ws.WSConnection;
 
 import java.sql.Connection;
 import java.sql.ResultSet;

@@ -5,7 +5,6 @@ import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.ws.WSConnection;
 
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;

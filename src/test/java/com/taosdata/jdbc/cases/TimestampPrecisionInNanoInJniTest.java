@@ -6,9 +6,9 @@ import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.*;
 
 import java.sql.*;
-import java.util.Properties;
 import java.text.Format;
 import java.text.SimpleDateFormat;
+import java.util.Properties;
 
 public class TimestampPrecisionInNanoInJniTest {
 

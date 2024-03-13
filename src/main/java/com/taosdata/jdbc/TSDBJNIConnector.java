@@ -10,7 +10,6 @@ import java.nio.ByteBuffer;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.time.ZoneId;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 import java.util.TimeZone;

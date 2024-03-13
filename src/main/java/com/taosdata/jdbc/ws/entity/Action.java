@@ -1,6 +1,5 @@
 package com.taosdata.jdbc.ws.entity;
 
-import com.taosdata.jdbc.ws.schemaless.CommonResp;
 import com.taosdata.jdbc.ws.stmt.entity.ExecResp;
 import com.taosdata.jdbc.ws.stmt.entity.StmtResp;
 

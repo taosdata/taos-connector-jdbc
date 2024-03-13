@@ -1,14 +1,10 @@
 package com.taosdata.jdbc.ws;
 
 import com.google.common.base.Strings;
-import com.taosdata.jdbc.TSDBError;
-import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.rs.ConnectionParam;
-import com.taosdata.jdbc.rs.RestfulDriver;
 import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.ws.entity.*;
-import org.java_websocket.WebSocketImpl;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.drafts.Draft;
 import org.java_websocket.drafts.Draft_6455;
@@ -16,7 +12,6 @@ import org.java_websocket.extensions.permessage_deflate.PerMessageDeflateExtensi
 import org.java_websocket.handshake.ServerHandshake;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sun.rmi.runtime.Log;
 
 import java.net.URI;
 import java.net.URISyntaxException;

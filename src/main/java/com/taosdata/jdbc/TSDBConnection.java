@@ -1,27 +1,13 @@
 package com.taosdata.jdbc;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
-import com.taosdata.jdbc.enums.ConnectionType;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
-import com.taosdata.jdbc.enums.WSFunction;
-import com.taosdata.jdbc.rs.ConnectionParam;
-import com.taosdata.jdbc.utils.HttpClientPoolUtil;
-import com.taosdata.jdbc.ws.FutureResponse;
-import com.taosdata.jdbc.ws.InFlightRequest;
-import com.taosdata.jdbc.ws.Transport;
-import com.taosdata.jdbc.ws.entity.Code;
-import com.taosdata.jdbc.ws.entity.Request;
-import com.taosdata.jdbc.ws.entity.Response;
-import com.taosdata.jdbc.ws.schemaless.CommonResp;
-import com.taosdata.jdbc.ws.schemaless.ConnReq;
-import com.taosdata.jdbc.ws.schemaless.InsertReq;
-import com.taosdata.jdbc.ws.schemaless.SchemalessAction;
 
-import java.sql.*;
-import java.time.ZoneId;
-import java.util.*;
+import java.sql.DatabaseMetaData;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.Properties;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class TSDBConnection extends AbstractConnection {

@@ -2,11 +2,6 @@ package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
-import com.taosdata.jdbc.ws.entity.Code;
-import com.taosdata.jdbc.ws.entity.Request;
-import com.taosdata.jdbc.ws.schemaless.CommonResp;
-import com.taosdata.jdbc.ws.schemaless.InsertReq;
-import com.taosdata.jdbc.ws.schemaless.SchemalessAction;
 
 import java.sql.*;
 import java.util.*;
