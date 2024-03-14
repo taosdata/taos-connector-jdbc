@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.ws;
 
+import com.taosdata.jdbc.AbstractConnection;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
@@ -71,7 +72,6 @@ public class WSCompressTest {
 
     @Description("test schemaless insert use compress")
     @Test
-    @Ignore
     public void schemaless() throws SQLException {
         String lineDemo = "meters,groupid=2,location=California.SanFrancisco current=10.3000002f64,voltage=219i32,phase=0.31f64 1710128243097\n";
         lineDemo += "meters,groupid=2,location=California.SanFrancisco current=10.3000002f64,voltage=219i32,phase=0.31f64 1710128243100\n";
@@ -104,7 +104,7 @@ public class WSCompressTest {
         lineDemo += "meters,groupid=2,location=California.SanFrancisco current=10.3000002f64,voltage=219i32,phase=0.31f64 1710128243127\n";
         lineDemo += "meters,groupid=2,location=California.SanFrancisco current=10.4000002f64,voltage=219i32,phase=0.31f64 1710128243128\n";
 
-        ((WSConnection)connection).write(lineDemo, SchemalessProtocolType.LINE, SchemalessTimestampType.MILLI_SECONDS);
+        ((AbstractConnection)connection).write(lineDemo, SchemalessProtocolType.LINE, SchemalessTimestampType.MILLI_SECONDS);
 
         try (Statement statement = connection.createStatement()) {
 
@@ -125,7 +125,7 @@ public class WSCompressTest {
 
         Properties properties = new Properties();
         properties.setProperty("td.connect.type", "ws");
-        properties.setProperty("bootstrap.servers", "vm98:6041");
+        properties.setProperty("bootstrap.servers", "127.0.0.1:6041");
         properties.setProperty(TMQConstants.CONNECT_USER, "root");
         properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");

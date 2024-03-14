@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.ws.entity;
 
+import com.taosdata.jdbc.ws.schemaless.CommonResp;
 import com.taosdata.jdbc.ws.stmt.entity.ExecResp;
 import com.taosdata.jdbc.ws.stmt.entity.StmtResp;
 
@@ -28,6 +29,9 @@ public enum Action {
     EXEC("exec", ExecResp.class),
     // response means nothing
     CLOSE("close", StmtResp.class),
+
+    //schemaless
+    INSERT("insert", CommonResp.class),
     ;
     ;
     private final String action;
