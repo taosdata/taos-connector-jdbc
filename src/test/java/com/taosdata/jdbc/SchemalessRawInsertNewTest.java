@@ -18,7 +18,7 @@ import java.sql.*;
 
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "Schemaless", author = "huolibo", version = "2.0.36")
-public class SchemalessRawInsertTest {
+public class SchemalessRawInsertNewTest {
     private static String host = "127.0.0.1";
     private final String dbname = "test_schemaless_insert";
     private Connection conn;
@@ -37,8 +37,7 @@ public class SchemalessRawInsertTest {
                 "measurement,host=host1 field1=2i,field2=2.0 1577837500000\n" +
                 "measurement,host=host1 field1=2i,field2=2.0 1577837600000";
         // when
-        SchemalessWriter writer = new SchemalessWriter(conn);
-        int num = writer.writeRaw(line, SchemalessProtocolType.LINE, SchemalessTimestampType.MILLI_SECONDS);
+        int num = ((AbstractConnection)conn).writeRaw(line, SchemalessProtocolType.LINE, SchemalessTimestampType.MILLI_SECONDS);
         Assert.assertEquals(4, num);
         // then
         Statement statement = conn.createStatement();
@@ -72,8 +71,7 @@ public class SchemalessRawInsertTest {
 
         // when
 
-        SchemalessWriter writer = new SchemalessWriter(conn);
-        writer.writeRaw(lines, SchemalessProtocolType.TELNET, SchemalessTimestampType.MILLI_SECONDS);
+        ((AbstractConnection)conn).writeRaw(lines, SchemalessProtocolType.TELNET, SchemalessTimestampType.MILLI_SECONDS);
 
         // then
         Statement statement = conn.createStatement();
@@ -108,8 +106,7 @@ public class SchemalessRawInsertTest {
                 "\"groupid\": 1 } }]";
 
         // when
-        SchemalessWriter writer = new SchemalessWriter(conn);
-        writer.writeRaw(json, SchemalessProtocolType.JSON, SchemalessTimestampType.MILLI_SECONDS);
+        ((AbstractConnection)conn).writeRaw(json, SchemalessProtocolType.JSON, SchemalessTimestampType.MILLI_SECONDS);
 
         // then
         Statement statement = conn.createStatement();

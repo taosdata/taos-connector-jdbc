@@ -77,7 +77,6 @@ public class TMQConstants {
      * connect type websocket or jni, default is jni
      */
     public static final String CONNECT_TYPE = "td.connect.type";
-
     /**
      * Key used to retrieve the token value from the properties instance passed to
      * the driver.

@@ -1,6 +1,5 @@
 package com.taosdata.jdbc.ws;
 
-import com.alibaba.fastjson.JSON;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.SpecifyAddress;

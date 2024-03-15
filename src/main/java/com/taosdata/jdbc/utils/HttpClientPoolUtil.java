@@ -12,6 +12,7 @@ import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.*;
 import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.conn.ConnectionKeepAliveStrategy;
+import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
@@ -21,14 +22,17 @@ import org.apache.http.protocol.HTTP;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.util.EntityUtils;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.Properties;
+import java.util.zip.GZIPOutputStream;
 
 public class HttpClientPoolUtil {
 
     private static final String DEFAULT_CONTENT_TYPE = "application/json";
+    private static final String DEFAULT_ACCEPT_ENCODING = "gzip, deflate";
     private static final int DEFAULT_MAX_RETRY_COUNT = 5;
 
     public static final String DEFAULT_HTTP_KEEP_ALIVE = "true";
@@ -57,12 +61,14 @@ public class HttpClientPoolUtil {
     private static volatile CloseableHttpClient httpClient;
     private static int connectTimeout = 0;
     private static int socketTimeout = 0;
+    private static boolean enableCompress = false;
 
     public static void init(Properties props) {
         int poolSize = Integer.parseInt(props.getProperty(TSDBDriver.HTTP_POOL_SIZE, HttpClientPoolUtil.DEFAULT_MAX_PER_ROUTE));
         boolean keepAlive = Boolean.parseBoolean(props.getProperty(TSDBDriver.HTTP_KEEP_ALIVE, HttpClientPoolUtil.DEFAULT_HTTP_KEEP_ALIVE));
         connectTimeout = Integer.parseInt(props.getProperty(TSDBDriver.HTTP_CONNECT_TIMEOUT, HttpClientPoolUtil.DEFAULT_CONNECT_TIMEOUT));
         socketTimeout = Integer.parseInt(props.getProperty(TSDBDriver.HTTP_SOCKET_TIMEOUT, HttpClientPoolUtil.DEFAULT_SOCKET_TIMEOUT));
+        enableCompress = Boolean.parseBoolean(props.getProperty(TSDBDriver.PROPERTY_KEY_ENABLE_COMPRESSION, "false"));
         if (httpClient == null) {
             synchronized (HttpClientPoolUtil.class) {
                 if (httpClient == null) {
@@ -124,7 +130,27 @@ public class HttpClientPoolUtil {
         if (auth != null) {
             method.setHeader("Authorization", auth);
         }
-        method.setEntity(new StringEntity(data, StandardCharsets.UTF_8));
+
+        if (enableCompress){
+            method.addHeader("Content-Encoding", "gzip");
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            GZIPOutputStream gos;
+            try {
+                gos = new GZIPOutputStream(baos);
+                gos.write(data.getBytes(StandardCharsets.UTF_8));
+                gos.close();
+            } catch (IOException e) {
+                throw new SQLException("gzip io error");
+            }
+
+            byte[] compressedData = baos.toByteArray();
+            // 创建带有压缩数据的 HttpEntity
+            HttpEntity entity = new ByteArrayEntity(compressedData);
+            method.setEntity(entity);
+        } else {
+            method.setEntity(new StringEntity(data, StandardCharsets.UTF_8));
+        }
+
         HttpContext context = HttpClientContext.create();
 
         HttpEntity httpEntity = null;
@@ -200,6 +226,8 @@ public class HttpClientPoolUtil {
         }
         method.addHeader(HTTP.CONTENT_TYPE, DEFAULT_CONTENT_TYPE);
         method.addHeader("Accept", DEFAULT_CONTENT_TYPE);
+        method.addHeader("Accept-Encoding", DEFAULT_ACCEPT_ENCODING);
+
         method.setConfig(requestConfig);
         return method;
     }

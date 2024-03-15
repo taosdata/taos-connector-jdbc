@@ -1,48 +1,58 @@
-package com.taosdata.jdbc;
+package com.taosdata.jdbc.ws;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
-import com.taosdata.jdbc.annotation.CatalogRunner;
-import com.taosdata.jdbc.annotation.Description;
-import com.taosdata.jdbc.annotation.TestTarget;
+import com.taosdata.jdbc.AbstractConnection;
+import com.taosdata.jdbc.SchemalessWriter;
+import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.utils.SpecifyAddress;
-import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
-@RunWith(CatalogRunner.class)
-@TestTarget(alias = "Schemaless", author = "huolibo", version = "2.0.36")
-public class SchemalessInsertTest {
-    private static String host = "127.0.0.1";
-    private final String dbname = "test_schemaless_insert";
-    private Connection conn;
+public class SchemalessNewTest {
+    private static final String host = "127.0.0.1";
+    private static final String dbName = "test_schemaless_ws";
+    private static final String dbName_ttl = "test_schemaless_ws_ttl";
+    public static Connection connection;
 
-    /**
-     * schemaless insert compatible with influxdb
-     *
-     * @throws SQLException execute error
-     */
+    @Before
+    public void before() throws SQLException {
+        String url = SpecifyAddress.getInstance().getJniUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+        }
+        Properties properties = new Properties();
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
+
+        connection = DriverManager.getConnection(url, properties);
+        try (Statement statement = connection.createStatement()) {
+            statement.executeUpdate("drop database if exists " + dbName);
+            statement.executeUpdate("create database " + dbName);
+            statement.executeUpdate("use " + dbName);
+        }
+    }
+
     @Test
-    @Description("line insert")
-    public void schemalessInsert() throws SQLException {
+    public void testLine() throws SQLException {
         // given
         String[] lines = new String[]{
                 "st,t1=3i64,t2=4f64,t3=\"t3\" c1=3i64,c3=L\"passit\",c2=false,c4=4f64 1626006833639000000",
                 "st,t1=4i64,t3=\"t4\",t2=5f64,t4=5f64 c1=3i64,c3=L\"passitagin\",c2=true,c4=5f64,c5=5f64 1626006833640000000"};
-        // when
-        SchemalessWriter writer = new SchemalessWriter(conn);
-        writer.write(lines, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS);
 
+        // when
+        ((AbstractConnection)connection).write(lines, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS);
         // then
-        Statement statement = conn.createStatement();
+        Statement statement = connection.createStatement();
+        statement.executeUpdate("use " + dbName);
         ResultSet rs = statement.executeQuery("show tables");
         Assert.assertNotNull(rs);
         ResultSetMetaData metaData = rs.getMetaData();
@@ -56,13 +66,19 @@ public class SchemalessInsertTest {
         statement.close();
     }
 
-    /**
-     * telnet insert compatible with opentsdb
-     *
-     * @throws SQLException execute error
-     */
     @Test
-    @Description("telnet insert")
+    public void testLineTtl() throws SQLException {
+        // given
+        String[] lines = new String[]{
+                "st,t1=3i64,t2=4f64,t3=\"t3\" c1=3i64,c3=L\"passit\",c2=false,c4=4f64 1626006833639000000",
+                "st,t1=4i64,t3=\"t4\",t2=5f64,t4=5f64 c1=3i64,c3=L\"passitagin\",c2=true,c4=5f64,c5=5f64 1626006833640000000"};
+
+        // when
+        ((AbstractConnection)connection).write(lines, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS, 1000, 1L);
+    }
+
+
+    @Test
     public void telnetInsert() throws SQLException {
         // given
         String[] lines = new String[]{
@@ -73,11 +89,11 @@ public class SchemalessInsertTest {
 
         // when
 
-        SchemalessWriter writer = new SchemalessWriter(conn);
-        writer.write(lines, SchemalessProtocolType.TELNET, SchemalessTimestampType.NOT_CONFIGURED);
+        ((AbstractConnection)connection).write(lines, SchemalessProtocolType.TELNET, SchemalessTimestampType.MILLI_SECONDS);
 
         // then
-        Statement statement = conn.createStatement();
+        Statement statement = connection.createStatement();
+        statement.executeUpdate("use " + dbName);
         ResultSet rs = statement.executeQuery("show tables");
         Assert.assertNotNull(rs);
         ResultSetMetaData metaData = rs.getMetaData();
@@ -91,13 +107,7 @@ public class SchemalessInsertTest {
         statement.close();
     }
 
-    /**
-     * json insert compatible with opentsdb json format
-     *
-     * @throws SQLException execute error
-     */
     @Test
-    @Description("json insert")
     public void jsonInsert() throws SQLException {
         // given
         String json = "[\n" +
@@ -124,11 +134,11 @@ public class SchemalessInsertTest {
                 "]";
 
         // when
-        SchemalessWriter writer = new SchemalessWriter(conn);
-        writer.write(json, SchemalessProtocolType.JSON, SchemalessTimestampType.NOT_CONFIGURED);
+        ((AbstractConnection)connection).write(json, SchemalessProtocolType.JSON, SchemalessTimestampType.MILLI_SECONDS);
 
         // then
-        Statement statement = conn.createStatement();
+        Statement statement = connection.createStatement();
+        statement.executeUpdate("use " + dbName);
         ResultSet rs = statement.executeQuery("show tables");
         Assert.assertNotNull(rs);
         ResultSetMetaData metaData = rs.getMetaData();
@@ -152,11 +162,11 @@ public class SchemalessInsertTest {
         list.add("stb0_2 1626006833 4 host=host0 interface=eth0 id=\"special_name\"");
         // when
 
-        SchemalessWriter writer = new SchemalessWriter(conn);
-        writer.write(list, SchemalessProtocolType.TELNET, SchemalessTimestampType.NOT_CONFIGURED);
+        ((AbstractConnection)connection).write(list, SchemalessProtocolType.TELNET, SchemalessTimestampType.MILLI_SECONDS);
 
         // then
-        Statement statement = conn.createStatement();
+        Statement statement = connection.createStatement();
+        statement.executeUpdate("use " + dbName);
         ResultSet rs = statement.executeQuery("show tables");
         Assert.assertNotNull(rs);
         ResultSetMetaData metaData = rs.getMetaData();
@@ -170,24 +180,14 @@ public class SchemalessInsertTest {
         statement.close();
     }
 
-    @Before
-    public void before() throws SQLException {
-        String url = SpecifyAddress.getInstance().getJniUrl();
-        if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+    @AfterClass
+    public static void after() {
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute("drop database if exists " + dbName);
+            connection.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
-        conn = DriverManager.getConnection(url);
-        Statement stmt = conn.createStatement();
-        stmt.executeUpdate("drop database if exists " + dbname);
-        stmt.executeUpdate("create database if not exists " + dbname + " precision 'ns'");
-        stmt.executeUpdate("use " + dbname);
     }
 
-    @After
-    public void after() throws SQLException {
-        try (Statement stmt = conn.createStatement()) {
-            stmt.executeUpdate("drop database if exists " + dbname);
-        }
-        conn.close();
-    }
 }

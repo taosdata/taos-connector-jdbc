@@ -1,7 +1,10 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
-import org.junit.*;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.FixMethodOrder;
+import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
 import java.sql.*;

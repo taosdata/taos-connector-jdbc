@@ -6,6 +6,7 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Properties;

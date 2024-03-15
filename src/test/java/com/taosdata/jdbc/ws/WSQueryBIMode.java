@@ -1,7 +1,5 @@
 package com.taosdata.jdbc.ws;
 
-import com.taosdata.jdbc.TSDBDatabaseMetaData;
-import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
@@ -11,8 +9,6 @@ import org.junit.runner.RunWith;
 
 import java.sql.*;
 import java.util.Properties;
-import java.util.concurrent.CountDownLatch;
-import java.util.stream.IntStream;
 
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "websocket query test", author = "sheyj", version = "2.3.7")

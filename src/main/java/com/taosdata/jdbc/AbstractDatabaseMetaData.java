@@ -5,7 +5,6 @@ import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.ws.WSConnection;
 
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -657,7 +656,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                 if (!StringUtils.isEmpty(tableNamePattern)) {
                     sql.append("like '").append(tableNamePattern).append("'");
                     Ssql.append("like '").append(tableNamePattern).append("'");
-                    // vsql.append("like '").append(tableNamePattern).append("'");
+                    vsql.append("like '").append(tableNamePattern).append("'");
                 }
 
                 if (tempTableTypeSet.contains("TABLE")) {

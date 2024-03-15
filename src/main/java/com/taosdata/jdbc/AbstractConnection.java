@@ -1,10 +1,10 @@
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.enums.SchemalessProtocolType;
+import com.taosdata.jdbc.enums.SchemalessTimestampType;
+
 import java.sql.*;
-import java.util.Enumeration;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.*;
 
 public abstract class AbstractConnection extends WrapperImpl implements Connection {
@@ -28,8 +28,6 @@ public abstract class AbstractConnection extends WrapperImpl implements Connecti
 
     @Override
     public CallableStatement prepareCall(String sql) throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
         throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
     }
 
@@ -186,7 +184,6 @@ public abstract class AbstractConnection extends WrapperImpl implements Connecti
         checkResultSetTypeAndResultSetConcurrency(resultSetType, resultSetConcurrency);
         return createStatement();
     }
-
     @Override
     public PreparedStatement prepareStatement(String sql, int resultSetType, int resultSetConcurrency) throws SQLException {
         if (isClosed())
@@ -497,4 +494,43 @@ public abstract class AbstractConnection extends WrapperImpl implements Connecti
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
         return 0;
     }
+
+
+    public void write(String[] lines, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType) throws SQLException{
+        write(lines, protocolType, timestampType, null, null);
+    }
+
+    public abstract void write(String[] lines, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, Integer ttl, Long reqId) throws SQLException;
+
+
+    /**
+     * only one line writes to db
+     *
+     * @param line          schemaless line
+     * @param protocolType  schemaless type {@link SchemalessProtocolType}
+     * @param timestampType Time precision {@link SchemalessTimestampType}
+     * @throws SQLException execute exception
+     */
+    public void write(String line, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType)throws SQLException{
+        write(new String[]{line}, protocolType, timestampType);
+    }
+
+    /**
+     * batch schemaless lines write to db with list
+     *
+     * @param lines         schemaless list
+     * @param protocolType  schemaless type {@link SchemalessProtocolType}
+     * @param timestampType Time precision {@link SchemalessTimestampType}
+     * @throws SQLException execute exception
+     */
+    public void write(List<String> lines, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType) throws SQLException{
+        String[] strings = lines.toArray(new String[0]);
+        write(strings, protocolType, timestampType);
+    }
+
+    public int writeRaw(String line, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType) throws SQLException{
+        return writeRaw(line, protocolType, timestampType, null, null);
+    }
+
+    public abstract int writeRaw(String line, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, Integer ttl, Long reqId) throws SQLException;
 }

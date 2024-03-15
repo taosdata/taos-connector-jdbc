@@ -19,6 +19,7 @@ import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.utils.Utils;
+
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;

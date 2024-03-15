@@ -108,6 +108,9 @@ public class TSDBDriver extends AbstractDriver {
      */
     public static final String PROPERTY_KEY_CONNECT_MODE = "conmode";
 
+
+    public static final String PROPERTY_KEY_ENABLE_COMPRESSION = "enableCompression";
+
     /**
      * max message number send to server concurrently
      */
