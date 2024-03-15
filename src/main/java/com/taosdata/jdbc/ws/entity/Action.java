@@ -29,6 +29,9 @@ public enum Action {
     EXEC("exec", ExecResp.class),
     // response means nothing
     CLOSE("close", StmtResp.class),
+
+    //schemaless
+    INSERT("insert", CommonResp.class),
     ;
     ;
     private final String action;

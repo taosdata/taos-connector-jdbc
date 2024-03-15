@@ -1,19 +1,17 @@
 package com.taosdata.jdbc.ws;
 
 import com.google.common.base.Strings;
-import com.taosdata.jdbc.TSDBError;
-import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.rs.ConnectionParam;
-import com.taosdata.jdbc.rs.RestfulDriver;
 import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.ws.entity.*;
-import org.java_websocket.WebSocketImpl;
 import org.java_websocket.client.WebSocketClient;
+import org.java_websocket.drafts.Draft;
+import org.java_websocket.drafts.Draft_6455;
+import org.java_websocket.extensions.permessage_deflate.PerMessageDeflateExtension;
 import org.java_websocket.handshake.ServerHandshake;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sun.rmi.runtime.Log;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -29,7 +27,8 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
 
     private final Logger log = LoggerFactory.getLogger(WSClient.class);
 
-
+    private static final Draft perMessageDeflateDraft = new Draft_6455(
+            new PerMessageDeflateExtension());
     ThreadPoolExecutor executor;
     Transport transport;
 
@@ -53,7 +52,7 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
      * @param serverUri connection url
      */
     public WSClient(URI serverUri, Transport transport, ConnectionParam connectionParam, WSFunction function) {
-        super(serverUri, new HashMap<>());
+        super(serverUri, connectionParam.isEnableCompression() ? perMessageDeflateDraft : new Draft_6455(), new HashMap<>());
         this.transport = transport;
         this.connectionParam = connectionParam;
         this.wsFunction = function;

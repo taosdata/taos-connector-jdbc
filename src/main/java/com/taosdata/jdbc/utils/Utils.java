@@ -4,8 +4,6 @@ import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 
-import java.io.FileWriter;
-import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.nio.charset.StandardCharsets;
 import java.sql.Date;
@@ -222,4 +220,5 @@ public class Utils {
             throw new RuntimeException("Could not instantiate class " + c.getName(), e);
         }
     }
+
 }

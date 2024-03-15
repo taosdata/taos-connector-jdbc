@@ -1,8 +1,13 @@
 package com.taosdata.jdbc;
 
-import java.sql.*;
-import java.time.ZoneId;
-import java.util.*;
+import com.taosdata.jdbc.enums.SchemalessProtocolType;
+import com.taosdata.jdbc.enums.SchemalessTimestampType;
+
+import java.sql.DatabaseMetaData;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.Properties;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class TSDBConnection extends AbstractConnection {
@@ -92,4 +97,28 @@ public class TSDBConnection extends AbstractConnection {
         return this.databaseMetaData;
     }
 
+    @Override
+    public void write(String[] lines, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, Integer ttl, Long reqId) throws SQLException {
+        if (null == ttl && null == reqId) {
+            connector.insertLines(lines, protocolType, timestampType);
+        } else if (null == reqId) {
+            connector.insertLinesWithTtl(lines, protocolType, timestampType, ttl);
+        } else if (null == ttl) {
+            connector.insertLinesWithReqId(lines, protocolType, timestampType, reqId);
+        } else {
+            connector.insertLinesWithTtlAndReqId(lines, protocolType, timestampType, ttl, reqId);
+        }
+    }
+    @Override
+    public int writeRaw(String line, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, Integer ttl, Long reqId) throws SQLException {
+        if (null == ttl && null == reqId) {
+            return connector.insertRaw(line, protocolType, timestampType);
+        } else if (null == reqId) {
+            return connector.insertRawWithTtl(line, protocolType, timestampType, ttl);
+        } else if (null == ttl) {
+            return connector.insertRawWithReqId(line, protocolType, timestampType, reqId);
+        } else {
+            return connector.insertRawWithTtlAndReqId(line, protocolType, timestampType, ttl, reqId);
+        }
+    }
 }

@@ -3,7 +3,10 @@ package com.taosdata.jdbc.cases;
 import com.alibaba.fastjson.JSONObject;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.sql.*;
 import java.util.Properties;

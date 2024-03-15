@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicLong;
 
+@Deprecated
 public class SchemalessWriter implements AutoCloseable {
     // jni
     private TSDBJNIConnector connector;

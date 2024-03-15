@@ -19,7 +19,10 @@ import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
 
 import java.math.BigDecimal;
-import java.sql.*;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;

@@ -1,6 +1,5 @@
 package com.taosdata.jdbc.ws;
 
-import com.taosdata.jdbc.EmptyResultSet;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.rs.RestfulDatabaseMetaData;
 import com.taosdata.jdbc.utils.SpecifyAddress;
