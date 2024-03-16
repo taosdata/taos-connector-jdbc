@@ -150,7 +150,7 @@ public class TSDBDatabaseMetaDataTest {
 
     @Test
     public void getIdentifierQuoteString() throws SQLException {
-        Assert.assertEquals(" ", metaData.getIdentifierQuoteString());
+        Assert.assertEquals("`", metaData.getIdentifierQuoteString());
     }
 
     @Test
