@@ -179,37 +179,7 @@ public class TSDBResultSetMetaData extends WrapperImpl implements ResultSetMetaD
     }
 
     public String getColumnClassName(int column) throws SQLException {
-        int columnType = getColumnType(column);
-        String columnClassName = "";
-        switch (columnType) {
-            case Types.TIMESTAMP:
-                columnClassName = Timestamp.class.getName();
-                break;
-            case Types.CHAR:
-                columnClassName = String.class.getName();
-                break;
-            case Types.DOUBLE:
-                columnClassName = Double.class.getName();
-                break;
-            case Types.FLOAT:
-                columnClassName = Float.class.getName();
-                break;
-            case Types.BIGINT:
-                columnClassName = Long.class.getName();
-                break;
-            case Types.INTEGER:
-                columnClassName = Integer.class.getName();
-                break;
-            case Types.SMALLINT:
-                columnClassName = Short.class.getName();
-                break;
-            case Types.TINYINT:
-                columnClassName = Byte.class.getName();
-                break;
-            case Types.BIT:
-                columnClassName = Boolean.class.getName();
-                break;
-        }
-        return columnClassName;
+        ColumnMetaData meta = this.colMetaDataList.get(column - 1);
+        return DataType.convertTaosType2DataType(meta.getColType()).getClassName();
     }
 }
