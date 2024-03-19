@@ -29,6 +29,7 @@ import java.util.Properties;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Deprecated
+// will be removed in future, please use writer functions in connection object.
 public class SchemalessWriter implements AutoCloseable {
     // jni
     private TSDBJNIConnector connector;
@@ -158,7 +159,7 @@ public class SchemalessWriter implements AutoCloseable {
                 }
             });
 
-            Transport.checkConnection(transport, connectTime);
+            transport.checkConnection(connectTime);
 
             ConnReq connectReq = new ConnReq();
             connectReq.setReqId(1);

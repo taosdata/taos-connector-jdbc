@@ -34,6 +34,10 @@ public class ConsumerParam {
             properties.setProperty(TSDBDriver.PROPERTY_KEY_PORT, properties.getProperty(TMQConstants.CONNECT_PORT));
         autoCommit = Boolean.parseBoolean(properties.getProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true"));
         connectionParam = ConnectionParam.getParam(properties);
+        if (!StringUtils.isEmpty(connectionParam.getSlaveClusterHost())){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TMQ_CONF_ERROR, "slaveClusterHost is not supported in consumer param");
+        }
+
         groupId = properties.getProperty(TMQConstants.GROUP_ID);
         clientId = properties.getProperty(TMQConstants.CLIENT_ID);
         offsetRest = properties.getProperty(TMQConstants.AUTO_OFFSET_RESET);
@@ -41,6 +45,8 @@ public class ConsumerParam {
         if (autoCommitInterval < 0){
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TMQ_CONF_ERROR, "autoCommitInterval must be greater than 0");
         }
+
+
         msgWithTableName = properties.getProperty(TMQConstants.MSG_WITH_TABLE_NAME);
     }
 

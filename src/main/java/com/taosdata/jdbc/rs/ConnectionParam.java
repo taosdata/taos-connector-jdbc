@@ -27,6 +27,11 @@ public class ConnectionParam {
     private int connectMode;
     private boolean enableCompression;
 
+    private String slaveClusterHost;
+    private String slaveClusterPort;
+    private int reconnectIntervalMs;
+    private int reconnectRetryCount;
+
     static public final int CONNECT_MODE_BI = 1;
 
     private ConnectionParam(Builder builder) {
@@ -43,6 +48,10 @@ public class ConnectionParam {
         this.requestTimeout = builder.requestTimeout;
         this.connectMode = builder.connectMode;
         this.enableCompression = builder.enableCompression;
+        this.slaveClusterHost = builder.slaveClusterHost;
+        this.slaveClusterPort = builder.slaveClusterPort;
+        this.reconnectIntervalMs = builder.reconnectIntervalMs;
+        this.reconnectRetryCount = builder.reconnectRetryCount;
     }
 
     public String getHost() {
@@ -148,6 +157,38 @@ public class ConnectionParam {
         this.enableCompression = enableCompression;
     }
 
+    public String getSlaveClusterHost() {
+        return slaveClusterHost;
+    }
+
+    public void setSlaveClusterHost(String slaveClusterHost) {
+        this.slaveClusterHost = slaveClusterHost;
+    }
+
+    public String getSlaveClusterPort() {
+        return slaveClusterPort;
+    }
+
+    public void setSlaveClusterPort(String slaveClusterPort) {
+        this.slaveClusterPort = slaveClusterPort;
+    }
+
+    public int getReconnectIntervalMs() {
+        return reconnectIntervalMs;
+    }
+
+    public void setReconnectIntervalMs(int reconnectIntervalMs) {
+        this.reconnectIntervalMs = reconnectIntervalMs;
+    }
+
+    public int getReconnectRetryCount() {
+        return reconnectRetryCount;
+    }
+
+    public void setReconnectRetryCount(int reconnectRetryCount) {
+        this.reconnectRetryCount = reconnectRetryCount;
+    }
+
     public static ConnectionParam getParam(Properties properties) throws SQLException {
         String host = properties.getProperty(TSDBDriver.PROPERTY_KEY_HOST);
         String port = properties.getProperty(TSDBDriver.PROPERTY_KEY_PORT);
@@ -200,9 +241,18 @@ public class ConnectionParam {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "unsupported connect mode");
         }
 
+        String slaveClusterHost = properties.getProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_HOST, "");
+        String slaveClusterPort = properties.getProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_PORT, "");
+
+        int reconnectIntervalMs  = Integer
+                .parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_INTERVAL_MS, "2000"));
+        int reconnectRetryCount = Integer
+                .parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_RETRY_COUNT, "3"));
+
+
         boolean enableCompression = Boolean.parseBoolean(properties.getProperty(TSDBDriver.PROPERTY_KEY_ENABLE_COMPRESSION,"false"));
 
-        return new ConnectionParam.Builder(host, port)
+        return new Builder(host, port)
                 .setDatabase(database)
                 .setCloudToken(cloudToken)
                 .setUserAndPassword(user, password)
@@ -213,6 +263,10 @@ public class ConnectionParam {
                 .setRequestTimeout(requestTimeout)
                 .setConnectMode(connectMode)
                 .setEnableCompression(enableCompression)
+                .setSlaveClusterHost(slaveClusterHost)
+                .setSlaveClusterPort(slaveClusterPort)
+                .setReconnectIntervalMs(reconnectIntervalMs)
+                .setReconnectRetryCount(reconnectRetryCount)
                 .build();
     }
 
@@ -231,6 +285,11 @@ public class ConnectionParam {
         private int connectMode;
 
         private boolean enableCompression;
+
+        private String slaveClusterHost;
+        private String slaveClusterPort;
+        private int reconnectIntervalMs;
+        private int reconnectRetryCount;
 
         public Builder(String host, String port) {
             this.host = host;
@@ -286,6 +345,27 @@ public class ConnectionParam {
             this.enableCompression = enableCompression;
             return this;
         }
+
+        public Builder setSlaveClusterHost(String slaveClusterHost) {
+            this.slaveClusterHost = slaveClusterHost;
+            return this;
+        }
+
+        public Builder setSlaveClusterPort(String slaveClusterPort) {
+            this.slaveClusterPort = slaveClusterPort;
+            return this;
+        }
+
+        public Builder setReconnectIntervalMs(int reconnectIntervalMs) {
+            this.reconnectIntervalMs = reconnectIntervalMs;
+            return this;
+        }
+
+        public Builder setReconnectRetryCount(int reconnectRetryCount) {
+            this.reconnectRetryCount = reconnectRetryCount;
+            return this;
+        }
+
         public ConnectionParam build() {
             return new ConnectionParam(this);
         }
