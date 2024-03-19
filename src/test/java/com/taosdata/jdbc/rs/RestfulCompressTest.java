@@ -23,7 +23,6 @@ public class RestfulCompressTest {
     @Test
     public void inertRows() throws SQLException {
         try (Statement statement = connection.createStatement()) {
-            // 必须超过1024个字符才会触发压缩
             statement.execute("INSERT INTO " + db_name + "." + tableName + " (tbname, location, groupId, ts, current, voltage, phase) \n" +
                     "                values('d31001', 'California.SanFrancisco', 2, '2021-07-13 14:06:34.630', 10.2, 219, 0.32) \n" +
                     "                ('d31001', 'California.SanFrancisco', 2, '2021-07-13 14:06:35.779', 10.15, 217, 0.33)\n" +
