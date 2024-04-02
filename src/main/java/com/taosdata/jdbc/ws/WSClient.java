@@ -85,7 +85,11 @@ public class WSClient extends WebSocketClient implements AutoCloseable {
     @SuppressWarnings("all")
     public void onClose(int code, String reason, boolean remote) {
         // do nothing, wait next send to retry.
-        log.error("disconnect uri: {},  code : {} , reason: {}, remote: {}", serverUri, code, reason, remote);
+        if (remote){
+            log.error("disconnect uri: {},  code : {} , reason: {}, remote: {}", serverUri, code, reason, remote);
+        }else{
+            log.debug("disconnect uri: {},  code : {} , reason: {}, remote: {}", serverUri, code, reason, remote);
+        }
     }
 
     @Override

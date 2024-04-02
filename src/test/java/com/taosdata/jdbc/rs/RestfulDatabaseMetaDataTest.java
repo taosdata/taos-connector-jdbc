@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.rs;
 
+import com.taosdata.jdbc.AbstractDatabaseMetaData;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
@@ -162,22 +163,22 @@ public class RestfulDatabaseMetaDataTest {
 
     @Test
     public void getNumericFunctions() throws SQLException {
-        Assert.assertEquals("ABS,ACOS,ASIN,ATAN,CEIL,COS,FLOOR,LOG,POW,ROUND,SIN,SQRT,TAN", metaData.getNumericFunctions());
+        Assert.assertEquals(AbstractDatabaseMetaData.NUMERIC_FUNCTIONS, metaData.getNumericFunctions());
     }
 
     @Test
     public void getStringFunctions() throws SQLException {
-        Assert.assertEquals("CHAR_LENGTH,CONCAT,CONCAT_WS,LENGTH,LOWER,LTRIM,RTRIM,SUBSTR,UPPER", metaData.getStringFunctions());
+        Assert.assertEquals(AbstractDatabaseMetaData.STRING_FUNCTIONS, metaData.getStringFunctions());
     }
 
     @Test
     public void getSystemFunctions() throws SQLException {
-        Assert.assertEquals("DATABASE,CLIENT_VERSION,SERVER_VERSION,SERVER_STATUS,CURRENT_USER", metaData.getSystemFunctions());
+        Assert.assertEquals(AbstractDatabaseMetaData.SYSTEM_FUNCTIONS, metaData.getSystemFunctions());
     }
 
     @Test
     public void getTimeDateFunctions() throws SQLException {
-        Assert.assertEquals("NOW,TIMEDIFF,TIMETRUNCATE,TIMEZONE,TODAY", metaData.getTimeDateFunctions());
+        Assert.assertEquals(AbstractDatabaseMetaData.TIME_DATE_FUNCTIONS, metaData.getTimeDateFunctions());
     }
 
     @Test

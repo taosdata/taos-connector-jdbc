@@ -246,9 +246,15 @@ public class ConnectionParam {
 
         int reconnectIntervalMs  = Integer
                 .parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_INTERVAL_MS, "2000"));
+        if (reconnectIntervalMs < 0){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_RECONNECT_INTERVAL_MS");
+        }
+
         int reconnectRetryCount = Integer
                 .parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_RETRY_COUNT, "3"));
-
+        if (reconnectRetryCount < 0){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_RECONNECT_RETRY_COUNT");
+        }
 
         boolean enableCompression = Boolean.parseBoolean(properties.getProperty(TSDBDriver.PROPERTY_KEY_ENABLE_COMPRESSION,"false"));
 
