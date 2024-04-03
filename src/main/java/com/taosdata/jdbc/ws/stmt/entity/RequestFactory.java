@@ -68,7 +68,7 @@ public class RequestFactory {
         CloseReq req = new CloseReq();
         req.setReqId(reqId);
         req.setStmtId(stmtId);
-        return new Request(Action.EXEC.getAction(), req);
+        return new Request(Action.CLOSE.getAction(), req);
     }
 
 }
