@@ -13,7 +13,7 @@ import java.util.Properties;
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "websocket query test", author = "sheyj", version = "2.3.7")
 @FixMethodOrder
-public class WSQueryBIMode {
+public class WSQueryBIModeTest {
     private static final String host = "127.0.0.1";
     private static final int port = 6041;
     private static final String db_name = "ws_bi_mode";

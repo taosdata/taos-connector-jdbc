@@ -23,6 +23,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class WSConnection extends AbstractConnection {
+
+    public static boolean g_FirstConnection = true;
     private final Transport transport;
     private final DatabaseMetaData metaData;
     private String database;

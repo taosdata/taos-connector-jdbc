@@ -5,11 +5,9 @@ import com.alibaba.fastjson.JSONObject;
 import com.taosdata.jdbc.*;
 import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.utils.HttpClientPoolUtil;
-import com.taosdata.jdbc.ws.FutureResponse;
-import com.taosdata.jdbc.ws.InFlightRequest;
-import com.taosdata.jdbc.ws.Transport;
-import com.taosdata.jdbc.ws.WSConnection;
+import com.taosdata.jdbc.ws.*;
 import com.taosdata.jdbc.ws.entity.*;
+import org.slf4j.LoggerFactory;
 
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
@@ -19,6 +17,7 @@ import java.util.Properties;
 import java.util.logging.Logger;
 
 public class RestfulDriver extends AbstractDriver {
+    private final org.slf4j.Logger log = LoggerFactory.getLogger(RestfulDriver.class);
 
     public static final String URL_PREFIX = "jdbc:TAOS-RS://";
 
@@ -104,6 +103,11 @@ public class RestfulDriver extends AbstractDriver {
     }
 
     private Connection getWSConnection(String url, ConnectionParam param, Properties props) throws SQLException {
+        log.debug("getWSConnection, url = {}", url);
+        if (log.isDebugEnabled()){
+            log.debug("getWSConnection, ConnectionParam = {}", JSON.toJSONString(param));
+        }
+
         InFlightRequest inFlightRequest = new InFlightRequest(param.getRequestTimeout(), param.getMaxRequest());
         Transport transport = new Transport(WSFunction.WS, param, inFlightRequest);
 
@@ -127,7 +131,7 @@ public class RestfulDriver extends AbstractDriver {
             }
         });
 
-        Transport.checkConnection(transport, param.getConnectTimeout());
+        transport.checkConnection(param.getConnectTimeout());
 
         ConnectReq connectReq = new ConnectReq();
         connectReq.setReqId(1);
