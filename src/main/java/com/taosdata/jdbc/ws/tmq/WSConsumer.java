@@ -155,16 +155,28 @@ public class WSConsumer<V> implements Consumer<V> {
         }
         return records;
     }
+
     @Override
     public ConsumerRecords<V> poll(Duration timeout, Deserializer<V> deserializer) throws SQLException {
 
         try {
             return doPoll(timeout, deserializer);
         } catch (SQLException e) {
-            if (e.getErrorCode() == TSDBErrorNumbers.ERROR_CONNECTION_CLOSED
+            if ((e.getErrorCode() == TSDBErrorNumbers.ERROR_CONNECTION_CLOSED
+                    && !transport.isClosed()
                     && this.param.getConnectionParam().isEnableAutoConnect()
-                    && handleReconnect()){
-                return doPoll(timeout, deserializer);
+                    && handleReconnect())) {
+                // when reconnect success, skip once auto commit for the message id is invalid
+                messageId = 0;
+                return ConsumerRecords.emptyRecord();
+            }
+            // time out due to connection lost
+            if (e.getErrorCode() == TSDBErrorNumbers.ERROR_QUERY_TIMEOUT
+                    && !transport.isClosed()
+                    && transport.isConnectionLost()
+                    && handleReconnect()) {
+                messageId = 0;
+                return ConsumerRecords.emptyRecord();
             }
             throw e;
         }

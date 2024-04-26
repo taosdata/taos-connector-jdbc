@@ -240,6 +240,10 @@ public class Transport implements AutoCloseable {
         return closed;
     }
 
+    public boolean isConnectionLost() {
+        return clientArr.get(currentNodeIndex).isClosed();
+    }
+
     public void disconnectAndReconnect() throws SQLException {
         try {
             clientArr.get(currentNodeIndex).closeBlocking();
