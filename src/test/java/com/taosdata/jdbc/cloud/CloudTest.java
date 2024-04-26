@@ -21,7 +21,6 @@ public class CloudTest {
             System.out.println("Environment variable for CloudTest not set properly");
             return;
         }
-        System.out.println("url====== " + url);
 
         Connection conn = DriverManager.getConnection(url);
         Statement stmt = conn.createStatement();
