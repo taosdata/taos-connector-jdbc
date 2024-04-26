@@ -54,6 +54,7 @@ public class TMQResultSet extends AbstractResultSet {
         } else if (code == TSDBConstants.JNI_FETCH_END) {
             return false;
         } else {
+            this.blockData.doSetByteArray();
             this.blockData.reset();
             return true;
         }

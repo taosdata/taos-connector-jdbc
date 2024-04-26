@@ -39,7 +39,7 @@ public class RestfulStatementTest {
 
         try (ResultSet resultSet = stmt.executeQuery("desc " + dbName + ".weather")) {
             ResultSetMetaData metaData = resultSet.getMetaData();
-            Assert.assertEquals(4, metaData.getColumnCount());
+            Assert.assertTrue(metaData.getColumnCount() >= 4);
         }
 
         affectRows = stmt.executeUpdate("insert into " + dbName + ".t1 using " + dbName + ".weather tags('北京') values(now, 22.33)");

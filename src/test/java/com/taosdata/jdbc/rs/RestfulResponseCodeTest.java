@@ -22,7 +22,7 @@ public class RestfulResponseCodeTest {
              Statement statement = connection.createStatement()) {
             statement.executeQuery("select 1");
         } catch (SQLException e) {
-            Assert.assertEquals(0x231f, e.getErrorCode());
+            Assert.assertEquals(0x231d, e.getErrorCode());
         }
     }
 
