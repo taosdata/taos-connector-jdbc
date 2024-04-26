@@ -169,8 +169,7 @@ public class TSDBResultSetBlockData {
                     break;
                 }
                 case TSDB_DATA_TYPE_BIGINT:
-                case TSDB_DATA_TYPE_UBIGINT:
-                case TSDB_DATA_TYPE_TIMESTAMP: {
+                case TSDB_DATA_TYPE_UBIGINT:{
                     length = bitMapOffset;
                     byte[] tmp = new byte[bitMapOffset];
                     buffer.get(tmp);
@@ -180,6 +179,20 @@ public class TSDBResultSetBlockData {
                             col.add(null);
                         } else {
                             col.add(l);
+                        }
+                    }
+                    break;
+                }
+                case TSDB_DATA_TYPE_TIMESTAMP: {
+                    length = bitMapOffset;
+                    byte[] tmp = new byte[bitMapOffset];
+                    buffer.get(tmp);
+                    for (int j = 0; j < numOfRows; j++) {
+                        long l = buffer.getLong();
+                        if (isNull(tmp, j)) {
+                            col.add(null);
+                        } else {
+                            col.add(parseTimestampColumnData(l));
                         }
                     }
                     break;
@@ -644,6 +657,7 @@ public class TSDBResultSetBlockData {
             case TSDB_DATA_TYPE_DOUBLE:
             case TSDB_DATA_TYPE_NCHAR:
             case TSDB_DATA_TYPE_BINARY:
+            case TSDB_DATA_TYPE_TIMESTAMP:
             case TSDB_DATA_TYPE_JSON:
             case TSDB_DATA_TYPE_VARBINARY:
             case TSDB_DATA_TYPE_GEOMETRY:{
@@ -660,12 +674,6 @@ public class TSDBResultSetBlockData {
             case TSDB_DATA_TYPE_UINT: {
                 int val = (int) source;
                 return parseUInteger(val);
-            }
-
-            case TSDB_DATA_TYPE_TIMESTAMP: {
-                long val = (long) source;
-
-                return parseTimestampColumnData(val);
             }
             case TSDB_DATA_TYPE_UBIGINT: {
                 long val = (long) source;

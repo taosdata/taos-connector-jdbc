@@ -88,7 +88,7 @@ public class TSDBResultSet extends AbstractResultSet {
                         TSDBResultSetBlockData tsdbResultSetBlockData = new TSDBResultSetBlockData(this.columnMetaDataList, this.columnMetaDataList.size(), timestampPrecision);
                         tsdbResultSetBlockData.returnCode = this.jniConnector.fetchBlock(this.resultSetPointer, tsdbResultSetBlockData);
 
-                        while (!blockingQueueOut.offer(tsdbResultSetBlockData, 1, TimeUnit.MILLISECONDS)) {
+                        while (!blockingQueueOut.offer(tsdbResultSetBlockData, 10, TimeUnit.MILLISECONDS)) {
                             if (isClosed) {
                                 return;
                             }
