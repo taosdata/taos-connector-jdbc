@@ -60,7 +60,7 @@ public class WSConsumer<V> implements Consumer<V> {
             }
         });
 
-        Transport.checkConnection(transport, param.getConnectionParam().getConnectTimeout());
+        transport.checkConnection(param.getConnectionParam().getConnectTimeout());
     }
 
     @Override

@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.rs;
 
+import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.Assert;
 import org.junit.Test;
@@ -22,7 +23,7 @@ public class RestfulResponseCodeTest {
              Statement statement = connection.createStatement()) {
             statement.executeQuery("select 1");
         } catch (SQLException e) {
-            Assert.assertEquals(0x231d, e.getErrorCode());
+            Assert.assertEquals(TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT, e.getErrorCode());
         }
     }
 
