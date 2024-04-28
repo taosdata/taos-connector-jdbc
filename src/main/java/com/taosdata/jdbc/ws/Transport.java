@@ -75,7 +75,7 @@ public class Transport implements AutoCloseable {
     }
 
     private void reconnect() throws SQLException {
-        for (int i = 0; i < clientArr.size(); i++){
+        for (int i = 0; i < clientArr.size() && this.connectionParam.isEnableAutoConnect(); i++){
             boolean reconnected = reconnectCurNode();
             if (reconnected){
                 log.debug("reconnect success to {}", clientArr.get(currentNodeIndex).serverUri);
@@ -88,13 +88,19 @@ public class Transport implements AutoCloseable {
         }
 
         close();
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED, "Websocket Not Connected Exception");
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
     }
 
+    private void tmqRethrowConnectionCloseException() throws SQLException {
+        // TMQ reconnect will be handled in poll
+        if (WSFunction.TMQ.equals(this.wsFunction)){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
+        }
+    }
     @SuppressWarnings("all")
     public Response send(Request request) throws SQLException {
         if (isClosed()){
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED, "Websocket Not Connected Exception");
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
         }
 
         Response response = null;
@@ -110,6 +116,7 @@ public class Transport implements AutoCloseable {
         try {
             clientArr.get(currentNodeIndex).send(reqString);
         } catch (WebsocketNotConnectedException e) {
+            tmqRethrowConnectionCloseException();
             reconnect();
             try {
                 clientArr.get(currentNodeIndex).send(reqString);
@@ -132,7 +139,7 @@ public class Transport implements AutoCloseable {
 
     public Response send(String action, long reqId, long stmtId, long type, byte[] rawData) throws SQLException {
         if (isClosed()){
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED, "Websocket Not Connected Exception");
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
         }
 
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
@@ -156,6 +163,7 @@ public class Transport implements AutoCloseable {
         try {
             clientArr.get(currentNodeIndex).send(buffer.toByteArray());
         } catch (WebsocketNotConnectedException e) {
+            tmqRethrowConnectionCloseException();
             reconnect();
             try {
                 clientArr.get(currentNodeIndex).send(buffer.toByteArray());
@@ -179,7 +187,7 @@ public class Transport implements AutoCloseable {
 
     public Response sendWithoutRetry(Request request) throws SQLException {
         if (isClosed()){
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED, "Websocket Not Connected Exception");
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
         }
 
         Response response;
@@ -212,12 +220,13 @@ public class Transport implements AutoCloseable {
 
     public void sendWithoutRep(Request request) throws SQLException  {
         if (isClosed()){
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED, "Websocket Not Connected Exception");
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
         }
 
         try {
             clientArr.get(currentNodeIndex).send(request.toString());
         } catch (WebsocketNotConnectedException e) {
+            tmqRethrowConnectionCloseException();
             reconnect();
             try {
                 clientArr.get(currentNodeIndex).send(request.toString());
@@ -229,6 +238,10 @@ public class Transport implements AutoCloseable {
 
     public boolean isClosed() {
         return closed;
+    }
+
+    public boolean isConnectionLost() {
+        return clientArr.get(currentNodeIndex).isClosed();
     }
 
     public void disconnectAndReconnect() throws SQLException {
@@ -304,11 +317,7 @@ public class Transport implements AutoCloseable {
         }
     }
 
-    public boolean reconnectCurNode() throws SQLException {
-        if (WSFunction.TMQ.equals(this.wsFunction)){
-            return false;
-        }
-
+    public boolean doReconnectCurNode() throws SQLException {
         boolean reconnected = false;
         for (int retryTimes = 0; retryTimes < connectionParam.getReconnectRetryCount(); retryTimes++) {
             try {
@@ -321,7 +330,11 @@ public class Transport implements AutoCloseable {
                 log.error("try connect remote server failed!", e);
             }
         }
+        return reconnected;
+    }
 
+    public boolean reconnectCurNode() throws SQLException {
+        boolean reconnected = doReconnectCurNode();
         if (!reconnected){
             return false;
         }

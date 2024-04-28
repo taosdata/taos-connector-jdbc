@@ -26,6 +26,7 @@ public class ConnectionParam {
     private int requestTimeout;
     private int connectMode;
     private boolean enableCompression;
+    private boolean enableAutoConnect;
 
     private String slaveClusterHost;
     private String slaveClusterPort;
@@ -52,6 +53,7 @@ public class ConnectionParam {
         this.slaveClusterPort = builder.slaveClusterPort;
         this.reconnectIntervalMs = builder.reconnectIntervalMs;
         this.reconnectRetryCount = builder.reconnectRetryCount;
+        this.enableAutoConnect = builder.enableAutoReconnect;
     }
 
     public String getHost() {
@@ -189,6 +191,10 @@ public class ConnectionParam {
         this.reconnectRetryCount = reconnectRetryCount;
     }
 
+    public boolean isEnableAutoConnect() {
+        return enableAutoConnect;
+    }
+
     public static ConnectionParam getParam(Properties properties) throws SQLException {
         String host = properties.getProperty(TSDBDriver.PROPERTY_KEY_HOST);
         String port = properties.getProperty(TSDBDriver.PROPERTY_KEY_PORT);
@@ -257,6 +263,7 @@ public class ConnectionParam {
         }
 
         boolean enableCompression = Boolean.parseBoolean(properties.getProperty(TSDBDriver.PROPERTY_KEY_ENABLE_COMPRESSION,"false"));
+        boolean enableAutoReconnect = Boolean.parseBoolean(properties.getProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT,"false"));
 
         return new Builder(host, port)
                 .setDatabase(database)
@@ -273,6 +280,7 @@ public class ConnectionParam {
                 .setSlaveClusterPort(slaveClusterPort)
                 .setReconnectIntervalMs(reconnectIntervalMs)
                 .setReconnectRetryCount(reconnectRetryCount)
+                .setEnableAutoReconnect(enableAutoReconnect)
                 .build();
     }
 
@@ -291,7 +299,7 @@ public class ConnectionParam {
         private int connectMode;
 
         private boolean enableCompression;
-
+        private boolean enableAutoReconnect;
         private String slaveClusterHost;
         private String slaveClusterPort;
         private int reconnectIntervalMs;
@@ -349,6 +357,10 @@ public class ConnectionParam {
 
         public Builder setEnableCompression(boolean enableCompression) {
             this.enableCompression = enableCompression;
+            return this;
+        }
+        public Builder setEnableAutoReconnect(boolean enableAutoReconnect) {
+            this.enableAutoReconnect = enableAutoReconnect;
             return this;
         }
 
