@@ -27,7 +27,7 @@ public class WSCompressTest {
     private static final String host = "127.0.0.1";
     private static final int port = 6041;
     private static final String db_name = "ws_query";
-    private static final String tableName = "compress";
+    private static final String tableName = "compressA";
 
     private static final String topicName = "compress_topic";
     private static Connection connection;

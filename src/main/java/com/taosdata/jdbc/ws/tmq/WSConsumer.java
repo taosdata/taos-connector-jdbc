@@ -30,6 +30,8 @@ public class WSConsumer<V> implements Consumer<V> {
     private long lastCommitTime = 0;
     private long messageId = 0L;
 
+    private Collection<String> topics;
+
     @Override
     public void create(Properties properties) throws SQLException {
         factory = new TMQRequestFactory();
@@ -60,7 +62,7 @@ public class WSConsumer<V> implements Consumer<V> {
             }
         });
 
-        Transport.checkConnection(transport, param.getConnectionParam().getConnectTimeout());
+        transport.checkConnection(param.getConnectionParam().getConnectTimeout());
     }
 
     @Override
@@ -80,6 +82,7 @@ public class WSConsumer<V> implements Consumer<V> {
             throw new SQLException("subscribe topic error, code: (0x" + Integer.toHexString(response.getCode())
                     + "), message: " + response.getMessage());
         }
+        this.topics = topics;
     }
 
     @Override
@@ -103,8 +106,17 @@ public class WSConsumer<V> implements Consumer<V> {
         return Arrays.stream(response.getTopics()).collect(Collectors.toSet());
     }
 
-    @Override
-    public ConsumerRecords<V> poll(Duration timeout, Deserializer<V> deserializer) throws SQLException {
+    private boolean handleReconnect() throws SQLException {
+        if (transport.doReconnectCurNode()){
+            subscribe(this.topics);
+            return true;
+        } else {
+            transport.close();
+            return false;
+        }
+    }
+
+    private ConsumerRecords<V> doPoll(Duration timeout, Deserializer<V> deserializer) throws SQLException{
         if (param.isAutoCommit() && (0 != messageId)) {
             long now = System.currentTimeMillis();
             if (now - lastCommitTime > param.getAutoCommitInterval()) {
@@ -115,11 +127,11 @@ public class WSConsumer<V> implements Consumer<V> {
 
         Request request = factory.generatePoll(timeout.toMillis());
         PollResp pollResp = (PollResp) transport.send(request);
+
         if (Code.SUCCESS.getCode() != pollResp.getCode()) {
             throw new SQLException("consumer poll error, code: (0x" + Integer.toHexString(pollResp.getCode()) + "), message: " + pollResp.getMessage());
         }
         if (!pollResp.isHaveMessage()) {
-
             return ConsumerRecords.emptyRecord();
         }
 
@@ -142,6 +154,32 @@ public class WSConsumer<V> implements Consumer<V> {
             }
         }
         return records;
+    }
+
+    @Override
+    public ConsumerRecords<V> poll(Duration timeout, Deserializer<V> deserializer) throws SQLException {
+
+        try {
+            return doPoll(timeout, deserializer);
+        } catch (SQLException e) {
+            if ((e.getErrorCode() == TSDBErrorNumbers.ERROR_CONNECTION_CLOSED
+                    && !transport.isClosed()
+                    && this.param.getConnectionParam().isEnableAutoConnect()
+                    && handleReconnect())) {
+                // when reconnect success, skip once auto commit for the message id is invalid
+                messageId = 0;
+                return ConsumerRecords.emptyRecord();
+            }
+            // time out due to connection lost
+            if (e.getErrorCode() == TSDBErrorNumbers.ERROR_QUERY_TIMEOUT
+                    && !transport.isClosed()
+                    && transport.isConnectionLost()
+                    && handleReconnect()) {
+                messageId = 0;
+                return ConsumerRecords.emptyRecord();
+            }
+            throw e;
+        }
     }
 
     @Override

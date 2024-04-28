@@ -31,6 +31,7 @@ import java.sql.Types;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.*;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
 import static com.taosdata.jdbc.utils.UnsignedDataUtils.*;
@@ -44,6 +45,9 @@ public class TSDBResultSetBlockData {
     public boolean wasNull;
 
     private int timestampPrecision;
+    private ByteBuffer buffer;
+    Semaphore semaphore = new Semaphore(0);
+    public int returnCode = 0;
 
     public TSDBResultSetBlockData(List<ColumnMetaData> colMeta, int numOfCols, int timestampPrecision) {
         this.columnMetaDataList = colMeta;
@@ -98,9 +102,12 @@ public class TSDBResultSetBlockData {
     public void reset() {
         this.rowIndex = 0;
     }
-
     public void setByteArray(byte[] value) {
-        ByteBuffer buffer = ByteBuffer.wrap(value);
+        byte[] copy = new byte[value.length];
+        System.arraycopy(value, 0, copy, 0, value.length);
+        buffer = ByteBuffer.wrap(copy);
+    }
+    public void doSetByteArray() {
         buffer.order(ByteOrder.LITTLE_ENDIAN);
         int bitMapOffset = BitmapLen(numOfRows);
         int pHeader = 28 + columnMetaDataList.size() * 5;
@@ -162,8 +169,7 @@ public class TSDBResultSetBlockData {
                     break;
                 }
                 case TSDB_DATA_TYPE_BIGINT:
-                case TSDB_DATA_TYPE_UBIGINT:
-                case TSDB_DATA_TYPE_TIMESTAMP: {
+                case TSDB_DATA_TYPE_UBIGINT:{
                     length = bitMapOffset;
                     byte[] tmp = new byte[bitMapOffset];
                     buffer.get(tmp);
@@ -173,6 +179,20 @@ public class TSDBResultSetBlockData {
                             col.add(null);
                         } else {
                             col.add(l);
+                        }
+                    }
+                    break;
+                }
+                case TSDB_DATA_TYPE_TIMESTAMP: {
+                    length = bitMapOffset;
+                    byte[] tmp = new byte[bitMapOffset];
+                    buffer.get(tmp);
+                    for (int j = 0; j < numOfRows; j++) {
+                        long l = buffer.getLong();
+                        if (isNull(tmp, j)) {
+                            col.add(null);
+                        } else {
+                            col.add(parseTimestampColumnData(l));
                         }
                     }
                     break;
@@ -258,6 +278,23 @@ public class TSDBResultSetBlockData {
             pHeader += length + lengths.get(i);
             buffer.position(pHeader);
             colData.add(col);
+        }
+        semaphore.release();
+    }
+
+    public void doneWithNoData(){
+        semaphore.release();
+    }
+
+    public void waitTillOK() throws SQLException {
+        try {
+            // must be ok When the CPU has idle time
+            if (!semaphore.tryAcquire(5, TimeUnit.SECONDS))
+            {
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "FETCH DATA TIME OUT");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 
@@ -620,6 +657,7 @@ public class TSDBResultSetBlockData {
             case TSDB_DATA_TYPE_DOUBLE:
             case TSDB_DATA_TYPE_NCHAR:
             case TSDB_DATA_TYPE_BINARY:
+            case TSDB_DATA_TYPE_TIMESTAMP:
             case TSDB_DATA_TYPE_JSON:
             case TSDB_DATA_TYPE_VARBINARY:
             case TSDB_DATA_TYPE_GEOMETRY:{
@@ -636,12 +674,6 @@ public class TSDBResultSetBlockData {
             case TSDB_DATA_TYPE_UINT: {
                 int val = (int) source;
                 return parseUInteger(val);
-            }
-
-            case TSDB_DATA_TYPE_TIMESTAMP: {
-                long val = (long) source;
-
-                return parseTimestampColumnData(val);
             }
             case TSDB_DATA_TYPE_UBIGINT: {
                 long val = (long) source;
@@ -680,4 +712,5 @@ public class TSDBResultSetBlockData {
         int index = n & 0x7;
         return (c[position] & (1 << (7 - index))) == (1 << (7 - index));
     }
+
 }
