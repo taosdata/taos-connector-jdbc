@@ -17,7 +17,7 @@ public class RestfulCompressTest {
     private static final Random random = new Random(System.currentTimeMillis());
     private static Connection connection;
     private static final String db_name = "restful_test";
-    private static final String tableName = "compress";
+    private static final String tableName = "compressA";
 
     @Description("inertRows")
     @Test
