@@ -42,7 +42,7 @@ public class TSDBResultSet extends AbstractResultSet {
     private boolean batchFetch;
     private boolean lastWasNull;
     private volatile boolean isClosed;
-    ExecutorService backFetchExecutor;
+    ThreadPoolExecutor backFetchExecutor;
     ForkJoinPool dataHandleExecutor = ForkJoinPool.commonPool();
     public void setBatchFetch(boolean batchFetch) {
         this.batchFetch = batchFetch;
@@ -81,7 +81,7 @@ public class TSDBResultSet extends AbstractResultSet {
         this.batchFetch = batchFetch;
 
         if (batchFetch){
-            backFetchExecutor = Executors.newFixedThreadPool(1);
+            backFetchExecutor = (ThreadPoolExecutor)Executors.newFixedThreadPool(1);
             backFetchExecutor.submit(() -> {
                 try {
                     while (!isClosed){
@@ -143,14 +143,23 @@ public class TSDBResultSet extends AbstractResultSet {
     }
 
     public void close() throws SQLException {
+        if (isClosed)
+            return;
+        isClosed = true;
+
         if (batchFetch){
+            // wait backFetchExecutor to finish
+            while (backFetchExecutor.getActiveCount() != 0) {
+                try {
+                    Thread.sleep(1);
+                } catch (InterruptedException ignored) {
+                    Thread.currentThread().interrupt();
+                }
+            }
             if (!backFetchExecutor.isShutdown()){
                 backFetchExecutor.shutdown();
             }
         }
-
-        if (isClosed)
-            return;
         if (this.statement == null)
             return;
         if (this.jniConnector != null) {
@@ -161,8 +170,6 @@ public class TSDBResultSet extends AbstractResultSet {
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_JNI_RESULT_SET_NULL);
             }
         }
-
-        isClosed = true;
     }
 
     public boolean wasNull() throws SQLException {
