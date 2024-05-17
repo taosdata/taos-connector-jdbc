@@ -31,10 +31,10 @@ public class WSQueryTest {
         IntStream.range(0, num).parallel().forEach(x -> {
             try (Statement statement = connection.createStatement()) {
                 statement.execute("insert into " + db_name + "." + tableName + " values(now+100s, 100)");
-
-                ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + tableName);
-                resultSet.next();
-                Assert.assertEquals(100, resultSet.getInt(2));
+                try (ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + tableName)) {
+                    resultSet.next();
+                    Assert.assertEquals(100, resultSet.getInt(2));
+                }
             } catch (SQLException e) {
                 e.printStackTrace();
             } finally {

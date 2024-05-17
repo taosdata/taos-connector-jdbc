@@ -5,6 +5,7 @@ import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
+import com.taosdata.jdbc.TSDBResultSetBlockData;
 import com.taosdata.jdbc.TaosGlobalConfig;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.utils.Utils;
@@ -22,6 +23,7 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.concurrent.*;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
 import static com.taosdata.jdbc.utils.UnsignedDataUtils.*;
@@ -32,176 +34,6 @@ public class BlockResultSet extends AbstractWSResultSet {
                           QueryResp response, String database) throws SQLException {
         super(statement, transport, response, database);
     }
-
-    @Override
-    public List<List<Object>> fetchJsonData() throws SQLException {
-        Request blockRequest = RequestFactory.generateFetchBlock(queryId);
-        FetchBlockResp resp = (FetchBlockResp) transport.send(blockRequest);
-        ByteBuffer buffer = resp.getBuffer();
-        List<List<Object>> list = new ArrayList<>();
-        if (resp.getBuffer() != null) {
-            int bitMapOffset = BitmapLen(numOfRows);
-            int pHeader = buffer.position() + 28 + fields.size() * 5;
-            buffer.position(pHeader);
-
-            List<Integer> lengths = new ArrayList<>(fields.size());
-            for (int i = 0; i < fields.size(); i++) {
-                lengths.add(buffer.getInt());
-            }
-            pHeader = buffer.position();
-            int length = 0;
-            for (int i = 0; i < fields.size(); i++) {
-                List<Object> col = new ArrayList<>(numOfRows);
-                int type = fields.get(i).getTaosType();
-                switch (type) {
-                    case TSDB_DATA_TYPE_BOOL:
-                    case TSDB_DATA_TYPE_TINYINT:
-                    case TSDB_DATA_TYPE_UTINYINT: {
-                        length = bitMapOffset;
-                        byte[] tmp = new byte[bitMapOffset];
-                        buffer.get(tmp);
-                        for (int j = 0; j < numOfRows; j++) {
-                            byte b = buffer.get();
-                            if (isNull(tmp, j)) {
-                                col.add(null);
-                            } else {
-                                col.add(b);
-                            }
-                        }
-                        break;
-                    }
-                    case TSDB_DATA_TYPE_SMALLINT:
-                    case TSDB_DATA_TYPE_USMALLINT: {
-                        length = bitMapOffset;
-                        byte[] tmp = new byte[bitMapOffset];
-                        buffer.get(tmp);
-                        for (int j = 0; j < numOfRows; j++) {
-                            short s = buffer.getShort();
-                            if (isNull(tmp, j)) {
-                                col.add(null);
-                            } else {
-                                col.add(s);
-                            }
-                        }
-                        break;
-                    }
-                    case TSDB_DATA_TYPE_INT:
-                    case TSDB_DATA_TYPE_UINT: {
-                        length = bitMapOffset;
-                        byte[] tmp = new byte[bitMapOffset];
-                        buffer.get(tmp);
-                        for (int j = 0; j < numOfRows; j++) {
-                            int in = buffer.getInt();
-                            if (isNull(tmp, j)) {
-                                col.add(null);
-                            } else {
-                                col.add(in);
-                            }
-                        }
-                        break;
-                    }
-                    case TSDB_DATA_TYPE_BIGINT:
-                    case TSDB_DATA_TYPE_UBIGINT:
-                    case TSDB_DATA_TYPE_TIMESTAMP: {
-                        length = bitMapOffset;
-                        byte[] tmp = new byte[bitMapOffset];
-                        buffer.get(tmp);
-                        for (int j = 0; j < numOfRows; j++) {
-                            long l = buffer.getLong();
-                            if (isNull(tmp, j)) {
-                                col.add(null);
-                            } else {
-                                col.add(l);
-                            }
-                        }
-                        break;
-                    }
-                    case TSDB_DATA_TYPE_FLOAT: {
-                        length = bitMapOffset;
-                        byte[] tmp = new byte[bitMapOffset];
-                        buffer.get(tmp);
-                        for (int j = 0; j < numOfRows; j++) {
-                            float f = buffer.getFloat();
-                            if (isNull(tmp, j)) {
-                                col.add(null);
-                            } else {
-                                col.add(f);
-                            }
-                        }
-                        break;
-                    }
-                    case TSDB_DATA_TYPE_DOUBLE: {
-                        length = bitMapOffset;
-                        byte[] tmp = new byte[bitMapOffset];
-                        buffer.get(tmp);
-                        for (int j = 0; j < numOfRows; j++) {
-                            double d = buffer.getDouble();
-                            if (isNull(tmp, j)) {
-                                col.add(null);
-                            } else {
-                                col.add(d);
-                            }
-                        }
-                        break;
-                    }
-                    case TSDB_DATA_TYPE_BINARY:
-                    case TSDB_DATA_TYPE_JSON:
-                    case TSDB_DATA_TYPE_VARBINARY:
-                    case TSDB_DATA_TYPE_GEOMETRY:{
-                        length = numOfRows * 4;
-                        List<Integer> offset = new ArrayList<>(numOfRows);
-                        for (int m = 0; m < numOfRows; m++) {
-                            offset.add(buffer.getInt());
-                        }
-                        int start = buffer.position();
-                        for (int m = 0; m < numOfRows; m++) {
-                            if (-1 == offset.get(m)) {
-                                col.add(null);
-                                continue;
-                            }
-                            buffer.position(start + offset.get(m));
-                            int len = buffer.getShort() & 0xFFFF;
-                            byte[] tmp = new byte[len];
-                            buffer.get(tmp);
-                            col.add(tmp);
-                        }
-                        break;
-                    }
-                    case TSDB_DATA_TYPE_NCHAR: {
-                        length = numOfRows * 4;
-                        List<Integer> offset = new ArrayList<>(numOfRows);
-                        for (int m = 0; m < numOfRows; m++) {
-                            offset.add(buffer.getInt());
-                        }
-                        int start = buffer.position();
-                        for (int m = 0; m < numOfRows; m++) {
-                            if (-1 == offset.get(m)) {
-                                col.add(null);
-                                continue;
-                            }
-                            buffer.position(start + offset.get(m));
-                            int len = (buffer.getShort() & 0xFFFF) / 4;
-                            int[] tmp = new int[len];
-                            for (int n = 0; n < len; n++) {
-                                tmp[n] = buffer.getInt();
-                            }
-                            col.add(tmp);
-                        }
-                        break;
-                    }
-                    default:
-                        // unknown type, do nothing
-                        col.add(null);
-                        break;
-                }
-                pHeader += length + lengths.get(i);
-                buffer.position(pHeader);
-                list.add(col);
-            }
-        }
-        return list;
-    }
-
     private Timestamp parseTimestampColumnData(long value) {
         if (TimestampPrecision.MS == this.timestampPrecision)
             return new Timestamp(value);

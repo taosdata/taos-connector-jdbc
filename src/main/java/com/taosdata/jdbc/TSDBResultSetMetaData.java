@@ -26,7 +26,7 @@ public class TSDBResultSetMetaData extends WrapperImpl implements ResultSetMetaD
 
     private String tableName = "";
     private String database = "";
-    List<ColumnMetaData> colMetaDataList;
+    public List<ColumnMetaData> colMetaDataList;
 
     public TSDBResultSetMetaData(List<ColumnMetaData> metaDataList) {
         this.colMetaDataList = metaDataList;

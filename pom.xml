@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.taosdata.jdbc</groupId>
     <artifactId>taos-jdbcdriver</artifactId>
-    <version>3.2.11</version>
+    <version>3.2.11-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>JDBCDriver</name>
     <url>https://github.com/taosdata/taos-connector-jdbc</url>
@@ -65,6 +65,8 @@
             <version>4.13.2</version>
             <scope>test</scope>
         </dependency>
+
+
     </dependencies>
 
     <build>
