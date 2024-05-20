@@ -130,6 +130,12 @@ public class Transport implements AutoCloseable {
                 completableFuture, timeout, TimeUnit.MILLISECONDS, reqString);
         try {
             response = responseFuture.get();
+            if (response instanceof CommonResp) {
+                CommonResp commonResp = (CommonResp) response;
+                if (0x20 == commonResp.getCode() || 0x0B == commonResp.getCode()) {
+                    clientArr.get(currentNodeIndex).closeBlocking();
+                }
+            }
         } catch (InterruptedException | ExecutionException e) {
             inFlightRequest.remove(request.getAction(), request.id());
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_QUERY_TIMEOUT, e.getMessage());
@@ -218,7 +224,7 @@ public class Transport implements AutoCloseable {
         return response;
     }
 
-    public void sendWithoutRep(Request request) throws SQLException  {
+    public void sendWithoutResponse(Request request) throws SQLException  {
         if (isClosed()){
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
         }

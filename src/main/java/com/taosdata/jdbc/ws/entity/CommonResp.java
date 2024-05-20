@@ -1,6 +1,4 @@
-package com.taosdata.jdbc.ws.schemaless;
-
-import com.taosdata.jdbc.ws.entity.Response;
+package com.taosdata.jdbc.ws.entity;
 
 public class CommonResp extends Response {
 

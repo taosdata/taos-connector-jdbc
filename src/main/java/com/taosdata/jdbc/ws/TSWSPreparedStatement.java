@@ -239,7 +239,7 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
         }
         // close
         Request close = RequestFactory.generateClose(stmtId, reqId);
-        transport.sendWithoutRep(close);
+        transport.sendWithoutResponse(close);
         return resp.getAffected();
     }
 
@@ -728,7 +728,7 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
     public void close() throws SQLException {
         super.close();
         Request close = RequestFactory.generateClose(stmtId, reqId);
-        transport.sendWithoutRep(close);
+        transport.sendWithoutResponse(close);
     }
 
     @Override
