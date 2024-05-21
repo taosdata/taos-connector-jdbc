@@ -4,11 +4,13 @@ import java.nio.ByteBuffer;
 
 public class FetchBlockResp extends Response {
     private ByteBuffer buffer;
+    private boolean isCompleted;
 
-    public FetchBlockResp(long id, ByteBuffer buffer) {
+    public FetchBlockResp(long id, ByteBuffer buffer, boolean isCompleted) {
         this.setAction(Action.FETCH_BLOCK.getAction());
         this.setReqId(id);
         this.buffer = buffer;
+        this.isCompleted = isCompleted;
     }
 
     public ByteBuffer getBuffer() {
@@ -17,5 +19,9 @@ public class FetchBlockResp extends Response {
 
     public void setBuffer(ByteBuffer buffer) {
         this.buffer = buffer;
+    }
+
+    public boolean isCompleted() {
+        return isCompleted;
     }
 }

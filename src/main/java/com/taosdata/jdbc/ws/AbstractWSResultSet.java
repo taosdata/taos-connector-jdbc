@@ -16,8 +16,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.*;
 
-import static com.taosdata.jdbc.TSDBConstants.JNI_SUCCESS;
-
 public abstract class AbstractWSResultSet extends AbstractResultSet {
     private final Logger log = LoggerFactory.getLogger(Transport.class);
 
@@ -37,8 +35,8 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
 
     protected int numOfRows = 0;
     protected int rowIndex = 0;
-    private final int cacheSize = 500000000;
-    BlockingQueue<BlockData> blockingQueueOut = new LinkedBlockingQueue<>(cacheSize);
+    private static final int CACHE_SIZE = 5;
+    BlockingQueue<BlockData> blockingQueueOut = new LinkedBlockingQueue<>(CACHE_SIZE);
     ThreadPoolExecutor backFetchExecutor;
     ForkJoinPool dataHandleExecutor = ForkJoinPool.commonPool();
     protected AbstractWSResultSet(Statement statement, Transport transport,
@@ -64,39 +62,45 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
                 while (!isClosed){
                     BlockData blockData = BlockData.getEmptyBlockData(fields);
 
-                    long a1 = System.nanoTime();
-                    Request request = RequestFactory.generateFetch(queryId, reqId);
-                    FetchResp fetchResp = (FetchResp)transport.send(request);
+//                    //long a1 = System.nanoTime();
+//                    Request request = RequestFactory.generateFetch(queryId, reqId);
+//                    FetchResp fetchResp = (FetchResp)transport.send(request);
+//
+//                    //long a2 = System.nanoTime();
+//                    if (Code.SUCCESS.getCode() != fetchResp.getCode()) {
+//                        blockData.setReturnCode(fetchResp.getCode());
+//                        blockingQueueOut.put(blockData);
+//                        break;
+//                    }
+//                    if (fetchResp.isCompleted() || fetchResp.getRows() == 0 || isClosed) {
+//                        blockData.setCompleted(true);
+//                        blockingQueueOut.put(blockData);
+//                        break;
+//                    }
+//                    blockData.setNumOfRows(fetchResp.getRows());
 
-                    long a2 = System.nanoTime();
-                    if (Code.SUCCESS.getCode() != fetchResp.getCode()) {
-                        blockData.setReturnCode(fetchResp.getCode());
-                        blockingQueueOut.put(blockData);
-                        break;
-                    }
-                    if (fetchResp.isCompleted() || fetchResp.getRows() == 0 || isClosed) {
+                    Request blockRequest = RequestFactory.generateFetchBlock(queryId);
+                    //long a3 = System.nanoTime();
+                    FetchBlockResp resp = (FetchBlockResp) transport.send(blockRequest);
+
+                    if (resp.isCompleted()){
                         blockData.setCompleted(true);
                         blockingQueueOut.put(blockData);
                         break;
                     }
-                    blockData.setNumOfRows(fetchResp.getRows());
 
-                    Request blockRequest = RequestFactory.generateFetchBlock(queryId);
-                    long a3 = System.nanoTime();
-                    FetchBlockResp resp = (FetchBlockResp) transport.send(blockRequest);
-
-                    long a4 = System.nanoTime();
+                    //long a4 = System.nanoTime();
 
                     blockData.setBuffer(resp.getBuffer());
                     blockingQueueOut.put(blockData);
 
-                    long a5 = System.nanoTime();
+                    //long a5 = System.nanoTime();
 
                     dataHandleExecutor.submit(blockData::handleData);
 
-                    long a6 = System.nanoTime();
+                    //long a6 = System.nanoTime();
 
-                    System.out.println((a2 - a1) + "\t" + (a3 - a2)+ "\t" + (a4 - a3)+ "\t" + (a5 - a4)+ "\t" + (a6 - a5));
+                    //System.out.println((a2 - a1) + "\t" + (a3 - a2)+ "\t" + (a4 - a3)+ "\t" + (a5 - a4)+ "\t" + (a6 - a5));
 
 
 

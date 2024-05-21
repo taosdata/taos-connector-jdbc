@@ -15,7 +15,7 @@ public enum Action {
     QUERY("query", QueryResp.class),
     FETCH("fetch", FetchResp.class),
     FETCH_JSON("fetch_json", FetchJsonResp.class),
-    FETCH_BLOCK("fetch_block", FetchBlockResp.class),
+    FETCH_BLOCK("fetch_raw_block", FetchBlockResp.class),
     // free_result's class is meaningless
     FREE_RESULT("free_result", Response.class),
 
