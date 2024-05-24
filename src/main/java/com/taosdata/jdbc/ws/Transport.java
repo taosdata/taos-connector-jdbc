@@ -33,6 +33,11 @@ public class Transport implements AutoCloseable {
 
     public static final int DEFAULT_MESSAGE_WAIT_TIMEOUT = 60_000;
 
+    public static final int TSDB_CODE_RPC_NETWORK_UNAVAIL = 0x0B;
+    public static final int TSDB_CODE_RPC_SOMENODE_NOT_CONNECTED = 0x20;
+
+
+
     private final ArrayList<WSClient> clientArr = new ArrayList<>();;
     private final InFlightRequest inFlightRequest;
     private long timeout;
@@ -130,12 +135,7 @@ public class Transport implements AutoCloseable {
                 completableFuture, timeout, TimeUnit.MILLISECONDS, reqString);
         try {
             response = responseFuture.get();
-            if (response instanceof CommonResp) {
-                CommonResp commonResp = (CommonResp) response;
-                if (0x20 == commonResp.getCode() || 0x0B == commonResp.getCode()) {
-                    clientArr.get(currentNodeIndex).closeBlocking();
-                }
-            }
+            handleErrInMasterSlaveMode(response);
         } catch (InterruptedException | ExecutionException e) {
             inFlightRequest.remove(request.getAction(), request.id());
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_QUERY_TIMEOUT, e.getMessage());
@@ -183,13 +183,21 @@ public class Transport implements AutoCloseable {
         CompletableFuture<Response> responseFuture = CompletableFutureTimeout.orTimeout(completableFuture, timeout, TimeUnit.MILLISECONDS, reqString);
         try {
             response = responseFuture.get();
+            handleErrInMasterSlaveMode(response);
         } catch (InterruptedException | ExecutionException e) {
             inFlightRequest.remove(action, reqId);
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_QUERY_TIMEOUT, e.getMessage());
         }
         return response;
     }
-
+    private void handleErrInMasterSlaveMode(Response response) throws InterruptedException{
+        if (clientArr.size() > 1 && response instanceof CommonResp){
+            CommonResp commonResp = (CommonResp) response;
+            if (TSDB_CODE_RPC_NETWORK_UNAVAIL == commonResp.getCode() || TSDB_CODE_RPC_SOMENODE_NOT_CONNECTED == commonResp.getCode()) {
+                clientArr.get(currentNodeIndex).closeBlocking();
+            }
+        }
+    }
 
     public Response sendWithoutRetry(Request request) throws SQLException {
         if (isClosed()){
