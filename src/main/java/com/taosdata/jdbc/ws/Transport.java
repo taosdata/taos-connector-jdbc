@@ -348,25 +348,36 @@ public class Transport implements AutoCloseable {
     }
 
     public boolean reconnectCurNode() throws SQLException {
-        boolean reconnected = doReconnectCurNode();
-        if (!reconnected){
-            return false;
+        for (int retryTimes = 0; retryTimes < connectionParam.getReconnectRetryCount(); retryTimes++) {
+            try {
+                boolean reconnected = clientArr.get(currentNodeIndex).reconnectBlocking();
+                if (reconnected) {
+                    // send con msgs
+                    ConnectReq connectReq = new ConnectReq();
+                    connectReq.setReqId(ReqId.getReqID());
+                    connectReq.setUser(connectionParam.getUser());
+                    connectReq.setPassword(connectionParam.getPassword());
+                    connectReq.setDb(connectionParam.getDatabase());
+
+                    if (connectionParam.getConnectMode() != 0) {
+                        connectReq.setMode(connectionParam.getConnectMode());
+                    }
+
+                    ConnectResp auth;
+                    auth = (ConnectResp) sendWithoutRetry(new Request(Action.CONN.getAction(), connectReq));
+
+                    if (Code.SUCCESS.getCode() == auth.getCode()) {
+                        return true;
+                    } else {
+                        clientArr.get(currentNodeIndex).closeBlocking();
+                        log.error("reconnect failed, code: {}, msg: {}", auth.getCode(), auth.getMessage());
+                    }
+                }
+                Thread.sleep(connectionParam.getReconnectIntervalMs());
+            } catch (Exception e) {
+                log.error("try connect remote server failed!", e);
+            }
         }
-
-        // send con msgs
-        ConnectReq connectReq = new ConnectReq();
-        connectReq.setReqId(ReqId.getReqID());
-        connectReq.setUser(connectionParam.getUser());
-        connectReq.setPassword(connectionParam.getPassword());
-        connectReq.setDb(connectionParam.getDatabase());
-
-        if (connectionParam.getConnectMode() != 0){
-            connectReq.setMode(connectionParam.getConnectMode());
-        }
-
-        ConnectResp auth;
-        auth = (ConnectResp) sendWithoutRetry(new Request(Action.CONN.getAction(), connectReq));
-
-        return Code.SUCCESS.getCode() == auth.getCode();
+        return false;
     }
 }
