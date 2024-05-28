@@ -1,6 +1,5 @@
 package com.taosdata.jdbc.ws.entity;
 
-import com.taosdata.jdbc.ws.schemaless.CommonResp;
 import com.taosdata.jdbc.ws.stmt.entity.ExecResp;
 import com.taosdata.jdbc.ws.stmt.entity.StmtResp;
 
@@ -14,7 +13,6 @@ public enum Action {
     CONN("conn", ConnectResp.class),
     QUERY("query", QueryResp.class),
     FETCH("fetch", FetchResp.class),
-    FETCH_JSON("fetch_json", FetchJsonResp.class),
     FETCH_BLOCK("fetch_block", FetchBlockResp.class),
     // free_result's class is meaningless
     FREE_RESULT("free_result", Response.class),

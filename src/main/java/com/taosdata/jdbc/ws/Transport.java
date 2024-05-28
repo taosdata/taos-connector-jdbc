@@ -33,6 +33,11 @@ public class Transport implements AutoCloseable {
 
     public static final int DEFAULT_MESSAGE_WAIT_TIMEOUT = 60_000;
 
+    public static final int TSDB_CODE_RPC_NETWORK_UNAVAIL = 0x0B;
+    public static final int TSDB_CODE_RPC_SOMENODE_NOT_CONNECTED = 0x20;
+
+
+
     private final ArrayList<WSClient> clientArr = new ArrayList<>();;
     private final InFlightRequest inFlightRequest;
     private long timeout;
@@ -130,6 +135,7 @@ public class Transport implements AutoCloseable {
                 completableFuture, timeout, TimeUnit.MILLISECONDS, reqString);
         try {
             response = responseFuture.get();
+            handleErrInMasterSlaveMode(response);
         } catch (InterruptedException | ExecutionException e) {
             inFlightRequest.remove(request.getAction(), request.id());
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_QUERY_TIMEOUT, e.getMessage());
@@ -177,13 +183,21 @@ public class Transport implements AutoCloseable {
         CompletableFuture<Response> responseFuture = CompletableFutureTimeout.orTimeout(completableFuture, timeout, TimeUnit.MILLISECONDS, reqString);
         try {
             response = responseFuture.get();
+            handleErrInMasterSlaveMode(response);
         } catch (InterruptedException | ExecutionException e) {
             inFlightRequest.remove(action, reqId);
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_QUERY_TIMEOUT, e.getMessage());
         }
         return response;
     }
-
+    private void handleErrInMasterSlaveMode(Response response) throws InterruptedException{
+        if (clientArr.size() > 1 && response instanceof CommonResp){
+            CommonResp commonResp = (CommonResp) response;
+            if (TSDB_CODE_RPC_NETWORK_UNAVAIL == commonResp.getCode() || TSDB_CODE_RPC_SOMENODE_NOT_CONNECTED == commonResp.getCode()) {
+                clientArr.get(currentNodeIndex).closeBlocking();
+            }
+        }
+    }
 
     public Response sendWithoutRetry(Request request) throws SQLException {
         if (isClosed()){
@@ -218,7 +232,7 @@ public class Transport implements AutoCloseable {
         return response;
     }
 
-    public void sendWithoutRep(Request request) throws SQLException  {
+    public void sendWithoutResponse(Request request) throws SQLException  {
         if (isClosed()){
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
         }
@@ -334,25 +348,36 @@ public class Transport implements AutoCloseable {
     }
 
     public boolean reconnectCurNode() throws SQLException {
-        boolean reconnected = doReconnectCurNode();
-        if (!reconnected){
-            return false;
+        for (int retryTimes = 0; retryTimes < connectionParam.getReconnectRetryCount(); retryTimes++) {
+            try {
+                boolean reconnected = clientArr.get(currentNodeIndex).reconnectBlocking();
+                if (reconnected) {
+                    // send con msgs
+                    ConnectReq connectReq = new ConnectReq();
+                    connectReq.setReqId(ReqId.getReqID());
+                    connectReq.setUser(connectionParam.getUser());
+                    connectReq.setPassword(connectionParam.getPassword());
+                    connectReq.setDb(connectionParam.getDatabase());
+
+                    if (connectionParam.getConnectMode() != 0) {
+                        connectReq.setMode(connectionParam.getConnectMode());
+                    }
+
+                    ConnectResp auth;
+                    auth = (ConnectResp) sendWithoutRetry(new Request(Action.CONN.getAction(), connectReq));
+
+                    if (Code.SUCCESS.getCode() == auth.getCode()) {
+                        return true;
+                    } else {
+                        clientArr.get(currentNodeIndex).closeBlocking();
+                        log.error("reconnect failed, code: {}, msg: {}", auth.getCode(), auth.getMessage());
+                    }
+                }
+                Thread.sleep(connectionParam.getReconnectIntervalMs());
+            } catch (Exception e) {
+                log.error("try connect remote server failed!", e);
+            }
         }
-
-        // send con msgs
-        ConnectReq connectReq = new ConnectReq();
-        connectReq.setReqId(ReqId.getReqID());
-        connectReq.setUser(connectionParam.getUser());
-        connectReq.setPassword(connectionParam.getPassword());
-        connectReq.setDb(connectionParam.getDatabase());
-
-        if (connectionParam.getConnectMode() != 0){
-            connectReq.setMode(connectionParam.getConnectMode());
-        }
-
-        ConnectResp auth;
-        auth = (ConnectResp) sendWithoutRetry(new Request(Action.CONN.getAction(), connectReq));
-
-        return Code.SUCCESS.getCode() == auth.getCode();
+        return false;
     }
 }

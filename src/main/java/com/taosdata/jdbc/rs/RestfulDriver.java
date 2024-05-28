@@ -124,6 +124,7 @@ public class RestfulDriver extends AbstractDriver {
             byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
             byteBuffer.position(8);
             long id = byteBuffer.getLong();
+
             FutureResponse remove = inFlightRequest.remove(Action.FETCH_BLOCK.getAction(), id);
             if (null != remove) {
                 FetchBlockResp fetchBlockResp = new FetchBlockResp(id, byteBuffer);
