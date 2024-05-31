@@ -1,10 +1,12 @@
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.*;
+import com.taosdata.jdbc.enums.BindType;
 import com.taosdata.jdbc.enums.DataType;
 import com.taosdata.jdbc.rs.RestfulResultSet;
 import com.taosdata.jdbc.rs.RestfulResultSetMetaData;
 import com.taosdata.jdbc.ws.entity.*;
+import com.taosdata.jdbc.ws.stmt.entity.StmtResp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,48 +64,26 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
                 while (!isClosed){
                     BlockData blockData = BlockData.getEmptyBlockData(fields);
 
-//                    //long a1 = System.nanoTime();
-//                    Request request = RequestFactory.generateFetch(queryId, reqId);
-//                    FetchResp fetchResp = (FetchResp)transport.send(request);
-//
-//                    //long a2 = System.nanoTime();
-//                    if (Code.SUCCESS.getCode() != fetchResp.getCode()) {
-//                        blockData.setReturnCode(fetchResp.getCode());
-//                        blockingQueueOut.put(blockData);
-//                        break;
-//                    }
-//                    if (fetchResp.isCompleted() || fetchResp.getRows() == 0 || isClosed) {
-//                        blockData.setCompleted(true);
-//                        blockingQueueOut.put(blockData);
-//                        break;
-//                    }
-//                    blockData.setNumOfRows(fetchResp.getRows());
+                    byte[] version = {1, 0};
+                    FetchBlockNewResp resp = (FetchBlockNewResp) transport.send(Action.FETCH_BLOCK_NEW.getAction(),
+                            reqId, queryId, 7, version);
+                    resp.init();
 
-                    Request blockRequest = RequestFactory.generateFetchBlock(queryId);
-                    //long a3 = System.nanoTime();
-                    FetchBlockResp resp = (FetchBlockResp) transport.send(blockRequest);
-
-                    if (resp.isCompleted()){
+                    if (Code.SUCCESS.getCode() != resp.getCode()) {
+                        blockData.setReturnCode(resp.getCode());
+                        blockingQueueOut.put(blockData);
+                        break;
+                    }
+                    if (resp.isCompleted() || isClosed) {
                         blockData.setCompleted(true);
                         blockingQueueOut.put(blockData);
                         break;
                     }
 
-                    //long a4 = System.nanoTime();
-
                     blockData.setBuffer(resp.getBuffer());
                     blockingQueueOut.put(blockData);
 
-                    //long a5 = System.nanoTime();
-
                     dataHandleExecutor.submit(blockData::handleData);
-
-                    //long a6 = System.nanoTime();
-
-                    //System.out.println((a2 - a1) + "\t" + (a3 - a2)+ "\t" + (a4 - a3)+ "\t" + (a5 - a4)+ "\t" + (a6 - a5));
-
-
-
                 }
             } catch (InterruptedException ignored) {
                 Thread.currentThread().interrupt();

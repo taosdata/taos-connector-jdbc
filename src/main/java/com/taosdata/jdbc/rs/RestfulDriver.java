@@ -122,12 +122,12 @@ public class RestfulDriver extends AbstractDriver {
         });
         transport.setBinaryMessageHandler(byteBuffer -> {
             byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
-            byteBuffer.position(8);
+            byteBuffer.position(26);
             long id = byteBuffer.getLong();
-            boolean isCompleted = byteBuffer.get() > 0;
-            FutureResponse remove = inFlightRequest.remove(Action.FETCH_BLOCK.getAction(), id);
+            byteBuffer.position(8);
+            FutureResponse remove = inFlightRequest.remove(Action.FETCH_BLOCK_NEW.getAction(), id);
             if (null != remove) {
-                FetchBlockResp fetchBlockResp = new FetchBlockResp(id, byteBuffer, isCompleted);
+                FetchBlockNewResp fetchBlockResp = new FetchBlockNewResp(byteBuffer);
                 remove.getFuture().complete(fetchBlockResp);
             }
         });

@@ -38,10 +38,10 @@ public class BlockData {
     public void handleData() {
 
         try {
-            ByteBuffer buffer = this.buffer;
             int columns = fields.size();
             List<List<Object>> list = new ArrayList<>();
             if (buffer != null) {
+                buffer.getInt(); // buffer length
                 int pHeader = buffer.position() + 28 + columns * 5;
                 buffer.position(buffer.position() + 8);
                 this.numOfRows = buffer.getInt();

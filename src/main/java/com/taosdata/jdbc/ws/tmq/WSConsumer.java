@@ -57,7 +57,7 @@ public class WSConsumer<V> implements Consumer<V> {
             byteBuffer.position(24);
             FutureResponse remove = inFlightRequest.remove(ConsumerAction.FETCH_BLOCK.getAction(), id);
             if (null != remove) {
-                FetchBlockResp fetchBlockResp = new FetchBlockResp(id, byteBuffer, true);
+                FetchBlockResp fetchBlockResp = new FetchBlockResp(id, byteBuffer);
                 remove.getFuture().complete(fetchBlockResp);
             }
         });

@@ -5,25 +5,17 @@ import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
-import com.taosdata.jdbc.TSDBResultSetBlockData;
 import com.taosdata.jdbc.TaosGlobalConfig;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.utils.Utils;
-import com.taosdata.jdbc.ws.entity.FetchBlockResp;
 import com.taosdata.jdbc.ws.entity.QueryResp;
-import com.taosdata.jdbc.ws.entity.Request;
-import com.taosdata.jdbc.ws.entity.RequestFactory;
 
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
-import java.nio.ByteBuffer;
 import java.sql.*;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.List;
-import java.util.concurrent.*;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
 import static com.taosdata.jdbc.utils.UnsignedDataUtils.*;
