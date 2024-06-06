@@ -46,6 +46,7 @@ public class WSQueryTest {
 
     @Before
     public void before() throws SQLException {
+        System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "80");
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();
         if (url == null) {
             url = "jdbc:TAOS-RS://" + host + ":" + port + "/?user=root&password=taosdata&batchfetch=true";

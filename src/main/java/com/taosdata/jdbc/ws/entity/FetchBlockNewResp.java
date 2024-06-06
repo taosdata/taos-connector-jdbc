@@ -28,7 +28,7 @@ public class FetchBlockNewResp extends Response {
 
         message = new String(msgBytes, StandardCharsets.UTF_8);
         buffer.getLong(); // resultId
-        isCompleted = buffer.get() == 1;
+        isCompleted = buffer.get() != 0;
     }
 
     public ByteBuffer getBuffer() {

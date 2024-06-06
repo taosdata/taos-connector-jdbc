@@ -229,7 +229,7 @@ public class BlockData {
     public void waitTillOK() throws SQLException {
         try {
             // must be ok When the CPU has idle time
-            if (!semaphore.tryAcquire(5, TimeUnit.SECONDS))
+            if (!semaphore.tryAcquire(500, TimeUnit.SECONDS))
             {
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "FETCH DATA TIME OUT");
             }

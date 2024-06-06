@@ -46,25 +46,14 @@ public class TMQRequestFactoryTest {
     }
 
     @Test
-    @Description("Generate Fetch")
-    public void testGenerateFetch() {
-        Request request = factory.generateFetch(1_000);
+    @Description("Generate FetchRaw")
+    public void testGenerateFetchRaw() {
+        Request request = factory.generateFetchRaw(1_000);
         JSONObject jsonObject = JSONObject.parseObject(request.toString());
-        FetchReq req = JSON.toJavaObject((JSON) JSON.toJSON(jsonObject.get("args")), FetchReq.class);
+        FetchRawReq req = JSON.toJavaObject((JSON) JSON.toJSON(jsonObject.get("args")), FetchRawReq.class);
         Assert.assertEquals(1, req.getReqId());
         Assert.assertEquals(1000, req.getMessageId());
     }
-
-    @Test
-    @Description("Generate Fetch Block")
-    public void testGenerateFetchBlock() {
-        Request request = factory.generateFetchBlock(10, 1000);
-        JSONObject jsonObject = JSONObject.parseObject(request.toString());
-        FetchBlockReq req = JSON.toJavaObject((JSON) JSON.toJSON(jsonObject.get("args")), FetchBlockReq.class);
-        Assert.assertEquals(10, req.getReqId());
-        Assert.assertEquals(1000, req.getMessageId());
-    }
-
     @Test
     @Description("Generate Commit")
     public void testGenerateCommit() {

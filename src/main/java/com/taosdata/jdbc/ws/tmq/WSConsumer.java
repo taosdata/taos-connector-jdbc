@@ -12,7 +12,6 @@ import com.taosdata.jdbc.ws.FutureResponse;
 import com.taosdata.jdbc.ws.InFlightRequest;
 import com.taosdata.jdbc.ws.Transport;
 import com.taosdata.jdbc.ws.entity.Code;
-import com.taosdata.jdbc.ws.entity.FetchBlockResp;
 import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.entity.Response;
 import com.taosdata.jdbc.ws.tmq.entity.*;
@@ -51,13 +50,13 @@ public class WSConsumer<V> implements Consumer<V> {
         });
         transport.setBinaryMessageHandler(byteBuffer -> {
             byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
-            byteBuffer.position(8);
+            byteBuffer.position(26);
             // request_id
             long id = byteBuffer.getLong();
-            byteBuffer.position(24);
-            FutureResponse remove = inFlightRequest.remove(ConsumerAction.FETCH_BLOCK.getAction(), id);
+            byteBuffer.position(8);
+            FutureResponse remove = inFlightRequest.remove(ConsumerAction.FETCH_RAW_DATA.getAction(), id);
             if (null != remove) {
-                FetchBlockResp fetchBlockResp = new FetchBlockResp(id, byteBuffer);
+                FetchRawBlockResp fetchBlockResp = new FetchRawBlockResp(byteBuffer);
                 remove.getFuture().complete(fetchBlockResp);
             }
         });
@@ -140,6 +139,8 @@ public class WSConsumer<V> implements Consumer<V> {
             return ConsumerRecords.emptyRecord();
         }
         messageId = pollResp.getMessageId();
+
+
         ConsumerRecords<V> records = new ConsumerRecords<>();
         try (WSConsumerResultSet rs = new WSConsumerResultSet(transport, factory, pollResp.getMessageId(), pollResp.getDatabase())) {
             while (rs.next()) {

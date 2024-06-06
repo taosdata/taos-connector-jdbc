@@ -202,6 +202,7 @@ public class RestfulResultSet extends AbstractResultSet {
         public int getTaosType() {
             return taos_type;
         }
+        public String getName() {return name;}
     }
 
     @Override
