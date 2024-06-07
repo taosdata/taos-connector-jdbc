@@ -171,7 +171,7 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
                     FetchReq closeReq = new FetchReq();
                     closeReq.setReqId(queryId);
                     closeReq.setId(queryId);
-                    transport.sendWithoutRep(new Request(Action.FREE_RESULT.getAction(), closeReq));
+                    transport.sendWithoutResponse(new Request(Action.FREE_RESULT.getAction(), closeReq));
                 }
             }
         }

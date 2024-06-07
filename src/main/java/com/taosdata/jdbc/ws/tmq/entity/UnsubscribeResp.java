@@ -1,28 +1,9 @@
 package com.taosdata.jdbc.ws.tmq.entity;
 
-import com.taosdata.jdbc.ws.entity.Response;
+import com.taosdata.jdbc.ws.entity.CommonResp;
 
-public class UnsubscribeResp extends Response {
-    private int code;
-    private String message;
+public class UnsubscribeResp extends CommonResp {
     private long timing;
-
-    public int getCode() {
-        return code;
-    }
-
-    public void setCode(int code) {
-        this.code = code;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
-    }
-
     public long getTiming() {
         return timing;
     }

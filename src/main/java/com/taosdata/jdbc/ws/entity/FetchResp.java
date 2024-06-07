@@ -3,29 +3,11 @@ package com.taosdata.jdbc.ws.entity;
 /**
  * fetch result pojo
  */
-public class FetchResp extends Response{
-    private int code;
-    private String message;
+public class FetchResp extends CommonResp{
     private long id;
     private boolean completed;
     private Integer[] lengths;
     private int rows;
-
-    public int getCode() {
-        return code;
-    }
-
-    public void setCode(int code) {
-        this.code = code;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
-    }
 
     public long getId() {
         return id;

@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.ws.schemaless;
 
+import com.taosdata.jdbc.ws.entity.CommonResp;
 import com.taosdata.jdbc.ws.entity.Response;
 
 public enum SchemalessAction {

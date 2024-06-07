@@ -1,22 +1,19 @@
-package com.taosdata.jdbc.ws.entity;
+package com.taosdata.jdbc.ws.tmq.entity;
 
 import com.alibaba.fastjson.annotation.JSONField;
 import com.taosdata.jdbc.utils.UInt64Codec;
+import com.taosdata.jdbc.ws.entity.CommonResp;
 
-/**
- * query result pojo
- */
-public class QueryResp extends CommonResp {
+public class FetchResp extends CommonResp {
 
+    @JSONField(name = "message_id", deserializeUsing = UInt64Codec.class)
+    private long messageId;
+    private boolean completed;
 
-    @JSONField(deserializeUsing = UInt64Codec.class)
-    private long id;
+    @JSONField(name = "table_name")
+    private String tableName;
 
-    @JSONField(name = "is_update")
-    private boolean isUpdate;
-
-    @JSONField(name = "affected_rows")
-    private int affectedRows;
+    private int rows;
 
     @JSONField(name = "fields_count")
     private int fieldsCount;
@@ -28,32 +25,41 @@ public class QueryResp extends CommonResp {
     private int[] fieldsTypes;
 
     @JSONField(name = "fields_lengths")
-    private int[] fieldsLengths;
+    private long[] fieldsLengths;
 
     private int precision;
 
-    public long getId() {
-        return id;
+
+    public long getMessageId() {
+        return messageId;
     }
 
-    public void setId(long id) {
-        this.id = id;
+    public void setMessageId(long messageId) {
+        this.messageId = messageId;
     }
 
-    public boolean isUpdate() {
-        return isUpdate;
+    public boolean isCompleted() {
+        return completed;
     }
 
-    public void setUpdate(boolean update) {
-        isUpdate = update;
+    public void setCompleted(boolean completed) {
+        this.completed = completed;
     }
 
-    public int getAffectedRows() {
-        return affectedRows;
+    public String getTableName() {
+        return tableName;
     }
 
-    public void setAffectedRows(int affectedRows) {
-        this.affectedRows = affectedRows;
+    public void setTableName(String tableName) {
+        this.tableName = tableName;
+    }
+
+    public int getRows() {
+        return rows;
+    }
+
+    public void setRows(int rows) {
+        this.rows = rows;
     }
 
     public int getFieldsCount() {
@@ -80,11 +86,11 @@ public class QueryResp extends CommonResp {
         this.fieldsTypes = fieldsTypes;
     }
 
-    public int[] getFieldsLengths() {
+    public long[] getFieldsLengths() {
         return fieldsLengths;
     }
 
-    public void setFieldsLengths(int[] fieldsLengths) {
+    public void setFieldsLengths(long[] fieldsLengths) {
         this.fieldsLengths = fieldsLengths;
     }
 
