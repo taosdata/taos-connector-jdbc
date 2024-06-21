@@ -14,6 +14,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -22,6 +25,11 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
+
+import javax.net.SocketFactory;
+import javax.net.ssl.*;
+import java.net.URI;
+import java.security.cert.X509Certificate;
 
 import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT;
 
@@ -50,6 +58,40 @@ public class Transport implements AutoCloseable {
     public Transport(WSFunction function, ConnectionParam param, InFlightRequest inFlightRequest) throws SQLException {
         WSClient master = WSClient.getInstance(param, function, this);
         WSClient slave = WSClient.getSlaveInstance(param, function, this);
+
+        if (param.isDisableSslCertValidation()){
+            // creat a TrustManager that trusts all certificates
+            TrustManager[] trustAllCerts = new TrustManager[]{
+                    new X509TrustManager() {
+                        public X509Certificate[] getAcceptedIssuers() {
+                            return new X509Certificate[0];
+                        }
+                        @SuppressWarnings("unused")
+                        public void checkClientTrusted(X509Certificate[] certs, String authType) {
+                            // Intentionally left blank to accept all certificates
+                        }
+                        @SuppressWarnings("unused")
+                        public void checkServerTrusted(X509Certificate[] certs, String authType) {
+                            // Intentionally left blank to accept all certificates
+                        }
+                    }
+            };
+
+            try{
+                // create a custom SSLContext
+                SSLContext sslContext = SSLContext.getInstance("TLS");
+                sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
+                // get SSLContext SocketFactory
+                final SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
+                master.setSocketFactory(sslSocketFactory);
+
+                if (slave != null){
+                    slave.setSocketFactory(sslSocketFactory);
+                }
+            } catch (Exception e){
+                throw new SQLException("setSocketFactory failed ", e);
+            }
+        }
 
         this.clientArr.add(master);
         if (slave != null){
