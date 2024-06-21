@@ -32,6 +32,7 @@ public class ConnectionParam {
     private String slaveClusterPort;
     private int reconnectIntervalMs;
     private int reconnectRetryCount;
+    private boolean disableSslCertValidation;
 
     static public final int CONNECT_MODE_BI = 1;
 
@@ -54,6 +55,7 @@ public class ConnectionParam {
         this.reconnectIntervalMs = builder.reconnectIntervalMs;
         this.reconnectRetryCount = builder.reconnectRetryCount;
         this.enableAutoConnect = builder.enableAutoReconnect;
+        this.disableSslCertValidation = builder.disableSslCertValidation;
     }
 
     public String getHost() {
@@ -194,6 +196,17 @@ public class ConnectionParam {
     public boolean isEnableAutoConnect() {
         return enableAutoConnect;
     }
+    public void setEnableAutoConnect(boolean enableAutoConnect) {
+        this.enableAutoConnect = enableAutoConnect;
+    }
+
+    public boolean isDisableSslCertValidation() {
+        return disableSslCertValidation;
+    }
+
+    public void setDisableSslCertValidation(boolean disableSslCertValidation) {
+        this.disableSslCertValidation = disableSslCertValidation;
+    }
 
     public static ConnectionParam getParam(Properties properties) throws SQLException {
         String host = properties.getProperty(TSDBDriver.PROPERTY_KEY_HOST);
@@ -264,6 +277,7 @@ public class ConnectionParam {
 
         boolean enableCompression = Boolean.parseBoolean(properties.getProperty(TSDBDriver.PROPERTY_KEY_ENABLE_COMPRESSION,"false"));
         boolean enableAutoReconnect = Boolean.parseBoolean(properties.getProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT,"false"));
+        boolean disableSslCertValidation = Boolean.parseBoolean(properties.getProperty(TSDBDriver.PROPERTY_KEY_DISABLE_SSL_CERT_VALIDATION,"false"));
 
         return new Builder(host, port)
                 .setDatabase(database)
@@ -281,6 +295,7 @@ public class ConnectionParam {
                 .setReconnectIntervalMs(reconnectIntervalMs)
                 .setReconnectRetryCount(reconnectRetryCount)
                 .setEnableAutoReconnect(enableAutoReconnect)
+                .setDisableSslCertValidation(disableSslCertValidation)
                 .build();
     }
 
@@ -304,6 +319,7 @@ public class ConnectionParam {
         private String slaveClusterPort;
         private int reconnectIntervalMs;
         private int reconnectRetryCount;
+        private boolean disableSslCertValidation;
 
         public Builder(String host, String port) {
             this.host = host;
@@ -381,6 +397,11 @@ public class ConnectionParam {
 
         public Builder setReconnectRetryCount(int reconnectRetryCount) {
             this.reconnectRetryCount = reconnectRetryCount;
+            return this;
+        }
+
+        public Builder setDisableSslCertValidation(boolean disableSslCertValidation) {
+            this.disableSslCertValidation = disableSslCertValidation;
             return this;
         }
 

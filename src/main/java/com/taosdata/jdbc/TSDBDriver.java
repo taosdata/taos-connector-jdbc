@@ -117,11 +117,13 @@ public class TSDBDriver extends AbstractDriver {
     public static final String PROPERTY_KEY_SLAVE_CLUSTER_PORT = "slaveClusterPort";
     public static final String PROPERTY_KEY_RECONNECT_INTERVAL_MS = "reconnectIntervalMs";
     public static final String PROPERTY_KEY_RECONNECT_RETRY_COUNT = "reconnectRetryCount";
+
+    public static final String PROPERTY_KEY_DISABLE_SSL_CERT_VALIDATION = "disableSSLCertValidation";
+
     /**
      * max message number send to server concurrently
      */
     public static final String PROPERTY_KEY_MAX_CONCURRENT_REQUEST = "maxConcurrentRequest";
-
     /**
      * max pool size
      */
