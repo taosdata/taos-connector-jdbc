@@ -83,7 +83,6 @@ public class Transport implements AutoCloseable {
                 sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
                 // 获取自定义的 SSLContext 的 SocketFactory
                 final SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
-                // 创建 WebSocket 连接
                 master.setSocketFactory(sslSocketFactory);
 
                 if (slave != null){
