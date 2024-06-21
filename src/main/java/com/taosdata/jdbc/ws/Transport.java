@@ -60,7 +60,7 @@ public class Transport implements AutoCloseable {
         WSClient slave = WSClient.getSlaveInstance(param, function, this);
 
         if (param.isDisableSslCertValidation()){
-            // 创建一个信任所有证书的 TrustManager
+            // creat a TrustManager that trusts all certificates
             TrustManager[] trustAllCerts = new TrustManager[]{
                     new X509TrustManager() {
                         public X509Certificate[] getAcceptedIssuers() {
@@ -78,10 +78,10 @@ public class Transport implements AutoCloseable {
             };
 
             try{
-                // 创建一个自定义的 SSLContext
+                // create a custom SSLContext
                 SSLContext sslContext = SSLContext.getInstance("TLS");
                 sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
-                // 获取自定义的 SSLContext 的 SocketFactory
+                // get SSLContext SocketFactory
                 final SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
                 master.setSocketFactory(sslSocketFactory);
 
