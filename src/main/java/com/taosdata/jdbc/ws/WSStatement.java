@@ -82,7 +82,7 @@ public class WSStatement extends AbstractStatement {
 
         byte[] sqlBytes = sql.getBytes();
 
-        // 将 version 和 sqlLen 转换为小端序的字节
+        // write version and sqlLen in little endian byte sequence
         byte[] result = ByteBuffer.allocate(6).order(ByteOrder.LITTLE_ENDIAN).putShort((short)1).putInt(sqlBytes.length).array();
         Response response = transport.send(Action.BINARY_QUERY.getAction(),
                 reqId, 0, 6, result, sqlBytes);
