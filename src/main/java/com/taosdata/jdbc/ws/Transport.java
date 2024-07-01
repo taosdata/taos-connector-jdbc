@@ -14,6 +14,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -22,6 +25,11 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
+
+import javax.net.SocketFactory;
+import javax.net.ssl.*;
+import java.net.URI;
+import java.security.cert.X509Certificate;
 
 import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT;
 
@@ -33,6 +41,11 @@ public class Transport implements AutoCloseable {
 
     public static final int DEFAULT_MESSAGE_WAIT_TIMEOUT = 60_000;
 
+    public static final int TSDB_CODE_RPC_NETWORK_UNAVAIL = 0x0B;
+    public static final int TSDB_CODE_RPC_SOMENODE_NOT_CONNECTED = 0x20;
+
+
+
     private final ArrayList<WSClient> clientArr = new ArrayList<>();;
     private final InFlightRequest inFlightRequest;
     private long timeout;
@@ -40,11 +53,46 @@ public class Transport implements AutoCloseable {
 
     private final ConnectionParam connectionParam;
     private final WSFunction wsFunction;
+    public static final byte[] EMPTY_BYTE_ARRAY = new byte[0];
 
     private int currentNodeIndex = 0;
     public Transport(WSFunction function, ConnectionParam param, InFlightRequest inFlightRequest) throws SQLException {
         WSClient master = WSClient.getInstance(param, function, this);
         WSClient slave = WSClient.getSlaveInstance(param, function, this);
+
+        if (param.isDisableSslCertValidation()){
+            // creat a TrustManager that trusts all certificates
+            TrustManager[] trustAllCerts = new TrustManager[]{
+                    new X509TrustManager() {
+                        public X509Certificate[] getAcceptedIssuers() {
+                            return new X509Certificate[0];
+                        }
+                        @SuppressWarnings("unused")
+                        public void checkClientTrusted(X509Certificate[] certs, String authType) {
+                            // Intentionally left blank to accept all certificates
+                        }
+                        @SuppressWarnings("unused")
+                        public void checkServerTrusted(X509Certificate[] certs, String authType) {
+                            // Intentionally left blank to accept all certificates
+                        }
+                    }
+            };
+
+            try{
+                // create a custom SSLContext
+                SSLContext sslContext = SSLContext.getInstance("TLS");
+                sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
+                // get SSLContext SocketFactory
+                final SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
+                master.setSocketFactory(sslSocketFactory);
+
+                if (slave != null){
+                    slave.setSocketFactory(sslSocketFactory);
+                }
+            } catch (Exception e){
+                throw new SQLException("setSocketFactory failed ", e);
+            }
+        }
 
         this.clientArr.add(master);
         if (slave != null){
@@ -130,14 +178,18 @@ public class Transport implements AutoCloseable {
                 completableFuture, timeout, TimeUnit.MILLISECONDS, reqString);
         try {
             response = responseFuture.get();
+            handleErrInMasterSlaveMode(response);
         } catch (InterruptedException | ExecutionException e) {
             inFlightRequest.remove(request.getAction(), request.id());
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_QUERY_TIMEOUT, e.getMessage());
         }
         return response;
     }
+    public Response send(String action, long reqId, long resultId, long type, byte[] rawData) throws SQLException {
+        return send(action, reqId, resultId, type, rawData, EMPTY_BYTE_ARRAY);
+    }
 
-    public Response send(String action, long reqId, long stmtId, long type, byte[] rawData) throws SQLException {
+    public Response send(String action, long reqId, long resultId, long type, byte[] rawData, byte[] rawData2) throws SQLException {
         if (isClosed()){
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
         }
@@ -145,9 +197,10 @@ public class Transport implements AutoCloseable {
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         try {
             buffer.write(SerializeBlock.longToBytes(reqId));
-            buffer.write(SerializeBlock.longToBytes(stmtId));
+            buffer.write(SerializeBlock.longToBytes(resultId));
             buffer.write(SerializeBlock.longToBytes(type));
             buffer.write(rawData);
+            buffer.write(rawData2);
         } catch (IOException e) {
             throw new SQLException("data serialize error!", e);
         }
@@ -173,17 +226,25 @@ public class Transport implements AutoCloseable {
             }
         }
 
-        String reqString = "action:" + action + ", reqId:" + reqId + ", stmtId:" + stmtId + ", bindType" + type;
+        String reqString = "action:" + action + ", reqId:" + reqId + ", resultId:" + resultId + ", actionType" + type;
         CompletableFuture<Response> responseFuture = CompletableFutureTimeout.orTimeout(completableFuture, timeout, TimeUnit.MILLISECONDS, reqString);
         try {
             response = responseFuture.get();
+            handleErrInMasterSlaveMode(response);
         } catch (InterruptedException | ExecutionException e) {
             inFlightRequest.remove(action, reqId);
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_QUERY_TIMEOUT, e.getMessage());
         }
         return response;
     }
-
+    private void handleErrInMasterSlaveMode(Response response) throws InterruptedException{
+        if (clientArr.size() > 1 && response instanceof CommonResp){
+            CommonResp commonResp = (CommonResp) response;
+            if (TSDB_CODE_RPC_NETWORK_UNAVAIL == commonResp.getCode() || TSDB_CODE_RPC_SOMENODE_NOT_CONNECTED == commonResp.getCode()) {
+                clientArr.get(currentNodeIndex).closeBlocking();
+            }
+        }
+    }
 
     public Response sendWithoutRetry(Request request) throws SQLException {
         if (isClosed()){
@@ -218,7 +279,7 @@ public class Transport implements AutoCloseable {
         return response;
     }
 
-    public void sendWithoutRep(Request request) throws SQLException  {
+    public void sendWithoutResponse(Request request) throws SQLException  {
         if (isClosed()){
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
         }
@@ -334,25 +395,36 @@ public class Transport implements AutoCloseable {
     }
 
     public boolean reconnectCurNode() throws SQLException {
-        boolean reconnected = doReconnectCurNode();
-        if (!reconnected){
-            return false;
+        for (int retryTimes = 0; retryTimes < connectionParam.getReconnectRetryCount(); retryTimes++) {
+            try {
+                boolean reconnected = clientArr.get(currentNodeIndex).reconnectBlocking();
+                if (reconnected) {
+                    // send con msgs
+                    ConnectReq connectReq = new ConnectReq();
+                    connectReq.setReqId(ReqId.getReqID());
+                    connectReq.setUser(connectionParam.getUser());
+                    connectReq.setPassword(connectionParam.getPassword());
+                    connectReq.setDb(connectionParam.getDatabase());
+
+                    if (connectionParam.getConnectMode() != 0) {
+                        connectReq.setMode(connectionParam.getConnectMode());
+                    }
+
+                    ConnectResp auth;
+                    auth = (ConnectResp) sendWithoutRetry(new Request(Action.CONN.getAction(), connectReq));
+
+                    if (Code.SUCCESS.getCode() == auth.getCode()) {
+                        return true;
+                    } else {
+                        clientArr.get(currentNodeIndex).closeBlocking();
+                        log.error("reconnect failed, code: {}, msg: {}", auth.getCode(), auth.getMessage());
+                    }
+                }
+                Thread.sleep(connectionParam.getReconnectIntervalMs());
+            } catch (Exception e) {
+                log.error("try connect remote server failed!", e);
+            }
         }
-
-        // send con msgs
-        ConnectReq connectReq = new ConnectReq();
-        connectReq.setReqId(ReqId.getReqID());
-        connectReq.setUser(connectionParam.getUser());
-        connectReq.setPassword(connectionParam.getPassword());
-        connectReq.setDb(connectionParam.getDatabase());
-
-        if (connectionParam.getConnectMode() != 0){
-            connectReq.setMode(connectionParam.getConnectMode());
-        }
-
-        ConnectResp auth;
-        auth = (ConnectResp) sendWithoutRetry(new Request(Action.CONN.getAction(), connectReq));
-
-        return Code.SUCCESS.getCode() == auth.getCode();
+        return false;
     }
 }

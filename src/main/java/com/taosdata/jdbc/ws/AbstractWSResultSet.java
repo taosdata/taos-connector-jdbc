@@ -1,12 +1,14 @@
 package com.taosdata.jdbc.ws;
 
-import com.taosdata.jdbc.AbstractResultSet;
-import com.taosdata.jdbc.TSDBError;
-import com.taosdata.jdbc.TSDBErrorNumbers;
+import com.taosdata.jdbc.*;
+import com.taosdata.jdbc.enums.BindType;
 import com.taosdata.jdbc.enums.DataType;
 import com.taosdata.jdbc.rs.RestfulResultSet;
 import com.taosdata.jdbc.rs.RestfulResultSetMetaData;
 import com.taosdata.jdbc.ws.entity.*;
+import com.taosdata.jdbc.ws.stmt.entity.StmtResp;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -14,26 +16,31 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.*;
 
 public abstract class AbstractWSResultSet extends AbstractResultSet {
+    private final Logger log = LoggerFactory.getLogger(Transport.class);
+
     protected final Statement statement;
     protected final Transport transport;
     protected final long queryId;
     protected final long reqId;
 
     protected volatile boolean isClosed;
+    private boolean isCompleted = false;
     // meta
     protected final ResultSetMetaData metaData;
     protected final List<RestfulResultSet.Field> fields = new ArrayList<>();
     protected final List<String> columnNames;
-    protected List<Integer> fieldLength;
     // data
     protected List<List<Object>> result = new ArrayList<>();
 
     protected int numOfRows = 0;
     protected int rowIndex = 0;
-    private boolean isCompleted;
-
+    private static final int CACHE_SIZE = 5;
+    BlockingQueue<BlockData> blockingQueueOut = new LinkedBlockingQueue<>(CACHE_SIZE);
+    ThreadPoolExecutor backFetchExecutor;
+    ForkJoinPool dataHandleExecutor = ForkJoinPool.commonPool();
     protected AbstractWSResultSet(Statement statement, Transport transport,
                                QueryResp response, String database) throws SQLException {
         this.statement = statement;
@@ -50,6 +57,51 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
         }
         this.metaData = new RestfulResultSetMetaData(database, fields);
         this.timestampPrecision = response.getPrecision();
+
+        backFetchExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
+        backFetchExecutor.submit(() -> {
+            try {
+                while (!isClosed){
+                    BlockData blockData = BlockData.getEmptyBlockData(fields);
+
+                    byte[] version = {1, 0};
+                    FetchBlockNewResp resp = (FetchBlockNewResp) transport.send(Action.FETCH_BLOCK_NEW.getAction(),
+                            reqId, queryId, 7, version);
+                    resp.init();
+
+                    if (Code.SUCCESS.getCode() != resp.getCode()) {
+                        blockData.setReturnCode(resp.getCode());
+                        blockingQueueOut.put(blockData);
+                        break;
+                    }
+                    if (resp.isCompleted() || isClosed) {
+                        blockData.setCompleted(true);
+                        blockingQueueOut.put(blockData);
+                        break;
+                    }
+
+                    blockData.setBuffer(resp.getBuffer());
+                    blockingQueueOut.put(blockData);
+
+                    dataHandleExecutor.submit(blockData::handleData);
+                }
+            } catch (InterruptedException ignored) {
+                Thread.currentThread().interrupt();
+            } catch (Exception e) {
+                log.error("fetch block error", e);
+                BlockData blockData = BlockData.getEmptyBlockData(fields);
+                while (!isClosed) {
+                    try {
+                        if (blockingQueueOut.offer(blockData, 10, TimeUnit.MILLISECONDS)){
+                            break;
+                        }
+                    } catch (InterruptedException ignored) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
+                }
+            }
+        });
     }
 
     private boolean forward() {
@@ -74,34 +126,52 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
             return true;
         }
 
-        Request request = RequestFactory.generateFetch(queryId, reqId);
-        FetchResp fetchResp = (FetchResp)transport.send(request);
-        if (Code.SUCCESS.getCode() != fetchResp.getCode()) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, fetchResp.getMessage());
+        BlockData blockData;
+        try {
+            blockData = blockingQueueOut.take();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "FETCH DATA INTERRUPTED");
+        }
+
+        if (blockData.getReturnCode() != Code.SUCCESS.getCode()){
+            throw TSDBError.createSQLException(blockData.getReturnCode(), "FETCH DATA ERROR");
         }
         this.reset();
-        if (fetchResp.isCompleted() || fetchResp.getRows() == 0) {
+        if (blockData.isCompleted()){
             this.isCompleted = true;
             return false;
         }
-        fieldLength = Arrays.asList(fetchResp.getLengths());
-        this.numOfRows = fetchResp.getRows();
-        this.result = fetchJsonData();
+        blockData.waitTillOK();
+
+        this.result = blockData.getData();
+        this.numOfRows = blockData.getNumOfRows();
         return true;
     }
-
-    public abstract List<List<Object>> fetchJsonData() throws SQLException;
 
     @Override
     public void close() throws SQLException {
         synchronized (this) {
             if (!this.isClosed) {
                 this.isClosed = true;
+
+                // wait backFetchExecutor to finish
+                while (backFetchExecutor.getActiveCount() != 0) {
+                    try {
+                        Thread.sleep(1);
+                    } catch (InterruptedException ignored) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+                if (!backFetchExecutor.isShutdown()){
+                    backFetchExecutor.shutdown();
+                }
+
                 if (result != null && !result.isEmpty() && !isCompleted) {
                     FetchReq closeReq = new FetchReq();
                     closeReq.setReqId(queryId);
                     closeReq.setId(queryId);
-                    transport.sendWithoutRep(new Request(Action.FREE_RESULT.getAction(), closeReq));
+                    transport.sendWithoutResponse(new Request(Action.FREE_RESULT.getAction(), closeReq));
                 }
             }
         }

@@ -51,19 +51,12 @@ public class TMQRequestFactory {
         return new Request(ConsumerAction.POLL.getAction(), pollReq);
     }
 
-    public Request generateFetch(long messageId) {
-        long reqId = this.getId(ConsumerAction.FETCH.getAction());
-        FetchReq fetchReq = new FetchReq();
+    public Request generateFetchRaw(long messageId) {
+        long reqId = this.getId(ConsumerAction.FETCH_RAW_DATA.getAction());
+        FetchRawReq fetchReq = new FetchRawReq();
         fetchReq.setReqId(reqId);
         fetchReq.setMessageId(messageId);
-        return new Request(ConsumerAction.FETCH.getAction(), fetchReq);
-    }
-
-    public Request generateFetchBlock(long fetchRequestId, long messageId) {
-        FetchBlockReq fetchBlockReq = new FetchBlockReq();
-        fetchBlockReq.setReqId(fetchRequestId);
-        fetchBlockReq.setMessageId(messageId);
-        return new Request(ConsumerAction.FETCH_BLOCK.getAction(), fetchBlockReq);
+        return new Request(ConsumerAction.FETCH_RAW_DATA.getAction(), fetchReq);
     }
 
     public Request generateCommit(long messageId) {

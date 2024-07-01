@@ -7,25 +7,21 @@ import com.taosdata.jdbc.AbstractResultSet;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.TaosGlobalConfig;
-import com.taosdata.jdbc.enums.DataType;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.rs.RestfulResultSet;
 import com.taosdata.jdbc.rs.RestfulResultSetMetaData;
 import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.Transport;
 import com.taosdata.jdbc.ws.entity.Code;
-import com.taosdata.jdbc.ws.entity.FetchBlockResp;
 import com.taosdata.jdbc.ws.entity.Request;
-import com.taosdata.jdbc.ws.tmq.entity.FetchResp;
+import com.taosdata.jdbc.ws.tmq.entity.FetchRawBlockResp;
 import com.taosdata.jdbc.ws.tmq.entity.TMQRequestFactory;
 
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
-import java.nio.ByteBuffer;
 import java.sql.*;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
 
@@ -75,197 +71,32 @@ public class WSConsumerResultSet extends AbstractResultSet {
 
         if (this.forward())
             return true;
+        if (this.numOfRows > 0){
+            return false;
+        }
 
-        Request request = factory.generateFetch(messageId);
-        FetchResp fetchResp = (FetchResp) transport.send(request);
+        Request request = factory.generateFetchRaw(messageId);
+        FetchRawBlockResp fetchResp = (FetchRawBlockResp) transport.send(request);
+        fetchResp.init();
+
         if (Code.SUCCESS.getCode() != fetchResp.getCode())
             throw TSDBError.createSQLException(fetchResp.getCode(), fetchResp.getMessage());
 
+        fetchResp.parseBlockInfos();
+
         this.reset();
-        if (fetchResp.isCompleted() || fetchResp.getRows() == 0)
+        if (fetchResp.getRows() == 0)
             return false;
 
-        columnNames = Arrays.asList(fetchResp.getFieldsNames());
+        columnNames = fetchResp.getColumnNames();
         fields.clear();
-        for (int i = 0; i < fetchResp.getFieldsCount(); i++) {
-            String colName = fetchResp.getFieldsNames()[i];
-            int taosType = fetchResp.getFieldsTypes()[i];
-            int jdbcType = DataType.convertTaosType2DataType(taosType).getJdbcTypeValue();
-            int length = (int) fetchResp.getFieldsLengths()[i];
-            fields.add(new RestfulResultSet.Field(colName, jdbcType, length, "", taosType));
-        }
+        fields.addAll(fetchResp.getFields());
+
         this.metaData = new RestfulResultSetMetaData(database, fields, fetchResp.getTableName());
         this.numOfRows = fetchResp.getRows();
-        this.result = fetchBlockData(request.id());
+        this.result = fetchResp.getResultData();
         this.timestampPrecision = fetchResp.getPrecision();
         return true;
-    }
-
-    public List<List<Object>> fetchBlockData(long fetchRequestId) throws SQLException {
-        Request blockRequest = factory.generateFetchBlock(fetchRequestId, messageId);
-        FetchBlockResp resp = (FetchBlockResp) transport.send(blockRequest);
-        ByteBuffer buffer = resp.getBuffer();
-        List<List<Object>> list = new ArrayList<>();
-        if (resp.getBuffer() != null) {
-            int bitMapOffset = BitmapLen(numOfRows);
-            int pHeader = buffer.position() + 28 + fields.size() * 5;
-            buffer.position(pHeader);
-            List<Integer> lengths = new ArrayList<>(fields.size());
-            for (int i = 0; i < fields.size(); i++) {
-                lengths.add(buffer.getInt());
-            }
-            pHeader = buffer.position();
-            int length = 0;
-            for (int i = 0; i < fields.size(); i++) {
-                List<Object> col = new ArrayList<>(numOfRows);
-                int type = fields.get(i).getTaosType();
-                switch (type) {
-                    case TSDB_DATA_TYPE_BOOL:
-                    case TSDB_DATA_TYPE_TINYINT:
-                    case TSDB_DATA_TYPE_UTINYINT: {
-                        length = bitMapOffset;
-                        byte[] tmp = new byte[bitMapOffset];
-                        buffer.get(tmp);
-                        for (int j = 0; j < numOfRows; j++) {
-                            byte b = buffer.get();
-                            if (isNull(tmp, j)) {
-                                col.add(null);
-                            } else {
-                                col.add(b);
-                            }
-                        }
-                        break;
-                    }
-                    case TSDB_DATA_TYPE_SMALLINT:
-                    case TSDB_DATA_TYPE_USMALLINT: {
-                        length = bitMapOffset;
-                        byte[] tmp = new byte[bitMapOffset];
-                        buffer.get(tmp);
-                        for (int j = 0; j < numOfRows; j++) {
-                            short s = buffer.getShort();
-                            if (isNull(tmp, j)) {
-                                col.add(null);
-                            } else {
-                                col.add(s);
-                            }
-                        }
-                        break;
-                    }
-                    case TSDB_DATA_TYPE_INT:
-                    case TSDB_DATA_TYPE_UINT: {
-                        length = bitMapOffset;
-                        byte[] tmp = new byte[bitMapOffset];
-                        buffer.get(tmp);
-                        for (int j = 0; j < numOfRows; j++) {
-                            int in = buffer.getInt();
-                            if (isNull(tmp, j)) {
-                                col.add(null);
-                            } else {
-                                col.add(in);
-                            }
-                        }
-                        break;
-                    }
-                    case TSDB_DATA_TYPE_BIGINT:
-                    case TSDB_DATA_TYPE_UBIGINT:
-                    case TSDB_DATA_TYPE_TIMESTAMP: {
-                        length = bitMapOffset;
-                        byte[] tmp = new byte[bitMapOffset];
-                        buffer.get(tmp);
-                        for (int j = 0; j < numOfRows; j++) {
-                            long l = buffer.getLong();
-                            if (isNull(tmp, j)) {
-                                col.add(null);
-                            } else {
-                                col.add(l);
-                            }
-                        }
-                        break;
-                    }
-                    case TSDB_DATA_TYPE_FLOAT: {
-                        length = bitMapOffset;
-                        byte[] tmp = new byte[bitMapOffset];
-                        buffer.get(tmp);
-                        for (int j = 0; j < numOfRows; j++) {
-                            float f = buffer.getFloat();
-                            if (isNull(tmp, j)) {
-                                col.add(null);
-                            } else {
-                                col.add(f);
-                            }
-                        }
-                        break;
-                    }
-                    case TSDB_DATA_TYPE_DOUBLE: {
-                        length = bitMapOffset;
-                        byte[] tmp = new byte[bitMapOffset];
-                        buffer.get(tmp);
-                        for (int j = 0; j < numOfRows; j++) {
-                            double d = buffer.getDouble();
-                            if (isNull(tmp, j)) {
-                                col.add(null);
-                            } else {
-                                col.add(d);
-                            }
-                        }
-                        break;
-                    }
-                    case TSDB_DATA_TYPE_BINARY:
-                    case TSDB_DATA_TYPE_JSON:
-                    case TSDB_DATA_TYPE_VARBINARY:
-                    case TSDB_DATA_TYPE_GEOMETRY:{
-                        length = numOfRows * 4;
-                        List<Integer> offset = new ArrayList<>(numOfRows);
-                        for (int m = 0; m < numOfRows; m++) {
-                            offset.add(buffer.getInt());
-                        }
-                        int start = buffer.position();
-                        for (int m = 0; m < numOfRows; m++) {
-                            if (-1 == offset.get(m)) {
-                                col.add(null);
-                                continue;
-                            }
-                            buffer.position(start + offset.get(m));
-                            int len = buffer.getShort() & 0xFFFF;
-                            byte[] tmp = new byte[len];
-                            buffer.get(tmp);
-                            col.add(tmp);
-                        }
-                        break;
-                    }
-                    case TSDB_DATA_TYPE_NCHAR: {
-                        length = numOfRows * 4;
-                        List<Integer> offset = new ArrayList<>(numOfRows);
-                        for (int m = 0; m < numOfRows; m++) {
-                            offset.add(buffer.getInt());
-                        }
-                        int start = buffer.position();
-                        for (int m = 0; m < numOfRows; m++) {
-                            if (-1 == offset.get(m)) {
-                                col.add(null);
-                                continue;
-                            }
-                            buffer.position(start + offset.get(m));
-                            int len = (buffer.getShort() & 0xFFFF) / 4;
-                            int[] tmp = new int[len];
-                            for (int n = 0; n < len; n++) {
-                                tmp[n] = buffer.getInt();
-                            }
-                            col.add(tmp);
-                        }
-                        break;
-                    }
-                    default:
-                        // unknown type, do nothing
-                        col.add(null);
-                        break;
-                }
-                pHeader += length + lengths.get(i);
-                buffer.position(pHeader);
-                list.add(col);
-            }
-        }
-        return list;
     }
 
     @Override
@@ -1143,13 +974,5 @@ public class WSConsumerResultSet extends AbstractResultSet {
     }
 
     //    ceil(numOfRows/8.0)
-    private int BitmapLen(int n) {
-        return (n + 0x7) >> 3;
-    }
 
-    private boolean isNull(byte[] c, int n) {
-        int position = n >>> 3;
-        int index = n & 0x7;
-        return (c[position] & (1 << (7 - index))) == (1 << (7 - index));
-    }
 }

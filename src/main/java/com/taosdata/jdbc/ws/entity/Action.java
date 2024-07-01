@@ -1,8 +1,8 @@
 package com.taosdata.jdbc.ws.entity;
 
-import com.taosdata.jdbc.ws.schemaless.CommonResp;
 import com.taosdata.jdbc.ws.stmt.entity.ExecResp;
 import com.taosdata.jdbc.ws.stmt.entity.StmtResp;
+import com.taosdata.jdbc.ws.tmq.entity.FetchRawBlockResp;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -13,9 +13,11 @@ import java.util.Map;
 public enum Action {
     CONN("conn", ConnectResp.class),
     QUERY("query", QueryResp.class),
+    BINARY_QUERY("binary_query", QueryResp.class),
     FETCH("fetch", FetchResp.class),
-    FETCH_JSON("fetch_json", FetchJsonResp.class),
-    FETCH_BLOCK("fetch_block", FetchBlockResp.class),
+    FETCH_BLOCK("fetch_raw_block", FetchRawBlockResp.class),
+    FETCH_BLOCK_NEW("fetch_block_new", FetchBlockNewResp.class),
+
     // free_result's class is meaningless
     FREE_RESULT("free_result", Response.class),
 

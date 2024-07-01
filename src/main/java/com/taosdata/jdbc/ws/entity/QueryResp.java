@@ -6,18 +6,8 @@ import com.taosdata.jdbc.utils.UInt64Codec;
 /**
  * query result pojo
  */
-public class QueryResp extends Response {
-    private int code;
+public class QueryResp extends CommonResp {
 
-    public int getCode() {
-        return code;
-    }
-
-    public void setCode(int code) {
-        this.code = code;
-    }
-
-    private String message;
 
     @JSONField(deserializeUsing = UInt64Codec.class)
     private long id;
@@ -41,14 +31,6 @@ public class QueryResp extends Response {
     private int[] fieldsLengths;
 
     private int precision;
-
-    public String getMessage() {
-        return message;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
-    }
 
     public long getId() {
         return id;
