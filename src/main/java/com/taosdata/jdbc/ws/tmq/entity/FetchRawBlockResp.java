@@ -96,6 +96,7 @@ public class FetchRawBlockResp extends Response {
     private int getTypeSkip(byte type) throws SQLException {
         switch (type) {
             case 1:
+                return 8;
             case 2:
             case 3:
                 return 16;
