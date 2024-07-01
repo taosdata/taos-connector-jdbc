@@ -53,6 +53,7 @@ public class Transport implements AutoCloseable {
 
     private final ConnectionParam connectionParam;
     private final WSFunction wsFunction;
+    public static final byte[] EMPTY_BYTE_ARRAY = new byte[0];
 
     private int currentNodeIndex = 0;
     public Transport(WSFunction function, ConnectionParam param, InFlightRequest inFlightRequest) throws SQLException {
@@ -184,8 +185,11 @@ public class Transport implements AutoCloseable {
         }
         return response;
     }
+    public Response send(String action, long reqId, long resultId, long type, byte[] rawData) throws SQLException {
+        return send(action, reqId, resultId, type, rawData, EMPTY_BYTE_ARRAY);
+    }
 
-    public Response send(String action, long reqId, long stmtId, long type, byte[] rawData) throws SQLException {
+    public Response send(String action, long reqId, long resultId, long type, byte[] rawData, byte[] rawData2) throws SQLException {
         if (isClosed()){
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
         }
@@ -193,9 +197,10 @@ public class Transport implements AutoCloseable {
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         try {
             buffer.write(SerializeBlock.longToBytes(reqId));
-            buffer.write(SerializeBlock.longToBytes(stmtId));
+            buffer.write(SerializeBlock.longToBytes(resultId));
             buffer.write(SerializeBlock.longToBytes(type));
             buffer.write(rawData);
+            buffer.write(rawData2);
         } catch (IOException e) {
             throw new SQLException("data serialize error!", e);
         }
@@ -221,7 +226,7 @@ public class Transport implements AutoCloseable {
             }
         }
 
-        String reqString = "action:" + action + ", reqId:" + reqId + ", stmtId:" + stmtId + ", bindType" + type;
+        String reqString = "action:" + action + ", reqId:" + reqId + ", resultId:" + resultId + ", actionType" + type;
         CompletableFuture<Response> responseFuture = CompletableFutureTimeout.orTimeout(completableFuture, timeout, TimeUnit.MILLISECONDS, reqString);
         try {
             response = responseFuture.get();

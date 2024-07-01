@@ -8,6 +8,8 @@ import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.utils.SqlSyntaxValidator;
 import com.taosdata.jdbc.ws.entity.*;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -75,12 +77,15 @@ public class WSStatement extends AbstractStatement {
         if (isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
 
-
         if (null == reqId)
             reqId = ReqId.getReqID();
 
-        Request request = RequestFactory.generateQuery(sql, reqId);
-        Response response = transport.send(request);
+        byte[] sqlBytes = sql.getBytes();
+
+        // write version and sqlLen in little endian byte sequence
+        byte[] result = ByteBuffer.allocate(6).order(ByteOrder.LITTLE_ENDIAN).putShort((short)1).putInt(sqlBytes.length).array();
+        Response response = transport.send(Action.BINARY_QUERY.getAction(),
+                reqId, 0, 6, result, sqlBytes);
 
         QueryResp queryResp = (QueryResp) response;
         if (Code.SUCCESS.getCode() != queryResp.getCode()) {
