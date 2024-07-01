@@ -39,6 +39,7 @@ jobs:
         run: | 
           sudo apt-get install  -y libgeos-dev
           geos-config --version
+          sudo apt-get install -y gcc cmake build-essential git libssl-dev libgflags2.2 libgflags-dev libexpat1-dev libapr1-dev libaprutil1-dev libmxml-dev  geos-devel 
 
       - name: install TDengine
         run: cd TDengine && mkdir debug && cd debug && cmake .. -DBUILD_JDBC=false -DBUILD_TOOLS=false -DBUILD_HTTP=false && make && sudo make install
