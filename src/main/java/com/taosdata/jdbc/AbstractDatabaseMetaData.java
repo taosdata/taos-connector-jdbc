@@ -617,8 +617,8 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
             WSConnection wsConnection = (WSConnection) connection;
             //BI模式，只查询用户表，只查表，不查询子表
             if (wsConnection.getParam().getConnectMode() == ConnectionParam.CONNECT_MODE_BI){
-                dbHelperStr = " user ";
-                tableHelperStr = " normal ";
+                dbHelperStr = "user";
+                tableHelperStr = "normal ";
             }
         }
 
@@ -1592,7 +1592,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
             WSConnection wsConnection = (WSConnection) conn;
             //BI模式，只查询用户表，只查表，不查询子表
             if (wsConnection.getParam().getConnectMode() == 1){
-                dbHelperStr = " user ";
+                dbHelperStr = "user";
             }
         }
 
