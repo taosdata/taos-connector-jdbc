@@ -90,7 +90,7 @@ cd taos-connector-jdbc
 mvn clean install -Dmaven.test.skip=true
 ```
 
-After compilation, a jar package of taos-jdbcdriver-3.0.0-dist .jar is generated in the target directory, and the compiled jar file is automatically placed in the local Maven repository.
+After compilation, a jar package of taos-jdbcdriver-3.3.0-dist .jar is generated in the target directory, and the compiled jar file is automatically placed in the local Maven repository.
 
 ## Establish a connection
 
@@ -203,7 +203,7 @@ In addition to getting the connection from the specified URL, you can use Proper
 **Note**:
 
 - The client parameter set in the application is process-level. If you want to update the parameters of the client, you need to restart the application. This is because the client parameter is a global parameter that takes effect only the first time the application is set.
-- The following sample code is based on taos-jdbcdriver-3.0.0.
+- The following sample code is based on taos-jdbcdriver-3.3.0.
 
 ```java
 public Connection getConn() throws Exception{
@@ -395,7 +395,7 @@ TDengine's native JDBC connection implementation has significantly improved its 
 
 **Note**.
 
-- The following sample code is based on taos-jdbcdriver-3.0.0
+- The following sample code is based on taos-jdbcdriver-3.3.0
 - The setString method should be called for binary type data, and the setNString method should be called for nchar type data
 - both setString and setNString require the user to declare the width of the corresponding column in the size parameter of the table definition
 
@@ -498,7 +498,7 @@ TDengine has added the ability to schemaless writing. It is compatible with Infl
 
 - Because the rules for schema-less writing and automatic table creation differ from those in the previous SQL examples, please ensure that the tables `meters`, `metric_telnet`, and `metric_json` do not exist before running the code examples.
 - The OpenTSDB TELNET line protocol and OpenTSDB JSON format protocol only support one data column, so we have used other examples.
-- The following example code is based on taos-jdbcdriver-3.0.0.
+- The following example code is based on taos-jdbcdriver-3.3.0.
 
 
 ```java

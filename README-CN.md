@@ -390,7 +390,7 @@ TDengine 的 JDBC 原生连接实现大幅改进了参数绑定方式对数据�
 
 **注意**：
 
-- 以下示例代码基于 taos-jdbcdriver-3.0.0
+- 以下示例代码基于 taos-jdbcdriver-3.3.0
 - binary 类型数据需要调用 setString 方法，nchar 类型数据需要调用 setNString 方法
 - setString 和 setNString 都要求用户在 size 参数里声明表定义中对应列的列宽
 
@@ -497,7 +497,7 @@ note
 **注意**：
 - 因为无模式写入自动建表规则与之前执行 SQL 样例中不同，因此运行代码样例前请确保 meters、metric_telnet 和 metric_json 表不存在。
 - OpenTSDB 的 TELNET 行协议和 OpenTSDB 的 JSON 格式协议只支持一个数据列，因此我们采用了其他示例。
-- 以下示例代码基于 taos-jdbcdriver-3.0.0
+- 以下示例代码基于 taos-jdbcdriver-3.3.0
 
 ```java
 public class SchemalessWsTest {
