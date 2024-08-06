@@ -27,7 +27,7 @@ Websocket 连接支持所有能运行 Java 的平台。
 
 ## 版本支持
 
-请参考[版本支持列表](https://docs.taosdata.com/reference/connector/#版本支持)。
+请参考[版本支持列表](https://docs.taosdata.com/connector/#版本支持)。
 
 ## TDengine DataType 和 Java DataType
 
@@ -58,7 +58,7 @@ TDengine 目前支持时间戳、数字、字符、布尔类型，与 Java 对�
 使用 Java Connector 连接数据库前，需要具备以下条件：
 
 - 已安装 Java 1.8 或以上版本运行时环境和 Maven 3.6 或以上版本
-- 已安装 TDengine 客户端驱动（使用原生连接必须安装，使用 Websocket 连接无需安装），具体步骤请参考[安装客户端驱动](https://docs.taosdata.com/reference/connector/#安装客户端驱动)
+- 已安装 TDengine 客户端驱动（使用原生连接必须安装，使用 Websocket 连接无需安装），具体步骤请参考[安装客户端驱动](https://docs.taosdata.com/connector/#安装客户端驱动)
 
 ## 安装连接器
 
@@ -362,15 +362,18 @@ try (Connection connection = DriverManager.getConnection(jdbcUrl, properties);
 在报错后，通过 SQLException 可以获取到错误的信息和错误码：
 
 ```java
-try (Statement statement = connection.createStatement()) {
-    // executeQuery
-    ResultSet resultSet = statement.executeQuery(sql);
+try (Statement statement = connection.createStatement();
+     // executeQuery
+     ResultSet tempResultSet = statement.executeQuery(sql)) {
+
     // print result
-    printResult(resultSet);
-} catch (SQLException e) {
-    System.out.println("ERROR Message: " + e.getMessage());
-    System.out.println("ERROR Code: " + e.getErrorCode());
-    e.printStackTrace();
+    printResult(tempResultSet);
+} catch (SQLException ex) {
+    System.out.println("ERROR Message: " + ex.getMessage() + "ERROR Code: " + ex.getErrorCode());
+    ex.printStackTrace();
+} catch (Exception ex){
+    System.out.println("ERROR Message: " + ex.getMessage());
+    ex.printStackTrace();
 }
 ```
 
@@ -387,7 +390,6 @@ TDengine 的 JDBC 原生连接实现大幅改进了参数绑定方式对数据�
 
 **注意**：
 
-- JDBC REST 连接目前不支持参数绑定
 - 以下示例代码基于 taos-jdbcdriver-3.0.0
 - binary 类型数据需要调用 setString 方法，nchar 类型数据需要调用 setNString 方法
 - setString 和 setNString 都要求用户在 size 参数里声明表定义中对应列的列宽
@@ -535,20 +537,17 @@ public class SchemalessWsTest {
 
 ### 数据订阅
 
-TDengine 提供了类似于消息队列产品的数据订阅和消费接口。在许多场景中，采用 TDengine 的时序大数据平台，无须再集成消息队列产品，从而简化应用程序设计并降低运维成本。本章介绍各语言连接器数据订阅的相关 API 以及使用方法。 
-
-
+TDengine 提供了类似于消息队列产品的数据订阅和消费接口。在许多场景中，采用 TDengine 的时序大数据平台，无须再集成消息队列产品，从而简化应用程序设计并降低运维成本。
 TDengine Java 连接器支持订阅功能，数据订阅的基础知识请参考官方文档 https://docs.taosdata.com/develop/tmq/ 。
 
 #### 创建 Topic
 
-通过 taos shell 或者 taos explore 执行创建主题的 SQL：CREATE TOPIC IF NOT EXISTS topic_meters AS SELECT ts, current, voltage, phase, groupid, location FROM meters
+通过 `taos shell` 或者 `taos explore` 执行创建主题的 SQL：`CREATE TOPIC IF NOT EXISTS topic_meters AS SELECT ts, current, voltage, phase, groupid, location FROM meters;` 
+上述 SQL 将创建一个名为 `topic_meters` 的订阅。使用该订阅所获取的消息中的每条记录都由此查询语句 `SELECT ts, current, voltage, phase, groupid, location FROM meters` 所选择的列组成。
 
-上述 SQL 将创建一个名为 topic_meters 的订阅。使用该订阅所获取的消息中的每条记录都由此查询语句 SELECT ts, current, voltage, phase, groupid, location FROM meters 所选择的列组成。
+**注意**：在 TDengine java 连接器实现中，对于订阅查询，有以下限制。
 
-注意 在 TDengine java 连接器实现中，对于订阅查询，有以下限制。
-
-- 查询语句限制：订阅查询只能使用 select 语句，不支持其他类型的SQL，如 insert、update 或 delete 等。
+- 查询语句限制：订阅查询只能使用 `select` 语句，不支持其他类型的 SQL，如 `insert`、`update` 或 `delete` 等。
 - 原始始数据查询：订阅查询只能查询原始数据，而不能查询聚合或计算结果。
 - 时间顺序限制：订阅查询只能按照时间正序查询数据。
   
@@ -582,10 +581,10 @@ try {
 }
 ```
 
-- enable.auto.commit: 是否允许自动提交。
-- group.id: consumer 所在的 group。
-- client.id: 客户端 id，想通的客户端 id 会分摊消费。
-- value.deserializer: 结果集反序列化方法，可以继承 `com.taosdata.jdbc.tmq.ReferenceDeserializer`，并指定结果集 bean，实现反序列化。也可以继承 `com.taosdata.jdbc.tmq.Deserializer`，根据 SQL 的 resultSet 自定义反序列化方式。
+- `enable.auto.commit`: 是否允许自动提交。
+- `group.id`: consumer 所在的分组。
+- `client.id`: 客户端 id，相同分组 id 的客户端 id 会分摊消费。
+- `value.deserializer`: 结果集反序列化方法，可以继承 `com.taosdata.jdbc.tmq.ReferenceDeserializer`，并指定结果集 bean，实现反序列化。也可以继承 `com.taosdata.jdbc.tmq.Deserializer`，根据 SQL 的 `resultSet` 自定义反序列化方式。
 - 其他参数请参考：[Consumer 参数列表](https://docs.taosdata.com/develop/tmq/#创建消费者-consumer)
 
 #### 订阅消费数据
