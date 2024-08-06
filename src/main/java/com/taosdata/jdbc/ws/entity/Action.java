@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.ws.entity;
 
 import com.taosdata.jdbc.ws.stmt.entity.ExecResp;
+import com.taosdata.jdbc.ws.stmt.entity.GetColFieldsResp;
 import com.taosdata.jdbc.ws.stmt.entity.StmtResp;
 import com.taosdata.jdbc.ws.tmq.entity.FetchRawBlockResp;
 
@@ -30,6 +31,8 @@ public enum Action {
     ADD_BATCH("add_batch", StmtResp.class),
     EXEC("exec", ExecResp.class),
     // response means nothing
+    GET_COL_FIELDS("get_col_fields", GetColFieldsResp.class),
+
     CLOSE("close", StmtResp.class),
 
     //schemaless

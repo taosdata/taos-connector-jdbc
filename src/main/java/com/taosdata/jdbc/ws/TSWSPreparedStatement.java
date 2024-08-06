@@ -7,6 +7,7 @@ import com.taosdata.jdbc.TSDBParameterMetaData;
 import com.taosdata.jdbc.common.ColumnInfo;
 import com.taosdata.jdbc.common.SerializeBlock;
 import com.taosdata.jdbc.enums.BindType;
+import com.taosdata.jdbc.enums.DataType;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.ReqId;
@@ -16,6 +17,7 @@ import com.taosdata.jdbc.ws.entity.Code;
 import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.entity.Response;
 import com.taosdata.jdbc.ws.stmt.entity.ExecResp;
+import com.taosdata.jdbc.ws.stmt.entity.GetColFieldsResp;
 import com.taosdata.jdbc.ws.stmt.entity.RequestFactory;
 import com.taosdata.jdbc.ws.stmt.entity.StmtResp;
 
@@ -54,6 +56,8 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
     private final List<ColumnInfo> data = new ArrayList<>();
 
     private final PriorityQueue<ColumnInfo> queue = new PriorityQueue<>();
+
+    private final List<Integer> columnIndexTypeArray = new ArrayList<>();
 
     public TSWSPreparedStatement(Transport transport, ConnectionParam param, String database, Connection connection, String sql) throws SQLException {
         super(transport, database, connection);
@@ -613,9 +617,25 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
     public void setObject(int parameterIndex, Object x) throws SQLException {
         if (isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
+        if (columnIndexTypeArray.isEmpty()){
+            Request req = RequestFactory.generateGetColFields(stmtId, reqId);
+            GetColFieldsResp res = (GetColFieldsResp) transport.send(req);
+            if (Code.SUCCESS.getCode() != res.getCode()) {
+                throw new SQLException("(0x" + Integer.toHexString(res.getCode()) + "):" + res.getMessage());
+            }
 
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
+            for (int i = 0; i < res.getFields().size(); i++) {
+                byte tsdbType = res.getFields().get(i).getFieldType();
+                DataType sqlType = DataType.convertTaosType2DataType(tsdbType);
+                columnIndexTypeArray.add(sqlType.getJdbcTypeValue());
+            }
+        }
+        if (parameterIndex < 1 || parameterIndex > columnIndexTypeArray.size()) {
+            throw new SQLException("parameterIndex out of range");
+        }
 
+        int sqlType = columnIndexTypeArray.get(parameterIndex - 1);
+        setObject(parameterIndex, x, sqlType);
     }
 
     @Override
