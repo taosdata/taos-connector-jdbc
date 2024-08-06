@@ -500,34 +500,43 @@ TDengine has added the ability to schemaless writing. It is compatible with Infl
 - The OpenTSDB TELNET line protocol and OpenTSDB JSON format protocol only support one data column, so we have used other examples.
 - The following example code is based on taos-jdbcdriver-3.0.0.
 
+
 ```java
-public class SchemalessInsertTest {
+public class SchemalessWsTest {
     private static final String host = "127.0.0.1";
-    private static final String lineDemo = "st,t1=3i64,t2=4f64,t3=\"t3\" c1=3i64,c3=L\"passit\",c2=false,c4=4f64 1626006833639000000";
-    private static final String telnetDemo = "stb0_0 1626006833 4 host=host0 interface=eth0";
-    private static final String jsonDemo = "{\"metric\": \"meter_current\",\"timestamp\": 1346846400,\"value\": 10.3, \"tags\": {\"groupid\": 2, \"location\": \"Beijing\", \"id\": \"d1001\"}}";
+    private static final String lineDemo = "meters,groupid=2,location=California.SanFrancisco current=10.3000002f64,voltage=219i32,phase=0.31f64 1626006833639";
+    private static final String telnetDemo = "metric_telnet 1707095283260 4 host=host0 interface=eth0";
+    private static final String jsonDemo = "{\"metric\": \"metric_json\",\"timestamp\": 1626846400,\"value\": 10.3, \"tags\": {\"groupid\": 2, \"location\": \"California.SanFrancisco\", \"id\": \"d1001\"}}";
 
     public static void main(String[] args) throws SQLException {
-        final String url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
-        try (Connection connection = DriverManager.getConnection(url)) {
+        final String url = "jdbc:TAOS-RS://" + host + ":6041?user=root&password=taosdata&batchfetch=true";
+        try(Connection connection = DriverManager.getConnection(url)){
             init(connection);
+            AbstractConnection conn = connection.unwrap(AbstractConnection.class);
 
-            SchemalessWriter writer = new SchemalessWriter(connection);
-            writer.write(lineDemo, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS);
-            writer.write(telnetDemo, SchemalessProtocolType.TELNET, SchemalessTimestampType.MILLI_SECONDS);
-            writer.write(jsonDemo, SchemalessProtocolType.JSON, SchemalessTimestampType.NOT_CONFIGURED);
+            conn.write(lineDemo, SchemalessProtocolType.LINE, SchemalessTimestampType.MILLI_SECONDS);
+            conn.write(telnetDemo, SchemalessProtocolType.TELNET, SchemalessTimestampType.MILLI_SECONDS);
+            conn.write(jsonDemo, SchemalessProtocolType.JSON, SchemalessTimestampType.SECONDS);
+            System.out.println("Inserted data with schemaless successfully.");
+        } catch (SQLException ex) {
+            // handle any errors, please refer to the JDBC specifications for detailed exceptions info
+            System.out.println("Failed to insert data with schemaless, host:" + host + "; ErrCode:" + ex.getErrorCode() + "; ErrMessage: " + ex.getMessage());
+            throw ex;
+        } catch (Exception ex){
+            System.out.println("Failed to insert data with schemaless, host:" + host + "; ErrMessage: " + ex.getMessage());
+            throw ex;
         }
     }
 
     private static void init(Connection connection) throws SQLException {
         try (Statement stmt = connection.createStatement()) {
-            stmt.executeUpdate("drop database if exists test_schemaless");
-            stmt.executeUpdate("create database if not exists test_schemaless");
-            stmt.executeUpdate("use test_schemaless");
+            stmt.execute("CREATE DATABASE IF NOT EXISTS power");
+            stmt.execute("USE power");
         }
     }
 }
 ```
+
 
 ### Subscriptions
 
