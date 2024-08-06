@@ -97,7 +97,7 @@ After compilation, a jar package of taos-jdbcdriver-3.0.0-dist .jar is generated
 TDengine's JDBC URL specification format is:
 `jdbc:[TAOS| TAOS-RS]://[host_name]:[port]/[database_name]? [user={user}|&password={password}|&charset={charset}|&cfgdir={config_dir}|&locale={locale}|&timezone={timezone}]`
 
-For establishing connections, native connections differ slightly from REST connections.
+For establishing connections, native connections differ slightly from Websocket connections.
 
 ### Native connection
 
@@ -165,15 +165,15 @@ In TDengine, as long as one node in firstEp and secondEp is valid, the connectio
 
 > **Note**: The configuration file here refers to the configuration file on the machine where the application that calls the JDBC Connector is located, the default path is `/etc/taos/taos.cfg` on Linux, and the default path is `C://TDengine/cfg/taos.cfg` on Windows.
 
-### REST connection
+### Websocket connection
 
 ```java
 Class.forName("com.taosdata.jdbc.rs.RestfulDriver");
-String jdbcUrl = "jdbc:TAOS-RS://taosdemo.com:6041/test?user=root&password=taosdata";
+String jdbcUrl = "jdbc:TAOS-RS://taosdemo.com:6041/test?user=root&password=taosdata&batchfetch=true";
 Connection conn = DriverManager.getConnection(jdbcUrl);
 ```
 
-In the above example, a RestfulDriver with a JDBC REST connection is used to establish a connection to a database named `test` with hostname `taosdemo.com` on port `6041`. The URL specifies the user name as `root` and the password as `taosdata`.
+In the above example, a RestfulDriver with a JDBC Websocket connection is used to establish a connection to a database named `test` with hostname `taosdemo.com` on port `6041`. The URL specifies the user name as `root` and the password as `taosdata`.
 
 There is no dependency on the client driver when Using a JDBC Websocket connection. Compared to a JDBC native connection, only the following are required: 1.
 
@@ -186,7 +186,7 @@ The configuration parameters in the URL are as follows.
 
 - user: Login TDengine user name, default value 'root'.
 - password: user login password, default value 'taosdata'.
-- batchfetch: true: pull the result set in batch when executing the query; false: pull the result set row by row. The default value is false. batchfetch uses HTTP for data transfer. The JDBC REST connection supports bulk data pulling function. taos-jdbcdriver and TDengine transfer data via WebSocket connection. Compared with HTTP, WebSocket enables JDBC REST connection to support large data volume querying and improve query performance.
+- batchfetch: true: pull the result set in batch when executing the query; false: pull the result set row by row. The default value is false. batchfetch uses HTTP for data transfer. The JDBC Websocket connection supports bulk data pulling function. taos-jdbcdriver and TDengine transfer data via WebSocket connection. Compared with HTTP, WebSocket enables to support large data volume querying and improve query performance.
 - charset: specify the charset to parse the string, this parameter is valid only when set batchfetch to true.
 - batchErrorIgnore: true: when executing executeBatch of Statement, if one SQL execution fails in the middle, continue to execute the following SQL. false: no longer execute any statement after the failed SQL. The default value is: false.
 - httpConnectTimeout: Websocket connection timeout in milliseconds, the default value is 5000 ms.
@@ -244,7 +244,7 @@ The configuration parameters in properties are as follows.
 - TSDBDriver.HTTP_CONNECT_TIMEOUT: Websocket connection timeout in milliseconds, the default value is 5000 ms. It only takes effect when using JDBC Websocket connection.
 - TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT: message transmission timeout in milliseconds, the default value is 3000 ms. It only takes effect when using JDBC Websocket connection.
 - TSDBDriver.PROPERTY_KEY_USE_SSL: connecting Securely Using SSL. true: using SSL connection, false: not using SSL connection. It only takes effect when using using JDBC Websocket connection.
-  For JDBC native connections, you can specify other parameters, such as log level, SQL length, etc., by specifying URL and Properties. For more detailed configuration, please refer to [Client Configuration](https://docs.taosdata.com/reference/config/#Client-Only).
+  For JDBC native connections, you can specify other parameters, such as log level, SQL length, etc., by specifying URL and Properties. For more detailed configuration, please refer to [Client Configuration](https://docs.tdengine.com/reference/config/#Client-Only).
 
 ### Priority of configuration parameters
 
