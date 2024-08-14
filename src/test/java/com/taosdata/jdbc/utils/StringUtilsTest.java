@@ -44,4 +44,11 @@ public class StringUtilsTest {
     public void isNumeric() {
         Assert.assertTrue(StringUtils.isNumeric("61"));
     }
+
+    @Test
+    public void getBasicUrlTest() {
+        Assert.assertEquals("jdbc:TAOS://localhost:6030/", StringUtils.getBasicUrl("jdbc:TAOS://localhost:6030/?user=root&password=taosdata"));
+        Assert.assertEquals("jdbc:TAOS://localhost:6030/", StringUtils.getBasicUrl("jdbc:TAOS://localhost:6030/"));
+    }
+
 }
