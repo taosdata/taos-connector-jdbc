@@ -382,9 +382,9 @@ public abstract class AbstractConnection extends WrapperImpl implements Connecti
         Future<Boolean> future = executor.submit(() -> {
             int status;
             try (Statement stmt = createStatement()) {
-                ResultSet resultSet = stmt.executeQuery("show cluster alive");
+                ResultSet resultSet = stmt.executeQuery("select server_status()");
                 resultSet.next();
-                status = resultSet.getInt("status");
+                status = resultSet.getInt("server_status()");
                 resultSet.close();
             }
             return status == 1;
