@@ -7,6 +7,7 @@ import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.CompletableFutureTimeout;
 import com.taosdata.jdbc.utils.ReqId;
+import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.ws.entity.*;
 import org.java_websocket.exceptions.WebsocketNotConnectedException;
 import org.slf4j.Logger;
@@ -126,11 +127,11 @@ public class Transport implements AutoCloseable {
         for (int i = 0; i < clientArr.size() && this.connectionParam.isEnableAutoConnect(); i++){
             boolean reconnected = reconnectCurNode();
             if (reconnected){
-                log.debug("reconnect success to {}", clientArr.get(currentNodeIndex).serverUri);
+                log.debug("reconnect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri));
                 return;
             }
 
-            log.debug("reconnect failed to {}", clientArr.get(currentNodeIndex).serverUri);
+            log.debug("reconnect failed to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri));
 
             currentNodeIndex =  (currentNodeIndex + 1) % clientArr.size();
         }
@@ -337,14 +338,14 @@ public class Transport implements AutoCloseable {
                         throw TSDBError.createSQLException(ERROR_CONNECTION_TIMEOUT,
                                 "can't create connection with server " + wsClient.serverUri.toString() + " within: " + connectTimeout + " milliseconds");
                     }
-                    log.debug("connect success to {}", wsClient.serverUri);
+                    log.debug("connect success to {}", StringUtils.getBasicUrl(wsClient.serverUri));
                 }
 
                 // 断开其他节点
                 for (int i = 0; i < clientArr.size(); i++){
                     if (i != currentNodeIndex) {
                         clientArr.get(i).closeBlocking();
-                        log.debug("disconnect success to {}", clientArr.get(i).serverUri);
+                        log.debug("disconnect success to {}", StringUtils.getBasicUrl(clientArr.get(i).serverUri));
                     }
                 }
             } else {
@@ -353,7 +354,7 @@ public class Transport implements AutoCloseable {
                     throw TSDBError.createSQLException(ERROR_CONNECTION_TIMEOUT,
                             "can't create connection with server within: " + connectTimeout + " milliseconds");
                 }
-                log.debug("connect success to {}", clientArr.get(currentNodeIndex).serverUri);
+                log.debug("connect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri));
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();

@@ -1006,7 +1006,7 @@ Example usage is as follows.
     config.setConnectionTimeout(30000); //maximum wait milliseconds for get connection from pool
     config.setMaxLifetime(0);       // maximum life time for each connection
     config.setIdleTimeout(0);       // max idle time for recycle idle connection
-    config.setConnectionTestQuery("select server_status()"); //validation query
+    config.setConnectionTestQuery("select SERVER_VERSION()"); //validation query
 
     HikariDataSource ds = new HikariDataSource(config); //create datasource
 
@@ -1041,7 +1041,7 @@ public static void main(String[] args) throws Exception {
     dataSource.setMinIdle(10);
     dataSource.setMaxActive(10);
     dataSource.setMaxWait(30000);
-    dataSource.setValidationQuery("select server_status()");
+    dataSource.setValidationQuery("select SERVER_VERSION()");
 
     Connection  connection = dataSource.getConnection(); // get connection
     Statement statement = connection.createStatement(); // get statement
