@@ -131,23 +131,22 @@ public class TSDBPreparedStatementPerfTest {
             });
         }
         latchB.await();
-        System.out.println("threads started successfully");
+        System.out.println("threads started successfully.");
 
-        // 关闭线程池，不再接受新的任务
+        // shutdown the executor, it will not accept new tasks, but will continue to execute the existing tasks
         executor.shutdown();
 
         try {
-            // 等待所有任务完成执行。这里的时间值和单位可以根据需要进行调整。
+            // wait for the executor to terminate
             if (!executor.awaitTermination(10, TimeUnit.MINUTES)) {
-                // 如果等待超时，可以进一步处理，比如调用shutdownNow()
-                System.out.println("线程池任务未在指定时间内完成，执行额外的处理。");
+                System.out.println("thread terminate timeout!");
+                executor.shutdownNow();
             } else {
-                System.out.println("所有任务已完成。");
+                System.out.println("all tasks executed completely.");
             }
         } catch (InterruptedException e) {
-            // 当前线程在等待过程中被中断
-            executor.shutdownNow(); // 尝试立即停止所有正在执行的任务
-            Thread.currentThread().interrupt(); // 保留中断状态
+            executor.shutdownNow();
+            Thread.currentThread().interrupt();
         }
         long e = System.currentTimeMillis();
         System.out.println(g_RowsNum * g_tableNum + " rows cost " + (e - b) + " ms, " + (long)(g_RowsNum * g_tableNum / ((e - b)/1000.0)) + " rows/s");
