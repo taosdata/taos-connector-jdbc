@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!--通用格式配置-->
+    <property name="pattern" value="[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} %c %M %L %thread %m%n"/>
+    <!-- 配置文件的输出路径 -->
+    <property name="logDir" value="/var/log/taos"/>
+    
+    <!-- 配置文件的appender 普通文件-->
+    <appender name="fileAppender" class="ch.qos.logback.core.FileAppender">
+        <!-- 引入文件位置 -->
+        <file>${logDir}/taos-jdbc.log</file>
+        <!-- 配置日志输出格式 -->
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <!-- 格式引用通用属性配置 -->
+            <pattern>${pattern}</pattern>
+        </encoder>
+    </appender>
+    
+    <!-- 配置控制台appender -->
+    <appender name="consoleAppender" class="ch.qos.logback.core.ConsoleAppender">
+        <!--默认：System.out 表示以黑色字体输出日志-->
+        <!--设置：System.err 表示以红色字体输出日志-->
+        <target>
+            System.out
+        </target>
+        <!--配置日志输出格式-->
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <!-- 格式引用通用属性配置 -->
+            <pattern>${pattern}</pattern>
+        </encoder>
+    </appender>
+    <!--
+        日志记录器
+        配置root logger
+        level：配置日志级别
+        可以同时配置多个appender，做日志的多方向输出
+    -->
+    <root level="DEBUG">
+        <!-- 引入控制台appender -->
+        <appender-ref ref="consoleAppender"/>
+        <!-- 引入普通文件appender -->
+        <appender-ref ref="fileAppender"/>
+    </root>
+</configuration>
+

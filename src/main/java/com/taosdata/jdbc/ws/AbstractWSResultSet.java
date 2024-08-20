@@ -1,5 +1,7 @@
 package com.taosdata.jdbc.ws;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.annotation.JSONField;
 import com.taosdata.jdbc.*;
 import com.taosdata.jdbc.enums.BindType;
 import com.taosdata.jdbc.enums.DataType;
@@ -19,9 +21,15 @@ import java.util.List;
 import java.util.concurrent.*;
 
 public abstract class AbstractWSResultSet extends AbstractResultSet {
+    private static final Logger logger = LoggerFactory.getLogger(AbstractWSResultSet.class);
+
+    @JSONField(serialize = false)
     private final Logger log = LoggerFactory.getLogger(Transport.class);
 
+    @JSONField(serialize = false)
     protected final Statement statement;
+
+    @JSONField(serialize = false)
     protected final Transport transport;
     protected final long queryId;
     protected final long reqId;
@@ -29,6 +37,7 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
     protected volatile boolean isClosed;
     private boolean isCompleted = false;
     // meta
+    @JSONField(serialize = false)
     protected final ResultSetMetaData metaData;
     protected final List<RestfulResultSet.Field> fields = new ArrayList<>();
     protected final List<String> columnNames;
@@ -38,8 +47,11 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
     protected int numOfRows = 0;
     protected int rowIndex = 0;
     private static final int CACHE_SIZE = 5;
+    @JSONField(serialize = false)
     BlockingQueue<BlockData> blockingQueueOut = new LinkedBlockingQueue<>(CACHE_SIZE);
+    @JSONField(serialize = false)
     ThreadPoolExecutor backFetchExecutor;
+    @JSONField(serialize = false)
     ForkJoinPool dataHandleExecutor = ForkJoinPool.commonPool();
     protected AbstractWSResultSet(Statement statement, Transport transport,
                                QueryResp response, String database) throws SQLException {
@@ -146,6 +158,7 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
 
         this.result = blockData.getData();
         this.numOfRows = blockData.getNumOfRows();
+        logger.debug("next rows: {}", this.numOfRows);
         return true;
     }
 

@@ -37,6 +37,7 @@ import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT;
 /**
  * send message
  */
+
 public class Transport implements AutoCloseable {
     private final Logger log = LoggerFactory.getLogger(Transport.class);
 
