@@ -4,6 +4,9 @@ import com.taosdata.jdbc.enums.DataType;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.ws.WSConnection;
+import com.taosdata.jdbc.ws.WSStatement;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -16,6 +19,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public abstract class AbstractDatabaseMetaData extends WrapperImpl implements DatabaseMetaData {
+    private static final Logger logger = LoggerFactory.getLogger(AbstractDatabaseMetaData.class);
 
     private static final String PRODUCT_NAME;
     private static final String PRODUCT_VERSION;
@@ -610,6 +614,8 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
     }
 
     protected ResultSet getTables(String catalog, String schemaPattern, String tableNamePattern, String[] types, Connection connection) throws SQLException {
+        logger.debug("getTables: catalog={}, schemaPattern={}, tableNamePattern={}, types={}", catalog, schemaPattern, tableNamePattern, types);
+
         String dbHelperStr = "";
         String tableHelperStr = "";
 

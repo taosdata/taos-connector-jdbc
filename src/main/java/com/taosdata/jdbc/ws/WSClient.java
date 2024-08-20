@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.ws;
 
+import com.alibaba.fastjson.annotation.JSONField;
 import com.google.common.base.Strings;
 import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.rs.ConnectionParam;
@@ -26,13 +27,19 @@ import java.util.function.Consumer;
 
 public class WSClient extends WebSocketClient implements AutoCloseable {
 
+    @JSONField(serialize = false)
     private final Logger log = LoggerFactory.getLogger(WSClient.class);
 
+    @JSONField(serialize = false)
     private static final Draft perMessageDeflateDraft = new Draft_6455(
             new PerMessageDeflateExtension());
+
     ThreadPoolExecutor executor;
+    @JSONField(serialize = false)
     Transport transport;
+    @JSONField(serialize = false)
     private Consumer<String> textMessageHandler;
+    @JSONField(serialize = false)
     private Consumer<ByteBuffer> binaryMessageHandler;
 
     public final String serverUri;

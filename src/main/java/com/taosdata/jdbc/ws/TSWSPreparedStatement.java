@@ -18,6 +18,8 @@ import com.taosdata.jdbc.ws.entity.Response;
 import com.taosdata.jdbc.ws.stmt.entity.ExecResp;
 import com.taosdata.jdbc.ws.stmt.entity.RequestFactory;
 import com.taosdata.jdbc.ws.stmt.entity.StmtResp;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -55,13 +57,16 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
 
     private final PriorityQueue<ColumnInfo> queue = new PriorityQueue<>();
 
+    private static final Logger logger = LoggerFactory.getLogger(TSWSPreparedStatement.class);
+
+
     public TSWSPreparedStatement(Transport transport, ConnectionParam param, String database, Connection connection, String sql) throws SQLException {
         super(transport, database, connection);
         this.rawSql = sql;
         this.param = param;
         if (!sql.contains("?"))
             return;
-
+        logger.debug("TSWSPreparedStatement: {}", sql);
         String useDb = null;
         Matcher matcher = INSERT_PATTERN.matcher(sql);
         if (matcher.find()) {

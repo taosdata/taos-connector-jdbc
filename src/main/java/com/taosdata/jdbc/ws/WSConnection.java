@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.ws;
 
+import com.alibaba.fastjson.annotation.JSONField;
 import com.taosdata.jdbc.AbstractConnection;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.TSDBError;
@@ -25,6 +26,8 @@ import java.util.concurrent.atomic.AtomicLong;
 public class WSConnection extends AbstractConnection {
 
     public static boolean g_FirstConnection = true;
+
+    @JSONField(serialize = false)
     private final Transport transport;
     private final DatabaseMetaData metaData;
     private String database;

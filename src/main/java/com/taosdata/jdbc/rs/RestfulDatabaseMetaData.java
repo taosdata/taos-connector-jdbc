@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.rs;
 
+import com.alibaba.fastjson.annotation.JSONField;
 import com.taosdata.jdbc.AbstractDatabaseMetaData;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
@@ -12,6 +13,7 @@ public class RestfulDatabaseMetaData extends AbstractDatabaseMetaData {
 
     private final String url;
     private final String userName;
+    @JSONField(serialize = false)
     private final Connection connection;
 
     public RestfulDatabaseMetaData(String url, String userName, Connection connection) {

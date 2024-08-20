@@ -9,6 +9,9 @@ import com.taosdata.jdbc.TaosGlobalConfig;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.entity.QueryResp;
+import javafx.css.ParsedValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
@@ -21,6 +24,7 @@ import static com.taosdata.jdbc.TSDBConstants.*;
 import static com.taosdata.jdbc.utils.UnsignedDataUtils.*;
 
 public class BlockResultSet extends AbstractWSResultSet {
+    private static final Logger logger = LoggerFactory.getLogger(BlockResultSet.class);
 
     public BlockResultSet(Statement statement, Transport transport,
                           QueryResp response, String database) throws SQLException {
@@ -42,8 +46,20 @@ public class BlockResultSet extends AbstractWSResultSet {
         }
         return null;
     }
-
     public Object parseValue(int columnIndex) {
+        Object obj = parseValueIn(columnIndex);
+
+        if (obj != null) {
+            logger.debug("parseValue: index: {}, class: {}, obj: {}", columnIndex, obj.getClass(), obj);
+            return obj;
+        } else {
+            logger.debug("parseValue: index: {}, obj: {}", columnIndex, obj);
+        }
+        return obj;
+    }
+
+
+    public Object parseValueIn(int columnIndex) {
         Object source = result.get(columnIndex - 1).get(rowIndex);
         if (null == source)
             return null;
@@ -68,6 +84,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             case TSDB_DATA_TYPE_JSON:
             case TSDB_DATA_TYPE_VARBINARY:
             case TSDB_DATA_TYPE_GEOMETRY:{
+
                 return source;
             }
             case TSDB_DATA_TYPE_USMALLINT: {
