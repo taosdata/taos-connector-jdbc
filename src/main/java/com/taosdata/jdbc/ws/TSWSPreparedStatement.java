@@ -57,8 +57,6 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
 
     private final PriorityQueue<ColumnInfo> queue = new PriorityQueue<>();
 
-    private final List<Integer> columnIndexTypeArray = new ArrayList<>();
-
     public TSWSPreparedStatement(Transport transport, ConnectionParam param, String database, Connection connection, String sql) throws SQLException {
         super(transport, database, connection);
         this.rawSql = sql;
@@ -617,25 +615,36 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
     public void setObject(int parameterIndex, Object x) throws SQLException {
         if (isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
-        if (columnIndexTypeArray.isEmpty()){
-            Request req = RequestFactory.generateGetColFields(stmtId, reqId);
-            GetColFieldsResp res = (GetColFieldsResp) transport.send(req);
-            if (Code.SUCCESS.getCode() != res.getCode()) {
-                throw new SQLException("(0x" + Integer.toHexString(res.getCode()) + "):" + res.getMessage());
-            }
-
-            for (int i = 0; i < res.getFields().size(); i++) {
-                byte tsdbType = res.getFields().get(i).getFieldType();
-                DataType sqlType = DataType.convertTaosType2DataType(tsdbType);
-                columnIndexTypeArray.add(sqlType.getJdbcTypeValue());
-            }
+        if (x instanceof Boolean) {
+            setBoolean(parameterIndex, (Boolean) x);
+        } else if (x instanceof Byte) {
+            setByte(parameterIndex, (Byte) x);
         }
-        if (parameterIndex < 1 || parameterIndex > columnIndexTypeArray.size()) {
-            throw new SQLException("parameterIndex out of range");
+        else if (x instanceof Short) {
+            setShort(parameterIndex, (Short) x);
         }
-
-        int sqlType = columnIndexTypeArray.get(parameterIndex - 1);
-        setObject(parameterIndex, x, sqlType);
+        else if (x instanceof Integer) {
+            setInt(parameterIndex, (Integer) x);
+        }else if (x instanceof Long){
+            setLong(parameterIndex, (Long) x);
+        }
+        else if (x instanceof Float){
+            setFloat(parameterIndex, (Float) x);
+        }
+        else if (x instanceof String) {
+            setNString(parameterIndex, (String) x);
+        }
+        else if (x instanceof byte[]) {
+            setBytes(parameterIndex, (byte[]) x);
+        } else if (x instanceof Double) {
+            setDouble(parameterIndex, (Double) x);
+        }  else if (x instanceof Time) {
+            setTime(parameterIndex, (Time) x);
+        }   else if (x instanceof Timestamp) {
+            setTimestamp(parameterIndex, (Timestamp) x);
+        } else {
+            throw new SQLException("Unsupported data type: " + x.getClass().getName());
+        }
     }
 
     @Override

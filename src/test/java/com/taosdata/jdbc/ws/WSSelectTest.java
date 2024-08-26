@@ -6,7 +6,9 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.math.BigDecimal;
 import java.sql.*;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -59,6 +61,31 @@ public class WSSelectTest {
         long d = System.nanoTime() - start;
 //        System.out.println(d / 1000);
 //        System.out.println(count);
+        statement.close();
+    }
+
+
+    @Test
+    public void testGetObject() throws SQLException {
+        Statement statement = connection.createStatement();
+
+        ResultSet resultSet = statement.executeQuery("select ts,c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13 from " + databaseName + ".alltype_query limit 3000");
+        if (resultSet.next()) {
+            LocalDateTime ts = resultSet.getObject("ts", LocalDateTime.class);
+            assert (ts != null);
+            Boolean c1 = resultSet.getObject("c1", Boolean.class);
+            assert (c1 != null);
+            Long c2 = resultSet.getObject("c2", Long.class);
+            assert (c2 != null);
+            BigDecimal c10 = resultSet.getObject("c10", BigDecimal.class);
+            assert (c10 != null);
+            String c12 = resultSet.getObject("c12", String.class);
+            String tmp = "test_binary";
+            assert (c12.equals(tmp));
+            String c13 = resultSet.getObject("c13", String.class);
+            assert (c13.equals("test_nchar"));
+        }
+
         statement.close();
     }
 

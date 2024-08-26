@@ -1054,6 +1054,53 @@ public class TSWSPreparedStatementTest {
         Assert.assertEquals("NCHAR", parameterMetaData.getParameterTypeName(10));
     }
 
+
+
+    @Test
+    public void setObjectTest() throws SQLException {
+
+        //private static final String sql_select = "select * from t1 where ts >= ? and ts < ? and f1 >= ?";
+        long ts = System.currentTimeMillis();
+        pstmt_select.setObject(1, new Timestamp(ts - 10000));
+        pstmt_select.setObject(2, new Timestamp(ts + 10000));
+        pstmt_select.setObject(3, 10);
+        pstmt_select.execute();
+    }
+    @Test
+    public void setObjectFullTest() throws SQLException {
+
+        String sql = "INSERT INTO weather_001 USING weather TAGS ('tag_001') VALUES ('2023-10-01 12:00:00', 25, 1234567890123, 23.45, 67.89, 10, 1, true, 'example_binary_data', 'example_nchar_data');";
+        Statement stmt = conn.createStatement();
+        stmt.execute(sql);
+        stmt.close();
+
+        boolean haveResult = false;
+        String query_sql = "SELECT * FROM weather_001 WHERE ts = ?  AND f1 = ? AND f2 = ?  AND f3 > ? AND f4 > ? AND f5 = ? AND f6 = ? AND f7 = ? AND f8 = ? AND f9 = ? and loc = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(query_sql)) {
+            pstmt.setObject(1, Timestamp.valueOf("2023-10-01 12:00:00"));
+            pstmt.setObject(2, 25);
+            pstmt.setObject(3, 1234567890123L);
+            pstmt.setObject(4, 23.44f);
+            pstmt.setObject(5, 67.889);
+            pstmt.setObject(6, (short) 10);
+            pstmt.setObject(7, (byte) 1);
+            pstmt.setObject(8, true);
+            pstmt.setObject(9, "example_binary_data".getBytes());
+            pstmt.setObject(10, "example_nchar_data");
+            pstmt.setObject(11, "tag_001");
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                   haveResult = true;
+                }
+            }
+        }
+
+        assert(haveResult);
+
+    }
+
+
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void setRowId() throws SQLException {
         pstmt_insert.setRowId(1, null);

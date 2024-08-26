@@ -761,6 +761,10 @@ public class BlockResultSet extends AbstractWSResultSet {
         } else {
             try {
                 if (type == String.class) {
+                    if (value instanceof byte[]) {
+                        String charset = TaosGlobalConfig.getCharset();
+                        return type.cast(new String((byte[]) value, charset));
+                    }
                     return type.cast(value.toString());
                 } else if (type == Integer.class && value instanceof Number) {
                     return type.cast(((Number) value).intValue());
@@ -772,6 +776,8 @@ public class BlockResultSet extends AbstractWSResultSet {
                     return type.cast(((Number) value).doubleValue());
                 } else if (type == Float.class && value instanceof Number) {
                     return type.cast(((Number) value).floatValue());
+                } else if (type == BigDecimal.class && value instanceof Number) {
+                    return type.cast(new BigDecimal(value.toString()));
                 } else if (type == Byte.class && value instanceof Number) {
                     return type.cast(((Number) value).byteValue());
                 } else if (type == LocalDateTime.class && value instanceof Timestamp) {
@@ -780,7 +786,7 @@ public class BlockResultSet extends AbstractWSResultSet {
                 } else {
                     throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TYPE_CONVERT_EXCEPTION, "Cannot convert " + value.getClass() + " to " + type);
                 }
-            } catch (ClassCastException e) {
+            } catch (ClassCastException | UnsupportedEncodingException e) {
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TYPE_CONVERT_EXCEPTION, "faild to convert " + value.getClass() + " to " + type);
             }
         }
