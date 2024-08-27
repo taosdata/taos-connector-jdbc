@@ -5,6 +5,7 @@ import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.*;
 
 import java.sql.*;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Random;
 
@@ -1077,6 +1078,7 @@ public class TSWSPreparedStatementTest {
         boolean haveResult = false;
         String query_sql = "SELECT * FROM weather_001 WHERE ts = ?  AND f1 = ? AND f2 = ?  AND f3 > ? AND f4 > ? AND f5 = ? AND f6 = ? AND f7 = ? AND f8 = ? AND f9 = ? and loc = ?";
         try (PreparedStatement pstmt = conn.prepareStatement(query_sql)) {
+            pstmt.setObject(1, LocalDateTime.now());
             pstmt.setObject(1, Timestamp.valueOf("2023-10-01 12:00:00"));
             pstmt.setObject(2, 25);
             pstmt.setObject(3, 1234567890123L);

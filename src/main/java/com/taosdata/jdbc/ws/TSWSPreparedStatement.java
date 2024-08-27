@@ -29,6 +29,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.sql.Date;
 import java.sql.*;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -619,29 +620,26 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
             setBoolean(parameterIndex, (Boolean) x);
         } else if (x instanceof Byte) {
             setByte(parameterIndex, (Byte) x);
-        }
-        else if (x instanceof Short) {
+        } else if (x instanceof Short) {
             setShort(parameterIndex, (Short) x);
-        }
-        else if (x instanceof Integer) {
+        } else if (x instanceof Integer) {
             setInt(parameterIndex, (Integer) x);
-        }else if (x instanceof Long){
+        } else if (x instanceof Long) {
             setLong(parameterIndex, (Long) x);
-        }
-        else if (x instanceof Float){
+        } else if (x instanceof Float) {
             setFloat(parameterIndex, (Float) x);
-        }
-        else if (x instanceof String) {
+        } else if (x instanceof String) {
             setNString(parameterIndex, (String) x);
-        }
-        else if (x instanceof byte[]) {
+        } else if (x instanceof byte[]) {
             setBytes(parameterIndex, (byte[]) x);
         } else if (x instanceof Double) {
             setDouble(parameterIndex, (Double) x);
-        }  else if (x instanceof Time) {
+        } else if (x instanceof Time) {
             setTime(parameterIndex, (Time) x);
-        }   else if (x instanceof Timestamp) {
+        } else if (x instanceof Timestamp) {
             setTimestamp(parameterIndex, (Timestamp) x);
+        } else if (x instanceof LocalDateTime) {
+            setTimestamp(parameterIndex, Timestamp.valueOf((LocalDateTime)x));
         } else {
             throw new SQLException("Unsupported data type: " + x.getClass().getName());
         }
