@@ -63,7 +63,12 @@ public class RequestFactory {
         req.setStmtId(stmtId);
         return new Request(Action.EXEC.getAction(), req);
     }
-
+    public static Request generateGetColFields(long stmtId, long reqId) {
+        ExecReq req = new ExecReq();
+        req.setReqId(reqId);
+        req.setStmtId(stmtId);
+        return new Request(Action.GET_COL_FIELDS.getAction(), req);
+    }
     public static Request generateClose(long stmtId, long reqId) {
         CloseReq req = new CloseReq();
         req.setReqId(reqId);
