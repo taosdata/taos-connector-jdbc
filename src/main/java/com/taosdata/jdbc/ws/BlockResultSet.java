@@ -14,6 +14,7 @@ import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.sql.*;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.Calendar;
 
@@ -748,6 +749,49 @@ public class BlockResultSet extends AbstractWSResultSet {
         wasNull = value == null;
         return value;
     }
+
+    @Override
+    public <T> T getObject(int columnIndex, Class<T> type) throws SQLException {
+        Object value = getObject(columnIndex);
+
+        if (value == null) {
+            return null;
+        } else if (type.isInstance(value)) {
+            return type.cast(value);
+        } else {
+            try {
+                if (type == String.class) {
+                    if (value instanceof byte[]) {
+                        String charset = TaosGlobalConfig.getCharset();
+                        return type.cast(new String((byte[]) value, charset));
+                    }
+                    return type.cast(value.toString());
+                } else if (type == Integer.class && value instanceof Number) {
+                    return type.cast(((Number) value).intValue());
+                } else if (type == Long.class && value instanceof Number) {
+                    return type.cast(((Number) value).longValue());
+                } else if (type == Short.class && value instanceof Number) {
+                    return type.cast(((Number) value).shortValue());
+                } else if (type == Double.class && value instanceof Number) {
+                    return type.cast(((Number) value).doubleValue());
+                } else if (type == Float.class && value instanceof Number) {
+                    return type.cast(((Number) value).floatValue());
+                } else if (type == BigDecimal.class && value instanceof Number) {
+                    return type.cast(new BigDecimal(value.toString()));
+                } else if (type == Byte.class && value instanceof Number) {
+                    return type.cast(((Number) value).byteValue());
+                } else if (type == LocalDateTime.class && value instanceof Timestamp) {
+                    Timestamp timestamp = (Timestamp) value;
+                    return type.cast(timestamp.toLocalDateTime());
+                } else {
+                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TYPE_CONVERT_EXCEPTION, "Cannot convert " + value.getClass() + " to " + type);
+                }
+            } catch (ClassCastException | UnsupportedEncodingException e) {
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TYPE_CONVERT_EXCEPTION, "faild to convert " + value.getClass() + " to " + type);
+            }
+        }
+    }
+
 
     @Override
     public int findColumn(String columnLabel) throws SQLException {

@@ -5,6 +5,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.taosdata.jdbc.*;
 import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.utils.HttpClientPoolUtil;
+import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.ws.*;
 import com.taosdata.jdbc.ws.entity.*;
 import org.slf4j.LoggerFactory;
@@ -103,8 +104,8 @@ public class RestfulDriver extends AbstractDriver {
     }
 
     private Connection getWSConnection(String url, ConnectionParam param, Properties props) throws SQLException {
-        log.debug("getWSConnection, url = {}", url);
         if (log.isDebugEnabled()){
+            log.debug("getWSConnection, url = {}", StringUtils.getBasicUrl(url));
             log.debug("getWSConnection, ConnectionParam = {}", JSON.toJSONString(param));
         }
 
