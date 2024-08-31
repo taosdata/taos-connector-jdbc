@@ -11,6 +11,7 @@ import java.sql.*;
 import java.util.Properties;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class RestfulConnectionTest {
 
@@ -26,25 +27,25 @@ public class RestfulConnectionTest {
     @Test
     public void createStatement() throws SQLException {
         try (Statement stmt = conn.createStatement()) {
-            ResultSet rs = stmt.executeQuery("select server_status()");
+            ResultSet rs = stmt.executeQuery("show cluster alive");
             rs.next();
-            int status = rs.getInt("server_status()");
-            assertEquals(1, status);
+            int status = rs.getInt("status");
+            assertTrue(status > 0);
         }
     }
 
     @Test
     public void prepareStatement() throws SQLException {
-        PreparedStatement pstmt = conn.prepareStatement("select server_status()");
+        PreparedStatement pstmt = conn.prepareStatement("show cluster alive");
         ResultSet rs = pstmt.executeQuery();
         rs.next();
-        int status = rs.getInt("server_status()");
-        assertEquals(1, status);
+        int status = rs.getInt("status");
+        assertTrue(status > 0);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void prepareCall() throws SQLException {
-        conn.prepareCall("select server_status()");
+        conn.prepareCall("show cluster alive");
     }
 
     @Test
@@ -138,24 +139,24 @@ public class RestfulConnectionTest {
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void testCreateStatement() throws SQLException {
         Statement stmt = conn.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
-        ResultSet rs = stmt.executeQuery("select server_status()");
+        ResultSet rs = stmt.executeQuery("show cluster alive");
         rs.next();
-        int status = rs.getInt("server_status()");
-        assertEquals(1, status);
+        int status = rs.getInt("status");
+        assertTrue(status > 0);
 
         conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void testPrepareStatement() throws SQLException {
-        PreparedStatement pstmt = conn.prepareStatement("select server_status()",
+        PreparedStatement pstmt = conn.prepareStatement("show cluster alive",
                 ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
         ResultSet rs = pstmt.executeQuery();
         rs.next();
-        int status = rs.getInt("server_status()");
-        assertEquals(1, status);
+        int status = rs.getInt("status");
+        assertTrue(status > 0);
 
-        conn.prepareStatement("select server_status", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+        conn.prepareStatement("select 1", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
@@ -208,24 +209,24 @@ public class RestfulConnectionTest {
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void testCreateStatement1() throws SQLException {
         Statement stmt = conn.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY, ResultSet.HOLD_CURSORS_OVER_COMMIT);
-        ResultSet rs = stmt.executeQuery("select server_status()");
+        ResultSet rs = stmt.executeQuery("show cluster alive");
         rs.next();
-        int status = rs.getInt("server_status()");
-        assertEquals(1, status);
+        int status = rs.getInt("status");
+        assertTrue(status > 0);
 
         conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY, ResultSet.HOLD_CURSORS_OVER_COMMIT);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void testPrepareStatement1() throws SQLException {
-        PreparedStatement pstmt = conn.prepareStatement("select server_status()",
+        PreparedStatement pstmt = conn.prepareStatement("show cluster alive",
                 ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY, ResultSet.HOLD_CURSORS_OVER_COMMIT);
         ResultSet rs = pstmt.executeQuery();
         rs.next();
-        int status = rs.getInt("server_status()");
-        assertEquals(1, status);
+        int status = rs.getInt("status");
+        assertTrue(status > 0);
 
-        conn.prepareStatement("select server_status", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY, ResultSet.HOLD_CURSORS_OVER_COMMIT);
+        conn.prepareStatement("select 1", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY, ResultSet.HOLD_CURSORS_OVER_COMMIT);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
