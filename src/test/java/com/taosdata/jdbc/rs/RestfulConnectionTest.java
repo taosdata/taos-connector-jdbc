@@ -30,6 +30,8 @@ public class RestfulConnectionTest {
             ResultSet rs = stmt.executeQuery("show cluster alive");
             rs.next();
             int status = rs.getInt("status");
+            System.out.println("status = " + status);
+
             assertTrue(status > 0);
         }
     }
@@ -40,6 +42,8 @@ public class RestfulConnectionTest {
         ResultSet rs = pstmt.executeQuery();
         rs.next();
         int status = rs.getInt("status");
+        System.out.println("status = " + status);
+
         assertTrue(status > 0);
     }
 
@@ -142,6 +146,7 @@ public class RestfulConnectionTest {
         ResultSet rs = stmt.executeQuery("show cluster alive");
         rs.next();
         int status = rs.getInt("status");
+        System.out.println("status = " + status);
         assertTrue(status > 0);
 
         conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
@@ -154,6 +159,8 @@ public class RestfulConnectionTest {
         ResultSet rs = pstmt.executeQuery();
         rs.next();
         int status = rs.getInt("status");
+        System.out.println("status = " + status);
+
         assertTrue(status > 0);
 
         conn.prepareStatement("select 1", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
@@ -212,6 +219,8 @@ public class RestfulConnectionTest {
         ResultSet rs = stmt.executeQuery("show cluster alive");
         rs.next();
         int status = rs.getInt("status");
+        System.out.println("status = " + status);
+
         assertTrue(status > 0);
 
         conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY, ResultSet.HOLD_CURSORS_OVER_COMMIT);
@@ -224,6 +233,8 @@ public class RestfulConnectionTest {
         ResultSet rs = pstmt.executeQuery();
         rs.next();
         int status = rs.getInt("status");
+        System.out.println("status = " + status);
+
         assertTrue(status > 0);
 
         conn.prepareStatement("select 1", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY, ResultSet.HOLD_CURSORS_OVER_COMMIT);
