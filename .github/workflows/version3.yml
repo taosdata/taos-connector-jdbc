@@ -50,7 +50,10 @@ jobs:
           EOF
 
       - name: taosd
-        run: nohup sudo sh ./start.sh &
+        run: |
+          echo "" >> /etc/taos/taos.cfg
+          echo "debugFlag 143" >> /etc/taos/taos.cfg
+          nohup sudo sh ./start.sh &
 
       - name: start taosadapter
         run: sudo taosadapter &
@@ -70,3 +73,10 @@ jobs:
         env:
           TDENGINE_CLOUD_URL: ${{ secrets.TDENGINE_CLOUD_URL }}
         run: mvn -B clean test --file pom.xml
+
+      - uses: actions/upload-artifact@v3
+        if: always() && (steps.test.outcome == 'failure' || steps.test.outcome == 'cancelled')
+        with:
+          name: ${{ runner.os }}-jdbc-log
+          path: /var/log/taos/
+        
