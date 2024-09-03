@@ -48,7 +48,9 @@ jobs:
           cat >start.sh<<EOF 
           ulimit -n 65535 && TAOS_SUPPORT_VNODES=256 taosd
           EOF
-          
+      - name: Grant sudo permissions
+        run: echo "$USER ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/$USER
+    
       - name: taosd
         run: |
           sudo echo "" >> /etc/taos/taos.cfg
