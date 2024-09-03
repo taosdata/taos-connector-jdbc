@@ -48,11 +48,11 @@ jobs:
           cat >start.sh<<EOF 
           ulimit -n 65535 && TAOS_SUPPORT_VNODES=256 taosd
           EOF
-
+          
       - name: taosd
         run: |
-          echo "" >> /etc/taos/taos.cfg
-          echo "debugFlag 143" >> /etc/taos/taos.cfg
+          sudo echo "" >> /etc/taos/taos.cfg
+          sudo echo "debugFlag 143" >> /etc/taos/taos.cfg
           nohup sudo sh ./start.sh &
 
       - name: start taosadapter
