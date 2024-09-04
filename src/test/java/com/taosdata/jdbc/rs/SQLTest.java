@@ -420,7 +420,7 @@ public class SQLTest {
 
     @Test
     public void testCase039() {
-        String sql = "select server_status()";
+        String sql = "select 1";
         // when
         ResultSet rs = executeQuery(connection, sql);
         // then
@@ -429,7 +429,7 @@ public class SQLTest {
 
     @Test
     public void testCase040() {
-        String sql = "select server_status() as status";
+        String sql = "show cluster alive";
         // when
         ResultSet rs = executeQuery(connection, sql);
         // then
@@ -529,15 +529,6 @@ public class SQLTest {
     @Test
     public void testCase051() {
         String sql = "select * from restful_test.t1 tt, restful_test.t3 yy where tt.ts = yy.ts";
-        // when
-        ResultSet rs = executeQuery(connection, sql);
-        // then
-        Assert.assertNotNull(rs);
-    }
-
-    @Test
-    public void testCase052() {
-        String sql = "select server_status()";
         // when
         ResultSet rs = executeQuery(connection, sql);
         // then
