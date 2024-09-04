@@ -381,7 +381,7 @@ public class RestfulConnectionTest {
     }
 
     @BeforeClass
-    public static void beforeClass() throws SQLException {
+    public static void beforeClass() throws Exception {
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "en_US.UTF-8");
@@ -394,6 +394,7 @@ public class RestfulConnectionTest {
         // create test database for test cases
         try (Statement stmt = conn.createStatement()) {
             stmt.execute("create database if not exists test");
+            Thread.sleep(3000);
         }
 
     }
