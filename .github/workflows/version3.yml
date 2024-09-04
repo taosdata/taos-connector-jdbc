@@ -48,7 +48,7 @@ jobs:
           cat >start.sh<<EOF 
           ulimit -n 65535 && TAOS_SUPPORT_VNODES=256 taosd
           EOF
-
+ 
       - name: taosd
         run: nohup sudo sh ./start.sh &
 
@@ -70,3 +70,10 @@ jobs:
         env:
           TDENGINE_CLOUD_URL: ${{ secrets.TDENGINE_CLOUD_URL }}
         run: mvn -B clean test --file pom.xml
+
+      - uses: actions/upload-artifact@v3
+        if: always() && (steps.test.outcome == 'failure' || steps.test.outcome == 'cancelled')
+        with:
+          name: ${{ runner.os }}-jdbc-log
+          path: /var/log/taos/
+        
