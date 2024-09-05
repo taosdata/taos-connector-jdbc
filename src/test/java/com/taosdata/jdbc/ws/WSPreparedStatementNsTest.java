@@ -115,12 +115,18 @@ public class WSPreparedStatementNsTest {
     private void initDbAndTable(String precision) throws SQLException, InterruptedException{
         Statement statement = connection.createStatement();
         statement.execute("drop database if exists " + db_name);
+        waitTransactionDone();
         statement.execute("create database " + db_name + " PRECISION '" + precision + "'");
+        waitTransactionDone();
         statement.execute("use " + db_name);
         statement.execute("create table if not exists " + db_name + "." + tableName + " (ts timestamp, c1 int)");
 
+        statement.close();
+    }
+
+    private void waitTransactionDone() throws SQLException, InterruptedException{
         while (true) {
-            try {
+            try (Statement statement = connection.createStatement()){
                 ResultSet resultSet = statement.executeQuery("show transactions");
                 if (resultSet.next()) {
                     continue;
@@ -130,7 +136,6 @@ public class WSPreparedStatementNsTest {
                 Thread.sleep(1000);
             }
         }
-        statement.close();
     }
     @Before
     public void before() throws SQLException, InterruptedException {
