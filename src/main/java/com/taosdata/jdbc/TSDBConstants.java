@@ -40,6 +40,9 @@ public abstract class TSDBConstants {
     public static final int TMQ_CONSUMER_NULL = -120;
     public static final int TMQ_CONSUMER_CREATE_ERROR = -121;
 
+    // TSDB Error Code
+    public static final int  TIMESTAMP_DATA_OUT_OF_RANGE  = 0x60b;
+
     // TSDB Data Types
     public static final int TSDB_DATA_TYPE_NULL = 0;
     public static final int TSDB_DATA_TYPE_BOOL = 1;

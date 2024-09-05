@@ -30,6 +30,24 @@ public class WSPreparedStatementTest {
     }
 
     @Test
+    public void testReuseStmtExecuteUpdate() throws SQLException {
+        String sql = "insert into " + db_name + "." + tableName + " values(?, ?)";
+        PreparedStatement statement = connection.prepareStatement(sql);
+        statement.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
+//        statement.setTimestamp(1, new Timestamp(0));
+        statement.setInt(2, 1);
+        int i = statement.executeUpdate();
+        Assert.assertEquals(1, i);
+
+        statement.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
+//        statement.setTimestamp(1, new Timestamp(0));
+        statement.setInt(2, 1);
+        i = statement.executeUpdate();
+        Assert.assertEquals(1, i);
+        statement.close();
+    }
+
+    @Test
     public void testExecuteBatchInsert() throws SQLException {
         String sql = "insert into " + db_name + "." + tableName + " values(?, ?)";
         PreparedStatement statement = connection.prepareStatement(sql);

@@ -31,6 +31,7 @@ import java.sql.Date;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -51,6 +52,8 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
     private int queryTimeout = 0;
     private int precision = TimestampPrecision.MS;
 
+    private String insertDbName;
+    static private Map<String, Integer> precisionHashMap = new ConcurrentHashMap<String, Integer>();
     private final Map<Integer, Column> column = new HashMap<>();
 
     private final Map<Integer, Column> tag = new HashMap<>();
@@ -62,6 +65,7 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
         super(transport, database, connection);
         this.rawSql = sql;
         this.param = param;
+        this.insertDbName = database;
         if (!sql.contains("?"))
             return;
 
@@ -86,11 +90,12 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
                 useDb = database;
             }
             if (useDb != null) {
-                try (ResultSet resultSet = this.executeQuery("select `precision` from information_schema.ins_databases where name = '" + useDb + "'")) {
-                    while (resultSet.next()) {
-                        String tmp = resultSet.getString(1);
-                        precision = TimestampPrecision.getPrecision(tmp);
-                    }
+                insertDbName = useDb;
+                Integer precisionObj = precisionHashMap.get(useDb);
+                if (precisionObj != null){
+                    precision = precisionObj;
+                } else {
+                    updatePrecision(useDb);
                 }
             }
         }
@@ -110,6 +115,15 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
         }
     }
 
+    private void updatePrecision(String database) throws SQLException{
+        try (ResultSet resultSet = this.executeQuery("select `precision` from information_schema.ins_databases where name = '" + database + "'")) {
+            while (resultSet.next()) {
+                String tmp = resultSet.getString(1);
+                precision = TimestampPrecision.getPrecision(tmp);
+                precisionHashMap.put(database, precision);
+            }
+        }
+    }
     @Override
     public int getQueryTimeout() throws SQLException {
         return queryTimeout;
@@ -240,11 +254,12 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
         Request request = RequestFactory.generateExec(stmtId, reqId);
         ExecResp resp = (ExecResp) transport.send(request);
         if (Code.SUCCESS.getCode() != resp.getCode()) {
-            throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
+            if (TIMESTAMP_DATA_OUT_OF_RANGE == resp.getCode()){
+                updatePrecision(insertDbName);
+            }
+            throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage(), "P0001", resp.getCode());
         }
-        // close
-        Request close = RequestFactory.generateClose(stmtId, reqId);
-        transport.sendWithoutResponse(close);
+
         return resp.getAffected();
     }
 
