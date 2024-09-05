@@ -81,18 +81,20 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
                     useDb = split[0];
                 }
             }
-        }
-        if (useDb == null && database != null) {
-            useDb = database;
-        }
-        if (useDb != null) {
-            try (ResultSet resultSet = this.executeQuery("select `precision` from information_schema.ins_databases where name = '" + useDb + "'")) {
-                while (resultSet.next()) {
-                    String tmp = resultSet.getString(1);
-                    precision = TimestampPrecision.getPrecision(tmp);
+
+            if (useDb == null && database != null) {
+                useDb = database;
+            }
+            if (useDb != null) {
+                try (ResultSet resultSet = this.executeQuery("select `precision` from information_schema.ins_databases where name = '" + useDb + "'")) {
+                    while (resultSet.next()) {
+                        String tmp = resultSet.getString(1);
+                        precision = TimestampPrecision.getPrecision(tmp);
+                    }
                 }
             }
         }
+
 
         reqId = ReqId.getReqID();
         Request request = RequestFactory.generateInit(reqId);
