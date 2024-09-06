@@ -31,7 +31,7 @@ public class ConnectMultiTaosdByRestfulWithDifferentTokenTest {
 
     private void executeSelectStatus(Connection connection) throws SQLException {
         try (Statement stmt = connection.createStatement()) {
-            ResultSet rs = stmt.executeQuery("select server_status()");
+            ResultSet rs = stmt.executeQuery("select 1");
             ResultSetMetaData meta = rs.getMetaData();
             Assert.assertNotNull(meta);
             while (rs.next()) {

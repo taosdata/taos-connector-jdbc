@@ -11,16 +11,16 @@ import java.sql.*;
 
 
 public class QueryTimeoutTest {
-    //    private String host = "127.0.0.1";
-    private String host = "master";
+    private String host = "127.0.0.1";
     private Connection conn;
+
 
     @Ignore
     @Test(expected = SQLTimeoutException.class)
     public void execute() throws SQLException {
         // given
         final int timeout = 1;
-        final String sql = "select server_status()";
+        final String sql = "show cluster alive";
         TSDBStatement stmt = (TSDBStatement) conn.createStatement();
 
         // when and Then
@@ -32,8 +32,8 @@ public class QueryTimeoutTest {
             while (rs.next()) {
                 for (int i = 1; i <= meta.getColumnCount(); i++) {
                     String value = rs.getString(i);
-                    Assert.assertEquals("server_status()", meta.getColumnLabel(i));
-                    Assert.assertEquals("1", value);
+                    Assert.assertEquals("status", meta.getColumnLabel(i));
+                    Assert.assertTrue(value.equals("1") || value.equals("2"));
                 }
             }
         }

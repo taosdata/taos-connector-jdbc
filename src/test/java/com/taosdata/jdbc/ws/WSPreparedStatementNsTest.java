@@ -9,9 +9,11 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Properties;
 
+import static com.taosdata.jdbc.TSDBConstants.TIMESTAMP_DATA_OUT_OF_RANGE;
+
 @FixMethodOrder
-public class WSPreparedStatementTest {
-    String host = "127.0.0.1";
+public class WSPreparedStatementNsTest {
+    String host = "localhost";
     String db_name = "ws_prepare";
     String tableName = "wpt";
     String superTable = "wpt_st";
@@ -22,7 +24,6 @@ public class WSPreparedStatementTest {
         String sql = "insert into " + db_name + "." + tableName + " values(?, ?)";
         PreparedStatement statement = connection.prepareStatement(sql);
         statement.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
-//        statement.setTimestamp(1, new Timestamp(0));
         statement.setInt(2, 1);
         int i = statement.executeUpdate();
         Assert.assertEquals(1, i);
@@ -30,23 +31,39 @@ public class WSPreparedStatementTest {
     }
 
     @Test
-    public void testReuseStmtExecuteUpdate() throws SQLException {
+    @Ignore
+    public void testChangePrecision() throws SQLException,InterruptedException {
+
+        // init pstmt, and insert one row successfully
         String sql = "insert into " + db_name + "." + tableName + " values(?, ?)";
         PreparedStatement statement = connection.prepareStatement(sql);
         statement.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
-//        statement.setTimestamp(1, new Timestamp(0));
         statement.setInt(2, 1);
         int i = statement.executeUpdate();
         Assert.assertEquals(1, i);
 
+        // 2. change precision to 'ms'
+        initDbAndTable("ms");
+
+        // 3. insert data failed
         statement.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
-//        statement.setTimestamp(1, new Timestamp(0));
+        statement.setInt(2, 1);
+        try {
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            Assert.assertEquals(TIMESTAMP_DATA_OUT_OF_RANGE, e.getErrorCode());
+        }
+
+        // 3. retry to insert data success
+        statement.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
         statement.setInt(2, 1);
         i = statement.executeUpdate();
         Assert.assertEquals(1, i);
+
+        // 4. change precision to 'ns'
+        initDbAndTable("ns");
         statement.close();
     }
-
     @Test
     public void testExecuteBatchInsert() throws SQLException {
         String sql = "insert into " + db_name + "." + tableName + " values(?, ?)";
@@ -73,18 +90,55 @@ public class WSPreparedStatementTest {
 
     @Test
     public void testQuery() throws SQLException {
-        String sql = "select * from " + db_name + "." + tableName + " where ts > ? and ts < ?";
+        String sql = "insert into " + db_name + "." + tableName + " values(?, ?)";
         PreparedStatement statement = connection.prepareStatement(sql);
-        statement.setTimestamp(1, new Timestamp(System.currentTimeMillis() - 1000));
+        for (int i = 0; i < 10; i++) {
+            statement.setTimestamp(1, new Timestamp(System.currentTimeMillis() + i));
+            statement.setInt(2, i);
+            statement.addBatch();
+        }
+        statement.executeBatch();
+        statement.close();
+
+        sql = "select * from " + db_name + "." + tableName + " where ts > ? and ts < ?";
+        statement = connection.prepareStatement(sql);
+        statement.setTimestamp(1, new Timestamp(0));
         statement.setTimestamp(2, new Timestamp(System.currentTimeMillis() + 1000));
         ResultSet resultSet = statement.executeQuery();
+
+        int i = 0;
         while (resultSet.next()) {
-            System.out.println(resultSet.getTimestamp(1) + " " + resultSet.getInt(2));
+            Assert.assertEquals(resultSet.getInt(2), i++);
         }
     }
 
+    private void initDbAndTable(String precision) throws SQLException, InterruptedException{
+        Statement statement = connection.createStatement();
+        statement.execute("drop database if exists " + db_name);
+        waitTransactionDone();
+        statement.execute("create database " + db_name + " PRECISION '" + precision + "'");
+        waitTransactionDone();
+        statement.execute("use " + db_name);
+        statement.execute("create table if not exists " + db_name + "." + tableName + " (ts timestamp, c1 int)");
+
+        statement.close();
+    }
+
+    private void waitTransactionDone() throws SQLException, InterruptedException{
+        while (true) {
+            try (Statement statement = connection.createStatement()){
+                ResultSet resultSet = statement.executeQuery("show transactions");
+                if (resultSet.next()) {
+                    continue;
+                }
+                break;
+            } catch (SQLException e) {
+                Thread.sleep(1000);
+            }
+        }
+    }
     @Before
-    public void before() throws SQLException {
+    public void before() throws SQLException, InterruptedException {
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();
         if (url == null) {
             url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata&batchfetch=true";
@@ -93,12 +147,7 @@ public class WSPreparedStatementTest {
         }
         Properties properties = new Properties();
         connection = DriverManager.getConnection(url, properties);
-        Statement statement = connection.createStatement();
-        statement.execute("drop database if exists " + db_name);
-        statement.execute("create database " + db_name);
-        statement.execute("use " + db_name);
-        statement.execute("create table if not exists " + db_name + "." + tableName + " (ts timestamp, c1 int)");
-        statement.close();
+        initDbAndTable("ns");
     }
 
     @After
