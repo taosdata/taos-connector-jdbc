@@ -24,10 +24,17 @@ public class CompletableFutureTimeout {
 
     private static <T> CompletableFuture<T> timeoutAfter(long timeout, TimeUnit unit, String msg) {
         CompletableFuture<T> result = new CompletableFuture<>();
-        Delayer.delayer.schedule(
+        ScheduledFuture<?> scheduledFuture = Delayer.delayer.schedule(
                 () -> result.completeExceptionally(TSDBError.createTimeoutException(ERROR_QUERY_TIMEOUT,
                         String.format("failed to complete the task:%s within the specified time : %d,%s", msg, timeout, unit)))
                 , timeout, unit);
+
+        // Use handle to ensure the scheduled task is cancelled when the CompletableFuture completes normally or exceptionally
+        result.handle((res, ex) -> {
+            scheduledFuture.cancel(false);
+            return null;
+        });
+
         return result;
     }
 

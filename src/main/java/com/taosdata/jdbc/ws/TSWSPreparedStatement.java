@@ -1,9 +1,6 @@
 package com.taosdata.jdbc.ws;
 
-import com.taosdata.jdbc.TSDBConstants;
-import com.taosdata.jdbc.TSDBError;
-import com.taosdata.jdbc.TSDBErrorNumbers;
-import com.taosdata.jdbc.TSDBParameterMetaData;
+import com.taosdata.jdbc.*;
 import com.taosdata.jdbc.common.ColumnInfo;
 import com.taosdata.jdbc.common.SerializeBlock;
 import com.taosdata.jdbc.enums.BindType;
@@ -61,8 +58,8 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
 
     private final PriorityQueue<ColumnInfo> queue = new PriorityQueue<>();
 
-    public TSWSPreparedStatement(Transport transport, ConnectionParam param, String database, Connection connection, String sql) throws SQLException {
-        super(transport, database, connection);
+    public TSWSPreparedStatement(Transport transport, ConnectionParam param, String database, AbstractConnection connection, String sql, Long instanceId) throws SQLException {
+        super(transport, database, connection, instanceId);
         this.rawSql = sql;
         this.param = param;
         this.insertDbName = database;

@@ -18,6 +18,7 @@ import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
@@ -29,7 +30,6 @@ public class WSConnection extends AbstractConnection {
     private final DatabaseMetaData metaData;
     private String database;
     private final ConnectionParam param;
-    CopyOnWriteArrayList<Statement> statementList = new CopyOnWriteArrayList<>();
     private final AtomicLong insertId = new AtomicLong(0);
 
     public WSConnection(String url, Properties properties, Transport transport, ConnectionParam param) {
@@ -47,9 +47,9 @@ public class WSConnection extends AbstractConnection {
 
         if (this.getClientInfo(TSDBDriver.PROPERTY_KEY_DBNAME) != null)
             database = this.getClientInfo(TSDBDriver.PROPERTY_KEY_DBNAME);
-        WSStatement statement = new WSStatement(transport, database, this);
+        WSStatement statement = new WSStatement(transport, database, this, idGenerator.getAndIncrement());
 
-        statementList.add(statement);
+        statementsMap.put(statement.getInstanceId(), statement);
         return statement;
     }
 
@@ -62,7 +62,7 @@ public class WSConnection extends AbstractConnection {
             database = this.getClientInfo(TSDBDriver.PROPERTY_KEY_DBNAME);
 
         if (transport != null && !transport.isClosed()) {
-            return new TSWSPreparedStatement(transport, param, database, this, sql);
+            return new TSWSPreparedStatement(transport, param, database, this, sql, idGenerator.getAndIncrement());
         } else {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
         }
@@ -70,9 +70,11 @@ public class WSConnection extends AbstractConnection {
 
     @Override
     public void close() throws SQLException {
-        for (Statement statement : statementList) {
-            statement.close();
+        for (Map.Entry<Long, Statement> entry : statementsMap.entrySet()) {
+            Statement value = entry.getValue();
+            value.close();
         }
+        statementsMap.clear();
         transport.close();
     }
 

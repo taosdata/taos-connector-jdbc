@@ -45,8 +45,9 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
     private int tagValueLength;
     private PriorityQueue<ColumnInfo> queue = new PriorityQueue<>();
 
-    TSDBPreparedStatement(TSDBConnection connection, String sql) throws SQLException {
-        super(connection);
+
+    TSDBPreparedStatement(TSDBConnection connection, String sql, Long instanceId) throws SQLException {
+        super(connection, instanceId);
         this.rawSql = sql;
         int parameterCnt = 0;
         if (!sql.contains("?"))
