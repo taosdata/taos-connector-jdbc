@@ -30,9 +30,10 @@ public class TSDBStatement extends AbstractStatement {
 
     private int queryTimeout;
 
-    TSDBStatement(TSDBConnection connection) {
+    TSDBStatement(TSDBConnection connection, Long instanceId) {
         this.connection = connection;
-        connection.registerStatement(this);
+        this.instanceId = instanceId;
+        connection.registerStatement(this.instanceId, this);
     }
 
     public ResultSet executeQuery(String sql) throws SQLException {
@@ -146,7 +147,7 @@ public class TSDBStatement extends AbstractStatement {
     public void close() throws SQLException {
         if (isClosed)
             return;
-        connection.unregisterStatement(this);
+        connection.unregisterStatement(this.instanceId);
         if (this.resultSet != null && !this.resultSet.isClosed())
             this.resultSet.close();
         isClosed = true;

@@ -10,6 +10,7 @@ public abstract class AbstractStatement extends WrapperImpl implements Statement
     protected List<String> batchedArgs;
     private int fetchSize;
     protected int affectedRows = -1;
+    protected Long instanceId;
 
     @Override
     public abstract ResultSet executeQuery(String sql) throws SQLException;
@@ -361,6 +362,10 @@ public abstract class AbstractStatement extends WrapperImpl implements Statement
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
 
         return false;
+    }
+
+    public Long getInstanceId(){
+        return this.instanceId;
     }
 
 }

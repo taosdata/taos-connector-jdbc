@@ -49,7 +49,7 @@ public class WSPreparedStatementTest {
 
     @Test
     public void testExecuteBatchInsert() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName + " values(?, ?)";
+        String sql = "insert into " + db_name + "." + tableName + " (ts, c1) values(?, ?)";
         PreparedStatement statement = connection.prepareStatement(sql);
         for (int i = 0; i < 10; i++) {
             statement.setTimestamp(1, new Timestamp(System.currentTimeMillis() + i));

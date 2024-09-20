@@ -1,9 +1,6 @@
 package com.taosdata.jdbc.ws;
 
-import com.taosdata.jdbc.AbstractStatement;
-import com.taosdata.jdbc.TSDBDriver;
-import com.taosdata.jdbc.TSDBError;
-import com.taosdata.jdbc.TSDBErrorNumbers;
+import com.taosdata.jdbc.*;
 import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.utils.SqlSyntaxValidator;
 import com.taosdata.jdbc.ws.entity.*;
@@ -19,17 +16,19 @@ import static com.taosdata.jdbc.utils.SqlSyntaxValidator.getDatabaseName;
 public class WSStatement extends AbstractStatement {
     protected Transport transport;
     private String database;
-    private final Connection connection;
+    private final AbstractConnection connection;
 
     private boolean closed;
     private ResultSet resultSet;
 
     private int queryTimeout = 0;
 
-    public WSStatement(Transport transport, String database, Connection connection) {
+    public WSStatement(Transport transport, String database, AbstractConnection connection, Long instanceId) {
         this.transport = transport;
         this.database = database;
         this.connection = connection;
+        this.instanceId = instanceId;
+        this.connection.registerStatement(this.instanceId, this);
     }
 
     @Override
@@ -61,6 +60,7 @@ public class WSStatement extends AbstractStatement {
     @Override
     public void close() throws SQLException {
         if (!isClosed()) {
+            this.connection.unregisterStatement(this.instanceId);
             this.closed = true;
             if (resultSet != null && !resultSet.isClosed()) {
                 resultSet.close();
