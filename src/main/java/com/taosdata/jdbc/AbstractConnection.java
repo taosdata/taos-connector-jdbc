@@ -6,8 +6,13 @@ import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicLong;
 
 public abstract class AbstractConnection extends WrapperImpl implements Connection {
+
+    protected  AtomicLong idGenerator = new AtomicLong(0);
+    protected ConcurrentHashMap<Long, Statement> statementsMap = new ConcurrentHashMap<>();
+
 
     protected volatile boolean isClosed;
     protected volatile String catalog;
@@ -18,6 +23,13 @@ public abstract class AbstractConnection extends WrapperImpl implements Connecti
         for (String propName : propNames) {
             clientInfoProps.setProperty(propName, properties.getProperty(propName));
         }
+    }
+    public void unregisterStatement(Long stmtId) {
+        this.statementsMap.remove(stmtId);
+    }
+
+    public void registerStatement(Long stmtId, Statement stmt) {
+        this.statementsMap.put(stmtId, stmt);
     }
 
     @Override
