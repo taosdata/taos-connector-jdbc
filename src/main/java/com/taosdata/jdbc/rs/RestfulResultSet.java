@@ -255,8 +255,6 @@ public class RestfulResultSet extends AbstractResultSet {
         if (value == null)
             return 0;
         long valueAsLong = Long.parseLong(value.toString());
-        if (valueAsLong == Byte.MIN_VALUE)
-            return 0;
         if (valueAsLong < Byte.MIN_VALUE || valueAsLong > Byte.MAX_VALUE)
             throwRangeException(value.toString(), columnIndex, Types.TINYINT);
 
@@ -277,8 +275,6 @@ public class RestfulResultSet extends AbstractResultSet {
         if (value == null)
             return 0;
         long valueAsLong = Long.parseLong(value.toString());
-        if (valueAsLong == Short.MIN_VALUE)
-            return 0;
         if (valueAsLong < Short.MIN_VALUE || valueAsLong > Short.MAX_VALUE)
             throwRangeException(value.toString(), columnIndex, Types.SMALLINT);
         return (short) valueAsLong;
@@ -293,8 +289,6 @@ public class RestfulResultSet extends AbstractResultSet {
         if (value == null)
             return 0;
         long valueAsLong = Long.parseLong(value.toString());
-        if (valueAsLong == Integer.MIN_VALUE)
-            return 0;
         if (valueAsLong < Integer.MIN_VALUE || valueAsLong > Integer.MAX_VALUE)
             throwRangeException(value.toString(), columnIndex, Types.INTEGER);
         return (int) valueAsLong;
@@ -323,8 +317,6 @@ public class RestfulResultSet extends AbstractResultSet {
         long valueAsLong = 0;
         try {
             valueAsLong = Long.parseLong(value.toString());
-            if (valueAsLong == Long.MIN_VALUE)
-                return 0;
         } catch (NumberFormatException e) {
             throwRangeException(value.toString(), columnIndex, Types.BIGINT);
         }
