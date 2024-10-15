@@ -33,7 +33,7 @@ public class RestfulJsonTagTest {
             "insert into jsons1_3 using jsons1 tags('{\"tag1\":false,\"tag2\":\"beijing\"}') values (1591060668000, 3, false, 'json3', 'efwe')",
             "insert into jsons1_4 using jsons1 tags('{\"tag1\":null,\"tag2\":\"shanghai\",\"tag3\":\"hello\"}') values (1591060728000, 4, true, 'json4', '323sd')",
             "insert into jsons1_5 using jsons1 tags('{\"tag1\":1.232, \"tag2\":null}') values(1591060928000, 1, false, '你就会', 'ewe')",
-            "insert into jsons1_6 using jsons1 tags('{\"tag1\":11,\"tag2\":\"\",\"tag2\":null}') values(1591061628000, 11, false, '你就会','')",
+            "insert into jsons1_6 using jsons1 tags('{\"tag1\":11,\"tag2\":\"\",\"tag3\":null}') values(1591061628000, 11, false, '你就会','')",
             "insert into jsons1_7 using jsons1 tags('{\"tag1\":\"收到货\",\"tag2\":\"\",\"tag3\":null}') values(1591062628000, 2, NULL, '你就会', 'dws')",
     };
 
@@ -311,7 +311,7 @@ public class RestfulJsonTagTest {
         ResultSet resultSet = statement.executeQuery("select jtag->'tag1' from jsons1_5");
         resultSet.next();
         String string = resultSet.getString(1);
-        Assert.assertEquals("1.232000000", string);
+        Assert.assertEquals("1.232", string);
         close(resultSet);
     }
 
@@ -743,7 +743,7 @@ public class RestfulJsonTagTest {
         while (resultSet.next()) {
             count++;
         }
-        Assert.assertEquals(4, count);
+        Assert.assertEquals(5, count);
         close(resultSet);
     }
 

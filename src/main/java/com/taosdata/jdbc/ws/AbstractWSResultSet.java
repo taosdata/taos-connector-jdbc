@@ -40,7 +40,7 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
     private static final int CACHE_SIZE = 5;
     BlockingQueue<BlockData> blockingQueueOut = new LinkedBlockingQueue<>(CACHE_SIZE);
     ThreadPoolExecutor backFetchExecutor;
-    ForkJoinPool dataHandleExecutor = ForkJoinPool.commonPool();
+    ForkJoinPool dataHandleExecutor = getForkJoinPool();
     protected AbstractWSResultSet(Statement statement, Transport transport,
                                QueryResp response, String database) throws SQLException {
         this.statement = statement;

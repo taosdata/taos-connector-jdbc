@@ -1,10 +1,11 @@
 package com.taosdata.jdbc.ws;
 
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.taosdata.jdbc.SchemalessWriter;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
+import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -103,7 +104,7 @@ public class SchemalessTest {
     }
 
     @Test
-    public void jsonInsert() throws SQLException {
+    public void jsonInsert() throws SQLException, JsonProcessingException {
         // given
         String json = "[\n" +
                 "  {\n" +
@@ -143,7 +144,8 @@ public class SchemalessTest {
             rowCnt++;
         }
 
-        Assert.assertEquals(((JSONArray) JSONObject.parse(json)).size(), rowCnt);
+        JsonNode jsonArray = JsonUtil.getObjectReader().readTree(json);
+        Assert.assertEquals(jsonArray.size(), rowCnt);
         rs.close();
         statement.close();
     }

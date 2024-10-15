@@ -14,7 +14,7 @@ import static com.taosdata.jdbc.TSDBConstants.TIMESTAMP_DATA_OUT_OF_RANGE;
 @FixMethodOrder
 public class WSPreparedStatementNsTest {
     String host = "localhost";
-    String db_name = "ws_prepare";
+    String db_name = "ws_prepare_ns";
     String tableName = "wpt";
     String superTable = "wpt_st";
     Connection connection;
@@ -154,6 +154,9 @@ public class WSPreparedStatementNsTest {
     public void after() throws SQLException {
         try (Statement statement = connection.createStatement()) {
             statement.execute("drop database if exists " + db_name);
+            waitTransactionDone();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
         connection.close();
     }
