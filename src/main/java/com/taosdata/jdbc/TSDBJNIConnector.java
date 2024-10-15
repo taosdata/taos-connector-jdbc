@@ -1,6 +1,8 @@
 package com.taosdata.jdbc;
 
-import com.alibaba.fastjson.JSONObject;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.utils.TaosInfo;
@@ -40,11 +42,22 @@ public class TSDBJNIConnector {
         synchronized (LOCK) {
             if (!isInitialized) {
 
-                JSONObject configJSON = new JSONObject();
+                ObjectMapper objectMapper = new ObjectMapper();
+                ObjectNode configJSON = objectMapper.createObjectNode();
+
                 for (String key : props.stringPropertyNames()) {
                     configJSON.put(key, props.getProperty(key));
                 }
-                setConfigImp(configJSON.toJSONString());
+
+                String cfg;
+
+                try {
+                    cfg = objectMapper.writeValueAsString(configJSON);
+                } catch (JsonProcessingException e) {
+                    throw TSDBError.createSQLWarning("Failed to parse properties to JSON string.");
+                }
+
+               setConfigImp(cfg);
 
                 initImp(props.getProperty(TSDBDriver.PROPERTY_KEY_CONFIG_DIR, null));
 

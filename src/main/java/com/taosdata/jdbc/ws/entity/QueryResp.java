@@ -1,33 +1,33 @@
 package com.taosdata.jdbc.ws.entity;
 
-import com.alibaba.fastjson.annotation.JSONField;
-import com.taosdata.jdbc.utils.UInt64Codec;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.taosdata.jdbc.utils.UInt64Deserializer;
 
 /**
  * query result pojo
  */
 public class QueryResp extends CommonResp {
 
-
-    @JSONField(deserializeUsing = UInt64Codec.class)
+    @JsonDeserialize(using = UInt64Deserializer.class)
     private long id;
 
-    @JSONField(name = "is_update")
+    @JsonProperty("is_update")
     private boolean isUpdate;
 
-    @JSONField(name = "affected_rows")
+    @JsonProperty("affected_rows")
     private int affectedRows;
 
-    @JSONField(name = "fields_count")
+    @JsonProperty("fields_count")
     private int fieldsCount;
 
-    @JSONField(name = "fields_names")
+    @JsonProperty("fields_names")
     private String[] fieldsNames;
 
-    @JSONField(name = "fields_types")
+    @JsonProperty("fields_types")
     private int[] fieldsTypes;
 
-    @JSONField(name = "fields_lengths")
+    @JsonProperty("fields_lengths")
     private int[] fieldsLengths;
 
     private int precision;

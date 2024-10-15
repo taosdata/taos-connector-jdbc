@@ -1,9 +1,10 @@
 package com.taosdata.jdbc.rs;
 
-import com.alibaba.fastjson.JSONArray;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
+import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -686,7 +687,8 @@ public class RestfulResultSetTest {
     public void parseTimestampColumnDataTest() throws SQLException {
         List<Object> list = new ArrayList<>();
         list.add("2022-08-09T02:36:44.5Z");
-        JSONArray array = new JSONArray(list);
+        // 使用 Jackson 将 List 转换为 JsonNode
+        JsonNode array = JsonUtil.getObjectMapper().convertValue(list, JsonNode.class);
         Timestamp timestamp = ((RestfulResultSet) rs).parseTimestampColumnData(array, 0);
         Assert.assertEquals(1660012604500L, timestamp.getTime());
     }

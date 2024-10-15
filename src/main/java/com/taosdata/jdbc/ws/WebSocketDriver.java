@@ -1,4 +1,4 @@
-package com.taosdata.jdbc.rs;
+package com.taosdata.jdbc.ws;
 
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -7,11 +7,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.taosdata.jdbc.*;
 import com.taosdata.jdbc.enums.WSFunction;
+import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.rs.RestfulConnection;
 import com.taosdata.jdbc.utils.HttpClientPoolUtil;
-import com.taosdata.jdbc.utils.StringUtils;
-import com.taosdata.jdbc.ws.*;
-import com.taosdata.jdbc.ws.entity.*;
 import com.taosdata.jdbc.utils.JsonUtil;
+import com.taosdata.jdbc.utils.StringUtils;
+import com.taosdata.jdbc.ws.entity.*;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteOrder;
@@ -21,13 +22,12 @@ import java.util.Base64;
 import java.util.Properties;
 import java.util.logging.Logger;
 
-public class RestfulDriver extends AbstractDriver {
-    private final org.slf4j.Logger log = LoggerFactory.getLogger(RestfulDriver.class);
-    public static final String URL_PREFIX = "jdbc:TAOS-RS://";
+public class WebSocketDriver extends AbstractDriver {
+    public static final String URL_PREFIX = "jdbc:TAOS-WS://";
 
     static {
         try {
-            DriverManager.registerDriver(new RestfulDriver());
+            DriverManager.registerDriver(new WebSocketDriver());
         } catch (SQLException e) {
             throw TSDBError.createRuntimeException(TSDBErrorNumbers.ERROR_URL_NOT_SET, e);
         }
@@ -45,27 +45,8 @@ public class RestfulDriver extends AbstractDriver {
 
         Properties props = parseURL(url, info);
         ConnectionParam param = ConnectionParam.getParam(props);
-        String batchLoad = info.getProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD);
-        if (Boolean.parseBoolean(batchLoad)) {
-            return getWSConnection(url, param, props);
-        }
-        HttpClientPoolUtil.init(props);
+        return getWSConnection(url, param, props);
 
-        String auth = null;
-
-        if (param.getUser() != null && param.getPassword() != null) {
-            auth = Base64.getEncoder().encodeToString(
-                    (param.getUser() + ":" + param.getPassword()).getBytes(StandardCharsets.UTF_8));
-        }
-
-        RestfulConnection conn = new RestfulConnection(param.getHost(), param.getPort(), props, param.getDatabase(),
-                url, auth, param.isUseSsl(), param.getCloudToken(), param.getTz());
-        if (param.getDatabase() != null && !param.getDatabase().trim().replaceAll("\\s", "").isEmpty()) {
-            try (Statement stmt = conn.createStatement()) {
-                stmt.execute("use " + param.getDatabase());
-            }
-        }
-        return conn;
     }
 
     @Override

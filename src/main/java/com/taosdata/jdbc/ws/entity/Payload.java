@@ -1,9 +1,9 @@
 package com.taosdata.jdbc.ws.entity;
 
-import com.alibaba.fastjson.annotation.JSONField;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class Payload {
-    @JSONField(name = "req_id")
+    @JsonProperty("req_id")
     private long reqId;
 
     public void setReqId(long reqId) {

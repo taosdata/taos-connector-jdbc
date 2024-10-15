@@ -1,9 +1,8 @@
 package com.taosdata.jdbc.rs;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONException;
-import com.alibaba.fastjson.JSONObject;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.taosdata.jdbc.AbstractStatement;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.TSDBError;
@@ -87,14 +86,15 @@ public class RestfulStatement extends AbstractStatement {
         boolean result = true;
 
         String response = HttpClientPoolUtil.execute(getUrl(), sql, this.conn.getAuth(), reqId);
-        JSONObject jsonObject = null;
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode jsonObject = null;
         try {
-            jsonObject = JSON.parseObject(response);
-        } catch (JSONException e) {
-            throw new JSONException(String.format("execute sql: %s, response: %s, can not cast to JSONObject.", sql, response), e);
+            jsonObject = objectMapper.readTree(response);
+        } catch (JsonProcessingException e) {
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, String.format("execute sql: %s, response: %s, can not cast to JsonNode.", sql, response));
         }
-        if (jsonObject.getIntValue("code") != 0) {
-            throw TSDBError.createSQLException(jsonObject.getInteger("code"), "sql: " + sql + ", desc: " + jsonObject.getString("desc"));
+        if (jsonObject.get("code").asInt() != 0) {
+            throw TSDBError.createSQLException(jsonObject.get("code").asInt(), "sql: " + sql + ", desc: " + jsonObject.get("desc").asText());
         }
 
         if (SqlSyntaxValidator.isUseSql(sql)) {
@@ -103,12 +103,12 @@ public class RestfulStatement extends AbstractStatement {
             this.conn.setClientInfo(TSDBDriver.PROPERTY_KEY_DBNAME, this.database);
             result = false;
         } else {
-            JSONArray head = jsonObject.getJSONArray("column_meta");
-            if (null == head) {
-                throw TSDBError.createSQLException(jsonObject.getInteger("code"), "sql: " + sql + ", desc: " + jsonObject.getString("desc") + ", head meta is null.");
+            JsonNode head = jsonObject.get("column_meta");
+            if (head == null) {
+                throw TSDBError.createSQLException(jsonObject.get("code").asInt(), "sql: " + sql + ", desc: " + jsonObject.get("desc").asText() + ", head meta is null.");
             }
-            Integer rows = jsonObject.getInteger("rows");
-            if (head.size() == 1 && ROW_NAME.equals(head.getJSONArray(0).getString(0)) && rows == 1) {
+            int rows = jsonObject.get("rows").asInt();
+            if (head.size() == 1 && ROW_NAME.equals(head.get(0).get(0).asText()) && rows == 1) {
                 this.resultSet = null;
                 this.affectedRows = getAffectedRows(jsonObject);
                 return false;
@@ -146,16 +146,16 @@ public class RestfulStatement extends AbstractStatement {
         }
         return url;
     }
-
-    private int getAffectedRows(JSONObject jsonObject) throws SQLException {
-        JSONArray head = jsonObject.getJSONArray("column_meta");
-        if (head.size() != 1 || !"affected_rows".equals(head.getJSONArray(0).getString(0)))
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid variable: [" + head.toJSONString() + "]");
-        JSONArray data = jsonObject.getJSONArray("data");
-        if (data != null) {
-            return data.getJSONArray(0).getInteger(0);
+    private int getAffectedRows(JsonNode jsonObject) throws SQLException {
+        JsonNode head = jsonObject.get("column_meta");
+        if (head.size() != 1 || !"affected_rows".equals(head.get(0).get(0).asText())) {
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid variable: [" + head.toString() + "]");
         }
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid variable: [" + jsonObject.toJSONString() + "]");
+        JsonNode data = jsonObject.get("data");
+        if (data != null) {
+            return data.get(0).get(0).asInt();
+        }
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid variable: [" + jsonObject.toString() + "]");
     }
 
     @Override

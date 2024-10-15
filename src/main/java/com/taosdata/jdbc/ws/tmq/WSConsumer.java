@@ -1,20 +1,24 @@
 package com.taosdata.jdbc.ws.tmq;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.common.Consumer;
 import com.taosdata.jdbc.enums.TmqMessageType;
 import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.tmq.*;
+import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.ws.FutureResponse;
 import com.taosdata.jdbc.ws.InFlightRequest;
 import com.taosdata.jdbc.ws.Transport;
+import com.taosdata.jdbc.ws.entity.Action;
 import com.taosdata.jdbc.ws.entity.Code;
 import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.entity.Response;
 import com.taosdata.jdbc.ws.tmq.entity.*;
+import org.slf4j.LoggerFactory;
 
 import java.nio.ByteOrder;
 import java.sql.SQLException;
@@ -23,6 +27,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class WSConsumer<V> implements Consumer<V> {
+    private final org.slf4j.Logger log = LoggerFactory.getLogger(WSConsumer.class);
     private Transport transport;
     private ConsumerParam param;
     private TMQRequestFactory factory;
@@ -40,12 +45,17 @@ public class WSConsumer<V> implements Consumer<V> {
         transport = new Transport(WSFunction.TMQ, param.getConnectionParam(), inFlightRequest);
 
         transport.setTextMessageHandler(message -> {
-            JSONObject jsonObject = JSON.parseObject(message);
-            ConsumerAction action = ConsumerAction.of(jsonObject.getString("action"));
-            Response response = jsonObject.toJavaObject(action.getResponseClazz());
-            FutureResponse remove = inFlightRequest.remove(response.getAction(), response.getReqId());
-            if (null != remove) {
-                remove.getFuture().complete(response);
+            try {
+                JsonNode jsonObject = JsonUtil.getObjectReader().readTree(message);
+                ConsumerAction action = ConsumerAction.of(jsonObject.get("action").asText());
+                ObjectReader actionReader = JsonUtil.getObjectReader(action.getResponseClazz());
+                Response response = actionReader.treeToValue(jsonObject, action.getResponseClazz());
+                FutureResponse remove = inFlightRequest.remove(response.getAction(), response.getReqId());
+                if (null != remove) {
+                    remove.getFuture().complete(response);
+                }
+            } catch (JsonProcessingException e) {
+                log.error("Error processing message", e);
             }
         });
         transport.setBinaryMessageHandler(byteBuffer -> {

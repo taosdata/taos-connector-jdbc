@@ -1,14 +1,14 @@
 package com.taosdata.jdbc;
 
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
+import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.SpecifyAddress;
-import com.taosdata.jdbc.ws.WSConnection;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -97,7 +97,7 @@ public class SchemalessInsertNewTest {
      */
     @Test
     @Description("json insert")
-    public void jsonInsert() throws SQLException {
+    public void jsonInsert() throws SQLException, JsonProcessingException {
         // given
         String json = "[\n" +
                 "  {\n" +
@@ -136,7 +136,8 @@ public class SchemalessInsertNewTest {
             rowCnt++;
         }
 
-        Assert.assertEquals(((JSONArray) JSONObject.parse(json)).size(), rowCnt);
+        JsonNode jsonArray = JsonUtil.getObjectReader().readTree(json);
+        Assert.assertEquals(jsonArray.size(), rowCnt);
         rs.close();
         statement.close();
     }

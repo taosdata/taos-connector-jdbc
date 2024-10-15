@@ -1,10 +1,13 @@
 package com.taosdata.jdbc.ws.entity;
 
-import com.alibaba.fastjson.annotation.JSONField;
-import com.taosdata.jdbc.utils.UInt64Codec;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.taosdata.jdbc.utils.UInt64Deserializer;
+import com.taosdata.jdbc.utils.UInt64Serializer;
 
 public class FetchReq extends Payload {
-    @JSONField(serializeUsing = UInt64Codec.class, deserializeUsing = UInt64Codec.class)
+    @JsonSerialize(using = UInt64Serializer.class)
+    @JsonDeserialize(using = UInt64Deserializer.class)
     private long id;
 
     public long getId() {
