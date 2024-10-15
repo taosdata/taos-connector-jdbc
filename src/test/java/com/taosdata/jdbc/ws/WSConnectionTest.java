@@ -20,7 +20,7 @@ import java.util.Properties;
 @TestTarget(alias = "test connection with server", author = "huolibo", version = "2.0.37")
 public class WSConnectionTest {
     //    private static final String host = "192.168.1.98";
-    private static String host = "vm98";
+    private static String host = "127.0.0.1";
     private static String port = "6041";
     private Connection connection;
     private String db_name = "information_schema";
@@ -77,7 +77,6 @@ public class WSConnectionTest {
         // Taosd recycles resources, if the sleep more than 30 seconds,
 //        TimeUnit.SECONDS.sleep(30);
         resultSet.next();
-        System.out.println(resultSet.getString(1));
         resultSet.close();
         statement.close();
         connection.close();
