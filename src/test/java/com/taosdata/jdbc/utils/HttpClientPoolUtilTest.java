@@ -1,7 +1,7 @@
 package com.taosdata.jdbc.utils;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.taosdata.jdbc.TSDBDriver;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -39,7 +39,7 @@ public class HttpClientPoolUtilTest {
             try {
                 String token = login(multi);
                 executeOneSql("use log", token);
-            } catch (SQLException | UnsupportedEncodingException e) {
+            } catch (SQLException | UnsupportedEncodingException | JsonProcessingException e) {
                 e.printStackTrace();
             }
         })).collect(Collectors.toList());
@@ -67,7 +67,7 @@ public class HttpClientPoolUtilTest {
                 String token = login(multi);
                 executeOneSql("insert into " + db_name + ".tb_not_exist values(now, 1)", token);
                 executeOneSql("select last(*) from " + db_name + ".dn", token);
-            } catch (SQLException | UnsupportedEncodingException e) {
+            } catch (SQLException | UnsupportedEncodingException | JsonProcessingException e) {
                 e.printStackTrace();
             }
         })).collect(Collectors.toList());
@@ -83,7 +83,7 @@ public class HttpClientPoolUtilTest {
         }
     }
 
-    private String login(int connPoolSize) throws SQLException, UnsupportedEncodingException {
+    private String login(int connPoolSize) throws SQLException, UnsupportedEncodingException, JsonProcessingException {
         user = URLEncoder.encode(user, StandardCharsets.UTF_8.displayName());
         password = URLEncoder.encode(password, StandardCharsets.UTF_8.displayName());
         String loginUrl;
@@ -98,15 +98,15 @@ public class HttpClientPoolUtilTest {
         properties.setProperty(TSDBDriver.HTTP_KEEP_ALIVE, "false");
         HttpClientPoolUtil.init(properties);
         String result = HttpClientPoolUtil.execute(loginUrl);
-        JSONObject jsonResult = JSON.parseObject(result);
-        String token = jsonResult.getString("desc");
-        if (jsonResult.getIntValue("code") != 0) {
-            throw new SQLException(jsonResult.getString("desc"));
+        JsonNode jsonResult = JsonUtil.getObjectMapper().readTree(result);
+        String token = jsonResult.get("desc").asText();
+        if (jsonResult.get("code").asInt() != 0) {
+            throw new SQLException(jsonResult.get("desc").asText());
         }
         return "Basic " + token;
     }
 
-    private boolean executeOneSql(String sql, String token) throws SQLException {
+    private boolean executeOneSql(String sql, String token) throws SQLException, JsonProcessingException {
 
         String url;
         String specifyHost = SpecifyAddress.getInstance().getHost();
@@ -116,8 +116,8 @@ public class HttpClientPoolUtilTest {
             url = "http://" + specifyHost + ":6041/rest/sql";
         }
         String result = HttpClientPoolUtil.execute(url, sql, token, null);
-        JSONObject resultJson = JSON.parseObject(result);
-        if (resultJson.getIntValue("code") == 0) {
+        JsonNode resultJson =  JsonUtil.getObjectMapper().readTree(result);
+        if (resultJson.get("code").asInt() == 0) {
 //            HttpClientPoolUtil.reset();
 //            throw TSDBError.createSQLException(resultJson.getInteger("code"), resultJson.getString("desc"));
             return false;

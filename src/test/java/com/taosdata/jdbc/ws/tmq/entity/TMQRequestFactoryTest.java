@@ -1,10 +1,12 @@
 package com.taosdata.jdbc.ws.tmq.entity;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
+import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.ws.entity.Request;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -15,16 +17,17 @@ import org.junit.runner.RunWith;
 @RunWith(CatalogRunner.class)
 public class TMQRequestFactoryTest {
     private static TMQRequestFactory factory;
+    private static final ObjectMapper objectMapper = JsonUtil.getObjectMapper();
 
     @Test
     @Description("Generate Subscribe")
-    public void testGenerateSubscribe() {
+    public void testGenerateSubscribe() throws JsonProcessingException {
         String[] topics = {"topic_1", "topic_2"};
         Request request = factory.generateSubscribe("root", "taosdata", "test", "gId",
                 "cId", "offset", topics
                 , null, null);
-        JSONObject jsonObject = JSONObject.parseObject(request.toString());
-        SubscribeReq req = JSON.toJavaObject((JSON) JSON.toJSON(jsonObject.get("args")), SubscribeReq.class);
+        JsonNode jsonObject = objectMapper.readTree(request.toString());
+        SubscribeReq req = objectMapper.treeToValue(jsonObject.get("args"), SubscribeReq.class);
         Assert.assertEquals(1, req.getReqId());
         Assert.assertEquals("root", req.getUser());
         Assert.assertEquals("taosdata", req.getPassword());
@@ -37,29 +40,29 @@ public class TMQRequestFactoryTest {
 
     @Test
     @Description("Generate Poll")
-    public void testGeneratePoll() {
+    public void testGeneratePoll() throws JsonProcessingException {
         Request request = factory.generatePoll(1000);
-        JSONObject jsonObject = JSONObject.parseObject(request.toString());
-        PollReq req = JSON.toJavaObject((JSON) JSON.toJSON(jsonObject.get("args")), PollReq.class);
+        JsonNode jsonObject = objectMapper.readTree(request.toString());
+        PollReq req = objectMapper.treeToValue(jsonObject.get("args"), PollReq.class);
         Assert.assertEquals(1, req.getReqId());
         Assert.assertEquals(1000, req.getBlockingTime());
     }
 
     @Test
     @Description("Generate FetchRaw")
-    public void testGenerateFetchRaw() {
+    public void testGenerateFetchRaw() throws JsonProcessingException {
         Request request = factory.generateFetchRaw(1_000);
-        JSONObject jsonObject = JSONObject.parseObject(request.toString());
-        FetchRawReq req = JSON.toJavaObject((JSON) JSON.toJSON(jsonObject.get("args")), FetchRawReq.class);
+        JsonNode jsonObject = objectMapper.readTree(request.toString());
+        FetchRawReq req = objectMapper.treeToValue(jsonObject.get("args"), FetchRawReq.class);
         Assert.assertEquals(1, req.getReqId());
         Assert.assertEquals(1000, req.getMessageId());
     }
     @Test
     @Description("Generate Commit")
-    public void testGenerateCommit() {
+    public void testGenerateCommit() throws JsonProcessingException {
         Request request = factory.generateCommit(1000);
-        JSONObject jsonObject = JSONObject.parseObject(request.toString());
-        CommitReq req = JSON.toJavaObject((JSON) JSON.toJSON(jsonObject.get("args")), CommitReq.class);
+        JsonNode jsonObject = objectMapper.readTree(request.toString());
+        CommitReq req = objectMapper.treeToValue(jsonObject.get("args"), CommitReq.class);
         Assert.assertEquals(1, req.getReqId());
         Assert.assertEquals(1000, req.getMessageId());
     }

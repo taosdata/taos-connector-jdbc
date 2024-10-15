@@ -1,12 +1,12 @@
 package com.taosdata.jdbc.ws.tmq.entity;
 
-import com.alibaba.fastjson.annotation.JSONField;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.taosdata.jdbc.ws.entity.CommonResp;
 
 public class CommitOffsetResp extends CommonResp {
     private long timing;
     private String topic;
-    @JSONField(name = "vg_id")
+    @JsonProperty("vg_id")
     private int vgId;
     private long offset;
     public long getTiming() {

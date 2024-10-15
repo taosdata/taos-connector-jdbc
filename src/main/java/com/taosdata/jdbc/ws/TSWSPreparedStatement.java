@@ -94,6 +94,8 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
                 } else {
                     updatePrecision(useDb);
                 }
+
+
             }
         }
 

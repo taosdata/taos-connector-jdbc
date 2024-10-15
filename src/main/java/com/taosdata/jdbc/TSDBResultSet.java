@@ -43,7 +43,7 @@ public class TSDBResultSet extends AbstractResultSet {
     private boolean lastWasNull;
     private volatile boolean isClosed;
     ThreadPoolExecutor backFetchExecutor;
-    ForkJoinPool dataHandleExecutor = ForkJoinPool.commonPool();
+    ForkJoinPool dataHandleExecutor = getForkJoinPool();
     public void setBatchFetch(boolean batchFetch) {
         this.batchFetch = batchFetch;
     }

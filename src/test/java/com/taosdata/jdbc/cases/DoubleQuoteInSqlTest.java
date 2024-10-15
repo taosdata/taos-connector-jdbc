@@ -1,7 +1,9 @@
 package com.taosdata.jdbc.cases;
 
-import com.alibaba.fastjson.JSONObject;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.After;
 import org.junit.Assert;
@@ -21,21 +23,23 @@ public class DoubleQuoteInSqlTest {
     public void test() {
         // given
         long ts = System.currentTimeMillis();
-        JSONObject value = new JSONObject();
+        ObjectNode value = JsonUtil.getObjectMapper().createObjectNode();
         value.put("name", "John Smith");
         value.put("age", 20);
 
         // when
         int ret = 0;
         try (PreparedStatement pstmt = conn.prepareStatement("insert into weather values(" + ts + ", ?)")) {
-            pstmt.setString(1, value.toJSONString());
+            pstmt.setString(1, JsonUtil.getObjectMapper().writeValueAsString(value));
             ret = pstmt.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
         }
 
         // then
-        Assert.assertEquals("{\"name\":\"John Smith\",\"age\":20}", value.toJSONString());
+        Assert.assertEquals("{\"name\":\"John Smith\",\"age\":20}", value.toString());
         Assert.assertEquals(1, ret);
     }
 

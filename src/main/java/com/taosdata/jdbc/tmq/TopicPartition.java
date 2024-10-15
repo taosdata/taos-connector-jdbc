@@ -1,12 +1,12 @@
 package com.taosdata.jdbc.tmq;
 
-import com.alibaba.fastjson.annotation.JSONField;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Objects;
 
 public class TopicPartition {
     private final String topic;
-    @JSONField(name = "vgroup_id")
+    @JsonProperty("vgroup_id")
     private final int vGroupId;
 
     public TopicPartition(String topic, int vGroupId) {
