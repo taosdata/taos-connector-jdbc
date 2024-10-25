@@ -3,6 +3,7 @@ package com.taosdata.jdbc.ws.entity;
 import com.taosdata.jdbc.ws.stmt.entity.ExecResp;
 import com.taosdata.jdbc.ws.stmt.entity.GetColFieldsResp;
 import com.taosdata.jdbc.ws.stmt.entity.StmtResp;
+import com.taosdata.jdbc.ws.stmt2.entity.Stmt2Resp;
 import com.taosdata.jdbc.ws.tmq.entity.FetchRawBlockResp;
 
 import java.util.HashMap;
@@ -34,6 +35,14 @@ public enum Action {
     GET_COL_FIELDS("get_col_fields", GetColFieldsResp.class),
 
     CLOSE("close", StmtResp.class),
+
+    // stmt2
+    STMT2_INIT("stmt2_init", Stmt2Resp.class),
+    STMT2_PREPARE("stmt2_prepare", Stmt2Resp.class),
+    STMT2_BIND("bind", Stmt2Resp.class),
+    STMT2_EXEC("exec", ExecResp.class),
+    // response means nothing
+    STMT2_CLOSE("close", StmtResp.class),
 
     //schemaless
     INSERT("insert", CommonResp.class),

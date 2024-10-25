@@ -4,7 +4,6 @@ import com.taosdata.jdbc.*;
 import com.taosdata.jdbc.common.ColumnInfo;
 import com.taosdata.jdbc.common.SerializeBlock;
 import com.taosdata.jdbc.enums.BindType;
-import com.taosdata.jdbc.enums.DataType;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.ReqId;
@@ -13,10 +12,7 @@ import com.taosdata.jdbc.ws.entity.Action;
 import com.taosdata.jdbc.ws.entity.Code;
 import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.entity.Response;
-import com.taosdata.jdbc.ws.stmt.entity.ExecResp;
-import com.taosdata.jdbc.ws.stmt.entity.GetColFieldsResp;
-import com.taosdata.jdbc.ws.stmt.entity.RequestFactory;
-import com.taosdata.jdbc.ws.stmt.entity.StmtResp;
+import com.taosdata.jdbc.ws.stmt2.entity.*;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -29,7 +25,6 @@ import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -38,9 +33,6 @@ import static com.taosdata.jdbc.utils.SqlSyntaxValidator.getDatabaseName;
 import static com.taosdata.jdbc.utils.SqlSyntaxValidator.isUseSql;
 
 public class TSWSPreparedStatement extends WSStatement implements PreparedStatement {
-   public static final Pattern INSERT_PATTERN = Pattern.compile(
-             "insert\\s+into\\s+([.\\w]+|\\?)\\s+(using\\s+([.\\w]+)(\\s*\\(.*\\)\\s*|\\s+)tags\\s*\\(.*\\))?\\s*(\\(.*\\))?\\s*values\\s*\\(.*\\)"
-   );
     private final ConnectionParam param;
     private long reqId;
     private long stmtId;
@@ -48,9 +40,11 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
 
     private int queryTimeout = 0;
     private int precision = TimestampPrecision.MS;
+    private int toBeBindColCount = 0;
+    private List<Field> fields;
+    private boolean isInsert = false;
 
-    private String insertDbName;
-    static private Map<String, Integer> precisionHashMap = new ConcurrentHashMap<String, Integer>();
+
     private final Map<Integer, Column> column = new HashMap<>();
 
     private final Map<Integer, Column> tag = new HashMap<>();
@@ -58,71 +52,54 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
 
     private final PriorityQueue<ColumnInfo> queue = new PriorityQueue<>();
 
+    private final
+
     public TSWSPreparedStatement(Transport transport, ConnectionParam param, String database, AbstractConnection connection, String sql, Long instanceId) throws SQLException {
         super(transport, database, connection, instanceId);
         this.rawSql = sql;
         this.param = param;
-        this.insertDbName = database;
         if (!sql.contains("?"))
             return;
 
-        String useDb = null;
-        Matcher matcher = INSERT_PATTERN.matcher(sql);
-        if (matcher.find()) {
-            if (matcher.group(1).equals("?") && matcher.group(3) != null) {
-                String usingGroup = matcher.group(3);
-                if (usingGroup.contains(".")) {
-                    String[] split = usingGroup.split("\\.");
-                    useDb = split[0];
-                }
-            } else {
-                String usingGroup = matcher.group(1);
-                if (usingGroup.contains(".")) {
-                    String[] split = usingGroup.split("\\.");
-                    useDb = split[0];
-                }
-            }
-
-            if (useDb == null && database != null) {
-                useDb = database;
-            }
-            if (useDb != null) {
-                insertDbName = useDb;
-                Integer precisionObj = precisionHashMap.get(useDb);
-                if (precisionObj != null){
-                    precision = precisionObj;
-                } else {
-                    updatePrecision(useDb);
-                }
-
-
-            }
-        }
-
-
         reqId = ReqId.getReqID();
-        Request request = RequestFactory.generateInit(reqId);
-        StmtResp resp = (StmtResp) transport.send(request);
+        Request request = RequestFactory.generateInit(reqId, true, false);
+        Stmt2Resp resp = (Stmt2Resp) transport.send(request);
         if (Code.SUCCESS.getCode() != resp.getCode()) {
             throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
         }
         stmtId = resp.getStmtId();
         Request prepare = RequestFactory.generatePrepare(stmtId, reqId, sql);
-        StmtResp prepareResp = (StmtResp) transport.send(prepare);
+        PrepareResp prepareResp = (PrepareResp) transport.send(prepare);
         if (Code.SUCCESS.getCode() != prepareResp.getCode()) {
             throw new SQLException("(0x" + Integer.toHexString(prepareResp.getCode()) + "):" + prepareResp.getMessage());
         }
-    }
 
-    private void updatePrecision(String database) throws SQLException{
-        try (ResultSet resultSet = this.executeQuery("select `precision` from information_schema.ins_databases where name = '" + database + "'")) {
-            while (resultSet.next()) {
-                String tmp = resultSet.getString(1);
-                precision = TimestampPrecision.getPrecision(tmp);
-                precisionHashMap.put(database, precision);
-            }
+        if (prepareResp.getFieldsCount() != prepareResp.getFields().size()){
+            throw new SQLException("prepare error: fields count not match");
+        }
+
+        isInsert = prepareResp.isInsert();
+        if (prepareResp.getFieldsCount() > 0){
+            toBeBindColCount = prepareResp.getFieldsCount();
+            fields = prepareResp.getFields();
+        } else{
+            return;
+        }
+
+        // now we know the number of fields, we can prepare the cache data
+        if (prepareResp.isInsert()){
+//            for (int i = 0; i < toBeBindColCount; i++){
+//                if (prepareResp.getFields().get(i).getType() == TSDB_DATA_TYPE_UNKNOWN){
+//                    column.put(i, new Column(null, TSDB_DATA_TYPE_UNKNOWN, i));
+//                }
+//                column.put(i, new Column(null, TSDB_DATA_TYPE_UNKNOWN, i));
+//            }
+
+        } else {
+
         }
     }
+
     @Override
     public int getQueryTimeout() throws SQLException {
         return queryTimeout;
@@ -139,42 +116,8 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
         transport.setTimeout(seconds * 1000L);
     }
 
-    private void checkUseStatement(String sql) throws SQLException {
-        if (sql == null || sql.isEmpty()) {
-            throw new SQLException("sql is empty");
-        }
-
-        if (isUseSql(sql)) {
-            String database = getDatabaseName(sql);
-            if (null != database) {
-                WSConnection.reInitTransport(transport, param, database);
-
-                try (ResultSet resultSet = this.executeQuery("select `precision` from information_schema.ins_databases where name = '" + database + "'")) {
-                    while (resultSet.next()) {
-                        String tmp = resultSet.getString(1);
-                        precision = TimestampPrecision.getPrecision(tmp);
-                    }
-                }
-
-                reqId = ReqId.getReqID();
-                Request request = RequestFactory.generateInit(reqId);
-                StmtResp resp = (StmtResp) transport.send(request);
-                if (Code.SUCCESS.getCode() != resp.getCode()) {
-                    throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
-                }
-                stmtId = resp.getStmtId();
-                Request prepare = RequestFactory.generatePrepare(stmtId, reqId, rawSql);
-                StmtResp prepareResp = (StmtResp) transport.send(prepare);
-                if (Code.SUCCESS.getCode() != prepareResp.getCode()) {
-                    throw new SQLException("(0x" + Integer.toHexString(prepareResp.getCode()) + "):" + prepareResp.getMessage());
-                }
-            }
-        }
-    }
-
     @Override
     public boolean execute(String sql, Long reqId) throws SQLException {
-        checkUseStatement(sql);
         return super.execute(sql, reqId);
     }
 
@@ -219,7 +162,7 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
             } catch (IOException e) {
                 throw new SQLException("data serialize error!", e);
             }
-            StmtResp bindResp = (StmtResp) transport.send(Action.SET_TAGS.getAction(),
+            Stmt2Resp bindResp = (Stmt2Resp) transport.send(Action.SET_TAGS.getAction(),
                     reqId, stmtId, BindType.TAG.get(), tagBlock);
             if (Code.SUCCESS.getCode() != bindResp.getCode()) {
                 throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
@@ -236,26 +179,16 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
         } catch (IOException e) {
             throw new SQLException("data serialize error!", e);
         }
-        StmtResp bindResp = (StmtResp) transport.send(Action.BIND.getAction(),
+        Stmt2Resp bindResp = (Stmt2Resp) transport.send(Action.BIND.getAction(),
                 reqId, stmtId, BindType.BIND.get(), rawBlock);
         if (Code.SUCCESS.getCode() != bindResp.getCode()) {
             throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
-        }
-        // add batch
-        Request batch = RequestFactory.generateBatch(stmtId, reqId);
-        Response send = transport.send(batch);
-        StmtResp batchResp = (StmtResp) send;
-        if (Code.SUCCESS.getCode() != batchResp.getCode()) {
-            throw new SQLException("(0x" + Integer.toHexString(batchResp.getCode()) + "):" + batchResp.getMessage());
         }
         this.clearParameters();
         // send
         Request request = RequestFactory.generateExec(stmtId, reqId);
         ExecResp resp = (ExecResp) transport.send(request);
         if (Code.SUCCESS.getCode() != resp.getCode()) {
-            if (TIMESTAMP_DATA_OUT_OF_RANGE == resp.getCode()){
-                updatePrecision(insertDbName);
-            }
             throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage(), "P0001", resp.getCode());
         }
 
@@ -265,7 +198,7 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
     // set sub-table name
     public void setTableName(String name) throws SQLException {
         Request request = RequestFactory.generateSetTableName(stmtId, reqId, name);
-        StmtResp resp = (StmtResp) transport.send(request);
+        Stmt2Resp resp = (Stmt2Resp) transport.send(request);
         if (Code.SUCCESS.getCode() != resp.getCode()) {
             throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
         }
@@ -728,7 +661,7 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
             } catch (IOException e) {
                 throw new SQLException("data serialize error!", e);
             }
-            StmtResp bindResp = (StmtResp) transport.send(Action.SET_TAGS.getAction(),
+            Stmt2Resp bindResp = (Stmt2Resp) transport.send(Action.SET_TAGS.getAction(),
                     reqId, stmtId, BindType.TAG.get(), tagBlock);
             if (Code.SUCCESS.getCode() != bindResp.getCode()) {
                 throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
@@ -741,17 +674,10 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
         } catch (IOException e) {
             throw new SQLException("data serialize error!", e);
         }
-        StmtResp bindResp = (StmtResp) transport.send(Action.BIND.getAction(),
+        Stmt2Resp bindResp = (Stmt2Resp) transport.send(Action.BIND.getAction(),
                 reqId, stmtId, BindType.BIND.get(), rawBlock);
         if (Code.SUCCESS.getCode() != bindResp.getCode()) {
             throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
-        }
-        // add batch
-        Request batch = RequestFactory.generateBatch(stmtId, reqId);
-        Response send = transport.send(batch);
-        StmtResp batchResp = (StmtResp) send;
-        if (Code.SUCCESS.getCode() != batchResp.getCode()) {
-            throw new SQLException("(0x" + Integer.toHexString(batchResp.getCode()) + "):" + batchResp.getMessage());
         }
 
         this.clearParameters();
@@ -1050,7 +976,7 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
             } catch (IOException e) {
                 throw new SQLException("data serialize error!", e);
             }
-            StmtResp bindResp = (StmtResp) transport.send(Action.SET_TAGS.getAction(),
+            Stmt2Resp bindResp = (Stmt2Resp) transport.send(Action.SET_TAGS.getAction(),
                     reqId, stmtId, BindType.TAG.get(), tagBlock);
             if (Code.SUCCESS.getCode() != bindResp.getCode()) {
                 throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
@@ -1063,17 +989,10 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
         } catch (IOException e) {
             throw new SQLException("data serialize error!", e);
         }
-        StmtResp bindResp = (StmtResp) transport.send(Action.BIND.getAction(),
+        Stmt2Resp bindResp = (Stmt2Resp) transport.send(Action.BIND.getAction(),
                 reqId, stmtId, BindType.BIND.get(), rawBlock);
         if (Code.SUCCESS.getCode() != bindResp.getCode()) {
             throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
-        }
-        // add batch
-        Request batch = RequestFactory.generateBatch(stmtId, reqId);
-        Response send = transport.send(batch);
-        StmtResp batchResp = (StmtResp) send;
-        if (Code.SUCCESS.getCode() != batchResp.getCode()) {
-            throw new SQLException("(0x" + Integer.toHexString(batchResp.getCode()) + "):" + batchResp.getMessage());
         }
 
         this.clearParameters();
