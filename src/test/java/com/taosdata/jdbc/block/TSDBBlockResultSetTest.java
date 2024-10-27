@@ -70,6 +70,9 @@ public class TSDBBlockResultSetTest {
         Assert.assertEquals(1, f2);
         f2 = rs.getInt(2);
         Assert.assertEquals(1, f2);
+
+        f2 = rs.getInt(4);
+        Assert.assertEquals(3, f2);
     }
 
     @Test
