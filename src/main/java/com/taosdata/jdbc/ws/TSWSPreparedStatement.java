@@ -52,7 +52,7 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
 
     private final PriorityQueue<ColumnInfo> queue = new PriorityQueue<>();
 
-    private final
+
 
     public TSWSPreparedStatement(Transport transport, ConnectionParam param, String database, AbstractConnection connection, String sql, Long instanceId) throws SQLException {
         super(transport, database, connection, instanceId);
@@ -196,13 +196,7 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
     }
 
     // set sub-table name
-    public void setTableName(String name) throws SQLException {
-        Request request = RequestFactory.generateSetTableName(stmtId, reqId, name);
-        Stmt2Resp resp = (Stmt2Resp) transport.send(request);
-        if (Code.SUCCESS.getCode() != resp.getCode()) {
-            throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
-        }
-    }
+
 
     public void setTagSqlTypeNull(int index, int type) throws SQLException {
         switch (type) {

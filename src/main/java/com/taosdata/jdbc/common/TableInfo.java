@@ -6,8 +6,8 @@ import java.util.List;
 public class TableInfo {
     private List<Object> dataList = new ArrayList<>();
 
-    private final String tableName;
-    private final List<ColumnInfo>;
+    private final String tableName = null;
+    private final List<ColumnInfo> tagInfo = null;
     // taos data type
     private final int type;
     private final int index;
