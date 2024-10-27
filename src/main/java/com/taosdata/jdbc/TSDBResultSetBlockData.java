@@ -381,7 +381,9 @@ public class TSDBResultSetBlockData {
                 return ((Long) ((Timestamp) obj).getTime()).intValue();
             }
 
-            case TSDB_DATA_TYPE_FLOAT:
+            case TSDB_DATA_TYPE_FLOAT:{
+                return ((Float) obj).intValue();
+            }
             case TSDB_DATA_TYPE_DOUBLE: {
                 return ((Double) obj).intValue();
             }
