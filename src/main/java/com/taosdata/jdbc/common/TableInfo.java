@@ -4,40 +4,42 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class TableInfo {
-    private List<Object> dataList = new ArrayList<>();
+    private  List<ColumnInfo> dataList;
+    private  String tableName;
+    private  List<ColumnInfo> tagInfo;
 
-    private final String tableName = null;
-    private final List<ColumnInfo> tagInfo = null;
-    // taos data type
-    private final int type;
-    private final int index;
-
-    public TableInfo(int columnIndex, Object data, int type) {
-        this.index = columnIndex;
-        this.dataList.add(data);
-        this.type = type;
-    }
-
-    public TableInfo(int columnIndex, List<Object> dataList, int type, Integer flag) {
-        this.index = columnIndex;
+    public TableInfo(List<ColumnInfo> dataList, String tableName, List<ColumnInfo> tagInfo) {
         this.dataList = dataList;
-        this.type = type;
+        this.tableName = tableName;
+        this.tagInfo = tagInfo;
     }
 
-    public void add(Object data) {
-        this.dataList.add(data);
+    public static TableInfo getEmptyTableInfo() {
+        return new TableInfo(new ArrayList<>(), "", new ArrayList<>());
     }
-
-    public List<Object> getDataList() {
+    public List<ColumnInfo> getDataList() {
         return dataList;
     }
 
-    public int getType() {
-        return type;
+    public String getTableName() {
+        return tableName;
     }
 
-    public int getIndex() {
-        return index;
+    public List<ColumnInfo> getTagInfo() {
+        return tagInfo;
     }
+
+    public void setDataList(List<ColumnInfo> dataList) {
+        this.dataList = dataList;
+    }
+
+    public void setTableName(String tableName) {
+        this.tableName = tableName;
+    }
+
+    public void setTagInfo(List<ColumnInfo> tagInfo) {
+        this.tagInfo = tagInfo;
+    }
+
 
 }

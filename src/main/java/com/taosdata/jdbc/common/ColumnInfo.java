@@ -9,6 +9,10 @@ public class ColumnInfo implements Comparable<ColumnInfo> {
     private final int type;
     private final int index;
 
+
+
+    private int serializeSize;
+
     public ColumnInfo(int columnIndex, Object data, int type) {
         this.index = columnIndex;
         this.dataList.add(data);
@@ -35,6 +39,14 @@ public class ColumnInfo implements Comparable<ColumnInfo> {
 
     public int getIndex() {
         return index;
+    }
+
+    public int getSerializeSize() {
+        return serializeSize;
+    }
+
+    public void setSerializeSize(int serializeSize) {
+        this.serializeSize = serializeSize;
     }
 
     @Override
