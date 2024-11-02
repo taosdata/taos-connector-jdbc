@@ -3,6 +3,8 @@ package com.taosdata.jdbc.ws.entity;
 import com.taosdata.jdbc.ws.stmt.entity.ExecResp;
 import com.taosdata.jdbc.ws.stmt.entity.GetColFieldsResp;
 import com.taosdata.jdbc.ws.stmt.entity.StmtResp;
+import com.taosdata.jdbc.ws.stmt2.entity.Stmt2ExecResp;
+import com.taosdata.jdbc.ws.stmt2.entity.Stmt2PrepareResp;
 import com.taosdata.jdbc.ws.stmt2.entity.Stmt2Resp;
 import com.taosdata.jdbc.ws.tmq.entity.FetchRawBlockResp;
 
@@ -38,11 +40,11 @@ public enum Action {
 
     // stmt2
     STMT2_INIT("stmt2_init", Stmt2Resp.class),
-    STMT2_PREPARE("stmt2_prepare", Stmt2Resp.class),
-    STMT2_BIND("bind", Stmt2Resp.class),
-    STMT2_EXEC("exec", ExecResp.class),
+    STMT2_PREPARE("stmt2_prepare", Stmt2PrepareResp.class),
+    STMT2_BIND("stmt2_bind", Stmt2Resp.class),
+    STMT2_EXEC("stmt2_exec", Stmt2ExecResp.class),
     // response means nothing
-    STMT2_CLOSE("close", StmtResp.class),
+    STMT2_CLOSE("stmt2_close", Stmt2Resp.class),
 
     //schemaless
     INSERT("insert", CommonResp.class),

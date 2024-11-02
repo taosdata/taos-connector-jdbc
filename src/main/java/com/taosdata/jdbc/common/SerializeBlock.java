@@ -102,6 +102,7 @@ public class SerializeBlock {
         // data is array type
         buf[offset++] = 1;
         // length
+        int bufferLength = 0;
         for (Object o: columnInfo.getDataList()){
             if (o == null){
                 SerializeInt(buf, offset, 0);
@@ -114,13 +115,16 @@ public class SerializeBlock {
                         byte[] v = (byte[]) o;
                         SerializeInt(buf, offset, v.length);
                         offset += Integer.BYTES;
+                        bufferLength += v.length;
                         break;
                     }
                     case TSDB_DATA_TYPE_JSON:
                     case TSDB_DATA_TYPE_NCHAR: {
                         String v = (String) o;
-                        SerializeInt(buf, offset, v.length());
+                        int len = v.getBytes().length;
+                        SerializeInt(buf, offset, len);
                         offset += Integer.BYTES;
+                        bufferLength += len;
                         break;
                     }
                     default:
@@ -129,7 +133,11 @@ public class SerializeBlock {
             }
         }
 
-        // Buffer
+        // buffer length
+        SerializeInt(buf, offset, bufferLength);
+        offset += Integer.BYTES;
+
+        // buffer
         SerializeArrayDataType(columnInfo.getType(), buf, offset, columnInfo.getDataList());
         return offset;
     }
@@ -137,6 +145,9 @@ public class SerializeBlock {
     private static void SerializeNormalDataType(int dataType , byte[] buf, int offset, List<Object> objectList, int precision) throws IOException, SQLException {
         switch (dataType) {
             case TSDB_DATA_TYPE_BOOL: {
+                SerializeInt(buf, offset, objectList.size());
+                offset += Integer.BYTES;
+
                 for (Object o: objectList){
                     if (o == null) {
                         buf[offset++] = 0;
@@ -148,6 +159,9 @@ public class SerializeBlock {
                 break;
             }
             case TSDB_DATA_TYPE_TINYINT: {
+                SerializeInt(buf, offset, objectList.size());
+                offset += Integer.BYTES;
+
                 for (Object o: objectList){
                     if (o == null) {
                         buf[offset++] = 0;
@@ -159,6 +173,9 @@ public class SerializeBlock {
                 break;
             }
             case TSDB_DATA_TYPE_SMALLINT: {
+                SerializeInt(buf, offset, objectList.size() * Short.BYTES);
+                offset += Integer.BYTES;
+
                 for (Object o: objectList){
                     short v = 0;
                     if (o != null) {
@@ -170,6 +187,9 @@ public class SerializeBlock {
                 break;
             }
             case TSDB_DATA_TYPE_INT: {
+                SerializeInt(buf, offset, objectList.size() * Integer.BYTES);
+                offset += Integer.BYTES;
+
                 for (Object o: objectList){
                     int v = 0;
                     if (o != null) {
@@ -181,6 +201,9 @@ public class SerializeBlock {
                 break;
             }
             case TSDB_DATA_TYPE_BIGINT: {
+                SerializeInt(buf, offset, objectList.size() * Long.BYTES);
+                offset += Integer.BYTES;
+
                 for (Object o: objectList){
                     long v = 0;
                     if (o != null) {
@@ -192,6 +215,9 @@ public class SerializeBlock {
                break;
             }
             case TSDB_DATA_TYPE_FLOAT: {
+                SerializeInt(buf, offset, objectList.size() * Integer.BYTES);
+                offset += Integer.BYTES;
+
                 for (Object o: objectList){
                     float v = 0;
                     if (o != null) {
@@ -204,6 +230,9 @@ public class SerializeBlock {
                 break;
             }
             case TSDB_DATA_TYPE_DOUBLE: {
+                SerializeInt(buf, offset, objectList.size() * Long.BYTES);
+                offset += Integer.BYTES;
+
                 for (Object o: objectList){
                     double v = 0;
                     if (o != null) {
@@ -216,6 +245,9 @@ public class SerializeBlock {
                 break;
             }
             case TSDB_DATA_TYPE_TIMESTAMP: {
+                SerializeInt(buf, offset, objectList.size() * Long.BYTES);
+                offset += Integer.BYTES;
+
                 for (Object o: objectList){
                     if (o != null) {
                         Timestamp t = (Timestamp) o;
@@ -341,7 +373,7 @@ public class SerializeBlock {
                         totalLength += v.length;
                     }
                 }
-                // TotalLength(4) + Type (4) + Num(4) + IsNull(1) * size + haveLength(1) + BufferLength(4) + 4 + v.length + totalLength
+                // TotalLength(4) + Type (4) + Num(4) + IsNull(1) * size + haveLength(1) + BufferLength(4) + 4 * v.length + totalLength
                 return 17 + (5 * column.getDataList().size()) + totalLength;
             }
             case TSDB_DATA_TYPE_JSON:
@@ -353,7 +385,7 @@ public class SerializeBlock {
                         totalLength += v.length();
                     }
                 }
-                // TotalLength(4) + Type (4) + Num(4) + IsNull(1) * size + haveLength(1) + BufferLength(4) + 4 + v.length + totalLength
+                // TotalLength(4) + Type (4) + Num(4) + IsNull(1) * size + haveLength(1) + BufferLength(4) + 4 * v.length + totalLength
                 return 17 + (5 * column.getDataList().size()) + totalLength;
             }
             default:
@@ -375,33 +407,39 @@ public class SerializeBlock {
         // cloc totol size
         int totalTableNameSize  = 0;
         List<Short> tableNameSizeList = new ArrayList<>();
-        for (int i = 0; i < tableInfoList.size(); i++) {
-            int tableNameSize = getTableNameTotalLength(tableInfoList, toBebindTableNameCount);
-            totalTableNameSize += tableNameSize;
-            tableNameSizeList.add((short)tableNameSize);
+        if (toBebindTableNameCount > 0) {
+            for (int i = 0; i < tableInfoList.size(); i++) {
+                int tableNameSize = getTableNameTotalLength(tableInfoList, toBebindTableNameCount);
+                totalTableNameSize += tableNameSize;
+                tableNameSizeList.add((short) tableNameSize);
+            }
         }
 
-        int totalagSize = 0;
+        int totaTagSize = 0;
         List<Integer> tagSizeList = new ArrayList<>();
-
-        for (int i = 0; i < tableInfoList.size(); i++) {
-            int tagSize = getTagTotalLengthByTableIndex(tableInfoList, i, toBebindTagCount);
-            totalagSize += tagSize;
-            tagSizeList.add(tagSize);
+        if (toBebindTagCount > 0){
+            for (int i = 0; i < tableInfoList.size(); i++) {
+                int tagSize = getTagTotalLengthByTableIndex(tableInfoList, i, toBebindTagCount);
+                totaTagSize += tagSize;
+                tagSizeList.add(tagSize);
+            }
         }
+
 
         int totalColSize = 0;
         List<Integer> colSizeList = new ArrayList<>();
-        for (int i = 0; i < tableInfoList.size(); i++) {
-            int colSize = getColTotalLengthByTableIndex(tableInfoList, i, toBebindColCount);
-            totalColSize += colSize;
-            colSizeList.add(colSize);
+        if (toBebindColCount > 0) {
+            for (int i = 0; i < tableInfoList.size(); i++) {
+                int colSize = getColTotalLengthByTableIndex(tableInfoList, i, toBebindColCount);
+                totalColSize += colSize;
+                colSizeList.add(colSize);
+            }
         }
 
-        int totalSize = totalTableNameSize + totalagSize + totalColSize;
+        int totalSize = totalTableNameSize + totaTagSize + totalColSize;
         totalSize += tagSizeList.size() * (toBebindTableNameCount * Short.BYTES + toBebindTagCount * Integer.BYTES  + toBebindColCount * Integer.BYTES);
 
-        byte[] buf = new byte[30 + totalSize];
+        byte[] buf = new byte[58 + totalSize];
         int offset = 0;
 
         //************ header *****************
@@ -425,7 +463,7 @@ public class SerializeBlock {
 
         //************ data *****************
         // TotalLength
-        SerializeInt(buf, offset, totalSize);
+        SerializeInt(buf, offset, totalSize + 28);
         offset += Integer.BYTES;
 
         // tableCount
@@ -472,7 +510,7 @@ public class SerializeBlock {
             }
 
             if (toBebindTagCount > 0){
-                skipSize += totalagSize + Integer.BYTES * tableInfoList.size();
+                skipSize += totaTagSize + Integer.BYTES * tableInfoList.size();
             }
             SerializeInt(buf, offset, 28 + skipSize);
             offset += Integer.BYTES;
@@ -507,7 +545,7 @@ public class SerializeBlock {
         if (toBebindTagCount > 0){
             for (Integer tagsize: tagSizeList) {
                    SerializeInt(buf, offset, tagsize);
-                     offset += Integer.BYTES;
+                   offset += Integer.BYTES;
             }
 
             for (int i = 0; i < tableInfoList.size(); i++) {
@@ -521,7 +559,7 @@ public class SerializeBlock {
             }
         }
 
-        // TagsDataLength
+        // ColsDataLength
         if (toBebindColCount > 0){
             for (Integer colSize: colSizeList) {
                 SerializeInt(buf, offset, colSize);
@@ -539,6 +577,13 @@ public class SerializeBlock {
             }
         }
 
+
+        for (int i = 30; i < buf.length; i++) {
+            int bb = buf[i] & 0xff;
+            System.out.print(bb);
+            System.out.print(",");
+        }
+        System.out.println();
         return buf;
     }
 

@@ -7,7 +7,7 @@ import com.taosdata.jdbc.ws.entity.CommonResp;
 
 import java.util.List;
 
-public class PrepareResp extends CommonResp {
+public class Stmt2PrepareResp extends CommonResp {
     @JsonProperty("stmt_id")
     @JsonDeserialize(using = UInt64Deserializer.class)
     private long stmtId;

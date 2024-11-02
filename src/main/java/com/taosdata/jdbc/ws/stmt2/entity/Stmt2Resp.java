@@ -12,11 +12,6 @@ public class Stmt2Resp extends CommonResp {
     @JsonProperty("stmt_id")
     @JsonDeserialize(using = UInt64Deserializer.class)
     private long stmtId;
-    private List<Field> fields;
-    @JsonProperty("fields_count")
-    private int fieldsCount;
-    @JsonProperty("is_insert")
-    private boolean isInsert;
     public long getStmtId() {
         return stmtId;
     }
@@ -24,28 +19,4 @@ public class Stmt2Resp extends CommonResp {
     public void setStmtId(long stmtId) {
         this.stmtId = stmtId;
     }
-
-    public List<Field> getFields() {
-        return fields;
-    }
-
-    public void setFields(List<Field> fields) {
-        this.fields = fields;
-    }
-
-    public int getFieldsCount() {
-        return fieldsCount;
-    }
-
-    public void setFieldsCount(int fieldsCount) {
-        this.fieldsCount = fieldsCount;
-    }
-    public boolean isInsert() {
-        return isInsert;
-    }
-
-    public void setInsert(boolean insert) {
-        isInsert = insert;
-    }
-
 }

@@ -10,7 +10,7 @@ public class Field {
     private byte scale;
     private int bytes;
 
-    @JsonProperty("bind_type")
+    @JsonProperty("BindType")
     private byte bindType;
     public String getName() {
         return name;

@@ -69,7 +69,7 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
         }
         stmtId = resp.getStmtId();
         Request prepare = RequestFactory.generatePrepare(stmtId, reqId, sql);
-        Stmt2Resp prepareResp = (Stmt2Resp) transport.send(prepare);
+        Stmt2PrepareResp prepareResp = (Stmt2PrepareResp) transport.send(prepare);
         if (Code.SUCCESS.getCode() != prepareResp.getCode()) {
             throw new SQLException("(0x" + Integer.toHexString(prepareResp.getCode()) + "):" + prepareResp.getMessage());
         }
@@ -1003,7 +1003,7 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
         List<Object> listObject = list.stream()
                 .map(Object.class::cast)
                 .collect(Collectors.toList());
-        ColumnInfo p = new ColumnInfo(columnIndex, listObject, type, null);
+        ColumnInfo p = new ColumnInfo(columnIndex, listObject, type);
         queue.add(p);
     }
 
@@ -1040,7 +1040,7 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
         this.clearParameters();
         // send
         Request request = RequestFactory.generateExec(stmtId, reqId);
-        ExecResp resp = (ExecResp) transport.send(request);
+        Stmt2ExecResp resp = (Stmt2ExecResp) transport.send(request);
         if (Code.SUCCESS.getCode() != resp.getCode()) {
             throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
         }

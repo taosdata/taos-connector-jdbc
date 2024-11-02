@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.taosdata.jdbc.utils.UInt64Deserializer;
 import com.taosdata.jdbc.ws.entity.CommonResp;
 
-public class ExecResp extends CommonResp {
+public class Stmt2ExecResp extends CommonResp {
     @JsonProperty("stmt_id")
     @JsonDeserialize(using = UInt64Deserializer.class)
     private long stmtId;
