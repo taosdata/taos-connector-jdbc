@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ColumnInfo implements Comparable<ColumnInfo> {
-    private List<Object> dataList = new ArrayList<>();
+    private List<Object> dataList;
     // taos data type
     private final int type;
     private final int index;

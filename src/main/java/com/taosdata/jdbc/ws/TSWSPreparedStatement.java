@@ -8,6 +8,7 @@ import com.taosdata.jdbc.enums.FeildBindType;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.ReqId;
+import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.entity.Action;
 import com.taosdata.jdbc.ws.entity.Code;
@@ -38,14 +39,14 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
 
     private int queryTimeout = 0;
     private int precision = TimestampPrecision.MS;
-    private int toBeBindTableNameCount = 0;
+    private int toBeBindTableNameIndex = -1;
     private int toBeBindColCount = 0;
     private int toBeBindTagCount = 0;
     private List<Field> fields;
     private boolean isInsert = false;
 
 
-    private final Map<Integer, Column> column = new HashMap<>();
+    private final Map<Integer, Column> column = new TreeMap<>();
 
     private final PriorityQueue<ColumnInfo> tag = new PriorityQueue<>();
     private final PriorityQueue<ColumnInfo> queue = new PriorityQueue<>();
@@ -74,30 +75,26 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
             throw new SQLException("(0x" + Integer.toHexString(prepareResp.getCode()) + "):" + prepareResp.getMessage());
         }
 
-//        if (prepareResp.getFieldsCount() != prepareResp.getFields().size()){
-//            throw new SQLException("prepare error: fields count not match");
-//        }
-
         isInsert = prepareResp.isInsert();
         if (isInsert){
             fields = prepareResp.getFields();
-            for (Field field : fields){
+            if (!fields.isEmpty()){
+                precision = fields.get(0).getPrecision();
+            }
+            for (int i = 0; i < fields.size(); i++){
+                Field field = fields.get(i);
                 if (field.getBindType() == FeildBindType.TAOS_FIELD_TBNAME.getValue()){
-                    toBeBindTableNameCount++;
+                    toBeBindTableNameIndex = i;
                 }
                 if (field.getBindType() == FeildBindType.TAOS_FIELD_TAG.getValue()){
-                    toBeBindTagCount ++;
+                    toBeBindTagCount++;
                 }
                 if (field.getBindType() == FeildBindType.TAOS_FIELD_COL.getValue()){
-                    toBeBindColCount ++;
+                    toBeBindColCount++;
                 }
             }
         } else if (!isInsert && prepareResp.getFieldsCount() > 0){
-            for (Field field : fields){
-                if (field.getBindType() == FeildBindType.TAOS_FIELD_QUERY.getValue()){
-                    toBeBindColCount ++;
-                }
-            }
+            toBeBindColCount = prepareResp.getFieldsCount();
         } else {
             return;
         }
@@ -141,81 +138,50 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
 
     @Override
     public ResultSet executeQuery() throws SQLException {
-//        List<Object> list = new ArrayList<>();
-//        if (!tag.isEmpty()) {
-//            tag.keySet().stream().sorted().forEach(i -> {
-//                Column col = this.tag.get(i);
-//                list.add(col.data);
-//            });
-//        }
-//        if (!column.isEmpty()) {
-//            column.keySet().stream().sorted().forEach(i -> {
-//                Column col = this.column.get(i);
-//                list.add(col.data);
-//            });
-//        }
-//        Object[] parameters = list.toArray(new Object[0]);
-//        this.clearParameters();
-//
-//        final String sql = Utils.getNativeSql(this.rawSql, parameters);
-//        return executeQuery(sql);
+        List<Object> list = new ArrayList<>();
 
+        while (!tag.isEmpty()){
+            ColumnInfo columnInfo = tag.poll();
+            if (columnInfo.getDataList().size() != 1){
+                throw new SQLException("tag size is not equal 1");
+            }
 
-        return null;
+            list.add(columnInfo.getDataList().get(0));
+        }
+
+        if (!column.isEmpty()) {
+            column.keySet().stream().sorted().forEach(i -> {
+                Column col = this.column.get(i);
+                list.add(col.data);
+            });
+        }
+        Object[] parameters = list.toArray(new Object[0]);
+        this.clearParameters();
+
+        final String sql = Utils.getNativeSql(this.rawSql, parameters);
+        return executeQuery(sql);
     }
 
     @Override
     public int executeUpdate() throws SQLException {
-//        if (column.isEmpty())
-//            throw new SQLException("no parameter to execute");
-//        if (!data.isEmpty())
-//            throw TSDBError.undeterminedExecutionError();
-//
-//        //set tag
-//        if (!tag.isEmpty()) {
-//            List<ColumnInfo> collect = tag.keySet().stream().sorted().map(i -> {
-//                Column col = this.tag.get(i);
-//                return new ColumnInfo(i, col.data, col.type);
-//            }).collect(Collectors.toList());
-//            byte[] tagBlock;
-//            try {
-//                tagBlock = SerializeBlock.getRawBlock(collect, precision);
-//            } catch (IOException e) {
-//                throw new SQLException("data serialize error!", e);
-//            }
-//            Stmt2Resp bindResp = (Stmt2Resp) transport.send(Action.SET_TAGS.getAction(),
-//                    reqId, stmtId, BindType.TAG.get(), tagBlock);
-//            if (Code.SUCCESS.getCode() != bindResp.getCode()) {
-//                throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
-//            }
-//        }
-//        // bind
-//        List<ColumnInfo> collect = column.keySet().stream().sorted().map(i -> {
-//            Column col = this.column.get(i);
-//            return new ColumnInfo(i, col.data, col.type);
-//        }).collect(Collectors.toList());
-//        byte[] rawBlock;
-//        try {
-//            rawBlock = SerializeBlock.getRawBlock(collect, precision);
-//        } catch (IOException e) {
-//            throw new SQLException("data serialize error!", e);
-//        }
-//        Stmt2Resp bindResp = (Stmt2Resp) transport.send(Action.BIND.getAction(),
-//                reqId, stmtId, BindType.BIND.get(), rawBlock);
-//        if (Code.SUCCESS.getCode() != bindResp.getCode()) {
-//            throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
-//        }
-//        this.clearParameters();
-//        // send
-//        Request request = RequestFactory.generateExec(stmtId, reqId);
-//        ExecResp resp = (ExecResp) transport.send(request);
-//        if (Code.SUCCESS.getCode() != resp.getCode()) {
-//            throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage(), "P0001", resp.getCode());
-//        }
-//
-//        return resp.getAffected();
+        if (column.isEmpty())
+            throw new SQLException("no parameter to execute");
+        if (!tableInfo.getDataList().isEmpty() || !tableInfo.getTagInfo().isEmpty())
+            throw TSDBError.undeterminedExecutionError();
 
-        return 0;
+        while (!tag.isEmpty()){
+            tableInfo.getTagInfo().add(tag.poll());
+        }
+
+        for (Map.Entry<Integer, Column> entry : column.entrySet()) {
+            Column col = entry.getValue();
+            tableInfo.getDataList().add(new ColumnInfo(entry.getKey(), Collections.singletonList(col.data), col.type));
+        }
+
+        tableInfoList.add(tableInfo);
+
+
+        return executeBatchImpl();
     }
 
     // set sub-table name
@@ -544,10 +510,9 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
     public void clearParameters() throws SQLException {
         column.clear();
         tag.clear();
+        queue.clear();
 
-        tableInfo.setTableName("");
-        tableInfo.getTagInfo().clear();
-        tableInfo.getDataList().clear();
+        tableInfo = TableInfo.getEmptyTableInfo();
         tableInfoList.clear();
     }
 
@@ -636,12 +601,14 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
 
         List<Object> list = new ArrayList<>();
-//        if (!tag.isEmpty()) {
-//            tag.keySet().stream().sorted().forEach(i -> {
-//                Column col = this.tag.get(i);
-//                list.add(col.data);
-//            });
-//        }
+        while (!tag.isEmpty()){
+            ColumnInfo columnInfo = tag.poll();
+            if (columnInfo.getDataList().size() != 1){
+                throw new SQLException("tag size is not equal 1");
+            }
+
+            list.add(columnInfo.getDataList().get(0));
+        }
         if (!column.isEmpty()) {
             column.keySet().stream().sorted().forEach(i -> {
                 Column col = this.column.get(i);
@@ -654,80 +621,114 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
         return execute(sql);
     }
 
-    @Override
-    public void addBatch() throws SQLException {
-//        List<Column> collect = column.keySet().stream().sorted().map(column::get).collect(Collectors.toList());
-//        if (data.isEmpty()) {
-//            for (Column col : collect) {
-//                data.add(new ColumnInfo(col.index, col.data, col.type));
-//            }
-//        } else {
-//            if (collect.size() != data.size()) {
-//                throw new SQLException("batch add column size not match, expected: " + data.size() + ", actual: " + collect.size());
-//            }
-//
-//            for (int i = 0; i < collect.size(); i++) {
-//                Column col = collect.get(i);
-//                ColumnInfo columnInfo = data.get(i);
-//                if (columnInfo.getIndex() != col.index) {
-//                    throw new SQLException("batch add column index not match, expected: " + columnInfo.getIndex() + ", actual: " + col.index);
-//                }
-//                if (columnInfo.getType() != col.type) {
-//                    throw new SQLException("batch add column type not match, expected type: " + columnInfo.getType() + ", actual type: " + col.type);
-//                }
-//                columnInfo.add(col.data);
-//            }
-//        }
+    private void bindAllToTableInfo(){
+        for (int index = 0; index < fields.size(); index++) {
+            if (fields.get(index).getBindType() == FeildBindType.TAOS_FIELD_TBNAME.getValue()) {
+                tableInfo.setTableName(column.get(index + 1).data.toString());
+            } else if (fields.get(index).getBindType() == FeildBindType.TAOS_FIELD_TAG.getValue()) {
+                tableInfo.getTagInfo().add(new ColumnInfo(index, Collections.singletonList(column.get(index + 1).data), fields.get(index).getFieldType()));
+            } else if (fields.get(index).getBindType() == FeildBindType.TAOS_FIELD_COL.getValue()) {
+                tableInfo.getDataList().add(new ColumnInfo(index, Collections.singletonList(column.get(index + 1).data), fields.get(index).getFieldType()));
+            }
+        }
+    }
+
+    private void bindColToTableInfo(){
+        for (int index = 0; index < fields.size(); index++) {
+            if (fields.get(index).getBindType() == FeildBindType.TAOS_FIELD_COL.getValue()) {
+                tableInfo.getDataList().add(new ColumnInfo(index, Collections.singletonList(column.get(index + 1).data), fields.get(index).getFieldType()));
+            }
+        }
+    }
+    private void bindAll(){
+        if (toBeBindTableNameIndex >= 0){
+            if (tableInfo.getTableName().isEmpty()) {
+                // first time, bind all
+                bindAllToTableInfo();
+            } else {
+                if (tableInfo.getTableName().equals(column.get(toBeBindTableNameIndex + 1).toString())){
+                    // same table, only bind col
+                    bindColToTableInfo();
+                } else {
+                    // different table, flush tableInfo and create a new one
+                    tableInfoList.add(tableInfo);
+                    tableInfo = TableInfo.getEmptyTableInfo();
+                    bindAllToTableInfo();
+                }
+            }
+        } else {
+            // must same table
+            if (toBeBindTagCount > 0 && tableInfo.getTagInfo().isEmpty()){
+                // first time, bind all
+                bindAllToTableInfo();
+            } else {
+                // only bind col
+                bindColToTableInfo();
+            }
+        }
+    }
+    private void onlyBindCol() {
+        if (tableInfo.getDataList().isEmpty()){
+            for (Map.Entry<Integer, Column> entry : column.entrySet()) {
+                Column col = entry.getValue();
+                List<Object> list = new ArrayList<>();
+                list.add(col.data);
+                tableInfo.getDataList().add(new ColumnInfo(entry.getKey(), list, col.type));
+            }
+        } else {
+            for (Map.Entry<Integer, Column> entry : column.entrySet()) {
+                Column col = entry.getValue();
+                tableInfo.getDataList().get(col.index - 1).add(col.data);
+            }
+        }
     }
 
     @Override
+    // Only support batch insert
+    public void addBatch() throws SQLException {
+        if (column.size() == toBeBindColCount){
+            if (toBeBindTableNameIndex < 0 && toBeBindTagCount == 0) {
+                onlyBindCol();
+            } else {
+                if (toBeBindTableNameIndex >= 0 && tableInfo.getTableName().isEmpty()){
+                    throw new SQLException("table name is empty");
+                }
+                if (tableInfo.getTagInfo().size()!= toBeBindTagCount){
+                    throw new SQLException("tag size not match, expected: " + toBeBindTagCount + ", actual: " + tableInfo.getTagInfo().size());
+                }
+                onlyBindCol();
+            }
+            return;
+        }
+
+        if (column.size() == fields.size()){
+            // bind all
+            bindAll();
+            return;
+        }
+        throw new SQLException("column size not match, expected: " + fields.size() + ", actual: " + column.size());
+    }
+
+    private boolean isTableInfoBinded(){
+        if (StringUtils.isEmpty(tableInfo.getTableName()) && tableInfo.getTagInfo().isEmpty() && tableInfo.getDataList().isEmpty()){
+            return false;
+        }
+        return true;
+    }
+    @Override
     public int[] executeBatch() throws SQLException {
-//        if (column.isEmpty())
-//            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_BATCH_IS_EMPTY);
-//
-//        //set tag
-//        if (!tag.isEmpty()) {
-//            List<ColumnInfo> collect = tag.keySet().stream().sorted().map(i -> {
-//                Column col = this.tag.get(i);
-//                return new ColumnInfo(i, col.data, col.type);
-//            }).collect(Collectors.toList());
-//            byte[] tagBlock;
-//            try {
-//                tagBlock = SerializeBlock.getRawBlock(collect, precision);
-//            } catch (IOException e) {
-//                throw new SQLException("data serialize error!", e);
-//            }
-//            Stmt2Resp bindResp = (Stmt2Resp) transport.send(Action.SET_TAGS.getAction(),
-//                    reqId, stmtId, BindType.TAG.get(), tagBlock);
-//            if (Code.SUCCESS.getCode() != bindResp.getCode()) {
-//                throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
-//            }
-//        }
-//        // bind
-//        byte[] rawBlock;
-//        try {
-//            rawBlock = SerializeBlock.getRawBlock(data, precision);
-//        } catch (IOException e) {
-//            throw new SQLException("data serialize error!", e);
-//        }
-//        Stmt2Resp bindResp = (Stmt2Resp) transport.send(Action.BIND.getAction(),
-//                reqId, stmtId, BindType.BIND.get(), rawBlock);
-//        if (Code.SUCCESS.getCode() != bindResp.getCode()) {
-//            throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
-//        }
-//
-//        this.clearParameters();
-//        // send
-//        Request request = RequestFactory.generateExec(stmtId, reqId);
-//        ExecResp resp = (ExecResp) transport.send(request);
-//        if (Code.SUCCESS.getCode() != resp.getCode()) {
-//            throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
-//        }
-//        int[] ints = new int[resp.getAffected()];
-//        for (int i = 0, len = ints.length; i < len; i++)
-//            ints[i] = SUCCESS_NO_INFO;
-//        return ints;
-        return null;
+        if (column.isEmpty())
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_BATCH_IS_EMPTY);
+
+        if (isTableInfoBinded()){
+            tableInfoList.add(tableInfo);
+        }
+
+        int affected = executeBatchImpl();
+        int[] ints = new int[affected];
+        for (int i = 0, len = ints.length; i < len; i++)
+            ints[i] = SUCCESS_NO_INFO;
+        return ints;
     }
 
     @Override
@@ -746,25 +747,24 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
 
     @Override
     public ParameterMetaData getParameterMetaData() throws SQLException {
-//        if (isClosed())
-//            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
-//        List<Object> list = new ArrayList<>();
-//        if (!tag.isEmpty()) {
-//            tag.keySet().stream().sorted().forEach(i -> {
-//                Column col = this.tag.get(i);
-//                list.add(col.data);
-//            });
-//        }
-//        if (!column.isEmpty()) {
-//            column.keySet().stream().sorted().forEach(i -> {
-//                Column col = this.column.get(i);
-//                list.add(col.data);
-//            });
-//        }
-//        return new TSDBParameterMetaData(list.toArray(new Object[0]));
+        if (isClosed())
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
+        List<Object> list = new ArrayList<>();
+        while (!tag.isEmpty()){
+            ColumnInfo columnInfo = tag.poll();
+            if (columnInfo.getDataList().size() != 1){
+                throw new SQLException("tag size is not equal 1");
+            }
 
-
-        return null;
+            list.add(columnInfo.getDataList().get(0));
+        }
+        if (!column.isEmpty()) {
+            column.keySet().stream().sorted().forEach(i -> {
+                Column col = this.column.get(i);
+                list.add(col.data);
+            });
+        }
+        return new TSDBParameterMetaData(list.toArray(new Object[0]));
     }
 
     @Override
@@ -1019,15 +1019,15 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
         tableInfo = TableInfo.getEmptyTableInfo();
     }
 
-    @Override
-    public void columnDataExecuteBatch() throws SQLException {
+
+    private int executeBatchImpl() throws SQLException {
         if (tableInfoList.isEmpty()) {
             throw new SQLException("batch data is empty");
         }
 
         byte[] rawBlock;
         try {
-            rawBlock = SerializeBlock.getStmt2BindBlock(reqId, stmtId, tableInfoList, toBeBindTableNameCount, toBeBindTagCount, toBeBindColCount, precision);
+            rawBlock = SerializeBlock.getStmt2BindBlock(reqId, stmtId, tableInfoList, toBeBindTableNameIndex, toBeBindTagCount, toBeBindColCount, precision);
         } catch (IOException e) {
             throw new SQLException("data serialize error!", e);
         }
@@ -1044,6 +1044,12 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
         if (Code.SUCCESS.getCode() != resp.getCode()) {
             throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
         }
+
+        return resp.getAffected();
+    }
+    @Override
+    public void columnDataExecuteBatch() throws SQLException {
+        executeBatchImpl();
     }
 
     public void columnDataCloseBatch() throws SQLException {

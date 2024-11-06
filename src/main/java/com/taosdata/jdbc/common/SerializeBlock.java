@@ -304,9 +304,9 @@ public class SerializeBlock {
                 throw new SQLException("unsupported data type : " + dataType);
         }
     }
-    public static int getTableNameTotalLength(List<TableInfo> tableInfoList, int toBebindTableNameCount) throws SQLException{
+    public static int getTableNameTotalLength(List<TableInfo> tableInfoList, int toBeBindTableNameIndex) throws SQLException{
         int totalLength = 0;
-        if (toBebindTableNameCount > 0){
+        if (toBeBindTableNameIndex >= 0){
             for ( TableInfo tableInfo: tableInfoList){
                 if (StringUtils.isEmpty(tableInfo.getTableName())) {
                     throw new SQLException("table name is empty");
@@ -343,9 +343,6 @@ public class SerializeBlock {
             }
 
             for (ColumnInfo columnInfo : tableInfoList.get(index).getDataList()){
-                if (columnInfo.getDataList().get(index) == null){
-                    throw new SQLException("col value is null, index: " + index);
-                }
                 int columnSize = getColumnSize(columnInfo);
                 columnInfo.setSerializeSize(columnSize);
                 totalLength += columnSize;
@@ -382,7 +379,7 @@ public class SerializeBlock {
                 for (Object o : column.getDataList()) {
                     if (o != null) {
                         String v = (String) o;
-                        totalLength += v.length();
+                        totalLength += v.getBytes().length;
                     }
                 }
                 // TotalLength(4) + Type (4) + Num(4) + IsNull(1) * size + haveLength(1) + BufferLength(4) + 4 * v.length + totalLength
@@ -399,7 +396,7 @@ public class SerializeBlock {
     public static byte[] getStmt2BindBlock(long reqId,
                                            long stmtId,
                                             List<TableInfo> tableInfoList,
-                                           int toBebindTableNameCount,
+                                           int toBeBindTableNameIndex,
                                            int toBebindTagCount,
                                            int toBebindColCount,
                                            int precision) throws IOException, SQLException {
@@ -407,20 +404,20 @@ public class SerializeBlock {
         // cloc totol size
         int totalTableNameSize  = 0;
         List<Short> tableNameSizeList = new ArrayList<>();
-        if (toBebindTableNameCount > 0) {
+        if (toBeBindTableNameIndex >= 0) {
             for (int i = 0; i < tableInfoList.size(); i++) {
-                int tableNameSize = getTableNameTotalLength(tableInfoList, toBebindTableNameCount);
+                int tableNameSize = getTableNameTotalLength(tableInfoList, toBeBindTableNameIndex);
                 totalTableNameSize += tableNameSize;
                 tableNameSizeList.add((short) tableNameSize);
             }
         }
 
-        int totaTagSize = 0;
+        int totalTagSize = 0;
         List<Integer> tagSizeList = new ArrayList<>();
         if (toBebindTagCount > 0){
             for (int i = 0; i < tableInfoList.size(); i++) {
                 int tagSize = getTagTotalLengthByTableIndex(tableInfoList, i, toBebindTagCount);
-                totaTagSize += tagSize;
+                totalTagSize += tagSize;
                 tagSizeList.add(tagSize);
             }
         }
@@ -436,8 +433,13 @@ public class SerializeBlock {
             }
         }
 
-        int totalSize = totalTableNameSize + totaTagSize + totalColSize;
-        totalSize += tagSizeList.size() * (toBebindTableNameCount * Short.BYTES + toBebindTagCount * Integer.BYTES  + toBebindColCount * Integer.BYTES);
+        int totalSize = totalTableNameSize + totalTagSize + totalColSize;
+        int toBebindTableNameCount = toBeBindTableNameIndex >= 0 ? 1 : 0;
+
+        totalSize += tableInfoList.size() * (
+                toBebindTableNameCount * Short.BYTES
+                + (toBebindTagCount > 0 ? 1 : 0) * Integer.BYTES
+                + (toBebindColCount > 0 ? 1 : 0) * Integer.BYTES);
 
         byte[] buf = new byte[58 + totalSize];
         int offset = 0;
@@ -479,7 +481,6 @@ public class SerializeBlock {
         offset += Integer.BYTES;
 
         // tableNameOffset
-        int totalTableNameOffset = 0;
         if (toBebindTableNameCount > 0){
             SerializeInt(buf, offset, 0x1C);
             offset += Integer.BYTES;
@@ -510,7 +511,7 @@ public class SerializeBlock {
             }
 
             if (toBebindTagCount > 0){
-                skipSize += totaTagSize + Integer.BYTES * tableInfoList.size();
+                skipSize += totalTagSize + Integer.BYTES * tableInfoList.size();
             }
             SerializeInt(buf, offset, 28 + skipSize);
             offset += Integer.BYTES;
@@ -568,9 +569,6 @@ public class SerializeBlock {
 
             for (int i = 0; i < tableInfoList.size(); i++) {
                 for (ColumnInfo col : tableInfoList.get(i).getDataList()){
-                    if (col.getDataList().get(i) == null){
-                        throw new SQLException("tag value is null, index: " + i);
-                    }
                     serializeColumn(col, buf, offset, precision);
                     offset += col.getSerializeSize();
                 }
