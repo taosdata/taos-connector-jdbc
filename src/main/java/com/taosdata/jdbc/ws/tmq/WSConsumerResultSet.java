@@ -117,18 +117,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
             return null;
         }
         wasNull = false;
-        if (value instanceof String)
-            return (String) value;
-
-        if (value instanceof byte[]) {
-            String charset = TaosGlobalConfig.getCharset();
-            try {
-                return new String((byte[]) value, charset);
-            } catch (UnsupportedEncodingException e) {
-                throw new RuntimeException(e.getMessage());
-            }
-        }
-        return value.toString();
+        return DataTypeConverUtil.getString(value);
     }
 
     @Override
@@ -250,7 +239,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
         wasNull = false;
 
         int taosType = fields.get(columnIndex - 1).getTaosType();
-        return DataTypeConverUtil.getDouble(taosType, value, columnIndex);
+        return DataTypeConverUtil.getDouble(taosType, value, columnIndex, this.timestampPrecision);
     }
 
     @Override

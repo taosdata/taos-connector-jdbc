@@ -384,7 +384,7 @@ public class DataTypeConverUtil {
         return 0;
     }
 
-    public static double getDouble(int taosType, Object value, int columnIndex) throws SQLException {
+    public static double getDouble(int taosType, Object value, int columnIndex, int timestampPrecision) throws SQLException {
         if (value instanceof Double)
             return (double) value;
         if (value instanceof Float)
@@ -410,6 +410,19 @@ public class DataTypeConverUtil {
                 if (tmp.compareTo(new BigDecimal(Double.MIN_VALUE)) < 0 || tmp.compareTo(new BigDecimal(Double.MAX_VALUE)) > 0)
                     throwRangeException(value.toString(), columnIndex, Types.DOUBLE);
                 return tmp.doubleValue();
+            }
+
+            case TSDB_DATA_TYPE_TIMESTAMP: {
+                Timestamp ts = (Timestamp) value;
+                switch (timestampPrecision) {
+                    case TimestampPrecision.MS:
+                    default:
+                        return ts.getTime();
+                    case TimestampPrecision.US:
+                        return ts.getTime() * 1000 + ts.getNanos() / 1000 % 1000;
+                    case TimestampPrecision.NS:
+                        return ts.getTime() * 1000_000 + ts.getNanos() % 1000_000;
+                }
             }
 
             case TSDB_DATA_TYPE_NCHAR:
@@ -445,6 +458,21 @@ public class DataTypeConverUtil {
             return new byte[]{(byte) value};
 
         return value.toString().getBytes();
+    }
+
+    public static String getString(Object value) throws SQLException {
+        if (value instanceof String)
+            return (String) value;
+
+        if (value instanceof byte[]) {
+            String charset = TaosGlobalConfig.getCharset();
+            try {
+                return new String((byte[]) value, charset);
+            } catch (UnsupportedEncodingException e) {
+                throw new RuntimeException(e.getMessage());
+            }
+        }
+        return value.toString();
     }
 
     public static Date getDate(Object value) {

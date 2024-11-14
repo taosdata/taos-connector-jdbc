@@ -310,18 +310,7 @@ public class TSDBResultSetBlockData {
             return null;
         }
         wasNull = false;
-        if (obj instanceof String)
-            return (String) obj;
-
-        if (obj instanceof byte[]) {
-            String charset = TaosGlobalConfig.getCharset();
-            try {
-                return new String((byte[]) obj, charset);
-            } catch (UnsupportedEncodingException e) {
-                throw new RuntimeException(e.getMessage());
-            }
-        }
-        return obj.toString();
+        return DataTypeConverUtil.getString(obj);
     }
 
     public byte[] getBytes(int col) throws SQLException {
@@ -332,20 +321,7 @@ public class TSDBResultSetBlockData {
             return null;
         }
         wasNull = false;
-        if (obj instanceof byte[])
-            return (byte[]) obj;
-        if (obj instanceof String)
-            return ((String) obj).getBytes();
-        if (obj instanceof Long)
-            return Longs.toByteArray((long) obj);
-        if (obj instanceof Integer)
-            return Ints.toByteArray((int) obj);
-        if (obj instanceof Short)
-            return Shorts.toByteArray((short) obj);
-        if (obj instanceof Byte)
-            return new byte[]{(byte) obj};
-
-        return obj.toString().getBytes();
+        return DataTypeConverUtil.getBytes(obj);
     }
 
     public int getInt(int col) throws SQLException {
@@ -365,6 +341,11 @@ public class TSDBResultSetBlockData {
             wasNull = true;
             return Boolean.FALSE;
         }
+
+        if (obj instanceof  Boolean) {
+            return (Boolean) obj;
+        }
+
         wasNull = false;
         int type = this.columnMetaDataList.get(col).getColType();
         return DataTypeConverUtil.getBoolean(type, obj);
@@ -419,7 +400,7 @@ public class TSDBResultSetBlockData {
         }
         wasNull = false;
         int type = this.columnMetaDataList.get(col).getColType();
-        return DataTypeConverUtil.getDouble(type, obj, col);
+        return DataTypeConverUtil.getDouble(type, obj, col, this.timestampPrecision);
     }
 
     public Object get(int col) {
