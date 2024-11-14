@@ -92,6 +92,10 @@ public class TSDBResultSet extends AbstractResultSet {
     }
 
     public boolean next() throws SQLException {
+        if (isClosed){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);
+        }
+
         if (this.blockData.forward())
             return true;
 
