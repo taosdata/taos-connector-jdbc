@@ -9,10 +9,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.math.BigDecimal;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Properties;
@@ -29,14 +26,14 @@ public class WSConsumerWithDiffTypeTest {
     @Test
     public void testWSBeanObject() throws Exception {
         try {
-            statement.executeUpdate("insert into " + dbName + ".ct0 values(now, 1, 100, 2.2, 2.3, '1', 12, 2, true, '一', 'POINT(1 1)', '\\x0101', 1.2234)");
+            statement.executeUpdate("insert into " + dbName + ".ct0 values(now, 1, 100, 2.2, 2.3, '1', 12, 2, true, '一', 'POINT(1 1)', '\\x0101', 1.2234, now)");
         } catch (SQLException e) {
             // ignore
         }
         String topic = topics[0];
         // create topic
         statement.executeUpdate("create topic if not exists " + topic +
-                " as select ts, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, t1 from " + dbName + ".ct0");
+                " as select ts, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, t1 from " + dbName + ".ct0");
 
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.CONNECT_USER, "root");
@@ -47,6 +44,7 @@ public class WSConsumerWithDiffTypeTest {
         properties.setProperty(TMQConstants.GROUP_ID, "ws_bean");
         properties.setProperty(TMQConstants.VALUE_DESERIALIZER, "com.taosdata.jdbc.ws.ResultDeserializer");
         properties.setProperty(TMQConstants.CONNECT_TYPE, "ws");
+        properties.setProperty(TMQConstants.AUTO_OFFSET_RESET, "earliest");
 
         try (TaosConsumer<Bean> consumer = new TaosConsumer<>(properties)) {
             consumer.subscribe(Collections.singletonList(topic));
@@ -58,7 +56,7 @@ public class WSConsumerWithDiffTypeTest {
                     Assert.assertEquals(100L, bean.getC2());
                     Assert.assertEquals(2.2, bean.getC3(), 0.000001);
                     Assert.assertEquals(2.3, bean.getC4(), 0.000001);
-                    Assert.assertEquals("1", bean.getC5());
+                    Assert.assertArrayEquals("1".getBytes(), bean.getC5());
                     Assert.assertEquals(12, bean.getC6());
                     Assert.assertEquals(2, bean.getC7());
                     Assert.assertTrue(bean.isC8());
@@ -84,11 +82,13 @@ public class WSConsumerWithDiffTypeTest {
         // properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
         connection = DriverManager.getConnection(url, properties);
         statement = connection.createStatement();
+
+        statement.executeUpdate("drop topic if exists " + topics[0]);
         statement.execute("drop database if exists " + dbName);
         statement.execute("create database if not exists " + dbName + " WAL_RETENTION_PERIOD 3650");
         statement.execute("use " + dbName);
         statement.execute("create stable if not exists " + superTable
-                + " (ts timestamp, c1 int, c2 bigint, c3 float, c4 double, c5 binary(10), c6 SMALLINT, c7 TINYINT, c8 BOOL, c9 nchar(100), c10 GEOMETRY(100), c11 VARBINARY(100), c12 double) tags(t1 int)");
+                + " (ts timestamp, c1 int, c2 bigint, c3 float, c4 double, c5 binary(10), c6 SMALLINT, c7 TINYINT, c8 BOOL, c9 nchar(100), c10 GEOMETRY(100), c11 VARBINARY(100), c12 double, c13 timestamp) tags(t1 int)");
         statement.execute("create table if not exists ct0 using " + superTable + " tags(1000)");
     }
 
@@ -136,6 +136,7 @@ class Bean {
 
 
     private BigDecimal c12;
+    private Timestamp c13;
 
     @Override
     public String toString() {
@@ -260,6 +261,15 @@ class Bean {
     public void setC12(BigDecimal c12) {
         this.c12 = c12;
     }
+
+    public Timestamp getC13() {
+        return c13;
+    }
+
+    public void setC13(Timestamp c13) {
+        this.c13 = c13;
+    }
+
     public int getT1() {
         return t1;
     }
@@ -267,5 +277,7 @@ class Bean {
     public void setT1(int t1) {
         this.t1 = t1;
     }
+
+
 
 }
