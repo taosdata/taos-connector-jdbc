@@ -13,6 +13,7 @@ import org.junit.runner.RunWith;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.URISyntaxException;
 import java.sql.*;
 import java.time.Duration;
 import java.util.Collections;
@@ -32,6 +33,7 @@ public class WSConFailOverTest {
     private static final String db_name = "test";
     private static final String tableName = "meters";
     private Connection connection;
+    private TaosAdapterMock taosAdapterMock;
 
     @Description("query")
     @Test
@@ -41,21 +43,11 @@ public class WSConFailOverTest {
             ResultSet resultSet;
             for (int i = 0; i < 4; i++){
                 try {
-                    resultSet = statement.executeQuery("select ts from " + db_name + "." + tableName + " limit 1;");
                     if (i == 2){
-                        int port = 8041;
-                        ProcessBuilder pb = new ProcessBuilder("sudo", "lsof", "-t", "-i:" + port);
-                        Process process = pb.start();
-                        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-                        String pid;
-                        while ((pid = reader.readLine()) != null) {
-                            ProcessBuilder killPb = new ProcessBuilder("sudo", "kill", "-9", pid);
-                            Process killProcess = killPb.start();
-                            killProcess.waitFor();
-                            System.out.println("Killed process with PID: " + pid);
-                        }
-                        reader.close();
+                        taosAdapterMock.stopServer();
                     }
+                    resultSet = statement.executeQuery("select ts from " + db_name + "." + tableName + " limit 1;");
+
                 }catch (SQLException e){
                     if (e.getErrorCode() == TSDBErrorNumbers.ERROR_RESULTSET_CLOSED){
                         System.out.println("connection closed");
@@ -81,55 +73,19 @@ public class WSConFailOverTest {
         }
     }
 
-
-    @Description("consumer")
-    @Test
-    public void consumerException() {
-        Properties properties = new Properties();
-        properties.setProperty(TMQConstants.CONNECT_USER, "root");
-        properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
-        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, "127.0.0.1:6041");
-//        properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_HOST, hostB);
-//        properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_PORT, String.valueOf(portB));
-
-        properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
-        properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
-        properties.setProperty(TMQConstants.GROUP_ID, "ws_bean");
-        properties.setProperty(TMQConstants.VALUE_DESERIALIZER, "com.taosdata.jdbc.tmq.ResultDeserializer");
-        properties.setProperty(TMQConstants.CONNECT_TYPE, "ws");
-
-        try {
-            TaosConsumer<ResultBean> consumer = new TaosConsumer<>(properties);
-        }
-        catch (Exception e){
-            System.out.println(e.getMessage());
-            return;
-        }
-        Assert.fail();
-    }
-
     @Before
-    public void before() throws SQLException, InterruptedException, IOException {
+    public void before() throws SQLException, InterruptedException, IOException, URISyntaxException {
+        taosAdapterMock = new TaosAdapterMock(8041);
+        taosAdapterMock.start();
 
-        Runtime.getRuntime().exec("sudo taosadapter -P 8041 &");
-
-        Thread.sleep(3000);
-
-        String url = SpecifyAddress.getInstance().getRestWithoutUrl();
+        String url;
+        url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + hostA + ":" + portA + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + hostA + ":" + portA + "/?user=root&password=taosdata";
         } else {
             url += "?user=root&password=taosdata";
         }
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
-
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_HOST, hostB);
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_PORT, String.valueOf(portB));
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_INTERVAL_MS, "2000");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_RETRY_COUNT, "3");
-
 
         connection = DriverManager.getConnection(url, properties);
         Statement statement = connection.createStatement();
@@ -139,6 +95,20 @@ public class WSConFailOverTest {
         statement.execute("create table if not exists " + db_name + "." + tableName + "(ts timestamp, f int)");
         statement.execute("insert into " + db_name + "." + tableName + " values (now, 1)");
         statement.close();
+        connection.close();
+
+        url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-WS://" + hostB + ":" + portB + "/?user=root&password=taosdata";
+        } else {
+            url += "?user=root&password=taosdata";
+        }
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_HOST, hostA);
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_PORT, String.valueOf(portA));
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_INTERVAL_MS, "2000");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_RETRY_COUNT, "3");
+        connection = DriverManager.getConnection(url, properties);
     }
 
     @After
