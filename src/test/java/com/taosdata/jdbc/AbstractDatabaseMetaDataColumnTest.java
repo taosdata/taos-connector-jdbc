@@ -59,6 +59,22 @@ public class AbstractDatabaseMetaDataColumnTest {
         Assert.assertTrue(tables.contains("ins_tables"));
         Assert.assertFalse(dbs.contains("performance_schema"));
     }
+    @Test
+    public void getColumns3() throws SQLException {
+        ResultSet columns = metaData.getColumns("information_schema", null, null, "table_name");
+        Set<String> dbs = new HashSet<>();
+        Set<String> tables = new HashSet<>();
+        int count = 0;
+        while (columns.next()) {
+            dbs.add(columns.getString("TABLE_CAT"));
+            tables.add(columns.getString("TABLE_NAME"));
+            count++;
+        }
+        Assert.assertTrue(count > 1);
+        Assert.assertTrue(dbs.contains("information_schema"));
+        Assert.assertTrue(tables.contains("ins_tables"));
+        Assert.assertFalse(dbs.contains("performance_schema"));
+    }
 
     @Test
     @Ignore
@@ -184,6 +200,13 @@ public class AbstractDatabaseMetaDataColumnTest {
         }
         connection = DriverManager.getConnection(url);
         metaData = connection.getMetaData();
+
+        try(Statement stmt = connection.createStatement()){
+            stmt.execute("drop database if exists test");
+            stmt.execute("create database if not exists test");
+            stmt.execute("use test");
+            stmt.execute("CREATE STABLE meters(ts timestamp,current float,voltage int,phase float) TAGS (location varchar(64),group_id int);");
+        }
     }
 
     @AfterClass
