@@ -170,9 +170,9 @@ public class RestfulResultSetMetaDataTest {
         Assert.assertEquals(Long.class.getName(), meta.getColumnClassName(3));
         Assert.assertEquals(Float.class.getName(), meta.getColumnClassName(4));
         Assert.assertEquals(Double.class.getName(), meta.getColumnClassName(5));
-        Assert.assertEquals(String.class.getName(), meta.getColumnClassName(6));
+        Assert.assertEquals("[B", meta.getColumnClassName(6));
         Assert.assertEquals(Short.class.getName(), meta.getColumnClassName(7));
-        Assert.assertEquals(Short.class.getName(), meta.getColumnClassName(8));
+        Assert.assertEquals(Byte.class.getName(), meta.getColumnClassName(8));
         Assert.assertEquals(Boolean.class.getName(), meta.getColumnClassName(9));
         Assert.assertEquals(String.class.getName(), meta.getColumnClassName(10));
     }

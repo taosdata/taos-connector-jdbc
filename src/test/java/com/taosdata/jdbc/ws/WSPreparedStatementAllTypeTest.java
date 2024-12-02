@@ -46,6 +46,12 @@ public class WSPreparedStatementAllTypeTest {
         Assert.assertEquals(resultSet.getString(9), "你好");
         Assert.assertEquals(resultSet.getString(10), "世界");
         Assert.assertEquals(resultSet.getString(11), "hello world");
+
+        Assert.assertEquals(resultSet.getDate(1), new Date(current));
+        Assert.assertEquals(resultSet.getTime(1), new Time(current));
+        Assert.assertEquals(resultSet.getTimestamp(1), new Timestamp(current));
+        Assert.assertEquals(resultSet.getBigDecimal(7).doubleValue(), 7.7, 0.000001);
+
         resultSet.close();
         statement.close();
     }

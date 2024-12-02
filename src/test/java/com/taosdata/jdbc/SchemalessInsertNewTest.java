@@ -55,7 +55,74 @@ public class SchemalessInsertNewTest {
         rs.close();
         statement.close();
     }
+    @Test
+    public void testLine2() throws SQLException {
+        // given
+        String[] lines = new String[]{
+                "st,t1=3i64,t2=4f64,t3=\"t3\" c1=3i64,c3=L\"passit\",c2=false,c4=4f64 1626006833639000000",
+                "st,t1=4i64,t3=\"t4\",t2=5f64,t4=5f64 c1=3i64,c3=L\"passitagin\",c2=true,c4=5f64,c5=5f64 1626006833640000000"};
 
+        // when
+        ((AbstractConnection)conn).write(lines, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS, 10000, 100L);
+        // then
+        Statement statement = conn.createStatement();
+        statement.executeUpdate("use " + dbname);
+        ResultSet rs = statement.executeQuery("show tables");
+        Assert.assertNotNull(rs);
+        ResultSetMetaData metaData = rs.getMetaData();
+        Assert.assertTrue(metaData.getColumnCount() > 0);
+        int rowCnt = 0;
+        while (rs.next()) {
+            rowCnt++;
+        }
+        Assert.assertEquals(lines.length, rowCnt);
+        rs.close();
+        statement.close();
+    }
+
+    @Test
+    @Description("line insert")
+    public void testWriteRaw() throws SQLException {
+        // given
+        String line = "st,t1=3i64,t2=4f64,t3=\"t3\" c1=3i64,c3=L\"passit\",c2=false,c4=4f64 1626006833639000000";
+
+        ((AbstractConnection)conn).writeRaw(line, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS);
+
+        // then
+        Statement statement = conn.createStatement();
+        ResultSet rs = statement.executeQuery("show tables");
+        Assert.assertNotNull(rs);
+        ResultSetMetaData metaData = rs.getMetaData();
+        Assert.assertTrue(metaData.getColumnCount() > 0);
+        int rowCnt = 0;
+        while (rs.next()) {
+            rowCnt++;
+        }
+        Assert.assertEquals(1, rowCnt);
+        rs.close();
+        statement.close();
+    }
+    @Test
+    public void testWriteRaw2() throws SQLException {
+        // given
+        String line = "st,t1=3i64,t2=4f64,t3=\"t3\" c1=3i64,c3=L\"passit\",c2=false,c4=4f64 1626006833639000000";
+        // when
+        ((AbstractConnection)conn).writeRaw(line, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS, 10000, 100L);
+        // then
+        Statement statement = conn.createStatement();
+        statement.executeUpdate("use " + dbname);
+        ResultSet rs = statement.executeQuery("show tables");
+        Assert.assertNotNull(rs);
+        ResultSetMetaData metaData = rs.getMetaData();
+        Assert.assertTrue(metaData.getColumnCount() > 0);
+        int rowCnt = 0;
+        while (rs.next()) {
+            rowCnt++;
+        }
+        Assert.assertEquals(1, rowCnt);
+        rs.close();
+        statement.close();
+    }
     /**
      * telnet insert compatible with opentsdb
      *
