@@ -358,6 +358,9 @@ public class TSDBResultSetBlockData {
             return 0;
         }
         wasNull = false;
+        if (obj instanceof Long) {
+            return (long) obj;
+        }
         int type = this.columnMetaDataList.get(col).getColType();
         return DataTypeConverUtil.getLong(type, obj, col, this.timestampPrecision);
     }

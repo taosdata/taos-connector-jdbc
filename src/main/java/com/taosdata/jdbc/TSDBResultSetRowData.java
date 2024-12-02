@@ -71,6 +71,8 @@ public class TSDBResultSetRowData {
 
     public boolean getBoolean(int col, int nativeType) throws SQLException {
         Object obj = data.get(col - 1);
+        if (obj instanceof Boolean)
+            return (boolean) obj;
 
         return DataTypeConverUtil.getBoolean(nativeType, obj);
     }
@@ -145,6 +147,10 @@ public class TSDBResultSetRowData {
             return 0;
         }
 
+        if (obj instanceof Long) {
+            return (long) obj;
+        }
+
         return DataTypeConverUtil.getLong(nativeType, obj, col, TimestampPrecision.MS);
     }
 
@@ -166,7 +172,8 @@ public class TSDBResultSetRowData {
         Object obj = data.get(col - 1);
         if (obj == null)
             return 0;
-
+        if (obj instanceof Float)
+            return (float) obj;
         return DataTypeConverUtil.getFloat(nativeType, obj, col);
     }
 
