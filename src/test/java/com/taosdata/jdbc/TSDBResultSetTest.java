@@ -1072,4 +1072,10 @@ public class TSDBResultSetTest {
         // Should still be FETCH_FORWARD as other directions are not supported
         assertEquals(ResultSet.FETCH_FORWARD, rs.getFetchDirection());
     }
+
+    @Test
+    public void getColumnClassName() throws SQLException {
+        ResultSetMetaData meta = rs.getMetaData();
+        Assert.assertEquals(Timestamp.class.getName(), meta.getColumnClassName(1));
+    }
 }
