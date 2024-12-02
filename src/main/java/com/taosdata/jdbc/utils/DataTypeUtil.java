@@ -52,8 +52,9 @@ public class DataTypeUtil {
                 columnClassName = Boolean.class.getName();
                 break;
             case Types.BINARY:
+            case Types.VARCHAR:
             case Types.VARBINARY:
-                columnClassName = byte[].class.getName();
+                columnClassName = "[B";
                 break;
         }
         return columnClassName;
