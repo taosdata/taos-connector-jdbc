@@ -167,7 +167,6 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
             }
             this.reset();
             BlockData blockData = BlockData.getEmptyBlockData(fields);
-
             if (resp.isCompleted() || isClosed) {
                 blockData.setCompleted(true);
                 return false;
