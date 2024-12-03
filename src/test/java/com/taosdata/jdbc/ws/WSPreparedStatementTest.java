@@ -3,11 +3,17 @@ package com.taosdata.jdbc.ws;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.*;
 
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.Reader;
+import java.io.Writer;
 import java.sql.*;
 import java.util.AbstractCollection;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Properties;
+
+import static com.taosdata.jdbc.TSDBConstants.*;
 
 @FixMethodOrder
 public class WSPreparedStatementTest {
@@ -16,6 +22,8 @@ public class WSPreparedStatementTest {
     String tableName = "wpt";
     String superTable = "wpt_st";
     Connection connection;
+
+    PreparedStatement pstmt;
 
     @Test
     public void testExecuteUpdate() throws SQLException {
@@ -83,6 +91,213 @@ public class WSPreparedStatementTest {
         }
     }
 
+    @Test (expected = SQLException.class)
+    public void testSetNCharacterStream() throws SQLException {
+        pstmt.setNCharacterStream(1, null);
+    }
+
+    @Test (expected = SQLException.class)
+    public void testSetNCharacterStream2() throws SQLException {
+        pstmt.setNCharacterStream(1, null, 0);
+    }
+    @Test (expected = SQLException.class)
+    public void testSetNClob() throws SQLException {
+        pstmt.setNClob(1, new NClob() {
+            @Override
+            public long length() throws SQLException {
+                return 0;
+            }
+
+            @Override
+            public String getSubString(long pos, int length) throws SQLException {
+                return null;
+            }
+
+            @Override
+            public Reader getCharacterStream() throws SQLException {
+                return null;
+            }
+
+            @Override
+            public InputStream getAsciiStream() throws SQLException {
+                return null;
+            }
+
+            @Override
+            public long position(String searchstr, long start) throws SQLException {
+                return 0;
+            }
+
+            @Override
+            public long position(Clob searchstr, long start) throws SQLException {
+                return 0;
+            }
+
+            @Override
+            public int setString(long pos, String str) throws SQLException {
+                return 0;
+            }
+
+            @Override
+            public int setString(long pos, String str, int offset, int len) throws SQLException {
+                return 0;
+            }
+
+            @Override
+            public OutputStream setAsciiStream(long pos) throws SQLException {
+                return null;
+            }
+
+            @Override
+            public Writer setCharacterStream(long pos) throws SQLException {
+                return null;
+            }
+
+            @Override
+            public void truncate(long len) throws SQLException {
+
+            }
+
+            @Override
+            public void free() throws SQLException {
+
+            }
+
+            @Override
+            public Reader getCharacterStream(long pos, long length) throws SQLException {
+                return null;
+            }
+        });
+    }
+    @Test (expected = SQLException.class)
+    public void testSetNClob2() throws SQLException {
+        pstmt.setNClob(1, null, 0);
+    }
+
+    @Test (expected = SQLException.class)
+    public void testSetBlob() throws SQLException {
+        pstmt.setBlob(1, new Blob() {
+            @Override
+            public long length() throws SQLException {
+                return 0;
+            }
+
+            @Override
+            public byte[] getBytes(long pos, int length) throws SQLException {
+                return new byte[0];
+            }
+
+            @Override
+            public InputStream getBinaryStream() throws SQLException {
+                return null;
+            }
+
+            @Override
+            public long position(byte[] pattern, long start) throws SQLException {
+                return 0;
+            }
+
+            @Override
+            public long position(Blob pattern, long start) throws SQLException {
+                return 0;
+            }
+
+            @Override
+            public int setBytes(long pos, byte[] bytes) throws SQLException {
+                return 0;
+            }
+
+            @Override
+            public int setBytes(long pos, byte[] bytes, int offset, int len) throws SQLException {
+                return 0;
+            }
+
+            @Override
+            public OutputStream setBinaryStream(long pos) throws SQLException {
+                return null;
+            }
+
+            @Override
+            public void truncate(long len) throws SQLException {
+
+            }
+
+            @Override
+            public void free() throws SQLException {
+
+            }
+
+            @Override
+            public InputStream getBinaryStream(long pos, long length) throws SQLException {
+                return null;
+            }
+        });
+    }
+    @Test (expected = SQLException.class)
+    public void testSetBlob2() throws SQLException {
+        pstmt.setBlob(1, null, 0);
+    }
+
+    @Test (expected = SQLException.class)
+    public void testSetSQLXML() throws SQLException {
+        pstmt.setSQLXML(1, null);
+    }
+
+    @Test (expected = SQLException.class)
+    public void testSetObject() throws SQLException {
+        pstmt.setObject(1, null, 0, 0);
+    }
+
+    @Test (expected = SQLException.class)
+    public void testSetAsciiStream() throws SQLException {
+        pstmt.setAsciiStream(1, null, 0);
+    }
+
+
+    @Test (expected = SQLException.class)
+    public void testSetBinaryStream() throws SQLException {
+        pstmt.setBinaryStream(1, null, 0);
+    }
+
+    @Test (expected = SQLException.class)
+    public void testSetCharacterStream() throws SQLException {
+        pstmt.setCharacterStream(1, null, 0);
+    }
+
+    @Test
+    public void testSetTagNull() throws SQLException {
+        TSWSPreparedStatement wsPreparedStatement = pstmt.unwrap(TSWSPreparedStatement.class);
+        wsPreparedStatement.setTagSqlTypeNull(1, Types.BOOLEAN);
+        wsPreparedStatement.setTagSqlTypeNull(1, Types.TINYINT);
+        wsPreparedStatement.setTagSqlTypeNull(1, Types.SMALLINT);
+        wsPreparedStatement.setTagSqlTypeNull(1, Types.INTEGER);
+        wsPreparedStatement.setTagSqlTypeNull(1, Types.BIGINT);
+        wsPreparedStatement.setTagSqlTypeNull(1, Types.FLOAT);
+        wsPreparedStatement.setTagSqlTypeNull(1, Types.DOUBLE);
+        wsPreparedStatement.setTagSqlTypeNull(1, Types.TIMESTAMP);
+        wsPreparedStatement.setTagSqlTypeNull(1, Types.BINARY);
+        wsPreparedStatement.setTagSqlTypeNull(1, Types.VARCHAR);
+        wsPreparedStatement.setTagSqlTypeNull(1, Types.VARBINARY);
+        wsPreparedStatement.setTagSqlTypeNull(1, Types.NCHAR);
+    }
+
+    @Test
+    public void testSetObject2() throws SQLException {
+        TSWSPreparedStatement wsPreparedStatement = pstmt.unwrap(TSWSPreparedStatement.class);
+        wsPreparedStatement.setObject(1, null, Types.BOOLEAN);
+        wsPreparedStatement.setObject(1, null, Types.TINYINT);
+        wsPreparedStatement.setObject(1, null, Types.SMALLINT);
+        wsPreparedStatement.setObject(1, null, Types.INTEGER);
+        wsPreparedStatement.setObject(1, null, Types.BIGINT);
+        wsPreparedStatement.setObject(1, null, Types.FLOAT);
+        wsPreparedStatement.setObject(1, null, Types.DOUBLE);
+        wsPreparedStatement.setObject(1, null, Types.TIMESTAMP);
+        wsPreparedStatement.setObject(1, null, Types.BINARY);
+        wsPreparedStatement.setObject(1, null, Types.VARCHAR);
+        wsPreparedStatement.setObject(1, null, Types.VARBINARY);
+        wsPreparedStatement.setObject(1, null, Types.NCHAR);
+    }
+
     @Before
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();
@@ -99,12 +314,18 @@ public class WSPreparedStatementTest {
         statement.execute("use " + db_name);
         statement.execute("create table if not exists " + db_name + "." + tableName + " (ts timestamp, c1 int)");
         statement.close();
+
+        pstmt = connection.prepareStatement("select 1");
     }
 
     @After
     public void after() throws SQLException {
         try (Statement statement = connection.createStatement()) {
             statement.execute("drop database if exists " + db_name);
+        }
+
+        if (pstmt != null){
+            pstmt.close();
         }
         connection.close();
     }

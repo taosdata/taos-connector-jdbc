@@ -34,6 +34,7 @@ public class DatabaseMetaDataResultSet extends AbstractResultSet {
     private List<TSDBResultSetRowData> rowDataList = new ArrayList<>();
     private TSDBResultSetRowData rowCursor;
 
+
     // position of cursor, starts from 0 as beforeFirst, increases as next() is called
     private int cursorRowNumber = 0;
 

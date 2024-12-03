@@ -24,7 +24,7 @@ public class WSBigQueryTest {
         PreparedStatement statement = connection.prepareStatement(sql);
         HashSet<Object> collect = new HashSet<>();
 
-        for (int i = 0; i < 10000; i++) {
+        for (int i = 0; i < 20000; i++) {
             collect.add(i);
             statement.setTimestamp(1, new Timestamp(System.currentTimeMillis() + i));
             statement.setInt(2, i);
