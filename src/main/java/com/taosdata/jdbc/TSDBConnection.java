@@ -18,12 +18,6 @@ import java.util.concurrent.atomic.AtomicLong;
 public class TSDBConnection extends AbstractConnection {
     private TSDBJNIConnector connector;
     private final TSDBDatabaseMetaData databaseMetaData;
-    private boolean batchFetch;
-
-
-    public Boolean getBatchFetch() {
-        return this.batchFetch;
-    }
 
     public TSDBConnection(Properties info, TSDBDatabaseMetaData meta) throws SQLException {
         super(info);
@@ -33,11 +27,6 @@ public class TSDBConnection extends AbstractConnection {
                 info.getProperty(TSDBDriver.PROPERTY_KEY_DBNAME),
                 info.getProperty(TSDBDriver.PROPERTY_KEY_USER),
                 info.getProperty(TSDBDriver.PROPERTY_KEY_PASSWORD));
-
-        String batchLoad = info.getProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
-        if (batchLoad != null) {
-            this.batchFetch = Boolean.parseBoolean(batchLoad);
-        }
     }
 
     private void connect(String host, int port, String dbName, String user, String password) throws SQLException {
