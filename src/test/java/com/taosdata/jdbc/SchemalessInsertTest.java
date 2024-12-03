@@ -55,6 +55,7 @@ public class SchemalessInsertTest {
         Assert.assertEquals(lines.length, rowCnt);
         rs.close();
         statement.close();
+        writer.close();
     }
     @Test
     public void testLine2() throws SQLException {
@@ -81,6 +82,7 @@ public class SchemalessInsertTest {
         Assert.assertEquals(lines.length, rowCnt);
         rs.close();
         statement.close();
+        writer.close();
     }
 
     @Test
@@ -108,6 +110,7 @@ public class SchemalessInsertTest {
         Assert.assertEquals(lines.length, rowCnt);
         rs.close();
         statement.close();
+        writer.close();
     }
 
     @Test
@@ -132,6 +135,7 @@ public class SchemalessInsertTest {
         Assert.assertEquals(1, rowCnt);
         rs.close();
         statement.close();
+        writer.close();
     }
     @Test
     public void testWriteRaw2() throws SQLException {
@@ -155,6 +159,7 @@ public class SchemalessInsertTest {
         Assert.assertEquals(1, rowCnt);
         rs.close();
         statement.close();
+        writer.close();
     }
     /**
      * telnet insert compatible with opentsdb
@@ -189,6 +194,7 @@ public class SchemalessInsertTest {
         Assert.assertEquals(lines.length, rowCnt);
         rs.close();
         statement.close();
+        writer.close();
     }
 
     /**
@@ -242,6 +248,7 @@ public class SchemalessInsertTest {
         Assert.assertEquals(jsonArray.size(), rowCnt);
         rs.close();
         statement.close();
+        writer.close();
     }
 
     @Test
@@ -269,6 +276,7 @@ public class SchemalessInsertTest {
         Assert.assertEquals(list.size(), rowCnt);
         rs.close();
         statement.close();
+        writer.close();
     }
 
     @Before

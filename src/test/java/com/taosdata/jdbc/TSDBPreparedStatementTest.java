@@ -1167,7 +1167,6 @@ public class TSDBPreparedStatementTest {
     public void setRowId() throws SQLException {
         pstmt_insert.setRowId(1, null);
     }
-
     @Test
     public void setNString() throws SQLException {
         setString();
@@ -1187,6 +1186,14 @@ public class TSDBPreparedStatementTest {
     public void setSQLXML() throws SQLException {
         pstmt_insert.setSQLXML(1, null);
     }
+
+
+//    @Test(expected = SQLFeatureNotSupportedException.class)
+//    public void setRowId() throws SQLException {
+//        pstmt_insert.setRowId(1, null);
+//    }
+
+
 
     @Before
     public void before() {

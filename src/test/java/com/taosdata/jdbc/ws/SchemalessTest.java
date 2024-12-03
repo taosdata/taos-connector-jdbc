@@ -61,6 +61,7 @@ public class SchemalessTest {
         Assert.assertEquals(lines.length, rowCnt);
         rs.close();
         statement.close();
+        writer.close();
     }
     @Test
     public void testLine2() throws SQLException {
@@ -87,6 +88,7 @@ public class SchemalessTest {
         Assert.assertEquals(lines.length, rowCnt);
         rs.close();
         statement.close();
+        writer.close();
     }
 
     @Test
@@ -112,6 +114,7 @@ public class SchemalessTest {
         Assert.assertEquals(1, rowCnt);
         rs.close();
         statement.close();
+        writer.close();
     }
     @Test
     public void testWriteRaw2() throws SQLException {
@@ -135,6 +138,7 @@ public class SchemalessTest {
         Assert.assertEquals(1, rowCnt);
         rs.close();
         statement.close();
+        writer.close();
     }
     @Test
     public void testLineTtl() throws SQLException {
@@ -145,6 +149,7 @@ public class SchemalessTest {
 
         // when
         writer.write(lines, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS, dbName_ttl, 1000, 1L);
+        writer.close();
     }
 
 
@@ -175,6 +180,7 @@ public class SchemalessTest {
         Assert.assertEquals(lines.length, rowCnt);
         rs.close();
         statement.close();
+        writer.close();
     }
 
     @Test
@@ -222,6 +228,7 @@ public class SchemalessTest {
         Assert.assertEquals(jsonArray.size(), rowCnt);
         rs.close();
         statement.close();
+        writer.close();
     }
 
     @Test
@@ -249,6 +256,7 @@ public class SchemalessTest {
         Assert.assertEquals(list.size(), rowCnt);
         rs.close();
         statement.close();
+        writer.close();
     }
 
     @AfterClass
