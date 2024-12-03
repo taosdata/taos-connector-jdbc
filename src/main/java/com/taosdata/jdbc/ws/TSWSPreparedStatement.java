@@ -3,20 +3,17 @@ package com.taosdata.jdbc.ws;
 import com.taosdata.jdbc.*;
 import com.taosdata.jdbc.common.ColumnInfo;
 import com.taosdata.jdbc.common.SerializeBlock;
-import com.taosdata.jdbc.enums.BindType;
-import com.taosdata.jdbc.enums.DataType;
+import com.taosdata.jdbc.common.TableInfo;
+import com.taosdata.jdbc.enums.FeildBindType;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.ReqId;
+import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.entity.Action;
 import com.taosdata.jdbc.ws.entity.Code;
 import com.taosdata.jdbc.ws.entity.Request;
-import com.taosdata.jdbc.ws.entity.Response;
-import com.taosdata.jdbc.ws.stmt.entity.ExecResp;
-import com.taosdata.jdbc.ws.stmt.entity.GetColFieldsResp;
-import com.taosdata.jdbc.ws.stmt.entity.RequestFactory;
-import com.taosdata.jdbc.ws.stmt.entity.StmtResp;
+import com.taosdata.jdbc.ws.stmt2.entity.*;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,19 +25,13 @@ import java.sql.Date;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
-import static com.taosdata.jdbc.utils.SqlSyntaxValidator.getDatabaseName;
-import static com.taosdata.jdbc.utils.SqlSyntaxValidator.isUseSql;
 
-public class TSWSPreparedStatement extends WSStatement implements PreparedStatement {
-   public static final Pattern INSERT_PATTERN = Pattern.compile(
-             "insert\\s+into\\s+([.\\w]+|\\?)\\s+(using\\s+([.\\w]+)(\\s*\\(.*\\)\\s*|\\s+)tags\\s*\\(.*\\))?\\s*(\\(.*\\))?\\s*values\\s*\\(.*\\)"
-   );
+public class TSWSPreparedStatement extends WSStatement implements TaosPrepareStatement {
+    private static final List<Object> nullTag = Collections.singletonList(null);
+
     private final ConnectionParam param;
     private long reqId;
     private long stmtId;
@@ -48,81 +39,82 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
 
     private int queryTimeout = 0;
     private int precision = TimestampPrecision.MS;
+    private int toBeBindTableNameIndex = -1;
+    private int toBeBindColCount = 0;
+    private int toBeBindTagCount = 0;
+    private List<Field> fields;
+    private boolean isInsert = false;
 
-    private String insertDbName;
-    static private Map<String, Integer> precisionHashMap = new ConcurrentHashMap<String, Integer>();
-    private final Map<Integer, Column> column = new HashMap<>();
 
-    private final Map<Integer, Column> tag = new HashMap<>();
-    private final List<ColumnInfo> data = new ArrayList<>();
+    private final Map<Integer, Column> column = new TreeMap<>();
 
+    private final PriorityQueue<ColumnInfo> tag = new PriorityQueue<>();
     private final PriorityQueue<ColumnInfo> queue = new PriorityQueue<>();
+
+    private List<TableInfo> tableInfoList = new ArrayList<>();
+    private TableInfo tableInfo;
+
 
     public TSWSPreparedStatement(Transport transport, ConnectionParam param, String database, AbstractConnection connection, String sql, Long instanceId) throws SQLException {
         super(transport, database, connection, instanceId);
         this.rawSql = sql;
         this.param = param;
-        this.insertDbName = database;
         if (!sql.contains("?"))
             return;
 
-        String useDb = null;
-        Matcher matcher = INSERT_PATTERN.matcher(sql);
-        if (matcher.find()) {
-            if (matcher.group(1).equals("?") && matcher.group(3) != null) {
-                String usingGroup = matcher.group(3);
-                if (usingGroup.contains(".")) {
-                    String[] split = usingGroup.split("\\.");
-                    useDb = split[0];
-                }
-            } else {
-                String usingGroup = matcher.group(1);
-                if (usingGroup.contains(".")) {
-                    String[] split = usingGroup.split("\\.");
-                    useDb = split[0];
-                }
-            }
-
-            if (useDb == null && database != null) {
-                useDb = database;
-            }
-            if (useDb != null) {
-                insertDbName = useDb;
-                Integer precisionObj = precisionHashMap.get(useDb);
-                if (precisionObj != null){
-                    precision = precisionObj;
-                } else {
-                    updatePrecision(useDb);
-                }
-
-
-            }
-        }
-
-
         reqId = ReqId.getReqID();
-        Request request = RequestFactory.generateInit(reqId);
-        StmtResp resp = (StmtResp) transport.send(request);
+        Request request = RequestFactory.generateInit(reqId, true, false);
+        Stmt2Resp resp = (Stmt2Resp) transport.send(request);
         if (Code.SUCCESS.getCode() != resp.getCode()) {
             throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
         }
         stmtId = resp.getStmtId();
         Request prepare = RequestFactory.generatePrepare(stmtId, reqId, sql);
-        StmtResp prepareResp = (StmtResp) transport.send(prepare);
+        Stmt2PrepareResp prepareResp = (Stmt2PrepareResp) transport.send(prepare);
         if (Code.SUCCESS.getCode() != prepareResp.getCode()) {
             throw new SQLException("(0x" + Integer.toHexString(prepareResp.getCode()) + "):" + prepareResp.getMessage());
         }
-    }
 
-    private void updatePrecision(String database) throws SQLException{
-        try (ResultSet resultSet = this.executeQuery("select `precision` from information_schema.ins_databases where name = '" + database + "'")) {
-            while (resultSet.next()) {
-                String tmp = resultSet.getString(1);
-                precision = TimestampPrecision.getPrecision(tmp);
-                precisionHashMap.put(database, precision);
+        isInsert = prepareResp.isInsert();
+        if (isInsert){
+            fields = prepareResp.getFields();
+            if (!fields.isEmpty()){
+                precision = fields.get(0).getPrecision();
             }
+            for (int i = 0; i < fields.size(); i++){
+                Field field = fields.get(i);
+                if (field.getBindType() == FeildBindType.TAOS_FIELD_TBNAME.getValue()){
+                    toBeBindTableNameIndex = i;
+                }
+                if (field.getBindType() == FeildBindType.TAOS_FIELD_TAG.getValue()){
+                    toBeBindTagCount++;
+                }
+                if (field.getBindType() == FeildBindType.TAOS_FIELD_COL.getValue()){
+                    toBeBindColCount++;
+                }
+            }
+        } else if (!isInsert && prepareResp.getFieldsCount() > 0){
+            toBeBindColCount = prepareResp.getFieldsCount();
+        } else {
+            return;
+        }
+
+        this.tableInfo = TableInfo.getEmptyTableInfo();
+
+        // now we know the number of fields, we can prepare the cache data
+        if (prepareResp.isInsert()){
+//            for (int i = 0; i < toBeBindColCount; i++){
+//                if (prepareResp.getFields().get(i).getType() == TSDB_DATA_TYPE_UNKNOWN){
+//                    column.put(i, new Column(null, TSDB_DATA_TYPE_UNKNOWN, i));
+//                }
+//                column.put(i, new Column(null, TSDB_DATA_TYPE_UNKNOWN, i));
+//            }
+
+        } else {
+
         }
     }
+
     @Override
     public int getQueryTimeout() throws SQLException {
         return queryTimeout;
@@ -139,54 +131,24 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
         transport.setTimeout(seconds * 1000L);
     }
 
-    private void checkUseStatement(String sql) throws SQLException {
-        if (sql == null || sql.isEmpty()) {
-            throw new SQLException("sql is empty");
-        }
-
-        if (isUseSql(sql)) {
-            String database = getDatabaseName(sql);
-            if (null != database) {
-                WSConnection.reInitTransport(transport, param, database);
-
-                try (ResultSet resultSet = this.executeQuery("select `precision` from information_schema.ins_databases where name = '" + database + "'")) {
-                    while (resultSet.next()) {
-                        String tmp = resultSet.getString(1);
-                        precision = TimestampPrecision.getPrecision(tmp);
-                    }
-                }
-
-                reqId = ReqId.getReqID();
-                Request request = RequestFactory.generateInit(reqId);
-                StmtResp resp = (StmtResp) transport.send(request);
-                if (Code.SUCCESS.getCode() != resp.getCode()) {
-                    throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
-                }
-                stmtId = resp.getStmtId();
-                Request prepare = RequestFactory.generatePrepare(stmtId, reqId, rawSql);
-                StmtResp prepareResp = (StmtResp) transport.send(prepare);
-                if (Code.SUCCESS.getCode() != prepareResp.getCode()) {
-                    throw new SQLException("(0x" + Integer.toHexString(prepareResp.getCode()) + "):" + prepareResp.getMessage());
-                }
-            }
-        }
-    }
-
     @Override
     public boolean execute(String sql, Long reqId) throws SQLException {
-        checkUseStatement(sql);
         return super.execute(sql, reqId);
     }
 
     @Override
     public ResultSet executeQuery() throws SQLException {
         List<Object> list = new ArrayList<>();
-        if (!tag.isEmpty()) {
-            tag.keySet().stream().sorted().forEach(i -> {
-                Column col = this.tag.get(i);
-                list.add(col.data);
-            });
+
+        while (!tag.isEmpty()){
+            ColumnInfo columnInfo = tag.poll();
+            if (columnInfo.getDataList().size() != 1){
+                throw new SQLException("tag size is not equal 1");
+            }
+
+            list.add(columnInfo.getDataList().get(0));
         }
+
         if (!column.isEmpty()) {
             column.keySet().stream().sorted().forEach(i -> {
                 Column col = this.column.get(i);
@@ -204,220 +166,189 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
     public int executeUpdate() throws SQLException {
         if (column.isEmpty())
             throw new SQLException("no parameter to execute");
-        if (!data.isEmpty())
+        if (!tableInfo.getDataList().isEmpty() || !tableInfo.getTagInfo().isEmpty())
             throw TSDBError.undeterminedExecutionError();
 
-        //set tag
-        if (!tag.isEmpty()) {
-            List<ColumnInfo> collect = tag.keySet().stream().sorted().map(i -> {
-                Column col = this.tag.get(i);
-                return new ColumnInfo(i, col.data, col.type);
-            }).collect(Collectors.toList());
-            byte[] tagBlock;
-            try {
-                tagBlock = SerializeBlock.getRawBlock(collect, precision);
-            } catch (IOException e) {
-                throw new SQLException("data serialize error!", e);
-            }
-            StmtResp bindResp = (StmtResp) transport.send(Action.SET_TAGS.getAction(),
-                    reqId, stmtId, BindType.TAG.get(), tagBlock);
-            if (Code.SUCCESS.getCode() != bindResp.getCode()) {
-                throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
-            }
-        }
-        // bind
-        List<ColumnInfo> collect = column.keySet().stream().sorted().map(i -> {
-            Column col = this.column.get(i);
-            return new ColumnInfo(i, col.data, col.type);
-        }).collect(Collectors.toList());
-        byte[] rawBlock;
-        try {
-            rawBlock = SerializeBlock.getRawBlock(collect, precision);
-        } catch (IOException e) {
-            throw new SQLException("data serialize error!", e);
-        }
-        StmtResp bindResp = (StmtResp) transport.send(Action.BIND.getAction(),
-                reqId, stmtId, BindType.BIND.get(), rawBlock);
-        if (Code.SUCCESS.getCode() != bindResp.getCode()) {
-            throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
-        }
-        // add batch
-        Request batch = RequestFactory.generateBatch(stmtId, reqId);
-        Response send = transport.send(batch);
-        StmtResp batchResp = (StmtResp) send;
-        if (Code.SUCCESS.getCode() != batchResp.getCode()) {
-            throw new SQLException("(0x" + Integer.toHexString(batchResp.getCode()) + "):" + batchResp.getMessage());
-        }
-        this.clearParameters();
-        // send
-        Request request = RequestFactory.generateExec(stmtId, reqId);
-        ExecResp resp = (ExecResp) transport.send(request);
-        if (Code.SUCCESS.getCode() != resp.getCode()) {
-            if (TIMESTAMP_DATA_OUT_OF_RANGE == resp.getCode()){
-                updatePrecision(insertDbName);
-            }
-            throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage(), "P0001", resp.getCode());
+        while (!tag.isEmpty()){
+            tableInfo.getTagInfo().add(tag.poll());
         }
 
-        return resp.getAffected();
+        for (Map.Entry<Integer, Column> entry : column.entrySet()) {
+            Column col = entry.getValue();
+            tableInfo.getDataList().add(new ColumnInfo(entry.getKey(), Collections.singletonList(col.data), col.type));
+        }
+
+        tableInfoList.add(tableInfo);
+
+
+        return executeBatchImpl();
     }
 
     // set sub-table name
-    public void setTableName(String name) throws SQLException {
-        Request request = RequestFactory.generateSetTableName(stmtId, reqId, name);
-        StmtResp resp = (StmtResp) transport.send(request);
-        if (Code.SUCCESS.getCode() != resp.getCode()) {
-            throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
-        }
-    }
+
 
     public void setTagSqlTypeNull(int index, int type) throws SQLException {
         switch (type) {
             case Types.BOOLEAN:
-                tag.put(index, new Column(null, TSDB_DATA_TYPE_BOOL, index));
+                tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_BOOL));
                 break;
             case Types.TINYINT:
-                tag.put(index, new Column(null, TSDB_DATA_TYPE_TINYINT, index));
+                tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_TINYINT));
                 break;
             case Types.SMALLINT:
-                tag.put(index, new Column(null, TSDB_DATA_TYPE_SMALLINT, index));
+                tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_SMALLINT));
                 break;
             case Types.INTEGER:
-                tag.put(index, new Column(null, TSDB_DATA_TYPE_INT, index));
+                tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_INT));
                 break;
             case Types.BIGINT:
-                tag.put(index, new Column(null, TSDB_DATA_TYPE_BIGINT, index));
+                tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_BIGINT));
                 break;
             case Types.FLOAT:
-                tag.put(index, new Column(null, TSDB_DATA_TYPE_FLOAT, index));
+                tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_FLOAT));
                 break;
             case Types.DOUBLE:
-                tag.put(index, new Column(null, TSDB_DATA_TYPE_DOUBLE, index));
+                tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_DOUBLE));
                 break;
             case Types.TIMESTAMP:
-                tag.put(index, new Column(null, TSDB_DATA_TYPE_TIMESTAMP, index));
+                tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_TIMESTAMP));
                 break;
             case Types.BINARY:
             case Types.VARCHAR:
-                tag.put(index, new Column(null, TSDB_DATA_TYPE_BINARY, index));
+                tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_BINARY));
                 break;
             case Types.VARBINARY:
-                tag.put(index, new Column(null, TSDB_DATA_TYPE_VARBINARY, index));
+                tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_VARBINARY));
                 break;
             case Types.NCHAR:
-                tag.put(index, new Column(null, TSDB_DATA_TYPE_NCHAR, index));
+                tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_NCHAR));
                 break;
             // json
             case Types.OTHER:
-                tag.put(index, new Column(null, TSDB_DATA_TYPE_JSON, index));
+                tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_JSON));
                 break;
             default:
                 throw new SQLException("unsupported type: " + type);
         }
     }
 
+    @Override
     public void setTagNull(int index, int type) throws SQLException {
         switch (type) {
             case TSDB_DATA_TYPE_BOOL:
-                tag.put(index, new Column(null, TSDB_DATA_TYPE_BOOL, index));
+                tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_BOOL));
                 break;
             case TSDB_DATA_TYPE_TINYINT:
-                tag.put(index, new Column(null, TSDB_DATA_TYPE_TINYINT, index));
+                tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_TINYINT));
                 break;
             case TSDB_DATA_TYPE_SMALLINT:
-                tag.put(index, new Column(null, TSDB_DATA_TYPE_SMALLINT, index));
+                tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_SMALLINT));
                 break;
             case TSDB_DATA_TYPE_INT:
-                tag.put(index, new Column(null, TSDB_DATA_TYPE_INT, index));
+                tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_INT));
                 break;
             case TSDB_DATA_TYPE_BIGINT:
-                tag.put(index, new Column(null, TSDB_DATA_TYPE_BIGINT, index));
+                tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_BIGINT));
                 break;
             case TSDB_DATA_TYPE_FLOAT:
-                tag.put(index, new Column(null, TSDB_DATA_TYPE_FLOAT, index));
+                tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_FLOAT));
                 break;
             case TSDB_DATA_TYPE_DOUBLE:
-                tag.put(index, new Column(null, TSDB_DATA_TYPE_DOUBLE, index));
+                tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_DOUBLE));
                 break;
             case TSDB_DATA_TYPE_TIMESTAMP:
-                tag.put(index, new Column(null, TSDB_DATA_TYPE_TIMESTAMP, index));
+                tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_TIMESTAMP));
                 break;
             case TSDB_DATA_TYPE_BINARY:
-                tag.put(index, new Column(null, TSDB_DATA_TYPE_BINARY, index));
+                tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_BINARY));
                 break;
             case TSDB_DATA_TYPE_VARBINARY:
-                tag.put(index, new Column(null, TSDB_DATA_TYPE_VARBINARY, index));
+                tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_VARBINARY));
                 break;
             case TSDB_DATA_TYPE_GEOMETRY:
-                tag.put(index, new Column(null, TSDB_DATA_TYPE_GEOMETRY, index));
+                tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_GEOMETRY));
                 break;
             case TSDB_DATA_TYPE_NCHAR:
-                tag.put(index, new Column(null, TSDB_DATA_TYPE_NCHAR, index));
+                tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_NCHAR));
                 break;
             // json
             case TSDB_DATA_TYPE_JSON:
-                tag.put(index, new Column(null, TSDB_DATA_TYPE_JSON, index));
+                tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_JSON));
                 break;
             default:
                 throw new SQLException("unsupported type: " + type);
         }
     }
 
+    @Override
     public void setTagBoolean(int index, boolean value) {
-        tag.put(index, new Column(value, TSDB_DATA_TYPE_BOOL, index));
+        tag.add(new ColumnInfo(index, Collections.singletonList(value), TSDB_DATA_TYPE_BOOL));
     }
 
+    @Override
     public void setTagByte(int index, byte value) {
-        tag.put(index, new Column(value, TSDB_DATA_TYPE_TINYINT, index));
+        tag.add(new ColumnInfo(index, Collections.singletonList(value), TSDB_DATA_TYPE_TINYINT));
     }
 
+    @Override
     public void setTagShort(int index, short value) {
-        tag.put(index, new Column(value, TSDB_DATA_TYPE_SMALLINT, index));
+        tag.add(new ColumnInfo(index, Collections.singletonList(value), TSDB_DATA_TYPE_SMALLINT));
     }
 
+    @Override
     public void setTagInt(int index, int value) {
-        tag.put(index, new Column(value, TSDB_DATA_TYPE_INT, index));
+        tag.add(new ColumnInfo(index, Collections.singletonList(value), TSDB_DATA_TYPE_INT));
     }
 
+    @Override
     public void setTagLong(int index, long value) {
-        tag.put(index, new Column(value, TSDB_DATA_TYPE_BIGINT, index));
+        tag.add(new ColumnInfo(index, Collections.singletonList(value), TSDB_DATA_TYPE_BIGINT));
     }
 
+    @Override
     public void setTagFloat(int index, float value) {
-        tag.put(index, new Column(value, TSDB_DATA_TYPE_FLOAT, index));
+        tag.add(new ColumnInfo(index, Collections.singletonList(value), TSDB_DATA_TYPE_FLOAT));
     }
 
+    @Override
     public void setTagDouble(int index, double value) {
-        tag.put(index, new Column(value, TSDB_DATA_TYPE_DOUBLE, index));
+        tag.add(new ColumnInfo(index, Collections.singletonList(value), TSDB_DATA_TYPE_DOUBLE));
     }
 
+    @Override
     public void setTagTimestamp(int index, long value) {
-        tag.put(index, new Column(new Timestamp(value), TSDB_DATA_TYPE_TIMESTAMP, index));
+        tag.add(new ColumnInfo(index, Collections.singletonList(new Timestamp(value)), TSDB_DATA_TYPE_TIMESTAMP));
     }
 
+    @Override
     public void setTagTimestamp(int index, Timestamp value) {
-        tag.put(index, new Column(value, TSDB_DATA_TYPE_TIMESTAMP, index));
+        tag.add(new ColumnInfo(index, Collections.singletonList(value), TSDB_DATA_TYPE_TIMESTAMP));
     }
 
+    @Override
     public void setTagString(int index, String value) {
         byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
-        tag.put(index, new Column(bytes, TSDB_DATA_TYPE_BINARY, index));
+        tag.add(new ColumnInfo(index, Collections.singletonList(bytes), TSDB_DATA_TYPE_BINARY));
     }
 
+    @Override
     public void setTagVarbinary(int index, byte[] value) {
-        tag.put(index, new Column(value, TSDB_DATA_TYPE_VARBINARY, index));
+        tag.add(new ColumnInfo(index, Collections.singletonList(value), TSDB_DATA_TYPE_VARBINARY));
     }
+    @Override
     public void setTagGeometry(int index, byte[] value) {
-        tag.put(index, new Column(value, TSDB_DATA_TYPE_GEOMETRY, index));
+        tag.add(new ColumnInfo(index, Collections.singletonList(value), TSDB_DATA_TYPE_GEOMETRY));
     }
 
+    @Override
     public void setTagNString(int index, String value) {
-        tag.put(index, new Column(value, TSDB_DATA_TYPE_NCHAR, index));
+        tag.add(new ColumnInfo(index, Collections.singletonList(value), TSDB_DATA_TYPE_NCHAR));
     }
 
+    @Override
     public void setTagJson(int index, String value) {
         byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
-        tag.put(index, new Column(bytes, TSDB_DATA_TYPE_JSON, index));
+        tag.add(new ColumnInfo(index, Collections.singletonList(bytes), TSDB_DATA_TYPE_JSON));
     }
 
     @Override
@@ -579,7 +510,10 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
     public void clearParameters() throws SQLException {
         column.clear();
         tag.clear();
-        data.clear();
+        queue.clear();
+
+        tableInfo = TableInfo.getEmptyTableInfo();
+        tableInfoList.clear();
     }
 
     @Override
@@ -667,11 +601,13 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
 
         List<Object> list = new ArrayList<>();
-        if (!tag.isEmpty()) {
-            tag.keySet().stream().sorted().forEach(i -> {
-                Column col = this.tag.get(i);
-                list.add(col.data);
-            });
+        while (!tag.isEmpty()){
+            ColumnInfo columnInfo = tag.poll();
+            if (columnInfo.getDataList().size() != 1){
+                throw new SQLException("tag size is not equal 1");
+            }
+
+            list.add(columnInfo.getDataList().get(0));
         }
         if (!column.isEmpty()) {
             column.keySet().stream().sorted().forEach(i -> {
@@ -685,83 +621,111 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
         return execute(sql);
     }
 
-    @Override
-    public void addBatch() throws SQLException {
-        List<Column> collect = column.keySet().stream().sorted().map(column::get).collect(Collectors.toList());
-        if (data.isEmpty()) {
-            for (Column col : collect) {
-                data.add(new ColumnInfo(col.index, col.data, col.type));
+    private void bindAllToTableInfo(){
+        for (int index = 0; index < fields.size(); index++) {
+            if (fields.get(index).getBindType() == FeildBindType.TAOS_FIELD_TBNAME.getValue()) {
+                tableInfo.setTableName(column.get(index + 1).data.toString());
+            } else if (fields.get(index).getBindType() == FeildBindType.TAOS_FIELD_TAG.getValue()) {
+                tableInfo.getTagInfo().add(new ColumnInfo(index, Collections.singletonList(column.get(index + 1).data), fields.get(index).getFieldType()));
+            } else if (fields.get(index).getBindType() == FeildBindType.TAOS_FIELD_COL.getValue()) {
+                tableInfo.getDataList().add(new ColumnInfo(index, Collections.singletonList(column.get(index + 1).data), fields.get(index).getFieldType()));
+            }
+        }
+    }
+
+    private void bindColToTableInfo(){
+        for (int index = 0; index < fields.size(); index++) {
+            if (fields.get(index).getBindType() == FeildBindType.TAOS_FIELD_COL.getValue()) {
+                tableInfo.getDataList().add(new ColumnInfo(index, Collections.singletonList(column.get(index + 1).data), fields.get(index).getFieldType()));
+            }
+        }
+    }
+    private void bindAll(){
+        if (toBeBindTableNameIndex >= 0){
+            if (tableInfo.getTableName().isEmpty()) {
+                // first time, bind all
+                bindAllToTableInfo();
+            } else {
+                if (tableInfo.getTableName().equals(column.get(toBeBindTableNameIndex + 1).toString())){
+                    // same table, only bind col
+                    bindColToTableInfo();
+                } else {
+                    // different table, flush tableInfo and create a new one
+                    tableInfoList.add(tableInfo);
+                    tableInfo = TableInfo.getEmptyTableInfo();
+                    bindAllToTableInfo();
+                }
             }
         } else {
-            if (collect.size() != data.size()) {
-                throw new SQLException("batch add column size not match, expected: " + data.size() + ", actual: " + collect.size());
+            // must same table
+            if (toBeBindTagCount > 0 && tableInfo.getTagInfo().isEmpty()){
+                // first time, bind all
+                bindAllToTableInfo();
+            } else {
+                // only bind col
+                bindColToTableInfo();
             }
-
-            for (int i = 0; i < collect.size(); i++) {
-                Column col = collect.get(i);
-                ColumnInfo columnInfo = data.get(i);
-                if (columnInfo.getIndex() != col.index) {
-                    throw new SQLException("batch add column index not match, expected: " + columnInfo.getIndex() + ", actual: " + col.index);
-                }
-                if (columnInfo.getType() != col.type) {
-                    throw new SQLException("batch add column type not match, expected type: " + columnInfo.getType() + ", actual type: " + col.type);
-                }
-                columnInfo.add(col.data);
+        }
+    }
+    private void onlyBindCol() {
+        if (tableInfo.getDataList().isEmpty()){
+            for (Map.Entry<Integer, Column> entry : column.entrySet()) {
+                Column col = entry.getValue();
+                List<Object> list = new ArrayList<>();
+                list.add(col.data);
+                tableInfo.getDataList().add(new ColumnInfo(entry.getKey(), list, col.type));
+            }
+        } else {
+            for (Map.Entry<Integer, Column> entry : column.entrySet()) {
+                Column col = entry.getValue();
+                tableInfo.getDataList().get(col.index - 1).add(col.data);
             }
         }
     }
 
     @Override
+    // Only support batch insert
+    public void addBatch() throws SQLException {
+        if (column.size() == toBeBindColCount){
+            if (toBeBindTableNameIndex < 0 && toBeBindTagCount == 0) {
+                onlyBindCol();
+            } else {
+                if (toBeBindTableNameIndex >= 0 && tableInfo.getTableName().isEmpty()){
+                    throw new SQLException("table name is empty");
+                }
+                if (tableInfo.getTagInfo().size()!= toBeBindTagCount){
+                    throw new SQLException("tag size not match, expected: " + toBeBindTagCount + ", actual: " + tableInfo.getTagInfo().size());
+                }
+                onlyBindCol();
+            }
+            return;
+        }
+
+        if (column.size() == fields.size()){
+            // bind all
+            bindAll();
+            return;
+        }
+        throw new SQLException("column size not match, expected: " + fields.size() + ", actual: " + column.size());
+    }
+
+    private boolean isTableInfoBinded(){
+        if (StringUtils.isEmpty(tableInfo.getTableName()) && tableInfo.getTagInfo().isEmpty() && tableInfo.getDataList().isEmpty()){
+            return false;
+        }
+        return true;
+    }
+    @Override
     public int[] executeBatch() throws SQLException {
         if (column.isEmpty())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_BATCH_IS_EMPTY);
 
-        //set tag
-        if (!tag.isEmpty()) {
-            List<ColumnInfo> collect = tag.keySet().stream().sorted().map(i -> {
-                Column col = this.tag.get(i);
-                return new ColumnInfo(i, col.data, col.type);
-            }).collect(Collectors.toList());
-            byte[] tagBlock;
-            try {
-                tagBlock = SerializeBlock.getRawBlock(collect, precision);
-            } catch (IOException e) {
-                throw new SQLException("data serialize error!", e);
-            }
-            StmtResp bindResp = (StmtResp) transport.send(Action.SET_TAGS.getAction(),
-                    reqId, stmtId, BindType.TAG.get(), tagBlock);
-            if (Code.SUCCESS.getCode() != bindResp.getCode()) {
-                throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
-            }
-        }
-        // bind
-        byte[] rawBlock;
-        try {
-            rawBlock = SerializeBlock.getRawBlock(data, precision);
-        } catch (IOException e) {
-            throw new SQLException("data serialize error!", e);
-        }
-        StmtResp bindResp = (StmtResp) transport.send(Action.BIND.getAction(),
-                reqId, stmtId, BindType.BIND.get(), rawBlock);
-        if (Code.SUCCESS.getCode() != bindResp.getCode()) {
-            throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
-        }
-        // add batch
-        Request batch = RequestFactory.generateBatch(stmtId, reqId);
-        Response send = transport.send(batch);
-        StmtResp batchResp = (StmtResp) send;
-        if (Code.SUCCESS.getCode() != batchResp.getCode()) {
-            throw new SQLException("(0x" + Integer.toHexString(batchResp.getCode()) + "):" + batchResp.getMessage());
+        if (isTableInfoBinded()){
+            tableInfoList.add(tableInfo);
         }
 
-        this.clearParameters();
-        // send
-        Request request = RequestFactory.generateExec(stmtId, reqId);
-        ExecResp resp = (ExecResp) transport.send(request);
-        if (Code.SUCCESS.getCode() != resp.getCode()) {
-            throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
-        }
-        int[] ints = new int[resp.getAffected()];
+        int affected = executeBatchImpl();
+        int[] ints = new int[affected];
         for (int i = 0, len = ints.length; i < len; i++)
             ints[i] = SUCCESS_NO_INFO;
         return ints;
@@ -786,11 +750,13 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
         if (isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
         List<Object> list = new ArrayList<>();
-        if (!tag.isEmpty()) {
-            tag.keySet().stream().sorted().forEach(i -> {
-                Column col = this.tag.get(i);
-                list.add(col.data);
-            });
+        while (!tag.isEmpty()){
+            ColumnInfo columnInfo = tag.poll();
+            if (columnInfo.getDataList().size() != 1){
+                throw new SQLException("tag size is not equal 1");
+            }
+
+            list.add(columnInfo.getDataList().get(0));
         }
         if (!column.isEmpty()) {
             column.keySet().stream().sorted().forEach(i -> {
@@ -964,14 +930,17 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
         }
     }
 
+    @Override
     public void setInt(int columnIndex, List<Integer> list) throws SQLException {
         setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_INT, Integer.BYTES);
     }
 
+    @Override
     public void setFloat(int columnIndex, List<Float> list) throws SQLException {
         setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_FLOAT, Float.BYTES);
     }
 
+    @Override
     public void setTimestamp(int columnIndex, List<Long> list) throws SQLException {
         List<Timestamp> collect = list.stream().map(x -> {
             if (x == null) {
@@ -982,10 +951,12 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
         setValueImpl(columnIndex, collect, TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP, Long.BYTES);
     }
 
+    @Override
     public void setLong(int columnIndex, List<Long> list) throws SQLException {
         setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_BIGINT, Long.BYTES);
     }
 
+    @Override
     public void setDouble(int columnIndex, List<Double> list) throws SQLException {
         setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_DOUBLE, Double.BYTES);
     }
@@ -994,14 +965,17 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
         setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_BOOL, Byte.BYTES);
     }
 
+    @Override
     public void setByte(int columnIndex, List<Byte> list) throws SQLException {
         setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_TINYINT, Byte.BYTES);
     }
 
+    @Override
     public void setShort(int columnIndex, List<Short> list) throws SQLException {
         setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_SMALLINT, Short.BYTES);
     }
 
+    @Override
     public void setString(int columnIndex, List<String> list, int size) throws SQLException {
         List<byte[]> collect = list.stream().map(x -> {
             if (x == null) {
@@ -1011,14 +985,16 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
         }).collect(Collectors.toList());
         setValueImpl(columnIndex, collect, TSDBConstants.TSDB_DATA_TYPE_BINARY, size);
     }
-
+    @Override
     public void setVarbinary(int columnIndex, List<byte[]> list, int size) throws SQLException {
         setValueImpl(columnIndex, list, TSDB_DATA_TYPE_VARBINARY, size);
     }
+    @Override
     public void setGeometry(int columnIndex, List<byte[]> list, int size) throws SQLException {
         setValueImpl(columnIndex, list, TSDB_DATA_TYPE_GEOMETRY, size);
     }
     // note: expand the required space for each NChar character
+    @Override
     public void setNString(int columnIndex, List<String> list, int size) throws SQLException {
         setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_NCHAR, size * Integer.BYTES);
     }
@@ -1027,65 +1003,72 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
         List<Object> listObject = list.stream()
                 .map(Object.class::cast)
                 .collect(Collectors.toList());
-        ColumnInfo p = new ColumnInfo(columnIndex, listObject, type, null);
+        ColumnInfo p = new ColumnInfo(columnIndex, listObject, type);
         queue.add(p);
     }
 
+    @Override
     public void columnDataAddBatch() throws SQLException {
-        while (!queue.isEmpty()) {
-            data.add(queue.poll());
+        while (!tag.isEmpty()){
+            tableInfo.getTagInfo().add(tag.poll());
         }
+        while (!queue.isEmpty()) {
+            tableInfo.getDataList().add(queue.poll());
+        }
+        tableInfoList.add(tableInfo);
+        tableInfo = TableInfo.getEmptyTableInfo();
     }
 
-    public void columnDataExecuteBatch() throws SQLException {
-        //set tag
-        if (!tag.isEmpty()) {
-            List<ColumnInfo> collect = tag.keySet().stream().sorted().map(i -> {
-                Column col = this.tag.get(i);
-                return new ColumnInfo(i, col.data, col.type);
-            }).collect(Collectors.toList());
-            byte[] tagBlock;
-            try {
-                tagBlock = SerializeBlock.getRawBlock(collect, precision);
-            } catch (IOException e) {
-                throw new SQLException("data serialize error!", e);
-            }
-            StmtResp bindResp = (StmtResp) transport.send(Action.SET_TAGS.getAction(),
-                    reqId, stmtId, BindType.TAG.get(), tagBlock);
-            if (Code.SUCCESS.getCode() != bindResp.getCode()) {
-                throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
-            }
+
+    private int executeBatchImpl() throws SQLException {
+        if (tableInfoList.isEmpty()) {
+            throw new SQLException("batch data is empty");
         }
-        // bind
+
         byte[] rawBlock;
         try {
-            rawBlock = SerializeBlock.getRawBlock(data, precision);
+            rawBlock = SerializeBlock.getStmt2BindBlock(reqId, stmtId, tableInfoList, toBeBindTableNameIndex, toBeBindTagCount, toBeBindColCount, precision);
         } catch (IOException e) {
             throw new SQLException("data serialize error!", e);
         }
-        StmtResp bindResp = (StmtResp) transport.send(Action.BIND.getAction(),
-                reqId, stmtId, BindType.BIND.get(), rawBlock);
+        Stmt2Resp bindResp = (Stmt2Resp) transport.send(Action.STMT2_BIND.getAction(),
+                reqId, rawBlock);
         if (Code.SUCCESS.getCode() != bindResp.getCode()) {
             throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
-        }
-        // add batch
-        Request batch = RequestFactory.generateBatch(stmtId, reqId);
-        Response send = transport.send(batch);
-        StmtResp batchResp = (StmtResp) send;
-        if (Code.SUCCESS.getCode() != batchResp.getCode()) {
-            throw new SQLException("(0x" + Integer.toHexString(batchResp.getCode()) + "):" + batchResp.getMessage());
         }
 
         this.clearParameters();
         // send
         Request request = RequestFactory.generateExec(stmtId, reqId);
-        ExecResp resp = (ExecResp) transport.send(request);
+        Stmt2ExecResp resp = (Stmt2ExecResp) transport.send(request);
         if (Code.SUCCESS.getCode() != resp.getCode()) {
             throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
         }
+
+        return resp.getAffected();
+    }
+    @Override
+    public void columnDataExecuteBatch() throws SQLException {
+        executeBatchImpl();
     }
 
     public void columnDataCloseBatch() throws SQLException {
         this.close();
     }
+
+
+
+
+    @Override
+    public void setTableName(String name) throws SQLException {
+        this.tableInfo.setTableName(name);
+    }
+
+    private void ensureTagCapacity(int index) {
+        if (this.tableInfo.getTagInfo().size() < index + 1) {
+            int delta = index + 1 - this.tableInfo.getTagInfo().size();
+            this.tableInfo.getTagInfo().addAll(Collections.nCopies(delta, null));
+        }
+    }
+
 }

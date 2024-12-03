@@ -74,6 +74,7 @@ public abstract class AbstractDriver implements Driver {
 
         transport.setTextMessageHandler(message -> {
             try {
+                System.out.println("message = " + message);
                 JsonNode jsonObject = JsonUtil.getObjectReader().readTree(message);
                 Action action = Action.of(jsonObject.get("action").asText());
                 ObjectReader actionReader = JsonUtil.getObjectReader(action.getResponseClazz());
