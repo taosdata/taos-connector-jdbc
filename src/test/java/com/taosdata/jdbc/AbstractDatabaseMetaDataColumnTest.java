@@ -77,7 +77,6 @@ public class AbstractDatabaseMetaDataColumnTest {
     }
 
     @Test
-    @Ignore
     public void getColumnsCatalog() throws SQLException {
         ResultSet columns = metaData.getColumns("information_schema", null, null, null);
         Set<String> dbs = new HashSet<>();
@@ -144,7 +143,6 @@ public class AbstractDatabaseMetaDataColumnTest {
     }
 
     @Test
-    @Ignore
     public void getColumnsCatalogColumn() throws SQLException {
         ResultSet columns = metaData.getColumns("information_schema", null, null, "stable_name");
         Set<String> dbs = new HashSet<>();
@@ -206,6 +204,10 @@ public class AbstractDatabaseMetaDataColumnTest {
             stmt.execute("create database if not exists test");
             stmt.execute("use test");
             stmt.execute("CREATE STABLE meters(ts timestamp,current float,voltage int,phase float) TAGS (location varchar(64),group_id int);");
+            stmt.execute("INSERT INTO d1001 USING meters TAGS (\"California.SanFrancisco\", 2) VALUES \n" +
+                    "    (\"2018-10-03 14:38:05\", 10.2, 220, 0.23),\n" +
+                    "    (\"2018-10-03 14:38:15\", 12.6, 218, 0.33),\n" +
+                    "    (\"2018-10-03 14:38:25\", 12.3, 221, 0.31) \n");
         }
     }
 
