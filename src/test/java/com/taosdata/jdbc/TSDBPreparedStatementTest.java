@@ -3,9 +3,12 @@ package com.taosdata.jdbc;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.*;
 
+import java.io.ByteArrayInputStream;
+import java.io.StringReader;
 import java.math.BigDecimal;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Properties;
 import java.util.Random;
 
@@ -1164,36 +1167,112 @@ public class TSDBPreparedStatementTest {
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
-    public void setRowId() throws SQLException {
+    public void testSetRowId() throws SQLException {
         pstmt_insert.setRowId(1, null);
     }
     @Test
-    public void setNString() throws SQLException {
+    public void testSetNString() throws SQLException {
         setString();
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
-    public void setNCharacterStream() throws SQLException {
+    public void testSetNCharacterStream() throws SQLException {
         pstmt_insert.setNCharacterStream(1, null);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
-    public void setNClob() throws SQLException {
+    public void testSetNClob() throws SQLException {
         pstmt_insert.setNClob(1, (NClob) null);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
-    public void setSQLXML() throws SQLException {
+    public void testSetSQLXML() throws SQLException {
         pstmt_insert.setSQLXML(1, null);
     }
 
+    @Test(expected = SQLFeatureNotSupportedException.class)
+    public void testSetAsciiStream() throws SQLException {
+        pstmt_insert.setAsciiStream(1, null, 0);
+    }
 
-//    @Test(expected = SQLFeatureNotSupportedException.class)
-//    public void setRowId() throws SQLException {
-//        pstmt_insert.setRowId(1, null);
-//    }
+    @Test(expected = SQLFeatureNotSupportedException.class)
+    public void testSetUnicodeStream() throws SQLException {
+        pstmt_insert.setUnicodeStream(1, null, 0);
+    }
+    @Test(expected = SQLFeatureNotSupportedException.class)
+    public void testSetBinaryStream() throws SQLException {
+        pstmt_insert.setBinaryStream(1, null, 0);
+    }
 
+    @Test
+    public void testClearParameters() throws SQLException {
+        pstmt_insert.clearParameters();
+    }
 
+    @Test
+    public void testSetObject() throws SQLException {
+        pstmt_insert.setObject(1, null, 1);
+    }
+
+    @Test(expected = SQLFeatureNotSupportedException.class)
+    public void testSetDate() throws SQLException {
+        pstmt_insert.setDate(1, new Date(System.currentTimeMillis()), Calendar.getInstance());
+    }
+
+    @Test(expected = SQLFeatureNotSupportedException.class)
+    public void testSetTime() throws SQLException {
+        pstmt_insert.setTime(1, new Time(System.currentTimeMillis()), Calendar.getInstance());
+    }
+
+    @Test(expected = SQLFeatureNotSupportedException.class)
+    public void testSetTimestamp() throws SQLException {
+        pstmt_insert.setTimestamp(1, new Timestamp(System.currentTimeMillis()), Calendar.getInstance());
+    }
+
+    @Test(expected = SQLFeatureNotSupportedException.class)
+    public void testSetNull() throws SQLException {
+        pstmt_insert.setNull(1, Types.NULL, null);
+    }
+
+    @Test(expected = SQLFeatureNotSupportedException.class)
+    public void testSetClobWithReaderAndLength() throws SQLException {
+        pstmt_insert.setClob(1, new StringReader("test"), 4);
+    }
+
+    @Test(expected = SQLFeatureNotSupportedException.class)
+    public void testSetBlobWithInputStreamAndLength() throws SQLException {
+        pstmt_insert.setBlob(1, new ByteArrayInputStream(new byte[]{1, 2, 3}), 3);
+    }
+
+    @Test(expected = SQLFeatureNotSupportedException.class)
+    public void testSetNClobWithReaderAndLength() throws SQLException {
+        pstmt_insert.setNClob(1, new StringReader("test"), 4);
+    }
+
+    @Test(expected = SQLFeatureNotSupportedException.class)
+    public void testSetObjectWithTargetSqlType() throws SQLException {
+        pstmt_insert.setObject(1, new Object(), Types.OTHER, 0);
+    }
+
+    @Test(expected = SQLFeatureNotSupportedException.class)
+    public void testSetCharacterStream() throws SQLException {
+        pstmt_insert.setCharacterStream(1, new StringReader("test"), 4);
+    }
+
+    @Test(expected = SQLFeatureNotSupportedException.class)
+    public void testSetClobWithReader() throws SQLException {
+        pstmt_insert.setClob(1, new StringReader("test"));
+    }
+
+    @Test(expected = SQLFeatureNotSupportedException.class)
+    public void testSetBlobWithInputStream() throws SQLException {
+        pstmt_insert.setBlob(1, new ByteArrayInputStream(new byte[]{1, 2, 3}));
+    }
+
+    @Test(expected = SQLFeatureNotSupportedException.class)
+    public void testSetNClobWithReader() throws SQLException {
+        pstmt_insert.setNClob(1, new StringReader("test"));
+    }
 
     @Before
     public void before() {
