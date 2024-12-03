@@ -34,7 +34,7 @@ public class Utils {
 
     public static Date parseDate(String timestampStr) {
         LocalDateTime dateTime = parseLocalDateTime(timestampStr);
-        return dateTime != null ? Date.valueOf(String.valueOf(dateTime)) : null;
+        return dateTime != null ? Date.valueOf(dateTime.toLocalDate()) : null;
     }
 
     public static Timestamp parseTimestamp(String timeStampStr) {

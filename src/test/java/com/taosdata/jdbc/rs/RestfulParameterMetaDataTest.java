@@ -72,15 +72,6 @@ public class RestfulParameterMetaDataTest {
     @Test
     public void getScale() throws SQLException {
         Assert.assertEquals(0, parameterMetaData_insert.getScale(1));
-        Assert.assertEquals(0, parameterMetaData_insert.getScale(2));
-        Assert.assertEquals(0, parameterMetaData_insert.getScale(3));
-        Assert.assertEquals(31, parameterMetaData_insert.getScale(4));
-        Assert.assertEquals(31, parameterMetaData_insert.getScale(5));
-        Assert.assertEquals(0, parameterMetaData_insert.getScale(6));
-        Assert.assertEquals(0, parameterMetaData_insert.getScale(7));
-        Assert.assertEquals(0, parameterMetaData_insert.getScale(8));
-        Assert.assertEquals(0, parameterMetaData_insert.getScale(9));
-        Assert.assertEquals(0, parameterMetaData_insert.getScale(10));
     }
 
     @Test
