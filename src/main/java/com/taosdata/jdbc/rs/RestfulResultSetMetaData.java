@@ -2,6 +2,7 @@ package com.taosdata.jdbc.rs;
 
 import com.taosdata.jdbc.WrapperImpl;
 import com.taosdata.jdbc.enums.DataType;
+import com.taosdata.jdbc.utils.DataTypeUtil;
 
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -117,15 +118,7 @@ public class RestfulResultSetMetaData extends WrapperImpl implements ResultSetMe
 
     @Override
     public int getScale(int column) throws SQLException {
-        int type = this.fields.get(column - 1).type;
-        switch (type) {
-            case Types.FLOAT:
-                return 5;
-            case Types.DOUBLE:
-                return 9;
-            default:
-                return 0;
-        }
+        return 0;
     }
 
     @Override
@@ -167,29 +160,7 @@ public class RestfulResultSetMetaData extends WrapperImpl implements ResultSetMe
     @Override
     public String getColumnClassName(int column) throws SQLException {
         int type = this.fields.get(column - 1).type;
-        String columnClassName = "";
-        switch (type) {
-            case Types.BOOLEAN:
-                return Boolean.class.getName();
-            case Types.TINYINT:
-            case Types.SMALLINT:
-                return Short.class.getName();
-            case Types.INTEGER:
-                return Integer.class.getName();
-            case Types.BIGINT:
-                return Long.class.getName();
-            case Types.FLOAT:
-                return Float.class.getName();
-            case Types.DOUBLE:
-                return Double.class.getName();
-            case Types.TIMESTAMP:
-                return Timestamp.class.getName();
-            case Types.BINARY:
-            case Types.NCHAR:
-            case Types.VARCHAR:
-                return String.class.getName();
-        }
-        return columnClassName;
+        return DataTypeUtil.getColumnClassName(type);
     }
 
 }
