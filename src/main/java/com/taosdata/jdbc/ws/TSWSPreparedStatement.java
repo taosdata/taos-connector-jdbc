@@ -93,26 +93,11 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
                     toBeBindColCount++;
                 }
             }
-        } else if (!isInsert && prepareResp.getFieldsCount() > 0){
+        } else if (prepareResp.getFieldsCount() > 0){
             toBeBindColCount = prepareResp.getFieldsCount();
-        } else {
-            return;
         }
 
         this.tableInfo = TableInfo.getEmptyTableInfo();
-
-        // now we know the number of fields, we can prepare the cache data
-        if (prepareResp.isInsert()){
-//            for (int i = 0; i < toBeBindColCount; i++){
-//                if (prepareResp.getFields().get(i).getType() == TSDB_DATA_TYPE_UNKNOWN){
-//                    column.put(i, new Column(null, TSDB_DATA_TYPE_UNKNOWN, i));
-//                }
-//                column.put(i, new Column(null, TSDB_DATA_TYPE_UNKNOWN, i));
-//            }
-
-        } else {
-
-        }
     }
 
     @Override
@@ -138,49 +123,46 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
 
     @Override
     public ResultSet executeQuery() throws SQLException {
-        List<Object> list = new ArrayList<>();
-
-        while (!tag.isEmpty()){
-            ColumnInfo columnInfo = tag.poll();
-            if (columnInfo.getDataList().size() != 1){
-                throw new SQLException("tag size is not equal 1");
-            }
-
-            list.add(columnInfo.getDataList().get(0));
+        if (this.isInsert){
+            throw new SQLException("The query SQL must be prepared.");
         }
 
-        if (!column.isEmpty()) {
-            column.keySet().stream().sorted().forEach(i -> {
-                Column col = this.column.get(i);
-                list.add(col.data);
-            });
+        if (isTableInfoEmpty()){
+            return executeQuery(this.rawSql);
         }
-        Object[] parameters = list.toArray(new Object[0]);
-        this.clearParameters();
 
-        final String sql = Utils.getNativeSql(this.rawSql, parameters);
-        return executeQuery(sql);
+        if (!StringUtils.isEmpty(tableInfo.getTableName())
+        || !tableInfo.getTagInfo().isEmpty()){
+            throw new SQLException("only support bind columns.");
+        }
+
+        this.executeBatchImpl();
+
+        Request request = RequestFactory.generateUseResult(stmtId, reqId);
+        ResultResp resp = (ResultResp) transport.send(request);
+        if (Code.SUCCESS.getCode() != resp.getCode()) {
+            throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
+        }
+
+        this.resultSet = new BlockResultSet(this, this.transport, resp, this.database);
+        this.affectedRows = -1;
+        return this.resultSet;
     }
 
     @Override
     public int executeUpdate() throws SQLException {
+
+        if (fields.isEmpty()){
+            return this.executeUpdate(this.rawSql);
+        }
+
         if (column.isEmpty())
             throw new SQLException("no parameter to execute");
-        if (!tableInfo.getDataList().isEmpty() || !tableInfo.getTagInfo().isEmpty())
+
+        if (!isTableInfoEmpty())
             throw TSDBError.undeterminedExecutionError();
 
-        while (!tag.isEmpty()){
-            tableInfo.getTagInfo().add(tag.poll());
-        }
-
-        for (Map.Entry<Integer, Column> entry : column.entrySet()) {
-            Column col = entry.getValue();
-            tableInfo.getDataList().add(new ColumnInfo(entry.getKey(), Collections.singletonList(col.data), col.type));
-        }
-
-        tableInfoList.add(tableInfo);
-
-
+        bindAll();
         return executeBatchImpl();
     }
 
@@ -709,18 +691,17 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
         throw new SQLException("column size not match, expected: " + fields.size() + ", actual: " + column.size());
     }
 
-    private boolean isTableInfoBinded(){
-        if (StringUtils.isEmpty(tableInfo.getTableName()) && tableInfo.getTagInfo().isEmpty() && tableInfo.getDataList().isEmpty()){
-            return false;
-        }
-        return true;
+    private boolean isTableInfoEmpty(){
+        return !StringUtils.isEmpty(tableInfo.getTableName())
+                || !tableInfo.getTagInfo().isEmpty()
+                || !tableInfo.getDataList().isEmpty();
     }
     @Override
     public int[] executeBatch() throws SQLException {
         if (column.isEmpty())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_BATCH_IS_EMPTY);
 
-        if (isTableInfoBinded()){
+        if (isTableInfoEmpty()){
             tableInfoList.add(tableInfo);
         }
 
@@ -736,6 +717,10 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
         super.close();
         Request close = RequestFactory.generateClose(stmtId, reqId);
         transport.sendWithoutResponse(close);
+        Stmt2Resp resp = (Stmt2Resp) transport.send(close);
+        if (Code.SUCCESS.getCode() != resp.getCode()) {
+            throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
+        }
     }
 
     @Override
@@ -1055,9 +1040,6 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
     public void columnDataCloseBatch() throws SQLException {
         this.close();
     }
-
-
-
 
     @Override
     public void setTableName(String name) throws SQLException {

@@ -28,14 +28,6 @@ public class RequestFactory {
         return new Request(Action.STMT2_PREPARE.getAction(), prepareReq);
     }
 
-    public static Request generateBind(long stmtId, long reqId, Object[][] columns) {
-        BindReq req = new BindReq();
-        req.setReqId(reqId);
-        req.setStmtId(stmtId);
-        req.setColumns(columns);
-        return new Request(Action.STMT2_BIND.getAction(), req);
-    }
-
     public static Request generateExec(long stmtId, long reqId) {
         ExecReq req = new ExecReq();
         req.setReqId(reqId);
@@ -48,5 +40,10 @@ public class RequestFactory {
         req.setStmtId(stmtId);
         return new Request(Action.STMT2_CLOSE.getAction(), req);
     }
-
+    public static Request generateUseResult(long stmtId, long reqId) {
+        ResultReq req = new ResultReq();
+        req.setReqId(reqId);
+        req.setStmtId(stmtId);
+        return new Request(Action.STMT2_USE_RESULT.getAction(), req);
+    }
 }
