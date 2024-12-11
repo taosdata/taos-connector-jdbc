@@ -15,6 +15,7 @@
 package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.enums.DataType;
+import com.taosdata.jdbc.utils.DataTypeUtil;
 
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -137,15 +138,7 @@ public class TSDBResultSetMetaData extends WrapperImpl implements ResultSetMetaD
         if (column < 1 && column >= colMetaDataList.size())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_PARAMETER_INDEX_OUT_RANGE);
 
-        ColumnMetaData meta = this.colMetaDataList.get(column - 1);
-        switch (meta.getColType()) {
-            case TSDBConstants.TSDB_DATA_TYPE_FLOAT:
-                return 5;
-            case TSDBConstants.TSDB_DATA_TYPE_DOUBLE:
-                return 9;
-            default:
-                return 0;
-        }
+        return 0;
     }
 
     public String getTableName(int column) throws SQLException {
@@ -180,36 +173,6 @@ public class TSDBResultSetMetaData extends WrapperImpl implements ResultSetMetaD
 
     public String getColumnClassName(int column) throws SQLException {
         int columnType = getColumnType(column);
-        String columnClassName = "";
-        switch (columnType) {
-            case Types.TIMESTAMP:
-                columnClassName = Timestamp.class.getName();
-                break;
-            case Types.CHAR:
-                columnClassName = String.class.getName();
-                break;
-            case Types.DOUBLE:
-                columnClassName = Double.class.getName();
-                break;
-            case Types.FLOAT:
-                columnClassName = Float.class.getName();
-                break;
-            case Types.BIGINT:
-                columnClassName = Long.class.getName();
-                break;
-            case Types.INTEGER:
-                columnClassName = Integer.class.getName();
-                break;
-            case Types.SMALLINT:
-                columnClassName = Short.class.getName();
-                break;
-            case Types.TINYINT:
-                columnClassName = Byte.class.getName();
-                break;
-            case Types.BIT:
-                columnClassName = Boolean.class.getName();
-                break;
-        }
-        return columnClassName;
+        return DataTypeUtil.getColumnClassName(columnType);
     }
 }

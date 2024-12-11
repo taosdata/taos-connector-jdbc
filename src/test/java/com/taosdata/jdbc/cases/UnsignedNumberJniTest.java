@@ -82,7 +82,7 @@ public class UnsignedNumberJniTest {
                 Assert.assertEquals(32767, rs.getShort(3));
                 Assert.assertEquals("4294967294", rs.getString(4));
                 Assert.assertEquals("18446744073709551614", rs.getString(5));
-                rs.getInt(4);
+                rs.getInt(3);
             }
         }
     }
