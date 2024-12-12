@@ -1,8 +1,9 @@
 package com.taosdata.jdbc.ws.entity;
 
-import com.taosdata.jdbc.ws.stmt.entity.ExecResp;
-import com.taosdata.jdbc.ws.stmt.entity.GetColFieldsResp;
-import com.taosdata.jdbc.ws.stmt.entity.StmtResp;
+import com.taosdata.jdbc.ws.stmt2.entity.ResultResp;
+import com.taosdata.jdbc.ws.stmt2.entity.Stmt2ExecResp;
+import com.taosdata.jdbc.ws.stmt2.entity.Stmt2PrepareResp;
+import com.taosdata.jdbc.ws.stmt2.entity.Stmt2Resp;
 import com.taosdata.jdbc.ws.tmq.entity.FetchRawBlockResp;
 
 import java.util.HashMap;
@@ -22,18 +23,14 @@ public enum Action {
     // free_result's class is meaningless
     FREE_RESULT("free_result", Response.class),
 
-    // stmt
-    INIT("init", StmtResp.class),
-    PREPARE("prepare", StmtResp.class),
-    SET_TABLE_NAME("set_table_name", StmtResp.class),
-    SET_TAGS("set_tags", StmtResp.class),
-    BIND("bind", StmtResp.class),
-    ADD_BATCH("add_batch", StmtResp.class),
-    EXEC("exec", ExecResp.class),
+    // stmt2
+    STMT2_INIT("stmt2_init", Stmt2Resp.class),
+    STMT2_PREPARE("stmt2_prepare", Stmt2PrepareResp.class),
+    STMT2_BIND("stmt2_bind", Stmt2Resp.class),
+    STMT2_EXEC("stmt2_exec", Stmt2ExecResp.class),
     // response means nothing
-    GET_COL_FIELDS("get_col_fields", GetColFieldsResp.class),
-
-    CLOSE("close", StmtResp.class),
+    STMT2_CLOSE("stmt2_close", Stmt2Resp.class),
+    STMT2_USE_RESULT("stmt2_result", ResultResp.class),
 
     //schemaless
     INSERT("insert", CommonResp.class),

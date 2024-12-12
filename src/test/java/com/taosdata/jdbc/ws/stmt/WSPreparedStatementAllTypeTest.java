@@ -1,12 +1,14 @@
-package com.taosdata.jdbc.ws;
+package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.ws.TSWSPreparedStatement;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.sql.*;
+import java.util.Collections;
 import java.util.Properties;
 
 public class WSPreparedStatementAllTypeTest {
@@ -75,9 +77,11 @@ public class WSPreparedStatementAllTypeTest {
         statement.setTagNString(9, "世界");
         statement.setTagString(10, "hello world");
 
-        statement.setTimestamp(1, new Timestamp(current));
-        statement.setByte(2, (byte) 2);
-        statement.executeUpdate();
+
+        statement.setTimestamp(0, Collections.singletonList(current));
+        statement.setByte(1, Collections.singletonList((byte) 2));
+        statement.columnDataAddBatch();
+        statement.columnDataExecuteBatch();
 
         ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + stableName);
         resultSet.next();

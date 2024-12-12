@@ -1,12 +1,13 @@
 package com.taosdata.jdbc.ws;
 
-import com.taosdata.jdbc.*;
-import com.taosdata.jdbc.enums.BindType;
+import com.taosdata.jdbc.AbstractResultSet;
+import com.taosdata.jdbc.BlockData;
+import com.taosdata.jdbc.TSDBError;
+import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.enums.DataType;
 import com.taosdata.jdbc.rs.RestfulResultSet;
 import com.taosdata.jdbc.rs.RestfulResultSetMetaData;
 import com.taosdata.jdbc.ws.entity.*;
-import com.taosdata.jdbc.ws.stmt.entity.StmtResp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

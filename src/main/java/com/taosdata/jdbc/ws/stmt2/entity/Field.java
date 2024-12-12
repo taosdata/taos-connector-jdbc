@@ -1,13 +1,17 @@
-package com.taosdata.jdbc.ws.stmt.entity;
+package com.taosdata.jdbc.ws.stmt2.entity;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class Field {
     private String name;
-    private byte field_type;
+    @JsonProperty("field_type")
+    private byte fieldType;
     private byte precision;
     private byte scale;
     private int bytes;
 
-    // getters and setters
+    @JsonProperty("bind_type")
+    private byte bindType;
     public String getName() {
         return name;
     }
@@ -17,11 +21,11 @@ public class Field {
     }
 
     public byte getFieldType() {
-        return field_type;
+        return fieldType;
     }
 
-    public void setFieldType(byte field_type) {
-        this.field_type = field_type;
+    public void setFieldType(byte fieldType) {
+        this.fieldType = fieldType;
     }
 
     public byte getPrecision() {
@@ -46,5 +50,13 @@ public class Field {
 
     public void setBytes(int bytes) {
         this.bytes = bytes;
+    }
+
+    public byte getBindType() {
+        return bindType;
+    }
+
+    public void setBindType(byte bindType) {
+        this.bindType = bindType;
     }
 }

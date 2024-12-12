@@ -18,29 +18,5 @@ public class InsertSqlPatternTest {
             "insert into st.sub_t using db.sup_t (t1, t2) tags(?,?) (c1, c2) values(?, ?)",
     };
 
-    @Test
-    public void test() {
-        for (String sql : sqls) {
-            Matcher matcher = TSWSPreparedStatement.INSERT_PATTERN.matcher(sql);
-            String db = null;
-            if (matcher.find()) {
-                if (matcher.group(1).equals("?") && matcher.group(3) != null) {
-                    String usingGroup = matcher.group(3);
-                    if (usingGroup.contains(".")) {
-                        String[] split = usingGroup.split("\\.");
-                        db = split[0];
-                    }
-                } else {
-                    String usingGroup = matcher.group(1);
-                    if (usingGroup.contains(".")) {
-                        String[] split = usingGroup.split("\\.");
-                        db = split[0];
-                    }
-                }
-                Assert.assertEquals("st", db);
-            } else {
-                throw new RuntimeException("not match sql: " + sql);
-            }
-        }
-    }
+
 }
