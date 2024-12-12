@@ -177,11 +177,12 @@ public class SerializeBlock {
                 offset += Integer.BYTES;
 
                 for (Object o: objectList){
-                    short v = 0;
                     if (o != null) {
-                        v = (Short) o;
+                        SerializeShort(buf, offset, (Short) o);
+                    } else {
+                        SerializeShort(buf, offset, (short)0);
                     }
-                    SerializeShort(buf, offset, v);
+
                     offset += Short.BYTES;
                 }
                 break;
@@ -191,11 +192,11 @@ public class SerializeBlock {
                 offset += Integer.BYTES;
 
                 for (Object o: objectList){
-                    int v = 0;
                     if (o != null) {
-                        v = (Integer) o;
+                        SerializeInt(buf, offset, (Integer) o);
+                    } else {
+                        SerializeInt(buf, offset, 0);
                     }
-                    SerializeInt(buf, offset, v);
                     offset += Integer.BYTES;
                 }
                 break;
@@ -205,11 +206,11 @@ public class SerializeBlock {
                 offset += Integer.BYTES;
 
                 for (Object o: objectList){
-                    long v = 0;
                     if (o != null) {
-                        v = (Long) o;
+                        SerializeLong(buf, offset, (Long)o);
+                    } else {
+                        SerializeLong(buf, offset, 0L);
                     }
-                    SerializeLong(buf, offset, v);
                     offset += Long.BYTES;
                 }
                break;
