@@ -1,6 +1,7 @@
-package com.taosdata.jdbc.ws;
+package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.ws.TSWSPreparedStatement;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -9,7 +10,7 @@ import org.junit.Test;
 import java.sql.*;
 import java.util.Properties;
 
-public class TaosPrepareStatementTest {
+public class WSPrepareStatementTest2 {
     String host = "127.0.0.1";
     String db_name = "ws_prepare_taos";
     String superTable = "wpt_st";
@@ -90,7 +91,7 @@ public class TaosPrepareStatementTest {
                 "                    \"t10\": \"2021-01-01 00:00:00.000\",\n" +
                 "                    \"t11\": \"taosdata\"\n" +
                 "                }"; // json string
-        statement.setTagJson(1, tagJson);
+        statement.setTagJson(0, tagJson);
         statement.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
         statement.setInt(2, 100);
         statement.executeUpdate();

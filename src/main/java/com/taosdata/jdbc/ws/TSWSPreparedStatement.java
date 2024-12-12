@@ -46,10 +46,10 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
     private boolean isInsert = false;
 
 
-    private final Map<Integer, Column> column = new TreeMap<>();
+    private final Map<Integer, Column> colOrderedMap = new TreeMap<>();
 
     private final PriorityQueue<ColumnInfo> tag = new PriorityQueue<>();
-    private final PriorityQueue<ColumnInfo> queue = new PriorityQueue<>();
+    private final PriorityQueue<ColumnInfo> colListQueue = new PriorityQueue<>();
 
     private List<TableInfo> tableInfoList = new ArrayList<>();
     private TableInfo tableInfo;
@@ -63,7 +63,7 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
             return;
 
         reqId = ReqId.getReqID();
-        Request request = RequestFactory.generateInit(reqId, true, false);
+        Request request = RequestFactory.generateInit(reqId, true, true);
         Stmt2Resp resp = (Stmt2Resp) transport.send(request);
         if (Code.SUCCESS.getCode() != resp.getCode()) {
             throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
@@ -122,18 +122,36 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
     }
 
     @Override
+    public boolean execute() throws SQLException {
+        if (isClosed())
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
+
+        if (isInsert){
+            executeUpdate();
+        } else {
+            executeQuery();
+        }
+
+        return !isInsert;
+    }
+    @Override
     public ResultSet executeQuery() throws SQLException {
         if (this.isInsert){
             throw new SQLException("The query SQL must be prepared.");
         }
 
-        if (isTableInfoEmpty()){
+        if (!tag.isEmpty() || !colListQueue.isEmpty()){
+            throw new SQLException("The query SQL only support bind columns.");
+        }
+
+        // only support jdbc standard bind api
+        if (colOrderedMap.isEmpty()){
             return executeQuery(this.rawSql);
         }
 
-        if (!StringUtils.isEmpty(tableInfo.getTableName())
-        || !tableInfo.getTagInfo().isEmpty()){
-            throw new SQLException("only support bind columns.");
+        onlyBindCol();
+        if (!isTableInfoEmpty()){
+            tableInfoList.add(tableInfo);
         }
 
         this.executeBatchImpl();
@@ -151,23 +169,30 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
 
     @Override
     public int executeUpdate() throws SQLException {
+        if (!this.isInsert){
+            throw new SQLException("The insert SQL must be prepared.");
+        }
 
         if (fields.isEmpty()){
             return this.executeUpdate(this.rawSql);
         }
 
-        if (column.isEmpty())
-            throw new SQLException("no parameter to execute");
+        if (colOrderedMap.size() == fields.size()){
+            // bind all
+            bindAllColWithStdApi();
+        } else{
+            // mixed standard api and extended api, only support one table
+            onlyBindTag();
+            onlyBindCol();
+        }
 
-        if (!isTableInfoEmpty())
-            throw TSDBError.undeterminedExecutionError();
+        if (isTableInfoEmpty()){
+            throw new SQLException("no data to be bind");
+        }
 
-        bindAll();
+        tableInfoList.add(tableInfo);
         return executeBatchImpl();
     }
-
-    // set sub-table name
-
 
     public void setTagSqlTypeNull(int index, int type) throws SQLException {
         switch (type) {
@@ -337,42 +362,42 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
     public void setNull(int parameterIndex, int sqlType) throws SQLException {
         switch (sqlType) {
             case Types.BOOLEAN:
-                column.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_BOOL, parameterIndex));
+                colOrderedMap.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_BOOL, parameterIndex));
                 break;
             case Types.TINYINT:
-                column.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_TINYINT, parameterIndex));
+                colOrderedMap.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_TINYINT, parameterIndex));
                 break;
             case Types.SMALLINT:
-                column.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_SMALLINT, parameterIndex));
+                colOrderedMap.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_SMALLINT, parameterIndex));
                 break;
             case Types.INTEGER:
-                column.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_INT, parameterIndex));
+                colOrderedMap.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_INT, parameterIndex));
                 break;
             case Types.BIGINT:
-                column.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_BIGINT, parameterIndex));
+                colOrderedMap.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_BIGINT, parameterIndex));
                 break;
             case Types.FLOAT:
-                column.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_FLOAT, parameterIndex));
+                colOrderedMap.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_FLOAT, parameterIndex));
                 break;
             case Types.DOUBLE:
-                column.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_DOUBLE, parameterIndex));
+                colOrderedMap.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_DOUBLE, parameterIndex));
                 break;
             case Types.TIMESTAMP:
-                column.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
+                colOrderedMap.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
                 break;
             case Types.BINARY:
             case Types.VARCHAR:
-                column.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_BINARY, parameterIndex));
+                colOrderedMap.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_BINARY, parameterIndex));
                 break;
             case Types.VARBINARY:
-                column.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_VARBINARY, parameterIndex));
+                colOrderedMap.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_VARBINARY, parameterIndex));
                 break;
             case Types.NCHAR:
-                column.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_NCHAR, parameterIndex));
+                colOrderedMap.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_NCHAR, parameterIndex));
                 break;
             // json
             case Types.OTHER:
-                column.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_JSON, parameterIndex));
+                colOrderedMap.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_JSON, parameterIndex));
                 break;
             default:
                 throw new SQLException("unsupported type: " + sqlType);
@@ -381,37 +406,37 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
 
     @Override
     public void setBoolean(int parameterIndex, boolean x) throws SQLException {
-        column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_BOOL, parameterIndex));
+        colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_BOOL, parameterIndex));
     }
 
     @Override
     public void setByte(int parameterIndex, byte x) throws SQLException {
-        column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_TINYINT, parameterIndex));
+        colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_TINYINT, parameterIndex));
     }
 
     @Override
     public void setShort(int parameterIndex, short x) throws SQLException {
-        column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_SMALLINT, parameterIndex));
+        colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_SMALLINT, parameterIndex));
     }
 
     @Override
     public void setInt(int parameterIndex, int x) throws SQLException {
-        column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_INT, parameterIndex));
+        colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_INT, parameterIndex));
     }
 
     @Override
     public void setLong(int parameterIndex, long x) throws SQLException {
-        column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_BIGINT, parameterIndex));
+        colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_BIGINT, parameterIndex));
     }
 
     @Override
     public void setFloat(int parameterIndex, float x) throws SQLException {
-        column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_FLOAT, parameterIndex));
+        colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_FLOAT, parameterIndex));
     }
 
     @Override
     public void setDouble(int parameterIndex, double x) throws SQLException {
-        column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_DOUBLE, parameterIndex));
+        colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_DOUBLE, parameterIndex));
     }
 
     @Override
@@ -432,7 +457,7 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
 
     @Override
     public void setBytes(int parameterIndex, byte[] x) throws SQLException {
-        column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_BINARY, parameterIndex));
+        colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_BINARY, parameterIndex));
     }
 
     public void setVarbinary(int parameterIndex, byte[] x) throws SQLException {
@@ -441,11 +466,11 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
             setNull(parameterIndex, Types.VARBINARY);
             return;
         }
-        column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_VARBINARY, parameterIndex));
+        colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_VARBINARY, parameterIndex));
     }
 
     public void setGeometry(int parameterIndex, byte[] x) throws SQLException {
-        column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_GEOMETRY, parameterIndex));
+        colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_GEOMETRY, parameterIndex));
     }
 
     @Override
@@ -470,7 +495,7 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
 
     @Override
     public void setTimestamp(int parameterIndex, Timestamp x) throws SQLException {
-        column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
+        colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
     }
 
     @Override
@@ -490,9 +515,9 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
 
     @Override
     public void clearParameters() throws SQLException {
-        column.clear();
+        colOrderedMap.clear();
         tag.clear();
-        queue.clear();
+        colListQueue.clear();
 
         tableInfo = TableInfo.getEmptyTableInfo();
         tableInfoList.clear();
@@ -502,42 +527,42 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
     public void setObject(int parameterIndex, Object x, int targetSqlType) throws SQLException {
         switch (targetSqlType) {
             case Types.BOOLEAN:
-                column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_BOOL, parameterIndex));
+                colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_BOOL, parameterIndex));
                 break;
             case Types.TINYINT:
-                column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_TINYINT, parameterIndex));
+                colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_TINYINT, parameterIndex));
                 break;
             case Types.SMALLINT:
-                column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_SMALLINT, parameterIndex));
+                colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_SMALLINT, parameterIndex));
                 break;
             case Types.INTEGER:
-                column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_INT, parameterIndex));
+                colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_INT, parameterIndex));
                 break;
             case Types.BIGINT:
-                column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_BIGINT, parameterIndex));
+                colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_BIGINT, parameterIndex));
                 break;
             case Types.FLOAT:
-                column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_FLOAT, parameterIndex));
+                colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_FLOAT, parameterIndex));
                 break;
             case Types.DOUBLE:
-                column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_DOUBLE, parameterIndex));
+                colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_DOUBLE, parameterIndex));
                 break;
             case Types.TIMESTAMP:
-                column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
+                colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
                 break;
             case Types.BINARY:
             case Types.VARCHAR:
-                column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_BINARY, parameterIndex));
+                colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_BINARY, parameterIndex));
                 break;
             case Types.VARBINARY:
-                column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_VARBINARY, parameterIndex));
+                colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_VARBINARY, parameterIndex));
                 break;
             case Types.NCHAR:
-                column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_NCHAR, parameterIndex));
+                colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_NCHAR, parameterIndex));
                 break;
             // json
             case Types.OTHER:
-                column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_JSON, parameterIndex));
+                colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_JSON, parameterIndex));
                 break;
             default:
                 throw new SQLException("unsupported type: " + targetSqlType);
@@ -577,58 +602,49 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
         }
     }
 
-    @Override
-    public boolean execute() throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
-
-        List<Object> list = new ArrayList<>();
-        while (!tag.isEmpty()){
-            ColumnInfo columnInfo = tag.poll();
-            if (columnInfo.getDataList().size() != 1){
-                throw new SQLException("tag size is not equal 1");
-            }
-
-            list.add(columnInfo.getDataList().get(0));
-        }
-        if (!column.isEmpty()) {
-            column.keySet().stream().sorted().forEach(i -> {
-                Column col = this.column.get(i);
-                list.add(col.data);
-            });
-        }
-        Object[] parameters = list.toArray(new Object[0]);
-        this.clearParameters();
-        final String sql = Utils.getNativeSql(this.rawSql, parameters);
-        return execute(sql);
-    }
-
     private void bindAllToTableInfo(){
         for (int index = 0; index < fields.size(); index++) {
             if (fields.get(index).getBindType() == FeildBindType.TAOS_FIELD_TBNAME.getValue()) {
-                tableInfo.setTableName(column.get(index + 1).data.toString());
+                if (colOrderedMap.get(index + 1).data instanceof byte[]){
+                    tableInfo.setTableName(new String((byte[])colOrderedMap.get(index + 1).data, StandardCharsets.UTF_8));
+                }
+                if (colOrderedMap.get(index + 1).data instanceof String){
+                    tableInfo.setTableName((String) colOrderedMap.get(index + 1).data);
+                }
             } else if (fields.get(index).getBindType() == FeildBindType.TAOS_FIELD_TAG.getValue()) {
-                tableInfo.getTagInfo().add(new ColumnInfo(index, Collections.singletonList(column.get(index + 1).data), fields.get(index).getFieldType()));
+                LinkedList<Object> list = new LinkedList<>();
+                list.add(colOrderedMap.get(index + 1).data);
+                tableInfo.getTagInfo().add(new ColumnInfo(index + 1, list, fields.get(index).getFieldType()));
             } else if (fields.get(index).getBindType() == FeildBindType.TAOS_FIELD_COL.getValue()) {
-                tableInfo.getDataList().add(new ColumnInfo(index, Collections.singletonList(column.get(index + 1).data), fields.get(index).getFieldType()));
+                LinkedList<Object> list = new LinkedList<>();
+                list.add(colOrderedMap.get(index + 1).data);
+                tableInfo.getDataList().add(new ColumnInfo(index + 1, list, fields.get(index).getFieldType()));
             }
         }
     }
 
+
     private void bindColToTableInfo(){
-        for (int index = 0; index < fields.size(); index++) {
-            if (fields.get(index).getBindType() == FeildBindType.TAOS_FIELD_COL.getValue()) {
-                tableInfo.getDataList().add(new ColumnInfo(index, Collections.singletonList(column.get(index + 1).data), fields.get(index).getFieldType()));
-            }
+        for (ColumnInfo columnInfo: tableInfo.getDataList()){
+            columnInfo.add(colOrderedMap.get(columnInfo.getIndex()).data);
         }
+//        int j = 0;
+//        for (int index = 0; index < fields.size(); index++) {
+//            if (fields.get(index).getBindType() == FeildBindType.TAOS_FIELD_COL.getValue()) {
+//                tableInfo.getDataList().get(j).getDataList().add();add(new ColumnInfo(index, Collections.singletonList(colOrderedMap.get(index + 1).data), fields.get(index).getFieldType()));
+//            }
+//        }
     }
-    private void bindAll(){
-        if (toBeBindTableNameIndex >= 0){
-            if (tableInfo.getTableName().isEmpty()) {
-                // first time, bind all
-                bindAllToTableInfo();
-            } else {
-                if (tableInfo.getTableName().equals(column.get(toBeBindTableNameIndex + 1).toString())){
+
+    private void bindAllColWithStdApi() {
+        if (isTableInfoEmpty()) {
+            // first time, bind all
+            bindAllToTableInfo();
+        } else {
+            if (toBeBindTableNameIndex >= 0) {
+                Object tbname = colOrderedMap.get(toBeBindTableNameIndex + 1).data;
+                if ((tbname instanceof String && tableInfo.getTableName().equals(tbname))
+                        || (tbname instanceof byte[] && tableInfo.getTableName().equals(new String((byte[]) tbname, StandardCharsets.UTF_8)))) {
                     // same table, only bind col
                     bindColToTableInfo();
                 } else {
@@ -637,71 +653,61 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
                     tableInfo = TableInfo.getEmptyTableInfo();
                     bindAllToTableInfo();
                 }
-            }
-        } else {
-            // must same table
-            if (toBeBindTagCount > 0 && tableInfo.getTagInfo().isEmpty()){
-                // first time, bind all
-                bindAllToTableInfo();
             } else {
-                // only bind col
+                // must same table
                 bindColToTableInfo();
             }
         }
     }
+
     private void onlyBindCol() {
         if (tableInfo.getDataList().isEmpty()){
-            for (Map.Entry<Integer, Column> entry : column.entrySet()) {
+            for (Map.Entry<Integer, Column> entry : colOrderedMap.entrySet()) {
                 Column col = entry.getValue();
                 List<Object> list = new ArrayList<>();
                 list.add(col.data);
                 tableInfo.getDataList().add(new ColumnInfo(entry.getKey(), list, col.type));
             }
         } else {
-            for (Map.Entry<Integer, Column> entry : column.entrySet()) {
+            for (Map.Entry<Integer, Column> entry : colOrderedMap.entrySet()) {
                 Column col = entry.getValue();
                 tableInfo.getDataList().get(col.index - 1).add(col.data);
             }
+        }
+    }
+    private void onlyBindTag() {
+        if (!tableInfo.getTagInfo().isEmpty()){
+            return;
+        }
+
+        while (!tag.isEmpty()) {
+            tableInfo.getTagInfo().add(tag.poll());
         }
     }
 
     @Override
     // Only support batch insert
     public void addBatch() throws SQLException {
-        if (column.size() == toBeBindColCount){
-            if (toBeBindTableNameIndex < 0 && toBeBindTagCount == 0) {
-                onlyBindCol();
-            } else {
-                if (toBeBindTableNameIndex >= 0 && tableInfo.getTableName().isEmpty()){
-                    throw new SQLException("table name is empty");
-                }
-                if (tableInfo.getTagInfo().size()!= toBeBindTagCount){
-                    throw new SQLException("tag size not match, expected: " + toBeBindTagCount + ", actual: " + tableInfo.getTagInfo().size());
-                }
-                onlyBindCol();
-            }
+        if (colOrderedMap.size() == fields.size()){
+            // jdbc standard bind api
+            bindAllColWithStdApi();
             return;
         }
 
-        if (column.size() == fields.size()){
-            // bind all
-            bindAll();
-            return;
-        }
-        throw new SQLException("column size not match, expected: " + fields.size() + ", actual: " + column.size());
+        // mixed standard api and extended api, only support one table
+        onlyBindTag();
+        onlyBindCol();
     }
 
     private boolean isTableInfoEmpty(){
-        return !StringUtils.isEmpty(tableInfo.getTableName())
-                || !tableInfo.getTagInfo().isEmpty()
-                || !tableInfo.getDataList().isEmpty();
+        return StringUtils.isEmpty(tableInfo.getTableName())
+                && tableInfo.getTagInfo().isEmpty()
+                && tableInfo.getDataList().isEmpty();
     }
     @Override
     public int[] executeBatch() throws SQLException {
-        if (column.isEmpty())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_BATCH_IS_EMPTY);
 
-        if (isTableInfoEmpty()){
+        if (!isTableInfoEmpty()){
             tableInfoList.add(tableInfo);
         }
 
@@ -743,9 +749,9 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
 
             list.add(columnInfo.getDataList().get(0));
         }
-        if (!column.isEmpty()) {
-            column.keySet().stream().sorted().forEach(i -> {
-                Column col = this.column.get(i);
+        if (!colOrderedMap.isEmpty()) {
+            colOrderedMap.keySet().stream().sorted().forEach(i -> {
+                Column col = this.colOrderedMap.get(i);
                 list.add(col.data);
             });
         }
@@ -814,7 +820,7 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
 
     @Override
     public void setNString(int parameterIndex, String value) throws SQLException {
-        column.put(parameterIndex, new Column(value, TSDB_DATA_TYPE_NCHAR, parameterIndex));
+        colOrderedMap.put(parameterIndex, new Column(value, TSDB_DATA_TYPE_NCHAR, parameterIndex));
     }
 
     @Override
@@ -927,13 +933,7 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
 
     @Override
     public void setTimestamp(int columnIndex, List<Long> list) throws SQLException {
-        List<Timestamp> collect = list.stream().map(x -> {
-            if (x == null) {
-                return null;
-            }
-            return new Timestamp(x);
-        }).collect(Collectors.toList());
-        setValueImpl(columnIndex, collect, TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP, Long.BYTES);
+        setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP, Long.BYTES);
     }
 
     @Override
@@ -985,20 +985,22 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
     }
 
     public <T> void setValueImpl(int columnIndex, List<T> list, int type, int bytes) throws SQLException {
-        List<Object> listObject = list.stream()
-                .map(Object.class::cast)
-                .collect(Collectors.toList());
+        List<Object> listObject = new ArrayList<>(list);
         ColumnInfo p = new ColumnInfo(columnIndex, listObject, type);
-        queue.add(p);
+        colListQueue.add(p);
     }
 
     @Override
     public void columnDataAddBatch() throws SQLException {
+        if (!colOrderedMap.isEmpty()){
+            throw new SQLException("column data is not empty");
+        }
+
         while (!tag.isEmpty()){
             tableInfo.getTagInfo().add(tag.poll());
         }
-        while (!queue.isEmpty()) {
-            tableInfo.getDataList().add(queue.poll());
+        while (!colListQueue.isEmpty()) {
+            tableInfo.getDataList().add(colListQueue.poll());
         }
         tableInfoList.add(tableInfo);
         tableInfo = TableInfo.getEmptyTableInfo();
@@ -1015,22 +1017,26 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
             rawBlock = SerializeBlock.getStmt2BindBlock(reqId, stmtId, tableInfoList, toBeBindTableNameIndex, toBeBindTagCount, toBeBindColCount, precision);
         } catch (IOException e) {
             throw new SQLException("data serialize error!", e);
+        } finally {
+            this.clearParameters();
         }
+
+        // bind
         Stmt2Resp bindResp = (Stmt2Resp) transport.send(Action.STMT2_BIND.getAction(),
                 reqId, rawBlock);
         if (Code.SUCCESS.getCode() != bindResp.getCode()) {
             throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
         }
 
-        this.clearParameters();
-        // send
+        // execute
         Request request = RequestFactory.generateExec(stmtId, reqId);
         Stmt2ExecResp resp = (Stmt2ExecResp) transport.send(request);
         if (Code.SUCCESS.getCode() != resp.getCode()) {
             throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
         }
 
-        return resp.getAffected();
+        this.affectedRows = resp.getAffected();
+        return this.affectedRows;
     }
     @Override
     public void columnDataExecuteBatch() throws SQLException {

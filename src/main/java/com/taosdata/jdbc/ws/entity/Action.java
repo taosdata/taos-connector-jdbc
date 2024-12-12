@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.ws.entity;
 
+import com.taosdata.jdbc.ws.stmt2.entity.ResultResp;
 import com.taosdata.jdbc.ws.stmt2.entity.Stmt2ExecResp;
 import com.taosdata.jdbc.ws.stmt2.entity.Stmt2PrepareResp;
 import com.taosdata.jdbc.ws.stmt2.entity.Stmt2Resp;
@@ -29,7 +30,7 @@ public enum Action {
     STMT2_EXEC("stmt2_exec", Stmt2ExecResp.class),
     // response means nothing
     STMT2_CLOSE("stmt2_close", Stmt2Resp.class),
-    STMT2_USE_RESULT("stmt2_result", Stmt2Resp.class),
+    STMT2_USE_RESULT("stmt2_result", ResultResp.class),
 
     //schemaless
     INSERT("insert", CommonResp.class),

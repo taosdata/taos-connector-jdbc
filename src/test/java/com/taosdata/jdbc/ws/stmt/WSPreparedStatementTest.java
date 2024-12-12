@@ -1,6 +1,7 @@
-package com.taosdata.jdbc.ws;
+package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.ws.TSWSPreparedStatement;
 import org.junit.*;
 
 import java.io.InputStream;

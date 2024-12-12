@@ -83,8 +83,8 @@ public class SerializeBlock {
         offset += Integer.BYTES;
 
         // IsNull
-        for (int i = 0; i < columnInfo.getDataList().size(); i++) {
-            if (columnInfo.getDataList().get(i) == null) {
+        for (Object o: columnInfo.getDataList()) {
+            if (o == null) {
                 buf[offset++] = 1;
             } else {
                 buf[offset++] = 0;
@@ -110,6 +110,7 @@ public class SerializeBlock {
             } else {
                 switch (columnInfo.getType()) {
                     case TSDB_DATA_TYPE_BINARY:
+                    case TSDB_DATA_TYPE_JSON:
                     case TSDB_DATA_TYPE_VARBINARY:
                     case TSDB_DATA_TYPE_GEOMETRY:{
                         byte[] v = (byte[]) o;
@@ -118,7 +119,6 @@ public class SerializeBlock {
                         bufferLength += v.length;
                         break;
                     }
-                    case TSDB_DATA_TYPE_JSON:
                     case TSDB_DATA_TYPE_NCHAR: {
                         String v = (String) o;
                         int len = v.getBytes().length;
@@ -250,17 +250,25 @@ public class SerializeBlock {
 
                 for (Object o: objectList){
                     if (o != null) {
-                        Timestamp t = (Timestamp) o;
-                        long v;
-                        if (precision == TimestampPrecision.MS) {
-                            v = t.getTime();
-                        } else if (precision == TimestampPrecision.US) {
-                            v = t.getTime() * 1000L + t.getNanos() / 1000 % 1000;
+                        if(o instanceof Timestamp) {
+                            Timestamp t = (Timestamp) o;
+                            long v;
+                            if (precision == TimestampPrecision.MS) {
+                                v = t.getTime();
+                            } else if (precision == TimestampPrecision.US) {
+                                v = t.getTime() * 1000L + t.getNanos() / 1000 % 1000;
+                            } else {
+                                v = t.getTime() * 1000_000L + t.getNanos() % 1000_000L;
+                            }
+                            SerializeLong(buf, offset, v);
+                            offset += Long.BYTES;
+                        } else if (o instanceof Long){
+                            SerializeLong(buf, offset, (Long) o);
+                            offset += Long.BYTES;
                         } else {
-                            v = t.getTime() * 1000_000L + t.getNanos() % 1000_000L;
+                            throw new SQLException("unsupported timestamp data type : " + o.getClass().getName());
                         }
-                        SerializeLong(buf, offset, v);
-                        offset += Long.BYTES;
+
                     } else {
                         SerializeLong(buf, offset, 0);
                         offset += Long.BYTES;
@@ -275,27 +283,26 @@ public class SerializeBlock {
 
     private static void SerializeArrayDataType(int dataType , byte[] buf, int offset, List<Object> objectList) throws SQLException {
         switch (dataType) {
+            case TSDB_DATA_TYPE_JSON:
             case TSDB_DATA_TYPE_BINARY:
             case TSDB_DATA_TYPE_VARBINARY:
             case TSDB_DATA_TYPE_GEOMETRY:{
                 for (Object o: objectList){
                     if (o != null) {
                         byte[] v = (byte[]) o;
-                        for (byte b : v) {
-                            buf[offset++] = b;
-                        }
+                        serializeByteArray(buf, offset, v);
+                        offset += v.length;
                     }
                 }
                 break;
             }
-            case TSDB_DATA_TYPE_JSON:
             case TSDB_DATA_TYPE_NCHAR: {
                 for (Object o: objectList){
                     if (o != null) {
                         String v = (String) o;
-                        for (byte b : v.getBytes()) {
-                            buf[offset++] = b;
-                        }
+                        byte[] bytes = v.getBytes();
+                        serializeByteArray(buf, offset, bytes);
+                        offset += bytes.length;
                     }
                 }
                 break;
@@ -303,18 +310,6 @@ public class SerializeBlock {
             default:
                 throw new SQLException("unsupported data type : " + dataType);
         }
-    }
-    public static int getTableNameTotalLength(List<TableInfo> tableInfoList, int toBeBindTableNameIndex) throws SQLException{
-        int totalLength = 0;
-        if (toBeBindTableNameIndex >= 0){
-            for ( TableInfo tableInfo: tableInfoList){
-                if (StringUtils.isEmpty(tableInfo.getTableName())) {
-                    throw new SQLException("table name is empty");
-                }
-                totalLength += tableInfo.getTableName().length() + 1;
-            }
-        }
-        return totalLength;
     }
     public static int getTagTotalLengthByTableIndex(List<TableInfo> tableInfoList, int index, int toBebindTagCount) throws SQLException{
         int totalLength = 0;
@@ -324,7 +319,7 @@ public class SerializeBlock {
             }
 
             for (ColumnInfo tag : tableInfoList.get(index).getTagInfo()){
-                if (tag.getDataList().get(index) == null){
+                if (tag.getDataList().isEmpty()){
                     throw new SQLException("tag value is null, index: " + index);
                 }
                 int columnSize = getColumnSize(tag);
@@ -360,6 +355,7 @@ public class SerializeBlock {
         }
 
         switch (column.getType()) {
+            case TSDB_DATA_TYPE_JSON:
             case TSDB_DATA_TYPE_BINARY:
             case TSDB_DATA_TYPE_VARBINARY:
             case TSDB_DATA_TYPE_GEOMETRY:{
@@ -373,7 +369,6 @@ public class SerializeBlock {
                 // TotalLength(4) + Type (4) + Num(4) + IsNull(1) * size + haveLength(1) + BufferLength(4) + 4 * v.length + totalLength
                 return 17 + (5 * column.getDataList().size()) + totalLength;
             }
-            case TSDB_DATA_TYPE_JSON:
             case TSDB_DATA_TYPE_NCHAR: {
                 int totalLength = 0;
                 for (Object o : column.getDataList()) {
@@ -390,9 +385,6 @@ public class SerializeBlock {
         }
     }
 
-
-
-
     public static byte[] getStmt2BindBlock(long reqId,
                                            long stmtId,
                                             List<TableInfo> tableInfoList,
@@ -405,8 +397,11 @@ public class SerializeBlock {
         int totalTableNameSize  = 0;
         List<Short> tableNameSizeList = new ArrayList<>();
         if (toBeBindTableNameIndex >= 0) {
-            for (int i = 0; i < tableInfoList.size(); i++) {
-                int tableNameSize = getTableNameTotalLength(tableInfoList, toBeBindTableNameIndex);
+            for (TableInfo tableInfo: tableInfoList) {
+                if (StringUtils.isEmpty(tableInfo.getTableName())){
+                    throw new SQLException("table name is empty");
+                }
+                int tableNameSize = tableInfo.getTableName().length() + 1;
                 totalTableNameSize += tableNameSize;
                 tableNameSizeList.add((short) tableNameSize);
             }
@@ -522,12 +517,12 @@ public class SerializeBlock {
 
         // TableNameLength
         if (toBebindTableNameCount > 0){
-            for (Short tabeNameLen: tableNameSizeList){
-                if (tabeNameLen == 0) {
+            for (Short tableNameLen: tableNameSizeList){
+                if (tableNameLen == 0) {
                     throw new SQLException("table name is empty");
                 }
 
-                SerializeShort(buf, offset, (short)(tabeNameLen + 1));
+                SerializeShort(buf, offset, tableNameLen);
                 offset += Short.BYTES;
             }
 
@@ -551,7 +546,7 @@ public class SerializeBlock {
 
             for (int i = 0; i < tableInfoList.size(); i++) {
                 for (ColumnInfo tag : tableInfoList.get(i).getTagInfo()){
-                    if (tag.getDataList().get(i) == null){
+                    if (tag.getDataList().isEmpty()){
                         throw new SQLException("tag value is null, index: " + i);
                     }
                     serializeColumn(tag, buf, offset, precision);
@@ -576,12 +571,12 @@ public class SerializeBlock {
         }
 
 
-        for (int i = 30; i < buf.length; i++) {
-            int bb = buf[i] & 0xff;
-            System.out.print(bb);
-            System.out.print(",");
-        }
-        System.out.println();
+//        for (int i = 30; i < buf.length; i++) {
+//            int bb = buf[i] & 0xff;
+//            System.out.print(bb);
+//            System.out.print(",");
+//        }
+//        System.out.println();
         return buf;
     }
 
