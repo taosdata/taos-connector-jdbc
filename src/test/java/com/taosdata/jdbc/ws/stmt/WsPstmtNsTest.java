@@ -12,7 +12,7 @@ import java.util.Properties;
 import static com.taosdata.jdbc.TSDBConstants.TIMESTAMP_DATA_OUT_OF_RANGE;
 
 @FixMethodOrder
-public class WSPreparedStatementNsTest {
+public class WsPstmtNsTest {
     String host = "localhost";
     String db_name = "ws_prepare_ns";
     String tableName = "wpt";

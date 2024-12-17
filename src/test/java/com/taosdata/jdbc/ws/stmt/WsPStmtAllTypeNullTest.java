@@ -13,7 +13,7 @@ import java.util.Properties;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
 
-public class WSPreparedStatementAllTypeNullTest {
+public class WsPStmtAllTypeNullTest {
     String host = "127.0.0.1";
     String db_name = "ws_prepare_type";
     String tableName = "wpt";

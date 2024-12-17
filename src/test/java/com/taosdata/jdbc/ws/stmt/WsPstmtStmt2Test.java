@@ -1,6 +1,5 @@
 package com.taosdata.jdbc.ws.stmt;
 
-import com.taosdata.jdbc.TSDBPreparedStatement;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.ws.TSWSPreparedStatement;
 import org.junit.*;
@@ -10,7 +9,7 @@ import java.util.*;
 import java.util.Random;
 
 @FixMethodOrder
-public class WSPreparedStatementStmt2Test {
+public class WsPstmtStmt2Test {
     String host = "127.0.0.1";
     String db_name = "ws_prepare";
     String tableName = "wpt";
@@ -177,7 +176,7 @@ public class WSPreparedStatementStmt2Test {
 
         try (TSWSPreparedStatement pstmt = connection.prepareStatement(sql).unwrap(TSWSPreparedStatement.class)) {
 
-            for (int i = 1; i <= 1; i++) {
+            for (int i = 1; i <= 10; i++) {
                 // set tags
                 pstmt.setTagInt(0, 1);
                 pstmt.setTagString(1, "location_" + 1);

@@ -11,7 +11,7 @@ import java.sql.*;
 import java.util.Collections;
 import java.util.Properties;
 
-public class WSPreparedStatementAllTypeTest {
+public class WsPstmtAllTypeTest {
     String host = "127.0.0.1";
     String db_name = "ws_prepare_type";
     String tableName = "wpt";

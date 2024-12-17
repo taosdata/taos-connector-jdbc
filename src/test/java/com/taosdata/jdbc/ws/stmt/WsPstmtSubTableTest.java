@@ -10,7 +10,7 @@ import org.junit.Test;
 import java.sql.*;
 import java.util.Properties;
 
-public class WSPrepareStatementTest2 {
+public class WsPstmtSubTableTest {
     String host = "127.0.0.1";
     String db_name = "ws_prepare_taos";
     String superTable = "wpt_st";
