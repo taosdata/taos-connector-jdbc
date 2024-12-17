@@ -367,5 +367,4 @@ public abstract class AbstractStatement extends WrapperImpl implements Statement
     public Long getInstanceId(){
         return this.instanceId;
     }
-
 }

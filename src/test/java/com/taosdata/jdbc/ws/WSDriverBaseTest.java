@@ -32,6 +32,13 @@ public class WSDriverBaseTest {
                 resultSet.next();
                 Assert.assertEquals(100, resultSet.getInt(2));
             }
+
+
+            statement.execute("select 1 where 0");
+            try (ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + tableName)) {
+                resultSet.next();
+                Assert.assertEquals(100, resultSet.getInt(2));
+            }
         } catch (SQLException e) {
             e.printStackTrace();
             throw e;

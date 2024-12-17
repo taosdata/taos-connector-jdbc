@@ -1,11 +1,11 @@
-package com.taosdata.jdbc.ws.stmt.entity;
+package com.taosdata.jdbc.ws.stmt2.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.taosdata.jdbc.utils.UInt64Serializer;
 import com.taosdata.jdbc.ws.entity.Payload;
 
-public class CloseReq extends Payload {
+public class ExecReq extends Payload {
     @JsonProperty("stmt_id")
     @JsonSerialize(using = UInt64Serializer.class)
     private long stmtId;
