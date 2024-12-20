@@ -413,7 +413,7 @@ public class RestfulResultSet extends AbstractResultSet {
             return null;
         if (value instanceof Timestamp)
             return new Date(((Timestamp) value).getTime());
-        return Utils.parseDate(value.toString());
+        return Utils.parseDate(value.toString(), null);
     }
 
     @Override
@@ -428,7 +428,7 @@ public class RestfulResultSet extends AbstractResultSet {
             return new Time(((Timestamp) value).getTime());
         Time time = null;
         try {
-            time = Utils.parseTime(value.toString());
+            time = Utils.parseTime(value.toString(), null);
         } catch (DateTimeParseException ignored) {
         }
         return time;
@@ -453,7 +453,7 @@ public class RestfulResultSet extends AbstractResultSet {
         }
         Timestamp ret;
         try {
-            ret = Utils.parseTimestamp(value.toString());
+            ret = Utils.parseTimestamp(value.toString(), null);
         } catch (Exception e) {
             ret = null;
             wasNull = true;

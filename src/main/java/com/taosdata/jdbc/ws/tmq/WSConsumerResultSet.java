@@ -22,6 +22,7 @@ import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.sql.*;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -46,11 +47,14 @@ public class WSConsumerResultSet extends AbstractResultSet {
     protected int numOfRows = 0;
     protected int rowIndex = 0;
 
-    public WSConsumerResultSet(Transport transport, TMQRequestFactory factory, long messageId, String database) {
+    private final ZoneId zoneId;
+
+    public WSConsumerResultSet(Transport transport, TMQRequestFactory factory, long messageId, String database, ZoneId zoneId) {
         this.transport = transport;
         this.factory = factory;
         this.messageId = messageId;
         this.database = database;
+        this.zoneId = zoneId;
     }
 
     private boolean forward() {
@@ -268,11 +272,11 @@ public class WSConsumerResultSet extends AbstractResultSet {
         if (value instanceof Timestamp)
             return (Timestamp) value;
         if (value instanceof Long) {
-            return DataTypeConverUtil.parseTimestampColumnData((long) value, this.timestampPrecision);
+            return DataTypeConverUtil.parseTimestampColumnDataWithZoneId((long) value, this.timestampPrecision, zoneId);
         }
         Timestamp ret;
         try {
-            ret = Utils.parseTimestamp(value.toString());
+            ret = Utils.parseTimestamp(value.toString(), null);
         } catch (Exception e) {
             ret = null;
             wasNull = true;
@@ -469,7 +473,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
             return null;
 
         int type = fields.get(columnIndex - 1).getTaosType();
-        return DataTypeConverUtil.parseValue(type, source, this.timestampPrecision);
+        return DataTypeConverUtil.parseValue(type, source, this.timestampPrecision, zoneId);
     }
 
     //    ceil(numOfRows/8.0)

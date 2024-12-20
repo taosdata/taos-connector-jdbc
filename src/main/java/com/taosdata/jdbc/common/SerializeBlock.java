@@ -6,6 +6,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -59,6 +62,18 @@ public class SerializeBlock {
         buf[offset] = (byte) (v & 0xFF);
         buf[offset + 1] = (byte) ((v >> 8) & 0xFF);
     }
+
+    private static Long getLongFromTimestamp(Timestamp o, int precision){
+        long v;
+        if (precision == TimestampPrecision.MS) {
+            v = o.getTime();
+        } else if (precision == TimestampPrecision.US) {
+            v = o.getTime() * 1000L + o.getNanos() / 1000 % 1000;
+        } else {
+            v = o.getTime() * 1000_000L + o.getNanos() % 1000_000L;
+        }
+        return v;
+    }
     private static void handleNormalDataType(int dataType ,byte[] buf, int rowIndex, int startOffset, Object o, int precision) throws SQLException {
         switch (dataType) {
             case TSDB_DATA_TYPE_BOOL: {
@@ -102,14 +117,24 @@ public class SerializeBlock {
                 break;
             }
             case TSDB_DATA_TYPE_TIMESTAMP: {
-                Timestamp t = (Timestamp) o;
                 long v;
-                if (precision == TimestampPrecision.MS) {
-                    v = t.getTime();
-                } else if (precision == TimestampPrecision.US) {
-                    v = t.getTime() * 1000L + t.getNanos() / 1000 % 1000;
+                if (o instanceof Timestamp) {
+                    Timestamp t = (Timestamp) o;
+                    v = getLongFromTimestamp(t, precision);
+                } else if (o instanceof Instant){
+                    Instant t = (Instant) o;
+                    Timestamp ts = Timestamp.from(t);
+                    v = getLongFromTimestamp(ts, precision);
+                } else if (o instanceof OffsetDateTime){
+                    OffsetDateTime t = (OffsetDateTime) o;
+                    Timestamp ts = Timestamp.from(t.toInstant());
+                    v = getLongFromTimestamp(ts, precision);
+                } else if (o instanceof ZonedDateTime){
+                    ZonedDateTime t = (ZonedDateTime) o;
+                    Timestamp ts = Timestamp.from(t.toInstant());
+                    v = getLongFromTimestamp(ts, precision);
                 } else {
-                    v = t.getTime() * 1000_000L + t.getNanos() % 1000_000L;
+                    throw new SQLException("unsupported data type : " + o.getClass().getName());
                 }
 
                 int offset = rowIndex * Long.BYTES + startOffset;

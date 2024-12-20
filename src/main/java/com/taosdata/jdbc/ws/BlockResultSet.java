@@ -16,6 +16,7 @@ import java.math.BigDecimal;
 import java.sql.*;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.Calendar;
 
@@ -23,10 +24,12 @@ import static com.taosdata.jdbc.TSDBConstants.*;
 import static com.taosdata.jdbc.utils.UnsignedDataUtils.*;
 
 public class BlockResultSet extends AbstractWSResultSet {
+    private final ZoneId zoneId;
 
     public BlockResultSet(Statement statement, Transport transport,
-                          QueryResp response, String database) throws SQLException {
+                          QueryResp response, String database, ZoneId zoneId) throws SQLException {
         super(statement, transport, response, database);
+        this.zoneId = zoneId;
     }
 
 
@@ -36,8 +39,16 @@ public class BlockResultSet extends AbstractWSResultSet {
             return null;
 
         int type = fields.get(columnIndex - 1).getTaosType();
-        return DataTypeConverUtil.parseValue(type, source, this.timestampPrecision);
+        return DataTypeConverUtil.parseValue(type, source, this.timestampPrecision, zoneId);
+    }
 
+    public Object parseValueWithZoneId(int columnIndex, ZoneId zoneId) {
+        Object source = result.get(columnIndex - 1).get(rowIndex);
+        if (null == source)
+            return null;
+
+        int type = fields.get(columnIndex - 1).getTaosType();
+        return DataTypeConverUtil.parseValue(type, source, this.timestampPrecision, zoneId);
     }
 
     @Override
@@ -205,7 +216,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             return null;
         }
         wasNull = false;
-        return DataTypeConverUtil.getDate(value);
+        return DataTypeConverUtil.getDate(value, zoneId);
     }
 
     @Override
@@ -218,7 +229,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             return null;
         }
         wasNull = false;
-        return DataTypeConverUtil.getTime(value);
+        return DataTypeConverUtil.getTime(value, zoneId);
     }
 
     @Override
@@ -234,7 +245,7 @@ public class BlockResultSet extends AbstractWSResultSet {
         if (value instanceof Timestamp)
             return (Timestamp) value;
         if (value instanceof Long) {
-            return DataTypeConverUtil.parseTimestampColumnData((long) value, this.timestampPrecision);
+            return DataTypeConverUtil.parseTimestampColumnDataWithZoneId((long) value, this.timestampPrecision, this.zoneId);
         }
         String tmp = "";
         if (value instanceof byte[]) {
@@ -249,7 +260,7 @@ public class BlockResultSet extends AbstractWSResultSet {
         }
         Timestamp ret;
         try {
-            ret = Utils.parseTimestamp(tmp);
+            ret = Utils.parseTimestamp(tmp, zoneId);
         } catch (Exception e) {
             ret = null;
             wasNull = true;
@@ -299,7 +310,23 @@ public class BlockResultSet extends AbstractWSResultSet {
                 } else if (type == LocalDateTime.class && value instanceof Timestamp) {
                     Timestamp timestamp = (Timestamp) value;
                     return type.cast(timestamp.toLocalDateTime());
-                } else {
+                }
+
+//                else if (type == Instant.class && value instanceof Timestamp) {
+//                    Timestamp timestamp = (Timestamp) value;
+//                    return type.cast(Instant.toLocalDateTime());
+//                }
+//
+//                else if (type == LocalDateTime.class && value instanceof Timestamp) {
+//                    Timestamp timestamp = (Timestamp) value;
+//                    return type.cast(timestamp.toLocalDateTime());
+//                }else if (type == LocalDateTime.class && value instanceof Timestamp) {
+//                    Timestamp timestamp = (Timestamp) value;
+//                    return type.cast(timestamp.toLocalDateTime());
+//                }
+
+
+                else {
                     throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TYPE_CONVERT_EXCEPTION, "Cannot convert " + value.getClass() + " to " + type);
                 }
             } catch (ClassCastException | UnsupportedEncodingException e) {

@@ -22,6 +22,10 @@ public class SubscribeReq extends Payload {
     @JsonProperty("with_table_name")
     private String withTableName;
 
+    private String tz;
+    private String app;
+    private String ip;
+
     public String getUser() {
         return user;
     }
@@ -101,4 +105,29 @@ public class SubscribeReq extends Payload {
     public void setWithTableName(String withTableName) {
         this.withTableName = withTableName;
     }
+
+    public String getTz() {
+        return tz;
+    }
+
+    public void setTz(String tz) {
+        this.tz = tz;
+    }
+
+    public String getApp() {
+        return app;
+    }
+
+    public void setApp(String app) {
+        this.app = app;
+    }
+
+    public String getIp() {
+        return ip;
+    }
+
+    public void setIp(String ip) {
+        this.ip = ip;
+    }
+
 }

@@ -12,6 +12,7 @@ import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.sql.*;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
@@ -475,7 +476,7 @@ public class DataTypeConverUtil {
         return value.toString();
     }
 
-    public static Date getDate(Object value) {
+    public static Date getDate(Object value, ZoneId zoneId) {
         if (value instanceof Timestamp)
             return new Date(((Timestamp) value).getTime());
         if (value instanceof byte[]) {
@@ -486,12 +487,12 @@ public class DataTypeConverUtil {
             } catch (UnsupportedEncodingException e) {
                 throw new RuntimeException(e.getMessage());
             }
-            return Utils.parseDate(tmp);
+            return Utils.parseDate(tmp, zoneId);
         }
-        return Utils.parseDate(value.toString());
+        return Utils.parseDate(value.toString(), zoneId);
     }
 
-    public static Time getTime(Object value) {
+    public static Time getTime(Object value, ZoneId zoneId) {
         if (value instanceof Timestamp)
             return new Time(((Timestamp) value).getTime());
         String tmp = "";
@@ -507,7 +508,7 @@ public class DataTypeConverUtil {
         }
         Time time = null;
         try {
-            time = Utils.parseTime(tmp);
+            time = Utils.parseTime(tmp, zoneId);
         } catch (DateTimeParseException e) {
             throw new RuntimeException(e.getMessage());
         }
@@ -556,7 +557,7 @@ public class DataTypeConverUtil {
         return new BigDecimal(0);
     }
 
-    static public Object parseValue(int type, Object source, int timestampPrecision){
+    static public Object parseValue(int type, Object source, int timestampPrecision, ZoneId zoneId){
         switch (type) {
             case TSDB_DATA_TYPE_BOOL: {
                 byte val = (byte) source;
@@ -588,7 +589,7 @@ public class DataTypeConverUtil {
             }
             case TSDB_DATA_TYPE_TIMESTAMP: {
                 long val = (long) source;
-                return parseTimestampColumnData(val, timestampPrecision);
+                return parseTimestampColumnDataWithZoneId(val, timestampPrecision, zoneId);
             }
             case TSDB_DATA_TYPE_UBIGINT: {
                 long val = (long) source;
@@ -617,6 +618,31 @@ public class DataTypeConverUtil {
             long epochSec = value / 1000_000_000L;
             long nanoAdjustment = value % 1000_000_000L;
             return Timestamp.from(Instant.ofEpochSecond(epochSec, nanoAdjustment));
+        }
+        return null;
+    }
+    public static Timestamp parseTimestampColumnDataWithZoneId(long value, int timestampPrecision, ZoneId zoneId) {
+        if (zoneId == null){
+            return parseTimestampColumnData(value, timestampPrecision);
+        }
+
+        if (TimestampPrecision.MS == timestampPrecision) {
+            Instant instant1 = Instant.ofEpochMilli(value);
+            Instant instant = instant1.atZone(zoneId).toInstant();
+            return Timestamp.from(instant);
+        }
+
+        if (TimestampPrecision.US == timestampPrecision) {
+            long epochSec = value / 1000_000L;
+            long nanoAdjustment = value % 1000_000L * 1000L;
+            Instant instant = Instant.ofEpochSecond(epochSec, nanoAdjustment);
+            return Timestamp.from(instant.atZone(zoneId).toInstant());
+        }
+        if (TimestampPrecision.NS == timestampPrecision) {
+            long epochSec = value / 1000_000_000L;
+            long nanoAdjustment = value % 1000_000_000L;
+            Instant instant = Instant.ofEpochSecond(epochSec, nanoAdjustment);
+            return Timestamp.from(instant.atZone(zoneId).toInstant());
         }
         return null;
     }

@@ -3,13 +3,19 @@ package com.taosdata.jdbc.utils;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
+import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.ws.entity.ConnectReq;
 
 import java.lang.reflect.Constructor;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
@@ -27,43 +33,61 @@ public class Utils {
     private static final DateTimeFormatter microSecFormatter = new DateTimeFormatterBuilder().appendPattern("yyyy-MM-dd HH:mm:ss.SSSSSS").toFormatter();
     private static final DateTimeFormatter nanoSecFormatter = new DateTimeFormatterBuilder().appendPattern("yyyy-MM-dd HH:mm:ss.SSSSSSSSS").toFormatter();
 
-    public static Time parseTime(String timestampStr) throws DateTimeParseException {
-        LocalDateTime dateTime = parseLocalDateTime(timestampStr);
+    public static Time parseTime(String timestampStr, ZoneId zoneId) throws DateTimeParseException {
+        LocalDateTime dateTime = parseLocalDateTime(timestampStr, zoneId);
         return dateTime != null ? Time.valueOf(dateTime.toLocalTime()) : null;
     }
 
-    public static Date parseDate(String timestampStr) {
-        LocalDateTime dateTime = parseLocalDateTime(timestampStr);
+    public static Date parseDate(String timestampStr, ZoneId zoneId) {
+        LocalDateTime dateTime = parseLocalDateTime(timestampStr, zoneId);
         return dateTime != null ? Date.valueOf(dateTime.toLocalDate()) : null;
     }
 
-    public static Timestamp parseTimestamp(String timeStampStr) {
-        LocalDateTime dateTime = parseLocalDateTime(timeStampStr);
+    public static Timestamp parseTimestamp(String timeStampStr, ZoneId zoneId) {
+        LocalDateTime dateTime = parseLocalDateTime(timeStampStr, zoneId);
         return dateTime != null ? Timestamp.valueOf(dateTime) : null;
     }
 
-    private static LocalDateTime parseLocalDateTime(String timeStampStr) {
+    private static LocalDateTime parseLocalDateTime(String timeStampStr, ZoneId zoneId) {
         try {
-            return parseMilliSecTimestamp(timeStampStr);
+            return parseMilliSecTimestamp(timeStampStr, zoneId);
         } catch (DateTimeParseException e) {
             try {
-                return parseMicroSecTimestamp(timeStampStr);
+                return parseMicroSecTimestamp(timeStampStr, zoneId);
             } catch (DateTimeParseException ee) {
-                return parseNanoSecTimestamp(timeStampStr);
+                return parseNanoSecTimestamp(timeStampStr, zoneId);
             }
         }
     }
 
-    private static LocalDateTime parseMilliSecTimestamp(String timeStampStr) throws DateTimeParseException {
-        return LocalDateTime.parse(timeStampStr, milliSecFormatter);
+    private static LocalDateTime parseMilliSecTimestamp(String timeStampStr, ZoneId zoneId) throws DateTimeParseException {
+        if (zoneId == null){
+            return LocalDateTime.parse(timeStampStr, milliSecFormatter);
+        } else {
+            LocalDateTime dateTime = LocalDateTime.parse(timeStampStr, milliSecFormatter);
+            ZonedDateTime zonedDateTime = dateTime.atZone(zoneId);
+            return zonedDateTime.toLocalDateTime();
+        }
     }
 
-    private static LocalDateTime parseMicroSecTimestamp(String timeStampStr) throws DateTimeParseException {
-        return LocalDateTime.parse(timeStampStr, microSecFormatter);
+    private static LocalDateTime parseMicroSecTimestamp(String timeStampStr, ZoneId zoneId) throws DateTimeParseException {
+        if (zoneId == null) {
+            return LocalDateTime.parse(timeStampStr, microSecFormatter);
+        } else {
+            LocalDateTime dateTime = LocalDateTime.parse(timeStampStr, microSecFormatter);
+            ZonedDateTime zonedDateTime = dateTime.atZone(zoneId);
+            return zonedDateTime.toLocalDateTime();
+        }
     }
 
-    private static LocalDateTime parseNanoSecTimestamp(String timeStampStr) throws DateTimeParseException {
-        return LocalDateTime.parse(timeStampStr, nanoSecFormatter);
+    private static LocalDateTime parseNanoSecTimestamp(String timeStampStr, ZoneId zoneId) throws DateTimeParseException {
+        if (zoneId == null) {
+            return LocalDateTime.parse(timeStampStr, nanoSecFormatter);
+        } else {
+            LocalDateTime dateTime = LocalDateTime.parse(timeStampStr, nanoSecFormatter);
+            ZonedDateTime zonedDateTime = dateTime.atZone(zoneId);
+            return zonedDateTime.toLocalDateTime();
+        }
     }
 
     public static String escapeSingleQuota(String origin) {
@@ -221,4 +245,12 @@ public class Utils {
         }
     }
 
+    public static boolean isValidIP(String ip) {
+        try {
+            InetAddress address = InetAddress.getByName(ip);
+            return true;
+        } catch (UnknownHostException e) {
+            return false;
+        }
+    }
 }

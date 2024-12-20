@@ -14,25 +14,18 @@
  *****************************************************************************/
 package com.taosdata.jdbc;
 
-import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
-import com.google.common.primitives.Shorts;
-import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.utils.DataTypeConverUtil;
 import com.taosdata.jdbc.utils.Utils;
 
 import java.io.UnsupportedEncodingException;
-import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.sql.SQLDataException;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.sql.Types;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
 import static com.taosdata.jdbc.utils.UnsignedDataUtils.*;
@@ -387,7 +380,7 @@ public class TSDBResultSetBlockData {
             String charset = TaosGlobalConfig.getCharset();
             try {
                 tmp = new String((byte[]) obj, charset);
-                return Utils.parseTimestamp(tmp);
+                return Utils.parseTimestamp(tmp, null);
             } catch (UnsupportedEncodingException e) {
                 throw new RuntimeException(e.getMessage());
             }

@@ -483,21 +483,21 @@ public class DataTypeConverUtilTest {
         // Test with Timestamp
         Timestamp timestamp = new Timestamp(System.currentTimeMillis());
         Date expectedDate = new Date(timestamp.getTime());
-        assertEquals(expectedDate, DataTypeConverUtil.getDate(timestamp));
+        assertEquals(expectedDate, DataTypeConverUtil.getDate(timestamp, null));
 
         // Test with byte array representing a date string
         String dateString = "2023-10-10 10:10:10.123";
         try {
             byte[] dateBytes = dateString.getBytes("UTF-8");
-            Date parsedDate = DataTypeConverUtil.getDate(dateBytes);
-            assertEquals(Utils.parseDate(dateString), parsedDate);
+            Date parsedDate = DataTypeConverUtil.getDate(dateBytes, null);
+            assertEquals(Utils.parseDate(dateString, null), parsedDate);
         } catch (UnsupportedEncodingException e) {
             fail("Unexpected UnsupportedEncodingException: " + e.getMessage());
         }
 
         // Test with String
-        Date parsedDateFromString = DataTypeConverUtil.getDate(dateString);
-        assertEquals(Utils.parseDate(dateString), parsedDateFromString);
+        Date parsedDateFromString = DataTypeConverUtil.getDate(dateString, null);
+        assertEquals(Utils.parseDate(dateString, null), parsedDateFromString);
 
     }
 
@@ -507,29 +507,29 @@ public class DataTypeConverUtilTest {
         // Test with Timestamp
         Timestamp timestamp = new Timestamp(Instant.now().toEpochMilli());
         Time expectedTime = new Time(timestamp.getTime());
-        assertEquals(expectedTime, DataTypeConverUtil.getTime(timestamp));
+        assertEquals(expectedTime, DataTypeConverUtil.getTime(timestamp, null));
 
         // Test with byte array representing a valid time string
         String timeString = "12:34:56";
         byte[] timeBytes = timeString.getBytes();
         Time parsedTime = Time.valueOf(timeString);
-        assertEquals(parsedTime, DataTypeConverUtil.getTime(timeBytes));
+        assertEquals(parsedTime, DataTypeConverUtil.getTime(timeBytes, null));
 
         // Test with invalid byte array (should throw RuntimeException)
         byte[] invalidBytes = "invalid".getBytes();
         try {
-            DataTypeConverUtil.getTime(invalidBytes);
+            DataTypeConverUtil.getTime(invalidBytes, null);
             fail("Expected RuntimeException for invalid byte array");
         } catch (RuntimeException e) {
             // Expected exception
         }
 
         // Test with String
-        assertEquals(parsedTime, DataTypeConverUtil.getTime(timeString));
+        assertEquals(parsedTime, DataTypeConverUtil.getTime(timeString, null));
 
         // Test with invalid String (should throw RuntimeException)
         try {
-            DataTypeConverUtil.getTime("invalid");
+            DataTypeConverUtil.getTime("invalid", null);
             fail("Expected RuntimeException for invalid string");
         } catch (RuntimeException e) {
             // Expected exception
@@ -581,44 +581,44 @@ public class DataTypeConverUtilTest {
     @Test
     public void testParseValue() {
         // BOOL
-        assertEquals(Boolean.TRUE, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_BOOL, (byte) 1, TimestampPrecision.MS));
-        assertEquals(Boolean.FALSE, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_BOOL, (byte) 0, TimestampPrecision.MS));
+        assertEquals(Boolean.TRUE, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_BOOL, (byte) 1, TimestampPrecision.MS, null));
+        assertEquals(Boolean.FALSE, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_BOOL, (byte) 0, TimestampPrecision.MS, null));
 
         // UTINYINT
-        assertEquals((short)255, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_UTINYINT, (byte) -1, TimestampPrecision.MS));
+        assertEquals((short)255, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_UTINYINT, (byte) -1, TimestampPrecision.MS, null));
 
         // TINYINT, SMALLINT, INT, BIGINT, FLOAT, DOUBLE, BINARY, JSON, VARBINARY, GEOMETRY
-        assertEquals((byte) 127, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_TINYINT, (byte) 127, TimestampPrecision.MS));
-        assertEquals((short) 32767, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_SMALLINT, (short) 32767, TimestampPrecision.MS));
-        assertEquals(2147483647, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_INT, 2147483647, TimestampPrecision.MS));
-        assertEquals(9223372036854775807L, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_BIGINT, 9223372036854775807L, TimestampPrecision.MS));
-        assertEquals(3.14f, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_FLOAT, 3.14f, TimestampPrecision.MS));
-        assertEquals(3.141592653589793, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_DOUBLE, 3.141592653589793, TimestampPrecision.MS));
-        assertEquals("binaryData", DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_BINARY, "binaryData", TimestampPrecision.MS));
-        assertEquals("jsonData", DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_JSON, "jsonData", TimestampPrecision.MS));
-        assertEquals("varbinaryData", DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_VARBINARY, "varbinaryData", TimestampPrecision.MS));
-        assertEquals("geometryData", DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_GEOMETRY, "geometryData", TimestampPrecision.MS));
+        assertEquals((byte) 127, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_TINYINT, (byte) 127, TimestampPrecision.MS, null));
+        assertEquals((short) 32767, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_SMALLINT, (short) 32767, TimestampPrecision.MS, null));
+        assertEquals(2147483647, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_INT, 2147483647, TimestampPrecision.MS, null));
+        assertEquals(9223372036854775807L, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_BIGINT, 9223372036854775807L, TimestampPrecision.MS, null));
+        assertEquals(3.14f, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_FLOAT, 3.14f, TimestampPrecision.MS, null));
+        assertEquals(3.141592653589793, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_DOUBLE, 3.141592653589793, TimestampPrecision.MS, null));
+        assertEquals("binaryData", DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_BINARY, "binaryData", TimestampPrecision.MS, null));
+        assertEquals("jsonData", DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_JSON, "jsonData", TimestampPrecision.MS, null));
+        assertEquals("varbinaryData", DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_VARBINARY, "varbinaryData", TimestampPrecision.MS, null));
+        assertEquals("geometryData", DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_GEOMETRY, "geometryData", TimestampPrecision.MS, null));
 
         // USMALLINT
-        assertEquals(65535, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_USMALLINT, (short) -1, TimestampPrecision.MS));
+        assertEquals(65535, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_USMALLINT, (short) -1, TimestampPrecision.MS, null));
 
         // UINT
-        assertEquals(4294967295L, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_UINT, -1, TimestampPrecision.MS));
+        assertEquals(4294967295L, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_UINT, -1, TimestampPrecision.MS, null));
 
         // TIMESTAMP
         long currentTimeMillis = System.currentTimeMillis();
         Timestamp expectedTimestamp = new Timestamp(currentTimeMillis);
-        assertEquals(expectedTimestamp, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_TIMESTAMP, currentTimeMillis, TimestampPrecision.MS));
+        assertEquals(expectedTimestamp, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_TIMESTAMP, currentTimeMillis, TimestampPrecision.MS, null));
 
         // UBIGINT
-        assertEquals(new BigDecimal("18446744073709551615"), DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_UBIGINT, -1L, TimestampPrecision.MS));
+        assertEquals(new BigDecimal("18446744073709551615"), DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_UBIGINT, -1L, TimestampPrecision.MS, null));
 
         // NCHAR
         int[] ncharData = {65, 66, 67}; // Corresponds to "ABC"
-        assertEquals("ABC", DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_NCHAR, ncharData, TimestampPrecision.MS));
+        assertEquals("ABC", DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_NCHAR, ncharData, TimestampPrecision.MS, null));
 
         // Default case
-        assertNull(DataTypeConverUtil.parseValue(-1, "unknownType", TimestampPrecision.MS));
+        assertNull(DataTypeConverUtil.parseValue(-1, "unknownType", TimestampPrecision.MS, null));
     }
 
     @Test

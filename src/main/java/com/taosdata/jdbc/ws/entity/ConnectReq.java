@@ -1,5 +1,8 @@
 package com.taosdata.jdbc.ws.entity;
 
+import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.utils.ReqId;
+
 /**
  * connection request pojo
  */
@@ -10,6 +13,10 @@ public class ConnectReq extends Payload {
     private String password;
     private String db;
     private Integer mode;
+
+    private String tz;
+    private String app;
+    private String ip;
 
     public String getUser() {
         return user;
@@ -41,5 +48,45 @@ public class ConnectReq extends Payload {
 
     public void setMode(Integer mode) {
         this.mode = mode;
+    }
+
+
+    public String getTz() {
+        return tz;
+    }
+
+    public void setTz(String tz) {
+        this.tz = tz;
+    }
+
+    public String getApp() {
+        return app;
+    }
+
+    public void setApp(String app) {
+        this.app = app;
+    }
+
+    public String getIp() {
+        return ip;
+    }
+
+    public void setIp(String ip) {
+        this.ip = ip;
+    }
+
+    public ConnectReq(ConnectionParam param) {
+        this.setReqId(ReqId.getReqID());
+        this.setUser(param.getUser());
+        this.setPassword(param.getPassword());
+        this.setDb(param.getDatabase());
+        this.setTz(param.getTz());
+        this.setApp(param.getAppName());
+        this.setIp(param.getAppIp());
+
+        // Currently, only BI mode is supported. The downstream interface value is 0, so a conversion is performed here.
+        if(param.getConnectMode() == ConnectionParam.CONNECT_MODE_BI){
+            this.setMode(0);
+        }
     }
 }

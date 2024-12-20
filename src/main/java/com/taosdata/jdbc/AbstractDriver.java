@@ -7,7 +7,9 @@ import com.fasterxml.jackson.databind.ObjectReader;
 import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.JsonUtil;
+import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.utils.StringUtils;
+import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.*;
 import com.taosdata.jdbc.ws.entity.*;
 import org.slf4j.LoggerFactory;
@@ -100,17 +102,7 @@ public abstract class AbstractDriver implements Driver {
 
         transport.checkConnection(param.getConnectTimeout());
 
-        ConnectReq connectReq = new ConnectReq();
-        connectReq.setReqId(1);
-        connectReq.setUser(param.getUser());
-        connectReq.setPassword(param.getPassword());
-        connectReq.setDb(param.getDatabase());
-
-        // Currently, only BI mode is supported. The downstream interface value is 0, so a conversion is performed here.
-        if(param.getConnectMode() == ConnectionParam.CONNECT_MODE_BI){
-            connectReq.setMode(0);
-        }
-
+        ConnectReq connectReq = new ConnectReq(param);
         ConnectResp auth = (ConnectResp) transport.send(new Request(Action.CONN.getAction(), connectReq));
 
         if (Code.SUCCESS.getCode() != auth.getCode()) {

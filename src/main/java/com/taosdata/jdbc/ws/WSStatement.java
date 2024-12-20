@@ -10,6 +10,7 @@ import java.nio.ByteOrder;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.ZoneId;
 
 import static com.taosdata.jdbc.utils.SqlSyntaxValidator.getDatabaseName;
 
@@ -23,12 +24,15 @@ public class WSStatement extends AbstractStatement {
 
     private int queryTimeout = 0;
 
-    public WSStatement(Transport transport, String database, AbstractConnection connection, Long instanceId) {
+    private final ZoneId zoneId;
+
+    public WSStatement(Transport transport, String database, AbstractConnection connection, Long instanceId, ZoneId zoneId) {
         this.transport = transport;
         this.database = database;
         this.connection = connection;
         this.instanceId = instanceId;
         this.connection.registerStatement(this.instanceId, this);
+        this.zoneId = zoneId;
     }
 
     @Override
@@ -101,7 +105,7 @@ public class WSStatement extends AbstractStatement {
             this.affectedRows = queryResp.getAffectedRows();
             return false;
         } else {
-            this.resultSet = new BlockResultSet(this, this.transport, queryResp, this.database);
+            this.resultSet = new BlockResultSet(this, this.transport, queryResp, this.database, this.zoneId);
             this.affectedRows = -1;
             return true;
         }

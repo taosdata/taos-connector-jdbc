@@ -108,6 +108,10 @@ public class WSConsumerTest {
         properties.setProperty(TMQConstants.VALUE_DESERIALIZER, "com.taosdata.jdbc.tmq.ResultDeserializer");
         properties.setProperty(TMQConstants.CONNECT_TYPE, "ws");
 
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_APP_IP, "192.168.1.1");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_APP_NAME, "APP_NAME");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "Asia/Shanghai");
+
         try (TaosConsumer<ResultBean> consumer = new TaosConsumer<>(properties)) {
             consumer.subscribe(Collections.singletonList(topic));
             for (int i = 0; i < 10; i++) {
