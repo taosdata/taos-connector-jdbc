@@ -213,7 +213,7 @@ public class WsPstmtStmt2Test {
     public void testStmt2InsertStdApi() throws SQLException {
         String sql = "INSERT INTO " + db_name + "." + tableName + "(tbname, groupId, location, ts, current, voltage, phase) VALUES (?,?,?,?,?,?,?)";
 
-        try (TSWSPreparedStatement pstmt = connection.prepareStatement(sql).unwrap(TSWSPreparedStatement.class)) {
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
 
             for (int i = 1; i <= numOfSubTable; i++) {
                 // set columns
