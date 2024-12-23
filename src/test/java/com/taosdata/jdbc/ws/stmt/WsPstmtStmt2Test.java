@@ -249,6 +249,44 @@ public class WsPstmtStmt2Test {
     }
 
     @Test
+    public void testStmt2InsertStdApiWithEscapeChar() throws SQLException {
+        String sql = "INSERT INTO `" + db_name + "`.`" + tableName + "` (tbname, groupId, location, ts, current, voltage, phase) VALUES (?,?,?,?,?,?,?)";
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+
+            for (int i = 1; i <= numOfSubTable; i++) {
+                // set columns
+                long current = System.currentTimeMillis();
+                for (int j = 0; j < numOfRow; j++) {
+                    pstmt.setString(1, "d_bind_" + i);
+                    pstmt.setInt(2, i);
+                    pstmt.setString(3, "location_" + i);
+
+                    pstmt.setTimestamp(4, new Timestamp(current + j));
+                    pstmt.setFloat(5, random.nextFloat() * 30);
+                    pstmt.setInt(6, random.nextInt(300));
+                    pstmt.setFloat(7, random.nextFloat());
+                    pstmt.addBatch();
+                }
+                int[] exeResult = pstmt.executeBatch();
+
+                for (int ele : exeResult){
+                    Assert.assertEquals(ele, Statement.SUCCESS_NO_INFO);
+                }
+            }
+            // you can check exeResult here
+            System.out.println("Successfully inserted " + (numOfSubTable * numOfRow) + " rows to power.meters.");
+        } catch (Exception ex) {
+            // please refer to the JDBC specifications for detailed exceptions info
+            System.out.printf("Failed to insert to table meters using stmt, %sErrMessage: %s%n",
+                    ex instanceof SQLException ? "ErrCode: " + ((SQLException) ex).getErrorCode() + ", " : "",
+                    ex.getMessage());
+            // Print stack trace for context in examples. Use logging in production.
+            ex.printStackTrace();
+            throw ex;
+        }
+    }
+    @Test
     public void testStmt2InsertStdApiNoTag() throws SQLException {
         // create sub table first
         String createSql = "create table";
