@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.ws.TSWSPreparedStatement;
 import org.junit.After;
 import org.junit.Assert;
@@ -17,10 +18,13 @@ public class WsPstmtAllTypeTest {
     String tableName = "wpt";
     String stableName = "swpt";
     Connection connection;
+    static String testStr = "20160601";
+    static byte[] expectedVarBinary = StringUtils.hexToBytes(testStr);
+    static byte[] expectedGeometry = StringUtils.hexToBytes("0101000000000000000000F03F0000000000000040");
 
     @Test
     public void testExecuteUpdate() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "insert into " + db_name + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         PreparedStatement statement = connection.prepareStatement(sql);
         long current = System.currentTimeMillis();
         statement.setTimestamp(1, new Timestamp(current));
@@ -34,6 +38,8 @@ public class WsPstmtAllTypeTest {
         statement.setString(9, "你好");
         statement.setNString(10, "世界");
         statement.setString(11, "hello world");
+        statement.setBytes(12, expectedVarBinary);
+        statement.setBytes(13, expectedGeometry);
         statement.executeUpdate();
 
         ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + tableName);
@@ -49,6 +55,8 @@ public class WsPstmtAllTypeTest {
         Assert.assertEquals(resultSet.getString(9), "你好");
         Assert.assertEquals(resultSet.getString(10), "世界");
         Assert.assertEquals(resultSet.getString(11), "hello world");
+        Assert.assertArrayEquals(resultSet.getBytes(12), expectedVarBinary);
+        Assert.assertArrayEquals(resultSet.getBytes(13), expectedGeometry);
 
         Assert.assertEquals(resultSet.getDate(1), new Date(current));
         Assert.assertEquals(resultSet.getTime(1), new Time(current));
@@ -62,7 +70,7 @@ public class WsPstmtAllTypeTest {
 
     @Test
     public void testExecuteUpdate2() throws SQLException {
-        String sql = "insert into stb_1 using " + db_name + "." + stableName + " tags (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) values (?, ?)";
+        String sql = "insert into stb_1 using " + db_name + "." + stableName + " tags (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) values (?, ?)";
         TSWSPreparedStatement statement = connection.prepareStatement(sql).unwrap(TSWSPreparedStatement.class);
         long current = System.currentTimeMillis();
         statement.setTagTimestamp(0, new Timestamp(current));
@@ -76,6 +84,8 @@ public class WsPstmtAllTypeTest {
         statement.setTagString(8, "你好");
         statement.setTagNString(9, "世界");
         statement.setTagString(10, "hello world");
+        statement.setTagVarbinary(11, expectedVarBinary);
+        statement.setTagGeometry(12, expectedGeometry);
 
 
         statement.setTimestamp(0, Collections.singletonList(current));
@@ -100,13 +110,17 @@ public class WsPstmtAllTypeTest {
         Assert.assertEquals(resultSet.getString(12), "世界");
         Assert.assertEquals(resultSet.getString(13), "hello world");
 
+        Assert.assertArrayEquals(resultSet.getBytes(14), expectedVarBinary);
+        Assert.assertArrayEquals(resultSet.getBytes(15), expectedGeometry);
+
+
         resultSet.close();
         statement.close();
     }
 
     @Test
     public void testExecuteCriticalValue() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "insert into " + db_name + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         PreparedStatement statement = connection.prepareStatement(sql);
         statement.setTimestamp(1, new Timestamp(0));
         statement.setByte(2, (byte) 127);
@@ -119,6 +133,9 @@ public class WsPstmtAllTypeTest {
         statement.setString(9, "ABC");
         statement.setNString(10, "涛思数据");
         statement.setString(11, "陶");
+        statement.setBytes(12, expectedVarBinary);
+        statement.setBytes(13, expectedGeometry);
+
         statement.executeUpdate();
         statement.close();
     }
@@ -139,11 +156,11 @@ public class WsPstmtAllTypeTest {
         statement.execute("use " + db_name);
         statement.execute("create table if not exists " + db_name + "." + tableName +
                 "(ts timestamp, c1 tinyint, c2 smallint, c3 int, c4 bigint, " +
-                "c5 float, c6 double, c7 bool, c8 binary(10), c9 nchar(10), c10 varchar(20))");
+                "c5 float, c6 double, c7 bool, c8 binary(10), c9 nchar(10), c10 varchar(20), c11 varbinary(100), c12 geometry(100))");
 
         statement.execute("create stable if not exists " + db_name + "." + stableName +
                 "(ts timestamp, c1 tinyint) tags (t1 timestamp, t2 tinyint, t3 smallint, t4 int, t5 bigint, " +
-                "t6 float, t7 double, t8 bool, t9 binary(10), t10 nchar(10), t11 varchar(20))");
+                "t6 float, t7 double, t8 bool, t9 binary(10), t10 nchar(10), t11 varchar(20), t12 varbinary(100), t13 geometry(100))");
 
         statement.close();
     }

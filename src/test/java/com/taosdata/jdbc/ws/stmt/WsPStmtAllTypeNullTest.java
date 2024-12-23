@@ -22,7 +22,7 @@ public class WsPStmtAllTypeNullTest {
 
     @Test
     public void testExecuteUpdate() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "insert into " + db_name + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         PreparedStatement statement = connection.prepareStatement(sql);
         long current = System.currentTimeMillis();
         statement.setTimestamp(1, new Timestamp(current));
@@ -37,6 +37,8 @@ public class WsPStmtAllTypeNullTest {
         statement.setString(9, null);
         statement.setNString(10, null);
         statement.setString(11, null);
+        statement.setNull(12, Types.VARBINARY);
+        statement.setNull(13, Types.VARBINARY);
         statement.executeUpdate();
 
         ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + tableName);
@@ -68,6 +70,8 @@ public class WsPStmtAllTypeNullTest {
         Assert.assertNull(resultSet.getString(10));
         Assert.assertNull(resultSet.getString(11));
 
+        Assert.assertNull(resultSet.getBytes(12));
+        Assert.assertNull(resultSet.getBytes(13));
         resultSet.close();
         statement.close();
     }
@@ -75,7 +79,7 @@ public class WsPStmtAllTypeNullTest {
 
     @Test
     public void testExecuteUpdate2() throws SQLException {
-        String sql = "insert into stb_1 using " + db_name + "." + stableName + " tags (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) values (?, ?)";
+        String sql = "insert into stb_1 using " + db_name + "." + stableName + " tags (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) values (?, ?)";
         TSWSPreparedStatement statement = connection.prepareStatement(sql).unwrap(TSWSPreparedStatement.class);
         long current = System.currentTimeMillis();
 
@@ -91,6 +95,9 @@ public class WsPStmtAllTypeNullTest {
         statement.setTagNull(8, TSDB_DATA_TYPE_BINARY);
         statement.setTagNull(9, TSDB_DATA_TYPE_NCHAR);
         statement.setTagNull(10, TSDB_DATA_TYPE_BINARY);
+
+        statement.setTagNull(11, TSDB_DATA_TYPE_VARBINARY);
+        statement.setTagNull(12, TSDB_DATA_TYPE_GEOMETRY);
 
         statement.setTimestamp(0, Collections.singletonList(current));
         statement.setByte(1, Collections.singletonList(null));
@@ -135,6 +142,8 @@ public class WsPStmtAllTypeNullTest {
         Assert.assertNull(resultSet.getString(12));
         Assert.assertNull(resultSet.getString(13));
 
+        Assert.assertNull(resultSet.getBytes(14));
+        Assert.assertNull(resultSet.getBytes(15));
         resultSet.close();
         statement.close();
     }
@@ -155,11 +164,11 @@ public class WsPStmtAllTypeNullTest {
         statement.execute("use " + db_name);
         statement.execute("create table if not exists " + db_name + "." + tableName +
                 "(ts timestamp, c1 tinyint, c2 smallint, c3 int, c4 bigint, " +
-                "c5 float, c6 double, c7 bool, c8 binary(10), c9 nchar(10), c10 varchar(20))");
+                "c5 float, c6 double, c7 bool, c8 binary(10), c9 nchar(10), c10 varchar(20), c11 varbinary(100), c12 geometry(100))");
 
         statement.execute("create stable if not exists " + db_name + "." + stableName +
                 "(ts timestamp, c1 tinyint) tags (t1 timestamp, t2 tinyint, t3 smallint, t4 int, t5 bigint, " +
-                "t6 float, t7 double, t8 bool, t9 binary(10), t10 nchar(10), t11 varchar(20))");
+                "t6 float, t7 double, t8 bool, t9 binary(10), t10 nchar(10), t11 varchar(20), t12 varbinary(100), t13 geometry(100))");
 
         statement.close();
     }
