@@ -1,5 +1,7 @@
 package com.taosdata.jdbc.common;
 
+import com.taosdata.jdbc.TSDBError;
+import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.utils.StringUtils;
 
@@ -128,7 +130,7 @@ public class SerializeBlock {
                         break;
                     }
                     default:
-                        throw new SQLException("unsupported data type : " + columnInfo.getType());
+                        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "unsupported data type : " + columnInfo.getType());
                 }
             }
         }
@@ -267,7 +269,7 @@ public class SerializeBlock {
                             SerializeLong(buf, offset, (Long) o);
                             offset += Long.BYTES;
                         } else {
-                            throw new SQLException("unsupported timestamp data type : " + o.getClass().getName());
+                            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "unsupported timestamp data type : " + o.getClass().getName());
                         }
 
                     } else {
@@ -278,7 +280,7 @@ public class SerializeBlock {
                 break;
             }
             default:
-                throw new SQLException("unsupported data type : " + dataType);
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "unsupported data type : " + dataType);
         }
     }
 
@@ -309,19 +311,19 @@ public class SerializeBlock {
                 break;
             }
             default:
-                throw new SQLException("unsupported data type : " + dataType);
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "unsupported data type : " + dataType);
         }
     }
     public static int getTagTotalLengthByTableIndex(List<TableInfo> tableInfoList, int index, int toBebindTagCount) throws SQLException{
         int totalLength = 0;
         if (toBebindTagCount > 0){
             if (tableInfoList.get(index).getTagInfo().size() != toBebindTagCount){
-                throw new SQLException("table tag size is not match");
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table tag size is not match");
             }
 
             for (ColumnInfo tag : tableInfoList.get(index).getTagInfo()){
                 if (tag.getDataList().isEmpty()){
-                    throw new SQLException("tag value is null, index: " + index);
+                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "tag value is null, index: " + index);
                 }
                 int columnSize = getColumnSize(tag);
                 tag.setSerializeSize(columnSize);
@@ -335,7 +337,7 @@ public class SerializeBlock {
         int totalLength = 0;
         if (toBebindColCount > 0){
             if (tableInfoList.get(index).getDataList().size() != toBebindColCount){
-                throw new SQLException("table column size is not match");
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table column size is not match");
             }
 
             for (ColumnInfo columnInfo : tableInfoList.get(index).getDataList()){
@@ -382,7 +384,7 @@ public class SerializeBlock {
                 return 17 + (5 * column.getDataList().size()) + totalLength;
             }
             default:
-                throw new SQLException("unsupported data type : " + column.getType());
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "unsupported data type : " + column.getType());
         }
     }
 
@@ -400,7 +402,7 @@ public class SerializeBlock {
         if (toBeBindTableNameIndex >= 0) {
             for (TableInfo tableInfo: tableInfoList) {
                 if (StringUtils.isEmpty(tableInfo.getTableName())){
-                    throw new SQLException("table name is empty");
+                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table name is empty");
                 }
                 int tableNameSize = tableInfo.getTableName().length() + 1;
                 totalTableNameSize += tableNameSize;
@@ -520,7 +522,7 @@ public class SerializeBlock {
         if (toBebindTableNameCount > 0){
             for (Short tableNameLen: tableNameSizeList){
                 if (tableNameLen == 0) {
-                    throw new SQLException("table name is empty");
+                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table name is empty");
                 }
 
                 SerializeShort(buf, offset, tableNameLen);
@@ -529,7 +531,7 @@ public class SerializeBlock {
 
             for (TableInfo tableInfo: tableInfoList){
                 if (StringUtils.isEmpty(tableInfo.getTableName())) {
-                    throw new SQLException("table name is empty");
+                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table name is empty");
                 }
 
                 serializeByteArray(buf, offset, tableInfo.getTableName().getBytes());
@@ -548,7 +550,7 @@ public class SerializeBlock {
             for (int i = 0; i < tableInfoList.size(); i++) {
                 for (ColumnInfo tag : tableInfoList.get(i).getTagInfo()){
                     if (tag.getDataList().isEmpty()){
-                        throw new SQLException("tag value is null, index: " + i);
+                        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "tag value is null, index: " + i);
                     }
                     serializeColumn(tag, buf, offset, precision);
                     offset += tag.getSerializeSize();

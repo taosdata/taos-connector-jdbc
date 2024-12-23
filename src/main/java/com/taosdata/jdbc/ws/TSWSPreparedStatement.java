@@ -137,11 +137,11 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
     @Override
     public ResultSet executeQuery() throws SQLException {
         if (this.isInsert){
-            throw new SQLException("The query SQL must be prepared.");
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "The query SQL must be prepared.");
         }
 
         if (!tag.isEmpty() || !colListQueue.isEmpty()){
-            throw new SQLException("The query SQL only support bind columns.");
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "The query SQL only support bind columns.");
         }
 
         // only support jdbc standard bind api
@@ -170,7 +170,7 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
     @Override
     public int executeUpdate() throws SQLException {
         if (!this.isInsert){
-            throw new SQLException("The insert SQL must be prepared.");
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "The insert SQL must be prepared.");
         }
 
         if (fields.isEmpty()){
@@ -187,7 +187,7 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
         }
 
         if (isTableInfoEmpty()){
-            throw new SQLException("no data to be bind");
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_WITH_EXECUTEUPDATE, "no data to be bind");
         }
 
         tableInfoList.add(tableInfo);
