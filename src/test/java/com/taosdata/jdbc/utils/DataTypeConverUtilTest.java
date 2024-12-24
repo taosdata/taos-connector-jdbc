@@ -490,14 +490,14 @@ public class DataTypeConverUtilTest {
         try {
             byte[] dateBytes = dateString.getBytes("UTF-8");
             Date parsedDate = DataTypeConverUtil.getDate(dateBytes, null);
-            assertEquals(Utils.parseDate(dateString, null), parsedDate);
+            assertEquals(DateTimeUtils.parseDate(dateString, null), parsedDate);
         } catch (UnsupportedEncodingException e) {
             fail("Unexpected UnsupportedEncodingException: " + e.getMessage());
         }
 
         // Test with String
         Date parsedDateFromString = DataTypeConverUtil.getDate(dateString, null);
-        assertEquals(Utils.parseDate(dateString, null), parsedDateFromString);
+        assertEquals(DateTimeUtils.parseDate(dateString, null), parsedDateFromString);
 
     }
 

@@ -4,9 +4,9 @@ import com.taosdata.jdbc.*;
 import com.taosdata.jdbc.common.ColumnInfo;
 import com.taosdata.jdbc.common.SerializeBlock;
 import com.taosdata.jdbc.enums.BindType;
-import com.taosdata.jdbc.enums.DataType;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.entity.Action;
@@ -14,7 +14,6 @@ import com.taosdata.jdbc.ws.entity.Code;
 import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.entity.Response;
 import com.taosdata.jdbc.ws.stmt.entity.ExecResp;
-import com.taosdata.jdbc.ws.stmt.entity.GetColFieldsResp;
 import com.taosdata.jdbc.ws.stmt.entity.RequestFactory;
 import com.taosdata.jdbc.ws.stmt.entity.StmtResp;
 
@@ -26,8 +25,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.sql.Date;
 import java.sql.*;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
@@ -558,7 +556,16 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
 
     @Override
     public void setTimestamp(int parameterIndex, Timestamp x) throws SQLException {
-        column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
+        if (this.zoneId == null) {
+            column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
+        } else {
+            Instant instant = x.toInstant();
+            ZonedDateTime zonedDateTime = instant.atZone(this.zoneId);
+            ZonedDateTime utcDateTime = zonedDateTime.withZoneSameInstant(ZoneId.systemDefault());
+            Timestamp utcTimestamp = Timestamp.valueOf(utcDateTime.toLocalDateTime());
+
+            column.put(parameterIndex, new Column(utcTimestamp, TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
+        }
     }
 
     @Override
@@ -608,7 +615,8 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
                 column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_DOUBLE, parameterIndex));
                 break;
             case Types.TIMESTAMP:
-                column.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
+                Timestamp timestamp = DateTimeUtils.toUTC((Timestamp) x, zoneId);
+                column.put(parameterIndex, new Column(timestamp, TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
                 break;
             case Types.BINARY:
             case Types.VARCHAR:
@@ -656,7 +664,24 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
         } else if (x instanceof Timestamp) {
             setTimestamp(parameterIndex, (Timestamp) x);
         } else if (x instanceof LocalDateTime) {
-            setTimestamp(parameterIndex, Timestamp.valueOf((LocalDateTime)x));
+            if (zoneId == null) {
+                setTimestamp(parameterIndex, Timestamp.valueOf((LocalDateTime) x));
+            } else {
+                ZonedDateTime zonedDateTime = ((LocalDateTime) x).atZone(zoneId);
+                Instant instant = zonedDateTime.toInstant();
+                Timestamp timestamp = Timestamp.from(instant);
+                setTimestamp(parameterIndex, timestamp);
+            }
+        } else if (x instanceof Instant) {
+            column.put(parameterIndex, new Column(Timestamp.from((Instant) x), TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
+        } else if (x instanceof ZonedDateTime) {
+            ZonedDateTime zonedDateTime = (ZonedDateTime) x;
+            Instant instant = zonedDateTime.toInstant();
+            column.put(parameterIndex, new Column(Timestamp.from(instant), TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
+        } else if (x instanceof OffsetDateTime) {
+            OffsetDateTime offsetDateTime = (OffsetDateTime) x;
+            Instant instant = offsetDateTime.toInstant();
+            column.put(parameterIndex, new Column(Timestamp.from(instant), TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
         } else {
             throw new SQLException("Unsupported data type: " + x.getClass().getName());
         }
@@ -844,7 +869,8 @@ public class TSWSPreparedStatement extends WSStatement implements PreparedStatem
 
     @Override
     public void setTimestamp(int parameterIndex, Timestamp x, Calendar cal) throws SQLException {
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
+       Timestamp timestamp = DateTimeUtils.toUTC(x, cal);
+        column.put(parameterIndex, new Column(timestamp, TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
     }
 
     @Override

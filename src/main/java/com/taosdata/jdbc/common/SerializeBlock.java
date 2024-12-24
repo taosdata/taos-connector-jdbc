@@ -121,18 +121,6 @@ public class SerializeBlock {
                 if (o instanceof Timestamp) {
                     Timestamp t = (Timestamp) o;
                     v = getLongFromTimestamp(t, precision);
-                } else if (o instanceof Instant){
-                    Instant t = (Instant) o;
-                    Timestamp ts = Timestamp.from(t);
-                    v = getLongFromTimestamp(ts, precision);
-                } else if (o instanceof OffsetDateTime){
-                    OffsetDateTime t = (OffsetDateTime) o;
-                    Timestamp ts = Timestamp.from(t.toInstant());
-                    v = getLongFromTimestamp(ts, precision);
-                } else if (o instanceof ZonedDateTime){
-                    ZonedDateTime t = (ZonedDateTime) o;
-                    Timestamp ts = Timestamp.from(t.toInstant());
-                    v = getLongFromTimestamp(ts, precision);
                 } else {
                     throw new SQLException("unsupported data type : " + o.getClass().getName());
                 }
@@ -298,6 +286,14 @@ public class SerializeBlock {
         for (int i = 0; i < Integer.BYTES; i++) {
             block[4 + i] = (byte) (block.length >> (8 * i));
         }
+
+        for (int i = 0; i < block.length; i++) {
+            int bb = block[i] & 0xff;
+            System.out.print(bb);
+            System.out.print(",");
+        }
+        System.out.println();
+
         return block;
     }
 

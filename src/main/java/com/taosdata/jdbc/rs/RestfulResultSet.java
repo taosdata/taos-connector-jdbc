@@ -12,6 +12,7 @@ import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.enums.DataType;
 import com.taosdata.jdbc.enums.TimestampPrecision;
+import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.Utils;
 
@@ -413,7 +414,7 @@ public class RestfulResultSet extends AbstractResultSet {
             return null;
         if (value instanceof Timestamp)
             return new Date(((Timestamp) value).getTime());
-        return Utils.parseDate(value.toString(), null);
+        return DateTimeUtils.parseDate(value.toString(), null);
     }
 
     @Override
@@ -428,7 +429,7 @@ public class RestfulResultSet extends AbstractResultSet {
             return new Time(((Timestamp) value).getTime());
         Time time = null;
         try {
-            time = Utils.parseTime(value.toString(), null);
+            time = DateTimeUtils.parseTime(value.toString(), null);
         } catch (DateTimeParseException ignored) {
         }
         return time;
@@ -453,7 +454,7 @@ public class RestfulResultSet extends AbstractResultSet {
         }
         Timestamp ret;
         try {
-            ret = Utils.parseTimestamp(value.toString(), null);
+            ret = DateTimeUtils.parseTimestamp(value.toString(), null);
         } catch (Exception e) {
             ret = null;
             wasNull = true;

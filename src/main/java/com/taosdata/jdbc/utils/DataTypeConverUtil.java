@@ -12,6 +12,7 @@ import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.sql.*;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 
@@ -487,9 +488,9 @@ public class DataTypeConverUtil {
             } catch (UnsupportedEncodingException e) {
                 throw new RuntimeException(e.getMessage());
             }
-            return Utils.parseDate(tmp, zoneId);
+            return DateTimeUtils.parseDate(tmp, zoneId);
         }
-        return Utils.parseDate(value.toString(), zoneId);
+        return DateTimeUtils.parseDate(value.toString(), zoneId);
     }
 
     public static Time getTime(Object value, ZoneId zoneId) {
@@ -508,7 +509,7 @@ public class DataTypeConverUtil {
         }
         Time time = null;
         try {
-            time = Utils.parseTime(tmp, zoneId);
+            time = DateTimeUtils.parseTime(tmp, zoneId);
         } catch (DateTimeParseException e) {
             throw new RuntimeException(e.getMessage());
         }
@@ -627,22 +628,24 @@ public class DataTypeConverUtil {
         }
 
         if (TimestampPrecision.MS == timestampPrecision) {
-            Instant instant1 = Instant.ofEpochMilli(value);
-            Instant instant = instant1.atZone(zoneId).toInstant();
-            return Timestamp.from(instant);
+            Instant instant = Instant.ofEpochMilli(value);
+            LocalDateTime localDateTime = instant.atZone(zoneId).toLocalDateTime();
+            return Timestamp.valueOf(localDateTime);
         }
 
         if (TimestampPrecision.US == timestampPrecision) {
             long epochSec = value / 1000_000L;
             long nanoAdjustment = value % 1000_000L * 1000L;
             Instant instant = Instant.ofEpochSecond(epochSec, nanoAdjustment);
-            return Timestamp.from(instant.atZone(zoneId).toInstant());
+            LocalDateTime localDateTime = instant.atZone(zoneId).toLocalDateTime();
+            return Timestamp.valueOf(localDateTime);
         }
         if (TimestampPrecision.NS == timestampPrecision) {
             long epochSec = value / 1000_000_000L;
             long nanoAdjustment = value % 1000_000_000L;
             Instant instant = Instant.ofEpochSecond(epochSec, nanoAdjustment);
-            return Timestamp.from(instant.atZone(zoneId).toInstant());
+            LocalDateTime localDateTime = instant.atZone(zoneId).toLocalDateTime();
+            return Timestamp.valueOf(localDateTime);
         }
         return null;
     }

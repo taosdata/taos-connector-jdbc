@@ -24,7 +24,8 @@ public class WSStatement extends AbstractStatement {
 
     private int queryTimeout = 0;
 
-    private final ZoneId zoneId;
+    protected final ZoneId zoneId;
+    protected final ZoneId stdZoneId = ZoneId.of("UTC");
 
     public WSStatement(Transport transport, String database, AbstractConnection connection, Long instanceId, ZoneId zoneId) {
         this.transport = transport;

@@ -8,6 +8,7 @@ import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.TaosGlobalConfig;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.utils.DataTypeConverUtil;
+import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.entity.QueryResp;
 
@@ -260,7 +261,7 @@ public class BlockResultSet extends AbstractWSResultSet {
         }
         Timestamp ret;
         try {
-            ret = Utils.parseTimestamp(tmp, zoneId);
+            ret = DateTimeUtils.parseTimestamp(tmp, zoneId);
         } catch (Exception e) {
             ret = null;
             wasNull = true;

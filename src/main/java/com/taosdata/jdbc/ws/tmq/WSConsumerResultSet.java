@@ -11,6 +11,7 @@ import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.rs.RestfulResultSet;
 import com.taosdata.jdbc.rs.RestfulResultSetMetaData;
 import com.taosdata.jdbc.utils.DataTypeConverUtil;
+import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.Transport;
 import com.taosdata.jdbc.ws.entity.Code;
@@ -276,7 +277,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
         }
         Timestamp ret;
         try {
-            ret = Utils.parseTimestamp(value.toString(), null);
+            ret = DateTimeUtils.parseTimestamp(value.toString(), null);
         } catch (Exception e) {
             ret = null;
             wasNull = true;
