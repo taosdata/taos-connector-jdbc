@@ -1,6 +1,7 @@
-package com.taosdata.jdbc.ws;
+package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.ws.TSWSPreparedStatement;
 import org.junit.*;
 
 import java.io.InputStream;
@@ -13,10 +14,8 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Properties;
 
-import static com.taosdata.jdbc.TSDBConstants.*;
-
 @FixMethodOrder
-public class WSPreparedStatementTest {
+public class WsPstmtTest {
     String host = "127.0.0.1";
     String db_name = "ws_prepare";
     String tableName = "wpt";

@@ -4,18 +4,22 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ColumnInfo implements Comparable<ColumnInfo> {
-    private List<Object> dataList = new ArrayList<>();
+    private List<Object> dataList;
     // taos data type
     private final int type;
     private final int index;
 
-    public ColumnInfo(int columnIndex, Object data, int type) {
-        this.index = columnIndex;
-        this.dataList.add(data);
-        this.type = type;
-    }
 
-    public ColumnInfo(int columnIndex, List<Object> dataList, int type, Integer flag) {
+
+    private int serializeSize;
+
+//    public ColumnInfo(int columnIndex, Object data, int type) {
+//        this.index = columnIndex;
+//        this.dataList.add(data);
+//        this.type = type;
+//    }
+
+    public ColumnInfo(int columnIndex, List<Object> dataList, int type) {
         this.index = columnIndex;
         this.dataList = dataList;
         this.type = type;
@@ -35,6 +39,14 @@ public class ColumnInfo implements Comparable<ColumnInfo> {
 
     public int getIndex() {
         return index;
+    }
+
+    public int getSerializeSize() {
+        return serializeSize;
+    }
+
+    public void setSerializeSize(int serializeSize) {
+        this.serializeSize = serializeSize;
     }
 
     @Override
