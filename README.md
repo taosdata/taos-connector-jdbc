@@ -76,7 +76,7 @@ Add following dependency in the `pom.xml` file of your Maven project:
 <dependency>
  <groupId>com.taosdata.jdbc</groupId>
  <artifactId>taos-jdbcdriver</artifactId>
- <version>3.0.*</version>
+ <version>3.5.0</version>
 </dependency>
 ```
 

@@ -15,11 +15,11 @@ import static com.taosdata.jdbc.utils.SqlSyntaxValidator.getDatabaseName;
 
 public class WSStatement extends AbstractStatement {
     protected Transport transport;
-    private String database;
+    protected String database;
     private final AbstractConnection connection;
 
     private boolean closed;
-    private ResultSet resultSet;
+    protected ResultSet resultSet;
 
     private int queryTimeout = 0;
 

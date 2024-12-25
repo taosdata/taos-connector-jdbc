@@ -1,9 +1,13 @@
 package com.taosdata.jdbc.common;
 
+import com.taosdata.jdbc.TSDBError;
+import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.enums.TimestampPrecision;
+import com.taosdata.jdbc.utils.StringUtils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -31,12 +35,12 @@ public class SerializeBlock {
         return (byte) (c + (1 << (7 - bitPos(n))));
     }
 
-    private static void handleBoolean(byte[] buf, int rowIndex, int offset, Object o){
+    private static void handleBoolean(ByteArrayOutputStream buf, Object o){
         boolean v = (Boolean) o;
         if (v) {
-            buf[offset + rowIndex] = 1;
+            buf.write(1);
         }else {
-            buf[offset + rowIndex] = 0;
+            buf.write(0);
         }
     }
     private static void SerializeInt(byte[] buf, int offset, int v){
@@ -45,6 +49,7 @@ public class SerializeBlock {
         buf[offset + 2] = (byte) ((v >> 16) & 0xFF);
         buf[offset + 3] = (byte) ((v >> 24) & 0xFF);
     }
+
     private static void SerializeLong(byte[] buf, int offset, long v){
         buf[offset] = (byte) (v & 0xFF);
         buf[offset + 1] = (byte) ((v >> 8) & 0xFF);
@@ -59,221 +64,531 @@ public class SerializeBlock {
         buf[offset] = (byte) (v & 0xFF);
         buf[offset + 1] = (byte) ((v >> 8) & 0xFF);
     }
-    private static void handleNormalDataType(int dataType ,byte[] buf, int rowIndex, int startOffset, Object o, int precision) throws SQLException {
-        switch (dataType) {
-            case TSDB_DATA_TYPE_BOOL: {
-                handleBoolean(buf, rowIndex, startOffset, o);
-                break;
-            }
-            case TSDB_DATA_TYPE_TINYINT: {
-                buf[rowIndex + startOffset] = (Byte) o;
-                break;
-            }
-            case TSDB_DATA_TYPE_SMALLINT: {
-                short v = (Short) o;
-                int offset = rowIndex * Short.BYTES + startOffset;
-                SerializeShort(buf, offset, v);
-                break;
-            }
-            case TSDB_DATA_TYPE_INT: {
-                int v = (Integer) o;
-                int offset = rowIndex * Integer.BYTES + startOffset;
-                SerializeInt(buf, offset, v);
-                break;
-            }
-            case TSDB_DATA_TYPE_BIGINT: {
-                long v = (Long) o;
-                int offset = rowIndex * Long.BYTES + startOffset;
-                SerializeLong(buf, offset, v);
-                break;
-            }
-            case TSDB_DATA_TYPE_FLOAT: {
-                float v = (Float) o;
-                int offset = rowIndex * Float.BYTES + startOffset;
-                int f = Float.floatToIntBits(v);
-                SerializeInt(buf, offset, f);
-                break;
-            }
-            case TSDB_DATA_TYPE_DOUBLE: {
-                double v = (Double) o;
-                int offset = rowIndex * Double.BYTES + startOffset;
-                long l = Double.doubleToLongBits(v);
-                SerializeLong(buf, offset, l);
-                break;
-            }
-            case TSDB_DATA_TYPE_TIMESTAMP: {
-                Timestamp t = (Timestamp) o;
-                long v;
-                if (precision == TimestampPrecision.MS) {
-                    v = t.getTime();
-                } else if (precision == TimestampPrecision.US) {
-                    v = t.getTime() * 1000L + t.getNanos() / 1000 % 1000;
-                } else {
-                    v = t.getTime() * 1000_000L + t.getNanos() % 1000_000L;
-                }
 
-                int offset = rowIndex * Long.BYTES + startOffset;
-                SerializeLong(buf, offset, v);
-                break;
-            }
-            default:
-                throw new SQLException("unsupported data type : " + dataType);
-        }
+    public static void serializeByteArray(byte[] buf, int offset, byte[] data) {
+        System.arraycopy(data, 0, buf, offset, data.length);
     }
 
+    private static int serializeColumn(ColumnInfo columnInfo, byte[] buf, int offset, int precision) throws IOException, SQLException {
+        Integer dataLen = DataLengthCfg.getDataLength(columnInfo.getType());
 
-    public static byte[] getRawBlock(List<ColumnInfo> list, int precision) throws IOException, SQLException {
-        int columns = list.size();
-        int rows = list.get(0).getDataList().size();
+        // TotalLength
+        SerializeInt(buf, offset, columnInfo.getSerializeSize());
+        offset += Integer.BYTES;
 
-        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-        // version int32
-        buffer.write(intToBytes(1));
-        // length int32
-        buffer.write(intToBytes(0));
-        // rows int32
-        buffer.write(intToBytes(rows));
-        // columns int32
-        buffer.write(intToBytes(columns));
-        // flagSegment int32
-        buffer.write(intToBytes(0));
-        // groupID uint64
-        buffer.write(longToBytes(0));
+        // Type
+        SerializeInt(buf, offset, columnInfo.getType());
+        offset += Integer.BYTES;
 
-        byte[] colInfoData = new byte[5 * columns];
-        byte[] lengthData = new byte[4 * columns];
+        // Num
+        SerializeInt(buf, offset, columnInfo.getDataList().size());
+        offset += Integer.BYTES;
 
-        int bitMapLen = bitMapLen(rows);
-        ByteArrayOutputStream data = new ByteArrayOutputStream();
-        for (int colIndex = 0; colIndex < list.size(); colIndex++) {
-            ColumnInfo column = list.get(colIndex);
-
-            Integer dataLen = DataLengthCfg.getDataLength(column.getType());
-
-            // 不支持的数据类型
-            if (column.getType() == TSDB_DATA_TYPE_UTINYINT
-                    || column.getType() == TSDB_DATA_TYPE_USMALLINT
-                    || column.getType() == TSDB_DATA_TYPE_UINT
-                    || column.getType() == TSDB_DATA_TYPE_UBIGINT
-            ) {
-                break;
+        // IsNull
+        for (Object o: columnInfo.getDataList()) {
+            if (o == null) {
+                buf[offset++] = 1;
+            } else {
+                buf[offset++] = 0;
             }
+        }
 
-            //非数组类型
-            if (dataLen != null){
-                colInfoData[colIndex * 5] = (byte) column.getType();
-                int typeLen = dataLen;
+        // haveLength
+        if (dataLen != null){
+            buf[offset++] = 0;
+            // buffer
+            SerializeNormalDataType(columnInfo.getType(), buf, offset, columnInfo.getDataList(), precision);
+            return offset;
+        }
 
-                byte[] typeBytes = intToBytes(typeLen);
-                System.arraycopy(typeBytes, 0, colInfoData, colIndex * 5 + 1, 4);
-                byte[] array = intToBytes(typeLen * rows);
-                System.arraycopy(array, 0, lengthData, colIndex * 4, 4);
-
-                byte[] tmp = new byte[bitMapLen + rows * dataLen];
-                List<?> rowData = column.getDataList();
-
-                for (int rowIndex = 0; rowIndex < rows; rowIndex++) {
-                    if (rowData.get(rowIndex) == null) {
-                        int charOffset = charOffset(rowIndex);
-                        tmp[charOffset] = bmSetNull(tmp[charOffset], rowIndex);
-                    } else {
-                        handleNormalDataType(column.getType(), tmp, rowIndex, bitMapLen, rowData.get(rowIndex), precision);
-                    }
-                }
-                data.write(tmp);
-            }else{
-                // 数组类型
-                switch (column.getType()) {
+        // data is array type
+        buf[offset++] = 1;
+        // length
+        int bufferLength = 0;
+        for (Object o: columnInfo.getDataList()){
+            if (o == null){
+                SerializeInt(buf, offset, 0);
+                offset += Integer.BYTES;
+            } else {
+                switch (columnInfo.getType()) {
                     case TSDB_DATA_TYPE_BINARY:
                     case TSDB_DATA_TYPE_JSON:
                     case TSDB_DATA_TYPE_VARBINARY:
-                    case TSDB_DATA_TYPE_GEOMETRY:
-                    {
-                        colInfoData[colIndex * 5] = (byte) column.getType();
-                        // 4 bytes for 0
-
-                        int length = 0;
-                        List<?> rowData = column.getDataList();
-                        byte[] index = new byte[rows * Integer.BYTES];
-                        List<Byte> tmp = new ArrayList<>();
-                        for (int rowIndex = 0; rowIndex < rows; rowIndex++) {
-                            int offset = rowIndex * Integer.BYTES;
-                            if (rowData.get(rowIndex) == null) {
-                                for (int i = 0; i < Integer.BYTES; i++) {
-                                    index[offset + i] = (byte) 0xFF;
-                                }
-                            } else {
-                                byte[] v = (byte[]) rowData.get(rowIndex);
-                                for (int i = 0; i < Integer.BYTES; i++) {
-                                    index[offset + i] = (byte) (length >> (8 * i) & 0xFF);
-                                }
-                                short len = (short) v.length;
-                                tmp.add((byte) (len & 0xFF));
-                                tmp.add((byte) ((len >> 8) & 0xFF));
-                                for (byte b : v) {
-                                    tmp.add(b);
-                                }
-                                length += v.length + Short.BYTES;
-                            }
-                        }
-                        byte[] array = intToBytes(length);
-                        System.arraycopy(array, 0, lengthData, colIndex * 4, 4);
-                        data.write(index);
-                        byte[] bytes = new byte[tmp.size()];
-                        for (int i = 0; i < tmp.size(); i++) {
-                            bytes[i] = tmp.get(i);
-                        }
-                        data.write(bytes);
+                    case TSDB_DATA_TYPE_GEOMETRY:{
+                        byte[] v = (byte[]) o;
+                        SerializeInt(buf, offset, v.length);
+                        offset += Integer.BYTES;
+                        bufferLength += v.length;
                         break;
                     }
                     case TSDB_DATA_TYPE_NCHAR: {
-                        colInfoData[colIndex * 5] = (byte) column.getType();;
-                        // 4 bytes for 0
-
-                        int length = 0;
-                        byte[] index = new byte[rows * Integer.BYTES];
-                        ByteArrayOutputStream tmp = new ByteArrayOutputStream();
-                        List<?> rowData = column.getDataList();
-                        for (int rowIndex = 0; rowIndex < rows; rowIndex++) {
-                            int offset = rowIndex * Integer.BYTES;
-                            if (rowData.get(rowIndex) == null) {
-                                for (int i = 0; i < Integer.BYTES; i++) {
-                                    index[offset + i] = (byte) 0xFF;
-                                }
-                            } else {
-                                String v = (String) rowData.get(rowIndex);
-                                for (int i = 0; i < Integer.BYTES; i++) {
-                                    index[offset + i] = (byte) ((length >> (8 * i)) & 0xFF);
-                                }
-                                short len = (short) (v.length() * 4);
-                                tmp.write((byte) (len & 0xFF));
-                                tmp.write((byte) ((len >> 8) & 0xFF));
-                                int[] t = v.codePoints().toArray();
-                                for (int i : t) {
-                                    tmp.write(intToBytes(i));
-                                }
-                                length += t.length * 4 + Short.BYTES;
-                            }
-                        }
-                        byte[] array = intToBytes(length);
-                        System.arraycopy(array, 0, lengthData, colIndex * 4, 4);
-                        data.write(index);
-                        data.write(tmp.toByteArray());
+                        String v = (String) o;
+                        int len = v.getBytes().length;
+                        SerializeInt(buf, offset, len);
+                        offset += Integer.BYTES;
+                        bufferLength += len;
                         break;
                     }
                     default:
-                        throw new SQLException("unsupported data type : " + column.getType());
+                        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "unsupported data type : " + columnInfo.getType());
                 }
             }
         }
-        buffer.write(colInfoData);
-        buffer.write(lengthData);
-        buffer.write(data.toByteArray());
-        byte[] block = buffer.toByteArray();
-        for (int i = 0; i < Integer.BYTES; i++) {
-            block[4 + i] = (byte) (block.length >> (8 * i));
+
+        // buffer length
+        SerializeInt(buf, offset, bufferLength);
+        offset += Integer.BYTES;
+
+        // buffer
+        SerializeArrayDataType(columnInfo.getType(), buf, offset, columnInfo.getDataList());
+        return offset;
+    }
+
+    private static void SerializeNormalDataType(int dataType , byte[] buf, int offset, List<Object> objectList, int precision) throws IOException, SQLException {
+        switch (dataType) {
+            case TSDB_DATA_TYPE_BOOL: {
+                SerializeInt(buf, offset, objectList.size());
+                offset += Integer.BYTES;
+
+                for (Object o: objectList){
+                    if (o == null) {
+                        buf[offset++] = 0;
+                    } else {
+                        boolean v = (Boolean) o;
+                        buf[offset++] = v ? (byte) 1 : (byte) 0;
+                    }
+                }
+                break;
+            }
+            case TSDB_DATA_TYPE_TINYINT: {
+                SerializeInt(buf, offset, objectList.size());
+                offset += Integer.BYTES;
+
+                for (Object o: objectList){
+                    if (o == null) {
+                        buf[offset++] = 0;
+                    } else {
+                        byte v = (Byte) o;
+                        buf[offset++] = v;
+                    }
+                }
+                break;
+            }
+            case TSDB_DATA_TYPE_SMALLINT: {
+                SerializeInt(buf, offset, objectList.size() * Short.BYTES);
+                offset += Integer.BYTES;
+
+                for (Object o: objectList){
+                    if (o != null) {
+                        SerializeShort(buf, offset, (Short) o);
+                    } else {
+                        SerializeShort(buf, offset, (short)0);
+                    }
+
+                    offset += Short.BYTES;
+                }
+                break;
+            }
+            case TSDB_DATA_TYPE_INT: {
+                SerializeInt(buf, offset, objectList.size() * Integer.BYTES);
+                offset += Integer.BYTES;
+
+                for (Object o: objectList){
+                    if (o != null) {
+                        SerializeInt(buf, offset, (Integer) o);
+                    } else {
+                        SerializeInt(buf, offset, 0);
+                    }
+                    offset += Integer.BYTES;
+                }
+                break;
+            }
+            case TSDB_DATA_TYPE_BIGINT: {
+                SerializeInt(buf, offset, objectList.size() * Long.BYTES);
+                offset += Integer.BYTES;
+
+                for (Object o: objectList){
+                    if (o != null) {
+                        SerializeLong(buf, offset, (Long)o);
+                    } else {
+                        SerializeLong(buf, offset, 0L);
+                    }
+                    offset += Long.BYTES;
+                }
+               break;
+            }
+            case TSDB_DATA_TYPE_FLOAT: {
+                SerializeInt(buf, offset, objectList.size() * Integer.BYTES);
+                offset += Integer.BYTES;
+
+                for (Object o: objectList){
+                    float v = 0;
+                    if (o != null) {
+                        v = (Float) o;
+                    }
+                    int f = Float.floatToIntBits(v);
+                    SerializeInt(buf, offset, f);
+                    offset += Integer.BYTES;
+                }
+                break;
+            }
+            case TSDB_DATA_TYPE_DOUBLE: {
+                SerializeInt(buf, offset, objectList.size() * Long.BYTES);
+                offset += Integer.BYTES;
+
+                for (Object o: objectList){
+                    double v = 0;
+                    if (o != null) {
+                        v = (Double) o;
+                    }
+                    long l = Double.doubleToLongBits(v);
+                    SerializeLong(buf, offset, l);
+                    offset += Long.BYTES;
+                }
+                break;
+            }
+            case TSDB_DATA_TYPE_TIMESTAMP: {
+                SerializeInt(buf, offset, objectList.size() * Long.BYTES);
+                offset += Integer.BYTES;
+
+                for (Object o: objectList){
+                    if (o != null) {
+                        if(o instanceof Timestamp) {
+                            Timestamp t = (Timestamp) o;
+                            long v;
+                            if (precision == TimestampPrecision.MS) {
+                                v = t.getTime();
+                            } else if (precision == TimestampPrecision.US) {
+                                v = t.getTime() * 1000L + t.getNanos() / 1000 % 1000;
+                            } else {
+                                v = t.getTime() * 1000_000L + t.getNanos() % 1000_000L;
+                            }
+                            SerializeLong(buf, offset, v);
+                            offset += Long.BYTES;
+                        } else if (o instanceof Long){
+                            SerializeLong(buf, offset, (Long) o);
+                            offset += Long.BYTES;
+                        } else {
+                            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "unsupported timestamp data type : " + o.getClass().getName());
+                        }
+
+                    } else {
+                        SerializeLong(buf, offset, 0);
+                        offset += Long.BYTES;
+                    }
+                }
+                break;
+            }
+            default:
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "unsupported data type : " + dataType);
         }
-        return block;
+    }
+
+    private static void SerializeArrayDataType(int dataType , byte[] buf, int offset, List<Object> objectList) throws SQLException {
+        switch (dataType) {
+            case TSDB_DATA_TYPE_JSON:
+            case TSDB_DATA_TYPE_BINARY:
+            case TSDB_DATA_TYPE_VARBINARY:
+            case TSDB_DATA_TYPE_GEOMETRY:{
+                for (Object o: objectList){
+                    if (o != null) {
+                        byte[] v = (byte[]) o;
+                        serializeByteArray(buf, offset, v);
+                        offset += v.length;
+                    }
+                }
+                break;
+            }
+            case TSDB_DATA_TYPE_NCHAR: {
+                for (Object o: objectList){
+                    if (o != null) {
+                        String v = (String) o;
+                        byte[] bytes = v.getBytes();
+                        serializeByteArray(buf, offset, bytes);
+                        offset += bytes.length;
+                    }
+                }
+                break;
+            }
+            default:
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "unsupported data type : " + dataType);
+        }
+    }
+    public static int getTagTotalLengthByTableIndex(List<TableInfo> tableInfoList, int index, int toBebindTagCount) throws SQLException{
+        int totalLength = 0;
+        if (toBebindTagCount > 0){
+            if (tableInfoList.get(index).getTagInfo().size() != toBebindTagCount){
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table tag size is not match");
+            }
+
+            for (ColumnInfo tag : tableInfoList.get(index).getTagInfo()){
+                if (tag.getDataList().isEmpty()){
+                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "tag value is null, index: " + index);
+                }
+                int columnSize = getColumnSize(tag);
+                tag.setSerializeSize(columnSize);
+                totalLength += columnSize;
+            }
+        }
+        return totalLength;
+    }
+
+    public static int getColTotalLengthByTableIndex(List<TableInfo> tableInfoList, int index, int toBebindColCount) throws SQLException{
+        int totalLength = 0;
+        if (toBebindColCount > 0){
+            if (tableInfoList.get(index).getDataList().size() != toBebindColCount){
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table column size is not match");
+            }
+
+            for (ColumnInfo columnInfo : tableInfoList.get(index).getDataList()){
+                int columnSize = getColumnSize(columnInfo);
+                columnInfo.setSerializeSize(columnSize);
+                totalLength += columnSize;
+            }
+        }
+        return totalLength;
+    }
+
+    public static int getColumnSize(ColumnInfo column) throws SQLException {
+        Integer dataLen = DataLengthCfg.getDataLength(column.getType());
+
+        if (dataLen != null) {
+            // TotalLength(4) + Type (4) + Num(4) + IsNull(1) * size + haveLength(1) + BufferLength(4) + size * dataLen
+            return 17 + (dataLen + 1) * column.getDataList().size();
+        }
+
+        switch (column.getType()) {
+            case TSDB_DATA_TYPE_JSON:
+            case TSDB_DATA_TYPE_BINARY:
+            case TSDB_DATA_TYPE_VARBINARY:
+            case TSDB_DATA_TYPE_GEOMETRY:{
+                int totalLength = 0;
+                for (Object o : column.getDataList()) {
+                    if (o != null) {
+                        byte[] v = (byte[]) o;
+                        totalLength += v.length;
+                    }
+                }
+                // TotalLength(4) + Type (4) + Num(4) + IsNull(1) * size + haveLength(1) + BufferLength(4) + 4 * v.length + totalLength
+                return 17 + (5 * column.getDataList().size()) + totalLength;
+            }
+            case TSDB_DATA_TYPE_NCHAR: {
+                int totalLength = 0;
+                for (Object o : column.getDataList()) {
+                    if (o != null) {
+                        String v = (String) o;
+                        totalLength += v.getBytes().length;
+                    }
+                }
+                // TotalLength(4) + Type (4) + Num(4) + IsNull(1) * size + haveLength(1) + BufferLength(4) + 4 * v.length + totalLength
+                return 17 + (5 * column.getDataList().size()) + totalLength;
+            }
+            default:
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "unsupported data type : " + column.getType());
+        }
+    }
+
+    public static byte[] getStmt2BindBlock(long reqId,
+                                           long stmtId,
+                                            List<TableInfo> tableInfoList,
+                                           int toBeBindTableNameIndex,
+                                           int toBebindTagCount,
+                                           int toBebindColCount,
+                                           int precision) throws IOException, SQLException {
+
+        // cloc totol size
+        int totalTableNameSize  = 0;
+        List<Short> tableNameSizeList = new ArrayList<>();
+        if (toBeBindTableNameIndex >= 0) {
+            for (TableInfo tableInfo: tableInfoList) {
+                if (StringUtils.isEmpty(tableInfo.getTableName())){
+                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table name is empty");
+                }
+                int tableNameSize = tableInfo.getTableName().length() + 1;
+                totalTableNameSize += tableNameSize;
+                tableNameSizeList.add((short) tableNameSize);
+            }
+        }
+
+        int totalTagSize = 0;
+        List<Integer> tagSizeList = new ArrayList<>();
+        if (toBebindTagCount > 0){
+            for (int i = 0; i < tableInfoList.size(); i++) {
+                int tagSize = getTagTotalLengthByTableIndex(tableInfoList, i, toBebindTagCount);
+                totalTagSize += tagSize;
+                tagSizeList.add(tagSize);
+            }
+        }
+
+
+        int totalColSize = 0;
+        List<Integer> colSizeList = new ArrayList<>();
+        if (toBebindColCount > 0) {
+            for (int i = 0; i < tableInfoList.size(); i++) {
+                int colSize = getColTotalLengthByTableIndex(tableInfoList, i, toBebindColCount);
+                totalColSize += colSize;
+                colSizeList.add(colSize);
+            }
+        }
+
+        int totalSize = totalTableNameSize + totalTagSize + totalColSize;
+        int toBebindTableNameCount = toBeBindTableNameIndex >= 0 ? 1 : 0;
+
+        totalSize += tableInfoList.size() * (
+                toBebindTableNameCount * Short.BYTES
+                + (toBebindTagCount > 0 ? 1 : 0) * Integer.BYTES
+                + (toBebindColCount > 0 ? 1 : 0) * Integer.BYTES);
+
+        byte[] buf = new byte[58 + totalSize];
+        int offset = 0;
+
+        //************ header *****************
+        // ReqId
+        SerializeLong(buf, offset, reqId);
+        offset += Long.BYTES;
+        // stmtId
+        SerializeLong(buf, offset, stmtId);
+        offset += Long.BYTES;
+        // actionId
+        SerializeLong(buf, offset, 9L);
+        offset += Long.BYTES;
+
+        // version
+        SerializeShort(buf, offset, (short) 1);
+        offset += Short.BYTES;
+
+        // col_idx
+        SerializeInt(buf, offset, -1);
+        offset += Integer.BYTES;
+
+        //************ data *****************
+        // TotalLength
+        SerializeInt(buf, offset, totalSize + 28);
+        offset += Integer.BYTES;
+
+        // tableCount
+        SerializeInt(buf, offset, tableInfoList.size());
+        offset += Integer.BYTES;
+
+        // TagCount
+        SerializeInt(buf, offset, toBebindTagCount);
+        offset += Integer.BYTES;
+
+        // ColCount
+        SerializeInt(buf, offset, toBebindColCount);
+        offset += Integer.BYTES;
+
+        // tableNameOffset
+        if (toBebindTableNameCount > 0){
+            SerializeInt(buf, offset, 0x1C);
+            offset += Integer.BYTES;
+        } else {
+            SerializeInt(buf, offset, 0);
+            offset += Integer.BYTES;
+        }
+
+        // tagOffset
+        if (toBebindTagCount > 0){
+            if (toBebindTableNameCount > 0){
+                SerializeInt(buf, offset, 28 + totalTableNameSize + Short.BYTES * tableInfoList.size());
+                offset += Integer.BYTES;
+            } else {
+                SerializeInt(buf, offset, 28);
+                offset += Integer.BYTES;
+            }
+        } else {
+            SerializeInt(buf, offset, 0);
+            offset += Integer.BYTES;
+        }
+
+        // colOffset
+        if (toBebindColCount > 0){
+            int skipSize = 0;
+            if (toBebindTableNameCount > 0){
+                skipSize += totalTableNameSize + Short.BYTES * tableInfoList.size();
+            }
+
+            if (toBebindTagCount > 0){
+                skipSize += totalTagSize + Integer.BYTES * tableInfoList.size();
+            }
+            SerializeInt(buf, offset, 28 + skipSize);
+            offset += Integer.BYTES;
+        } else {
+            SerializeInt(buf, offset, 0);
+            offset += Integer.BYTES;
+        }
+
+        // TableNameLength
+        if (toBebindTableNameCount > 0){
+            for (Short tableNameLen: tableNameSizeList){
+                if (tableNameLen == 0) {
+                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table name is empty");
+                }
+
+                SerializeShort(buf, offset, tableNameLen);
+                offset += Short.BYTES;
+            }
+
+            for (TableInfo tableInfo: tableInfoList){
+                if (StringUtils.isEmpty(tableInfo.getTableName())) {
+                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table name is empty");
+                }
+
+                serializeByteArray(buf, offset, tableInfo.getTableName().getBytes());
+                offset += tableInfo.getTableName().length();
+                buf[offset++] = 0;
+            }
+        }
+
+        // TagsDataLength
+        if (toBebindTagCount > 0){
+            for (Integer tagsize: tagSizeList) {
+                   SerializeInt(buf, offset, tagsize);
+                   offset += Integer.BYTES;
+            }
+
+            for (int i = 0; i < tableInfoList.size(); i++) {
+                for (ColumnInfo tag : tableInfoList.get(i).getTagInfo()){
+                    if (tag.getDataList().isEmpty()){
+                        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "tag value is null, index: " + i);
+                    }
+                    serializeColumn(tag, buf, offset, precision);
+                    offset += tag.getSerializeSize();
+                }
+            }
+        }
+
+        // ColsDataLength
+        if (toBebindColCount > 0){
+            for (Integer colSize: colSizeList) {
+                SerializeInt(buf, offset, colSize);
+                offset += Integer.BYTES;
+            }
+
+            for (int i = 0; i < tableInfoList.size(); i++) {
+                for (ColumnInfo col : tableInfoList.get(i).getDataList()){
+                    serializeColumn(col, buf, offset, precision);
+                    offset += col.getSerializeSize();
+                }
+            }
+        }
+
+
+//        for (int i = 30; i < buf.length; i++) {
+//            int bb = buf[i] & 0xff;
+//            System.out.print(bb);
+//            System.out.print(",");
+//        }
+//        System.out.println();
+        return buf;
+    }
+
+    // little endian
+    public static byte[] shortToBytes(int v) {
+        byte[] result = new byte[2];
+        result[0] = (byte) (v & 0xFF);
+        result[1] = (byte) ((v >> 8) & 0xFF);
+        return result;
     }
 
     // little endian
