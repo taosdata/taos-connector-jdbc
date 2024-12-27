@@ -16,7 +16,7 @@ public class WSConsumerResultSetTest {
 
     @Before
     public void setUp() {
-        wsConsumerResultSet = new WSConsumerResultSet(null, null, 0, null, null);
+        wsConsumerResultSet = new WSConsumerResultSet(null, null, 0, null);
     }
 
     @Test

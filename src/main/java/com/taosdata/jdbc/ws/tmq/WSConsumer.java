@@ -36,13 +36,10 @@ public class WSConsumer<V> implements Consumer<V> {
     private long messageId = 0L;
 
     private Collection<String> topics;
-    private ZoneId zoneId = null;
-
     @Override
     public void create(Properties properties) throws SQLException {
         factory = new TMQRequestFactory();
         param = new ConsumerParam(properties);
-        this.zoneId = param.getConnectionParam().getZoneId();
         InFlightRequest inFlightRequest = new InFlightRequest(param.getConnectionParam().getRequestTimeout()
                 , param.getConnectionParam().getMaxRequest());
         transport = new Transport(WSFunction.TMQ, param.getConnectionParam(), inFlightRequest);
@@ -149,7 +146,7 @@ public class WSConsumer<V> implements Consumer<V> {
 
 
         ConsumerRecords<V> records = new ConsumerRecords<>();
-        try (WSConsumerResultSet rs = new WSConsumerResultSet(transport, factory, pollResp.getMessageId(), pollResp.getDatabase(), zoneId)) {
+        try (WSConsumerResultSet rs = new WSConsumerResultSet(transport, factory, pollResp.getMessageId(), pollResp.getDatabase())) {
             while (rs.next()) {
                 String topic = pollResp.getTopic();
                 String dbName = pollResp.getDatabase();

@@ -48,14 +48,11 @@ public class WSConsumerResultSet extends AbstractResultSet {
     protected int numOfRows = 0;
     protected int rowIndex = 0;
 
-    private final ZoneId zoneId;
-
-    public WSConsumerResultSet(Transport transport, TMQRequestFactory factory, long messageId, String database, ZoneId zoneId) {
+    public WSConsumerResultSet(Transport transport, TMQRequestFactory factory, long messageId, String database) {
         this.transport = transport;
         this.factory = factory;
         this.messageId = messageId;
         this.database = database;
-        this.zoneId = zoneId;
     }
 
     private boolean forward() {
@@ -274,7 +271,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
             return (Timestamp) value;
         if (value instanceof Long) {
             Instant instant = DateTimeUtils.parseTimestampColumnData((long) value, this.timestampPrecision);
-            return DateTimeUtils.getTimestamp(instant, zoneId);
+            return DateTimeUtils.getTimestamp(instant, null);
         }
         Timestamp ret;
         try {

@@ -590,35 +590,4 @@ public class DataTypeConverUtil {
                 return null;
         }
     }
-
-
-
-//    public static Timestamp parseTimestampColumnDataWithZoneId(long value, int timestampPrecision, ZoneId zoneId) {
-//        if (zoneId == null){
-//            return parseTimestampColumnData(value, timestampPrecision);
-//        }
-//
-//        if (TimestampPrecision.MS == timestampPrecision) {
-//            Instant instant = Instant.ofEpochMilli(value);
-//            LocalDateTime localDateTime = instant.atZone(zoneId).toLocalDateTime();
-//            return Timestamp.valueOf(localDateTime);
-//        }
-//
-//        if (TimestampPrecision.US == timestampPrecision) {
-//            long epochSec = value / 1000_000L;
-//            long nanoAdjustment = value % 1000_000L * 1000L;
-//            Instant instant = Instant.ofEpochSecond(epochSec, nanoAdjustment);
-//            LocalDateTime localDateTime = instant.atZone(zoneId).toLocalDateTime();
-//            return Timestamp.valueOf(localDateTime);
-//        }
-//        if (TimestampPrecision.NS == timestampPrecision) {
-//            long epochSec = value / 1000_000_000L;
-//            long nanoAdjustment = value % 1000_000_000L;
-//            Instant instant = Instant.ofEpochSecond(epochSec, nanoAdjustment);
-//            LocalDateTime localDateTime = instant.atZone(zoneId).toLocalDateTime();
-//            return Timestamp.valueOf(localDateTime);
-//        }
-//        return null;
-//    }
-
 }

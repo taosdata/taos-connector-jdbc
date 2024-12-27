@@ -115,32 +115,6 @@ public class DateTimeUtils {
         return v;
     }
 
-//    public static ZonedDateTime getZonedDateTime(Timestamp timestamp, ZoneId zoneId) {
-//        if (zoneId == null) {
-//            return ;
-//        }
-//
-//        TimeZone calTimeZone = cal.getTimeZone();
-//        ZoneId zoneId = calTimeZone.toZoneId();
-//
-//        return toUTC(timestamp, zoneId);
-//    }
-//    public static OffsetDateTime getOffsetDateTime(Timestamp timestamp) {
-//        if (zoneId == null) {
-//            return timestamp;
-//        }
-//
-//        Instant instant = timestamp.toInstant();
-//
-//        ZoneOffset systemOffset = systemZoneId.getRules().getOffset(instant);
-//
-//        // 将 Instant 转换为 OffsetDateTime
-//        OffsetDateTime offsetDateTime = OffsetDateTime.ofInstant(instant, systemOffset);
-//        return offsetDateTime;
-//    }
-
-
-
     public static Instant parseTimestampColumnData(long value, int timestampPrecision) {
         if (TimestampPrecision.MS == timestampPrecision)
             return Instant.ofEpochMilli(value);
