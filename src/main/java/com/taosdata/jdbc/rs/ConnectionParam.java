@@ -241,11 +241,13 @@ public class ConnectionParam {
 
     public static ConnectionParam getParamWs(Properties perperties) throws SQLException {
         ConnectionParam connectionParam = getParam(perperties);
-        if (connectionParam.getTz().contains("+")
+        if (connectionParam.getTz() == null
+                || connectionParam.getTz().contains("+")
                 || connectionParam.getTz().contains("-")
                 || !connectionParam.getTz().contains("/")){
             // for history reason, we will not support time zone with offset in websocket connection
             connectionParam.setTz("");
+            return connectionParam;
         }
 
         try {

@@ -273,7 +273,8 @@ public class WSConsumerResultSet extends AbstractResultSet {
         if (value instanceof Timestamp)
             return (Timestamp) value;
         if (value instanceof Long) {
-            return DataTypeConverUtil.parseTimestampColumnDataWithZoneId((long) value, this.timestampPrecision, zoneId);
+            Instant instant = DateTimeUtils.parseTimestampColumnData((long) value, this.timestampPrecision);
+            return DateTimeUtils.getTimestamp(instant, zoneId);
         }
         Timestamp ret;
         try {
@@ -474,7 +475,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
             return null;
 
         int type = fields.get(columnIndex - 1).getTaosType();
-        return DataTypeConverUtil.parseValue(type, source, this.timestampPrecision, zoneId);
+        return DataTypeConverUtil.parseValue(type, source);
     }
 
     //    ceil(numOfRows/8.0)

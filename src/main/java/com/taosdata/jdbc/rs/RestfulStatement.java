@@ -136,13 +136,9 @@ public class RestfulStatement extends AbstractStatement {
         String url;
         String port = null != conn.getPort() ? ":" + conn.getPort() : "";
         if (this.conn.getToken() != null && !"".equals(this.conn.getToken().trim())) {
-
-            String tz = (null == conn.getTz() || "".equals(conn.getTz().trim())) ? "" : "&tz=" + conn.getTz().trim();
-            url = protocol + "://" + conn.getHost() + port + "/rest/sql" + dbname + "?token=" + this.conn.getToken() + tz;
+            url = protocol + "://" + conn.getHost() + port + "/rest/sql" + dbname + "?token=" + this.conn.getToken();
         } else {
-            String tz = (null == conn.getTz() || "".equals(conn.getTz().trim())) ? "" : "?tz=" + conn.getTz().trim();
-
-            url = protocol + "://" + conn.getHost() + port + "/rest/sql" + dbname + tz;
+            url = protocol + "://" + conn.getHost() + port + "/rest/sql" + dbname;
         }
         return url;
     }

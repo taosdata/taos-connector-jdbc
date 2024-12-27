@@ -9,6 +9,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Semaphore;
@@ -173,7 +174,7 @@ public class TSDBResultSetBlockData {
                         if (isNull(tmp, j)) {
                             col.add(null);
                         } else {
-                            col.add(DataTypeConverUtil.parseTimestampColumnData(l, this.timestampPrecision));
+                            col.add(DateTimeUtils.parseTimestampColumnData(l, this.timestampPrecision));
                         }
                     }
                     break;
@@ -358,10 +359,12 @@ public class TSDBResultSetBlockData {
         }
         wasNull = false;
         int type = this.columnMetaDataList.get(col).getColType();
-        if (type == TSDB_DATA_TYPE_BIGINT)
-            return DataTypeConverUtil.parseTimestampColumnData((long) obj, this.timestampPrecision);
+        if (type == TSDB_DATA_TYPE_BIGINT) {
+            Instant instant = DateTimeUtils.parseTimestampColumnData((long) obj, this.timestampPrecision);
+            return DateTimeUtils.getTimestamp(instant, null);
+        }
         if (type == TSDB_DATA_TYPE_TIMESTAMP)
-            return (Timestamp) obj;
+            return DateTimeUtils.getTimestamp((Instant) obj, null);
         if (obj instanceof byte[]) {
             String tmp = "";
             String charset = TaosGlobalConfig.getCharset();

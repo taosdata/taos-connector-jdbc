@@ -1,35 +1,22 @@
 package com.taosdata.jdbc.utils;
 
-import com.google.common.collect.Range;
-import com.google.common.collect.RangeSet;
-import com.google.common.collect.TreeRangeSet;
+import com.taosdata.jdbc.enums.TimestampPrecision;
 
-import java.lang.reflect.Constructor;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.nio.charset.StandardCharsets;
 import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
 import java.util.Calendar;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.TimeZone;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 public class DateTimeUtils {
 
     private static final ZoneId stdZoneId = ZoneId.of("UTC");
+    private static final ZoneId systemZoneId = ZoneId.systemDefault();
     private static final Pattern ptn = Pattern.compile(".*?'");
     private static final DateTimeFormatter milliSecFormatter = new DateTimeFormatterBuilder().appendPattern("yyyy-MM-dd HH:mm:ss.SSS").toFormatter();
     private static final DateTimeFormatter microSecFormatter = new DateTimeFormatterBuilder().appendPattern("yyyy-MM-dd HH:mm:ss.SSSSSS").toFormatter();
@@ -92,24 +79,133 @@ public class DateTimeUtils {
         }
     }
 
-    public static Timestamp toUTC(Timestamp timestamp, ZoneId zoneId) {
-        if (zoneId == null) {
-            return timestamp;
+    public static Instant toInstant(Timestamp timestamp, ZoneId zoneId) {
+        if (timestamp == null) {
+            return null;
         }
 
-        Instant instant = timestamp.toInstant();
-        ZonedDateTime zonedDateTime = instant.atZone(zoneId);
-        ZonedDateTime utcDateTime = zonedDateTime.withZoneSameInstant(stdZoneId);
-        return Timestamp.valueOf(utcDateTime.toLocalDateTime());
+        if (zoneId == null) {
+            return timestamp.toInstant();
+        }
+
+        LocalDateTime localDateTime = timestamp.toLocalDateTime();
+        ZonedDateTime zonedDateTime = localDateTime.atZone(zoneId);
+        return zonedDateTime.toInstant();
     }
-    public static Timestamp toUTC(Timestamp timestamp, Calendar cal) {
+    public static Instant toInstant(Timestamp timestamp, Calendar cal) {
         if (cal == null) {
-            return timestamp;
+            return timestamp.toInstant();
         }
 
         TimeZone calTimeZone = cal.getTimeZone();
         ZoneId zoneId = calTimeZone.toZoneId();
 
-        return toUTC(timestamp, zoneId);
+        return toInstant(timestamp, zoneId);
+    }
+
+    public static Long toLong(Instant instant, int precision) {
+        long v;
+        if (precision == TimestampPrecision.MS) {
+            v = instant.toEpochMilli();
+        } else if (precision == TimestampPrecision.US) {
+            v = instant.getEpochSecond() * 1_000_000L + instant.getNano() / 1_000L;
+        } else {
+            v = instant.getEpochSecond() * 1_000_000_000L + instant.getNano();
+        }
+        return v;
+    }
+
+//    public static ZonedDateTime getZonedDateTime(Timestamp timestamp, ZoneId zoneId) {
+//        if (zoneId == null) {
+//            return ;
+//        }
+//
+//        TimeZone calTimeZone = cal.getTimeZone();
+//        ZoneId zoneId = calTimeZone.toZoneId();
+//
+//        return toUTC(timestamp, zoneId);
+//    }
+//    public static OffsetDateTime getOffsetDateTime(Timestamp timestamp) {
+//        if (zoneId == null) {
+//            return timestamp;
+//        }
+//
+//        Instant instant = timestamp.toInstant();
+//
+//        ZoneOffset systemOffset = systemZoneId.getRules().getOffset(instant);
+//
+//        // 将 Instant 转换为 OffsetDateTime
+//        OffsetDateTime offsetDateTime = OffsetDateTime.ofInstant(instant, systemOffset);
+//        return offsetDateTime;
+//    }
+
+
+
+    public static Instant parseTimestampColumnData(long value, int timestampPrecision) {
+        if (TimestampPrecision.MS == timestampPrecision)
+            return Instant.ofEpochMilli(value);
+
+        if (TimestampPrecision.US == timestampPrecision) {
+            long epochSec = value / 1000_000L;
+            long nanoAdjustment = value % 1000_000L * 1000L;
+            return Instant.ofEpochSecond(epochSec, nanoAdjustment);
+        }
+        if (TimestampPrecision.NS == timestampPrecision) {
+            long epochSec = value / 1000_000_000L;
+            long nanoAdjustment = value % 1000_000_000L;
+            return Instant.ofEpochSecond(epochSec, nanoAdjustment);
+        }
+        return null;
+    }
+
+    public static Timestamp getTimestamp(Instant instant, ZoneId zoneId) {
+        if (zoneId == null){
+            return Timestamp.from(instant);
+        }
+        return Timestamp.valueOf(LocalDateTime.ofInstant(instant, zoneId));
+    }
+
+    public static LocalDateTime getLocalDateTime(Instant instant, ZoneId zoneId) {
+        if (zoneId == null){
+            ZonedDateTime zonedDateTime = instant.atZone(systemZoneId);
+            return zonedDateTime.toLocalDateTime();
+        }
+
+        ZonedDateTime zonedDateTime = instant.atZone(zoneId);
+        return zonedDateTime.toLocalDateTime();
+    }
+    public static OffsetDateTime getOffsetDateTime(Instant instant, ZoneId zoneId) {
+        if (zoneId == null){
+            ZonedDateTime zonedDateTime = instant.atZone(systemZoneId);
+            return zonedDateTime.toOffsetDateTime();
+        }
+
+        ZonedDateTime zonedDateTime = instant.atZone(zoneId);
+        return zonedDateTime.toOffsetDateTime();
+    }
+
+    public static ZonedDateTime getZonedDateTime(Instant instant, ZoneId zoneId) {
+        if (zoneId == null){
+            return instant.atZone(systemZoneId);
+        }
+
+        return instant.atZone(zoneId);
+    }
+
+    public static Date getDate(Instant instant, ZoneId zoneId) {
+        if (zoneId == null){
+            return new Date(instant.toEpochMilli());
+        }
+
+        Timestamp timestamp = getTimestamp(instant, zoneId);
+        return new Date(timestamp.getTime());
+    }
+    public static Time getTime(Instant instant, ZoneId zoneId) {
+        if (zoneId == null){
+            return new Time(instant.toEpochMilli());
+        }
+
+        Timestamp timestamp = getTimestamp(instant, zoneId);
+        return new Time(timestamp.getTime());
     }
 }

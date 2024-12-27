@@ -4,16 +4,16 @@ import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
+import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.sql.*;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
+import java.sql.Date;
+import java.time.*;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.IntStream;
@@ -33,8 +33,9 @@ public class WSTimeZoneTest {
 
     private static final String host = "127.0.0.1";
     private static final int port = 6041;
-    private static final String db_name = "ws_query";
-    private static final String tableName = "wq";
+    private static final String db_name = "ws_timezone";
+    private static final String tableName = "simple_t";
+    private static final String fullTableName = "full_t";
     private Connection connection;
 
     // 提供参数
@@ -68,12 +69,18 @@ public class WSTimeZoneTest {
     }
 
     @Test
-    public void TimeZoneStmtTest() throws SQLException, InterruptedException {
+    public void TimeZoneStmtTimestampTest() throws SQLException, InterruptedException {
         String sql = "insert into " + db_name + "." + tableName + " values(?, ?)";
         PreparedStatement statement = connection.prepareStatement(sql);
 
-        LocalDateTime localDateTime = LocalDateTime.of(2024, 1, 2, 0, 0, 0, 123456789);
-        statement.setTimestamp(1, Timestamp.valueOf(localDateTime));
+        LocalDateTime localDateTime = LocalDateTime.of(2024, 1, 2, 1, 2, 3, 123456789);
+        ZoneId zoneId = ZoneId.of("Asia/Tokyo");
+        ZonedDateTime zonedDateTime = localDateTime.atZone(zoneId);
+        Instant instant = zonedDateTime.toInstant();
+
+        Timestamp timestamp = DateTimeUtils.getTimestamp(instant, zoneId);
+
+        statement.setTimestamp(1, timestamp);
         statement.setInt(2, 2);
         int i = statement.executeUpdate();
         Assert.assertEquals(1, i);
@@ -84,18 +91,89 @@ public class WSTimeZoneTest {
             while (resultSet.next()) {
 
                 Timestamp ts = resultSet.getTimestamp("ts");
+                Assert.assertEquals("2024-01-02 01:02:03." + precisionMap.get(this.precision), ts.toString());
 
-                System.out.println("ts: " + ts);
-                System.out.println("ts: " + ts.getTime());
-                Assert.assertEquals("2024-01-02 01:00:00." + precisionMap.get(this.precision), ts.toString());
+                Date date = resultSet.getDate("ts");
+                Assert.assertEquals("2024-01-02", date.toString());
+
+                Time time = resultSet.getTime("ts");
+                Assert.assertEquals("01:02:03", time.toString());
+
+                Instant ins = resultSet.getObject("ts", Instant.class);
+                Assert.assertEquals(ins.toEpochMilli(), instant.toEpochMilli());
+
+                ZonedDateTime zdt = resultSet.getObject("ts", ZonedDateTime.class);
+                Assert.assertEquals(zdt.toInstant().toEpochMilli(), instant.toEpochMilli());
+
+                OffsetDateTime odt = resultSet.getObject("ts", OffsetDateTime.class);
+                Assert.assertEquals(odt.toInstant().toEpochMilli(), instant.toEpochMilli());
+
+                LocalDateTime ldt = resultSet.getObject("ts", LocalDateTime.class);
+                Assert.assertEquals(ldt.truncatedTo(ChronoUnit.MILLIS), instant.atZone(zoneId).toLocalDateTime().truncatedTo(ChronoUnit.MILLIS));
             }
         } catch (SQLException e) {
             e.printStackTrace();
             throw e;
         }
-
-
     }
+
+    @Test
+    public void TimeZoneStmtAllTimeTypeTest() throws SQLException, InterruptedException {
+        String sql = "insert into " + db_name + "." + fullTableName + " values(?, ?, ?, ?, ?, ?)";
+        PreparedStatement statement = connection.prepareStatement(sql);
+
+        // 创建一个 LocalDateTime 对象，表示特定的日期和时间
+        LocalDateTime localDateTime = LocalDateTime.of(2024, 1, 2, 1, 2, 3, 123456789);
+
+        // 指定时区
+        ZoneId zoneId = ZoneId.of("Asia/Tokyo");
+
+        // 将 LocalDateTime 转换为 ZonedDateTime
+        ZonedDateTime zonedDateTime = localDateTime.atZone(zoneId);
+
+        // 将 ZonedDateTime 转换为 Instant
+        Instant instant = zonedDateTime.toInstant();
+
+        statement.setObject(1, instant);
+        statement.setObject(2, ZonedDateTime.ofInstant(instant, zoneId));
+        statement.setObject(3, OffsetDateTime.ofInstant(instant, zoneId));
+        statement.setObject(4, localDateTime);
+
+        LocalDate localDate = localDateTime.toLocalDate();
+        LocalTime localTime = localDateTime.toLocalTime();
+
+        statement.setObject(5, Date.valueOf(localDate));
+        statement.setObject(6, Time.valueOf(localTime));
+
+        int i = statement.executeUpdate();
+        Assert.assertEquals(1, i);
+        statement.close();
+
+        try (Statement qStmt = connection.createStatement();
+             ResultSet resultSet = qStmt.executeQuery("select * from "  + db_name + "." + fullTableName + " limit 1")) {
+            while (resultSet.next()) {
+
+                Timestamp ts1 = resultSet.getTimestamp("ts1");
+                Timestamp ts2 = resultSet.getTimestamp("ts2");
+                Timestamp ts3 = resultSet.getTimestamp("ts3");
+                Timestamp ts4 = resultSet.getTimestamp("ts4");
+                Timestamp ts5 = resultSet.getTimestamp("ts5");
+                Timestamp ts6 = resultSet.getTimestamp("ts6");
+
+                Assert.assertEquals("2024-01-02 01:02:03." + precisionMap.get(this.precision), ts1.toString());
+                Assert.assertEquals("2024-01-02 01:02:03." + precisionMap.get(this.precision), ts2.toString());
+                Assert.assertEquals("2024-01-02 01:02:03." + precisionMap.get(this.precision), ts3.toString());
+                Assert.assertEquals("2024-01-02 01:02:03." + precisionMap.get(this.precision), ts4.toString());
+
+                Assert.assertEquals("2024-01-02", new Date(ts5.getTime()).toString());
+                Assert.assertEquals("01:02:03", new Time(ts6.getTime()).toString());
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw e;
+        }
+    }
+
 
     @Test
     public void TimeZoneTest3() throws SQLException, InterruptedException {
@@ -143,7 +221,8 @@ public class WSTimeZoneTest {
         statement.execute("drop database if exists " + db_name);
         statement.execute("create database " + db_name + " precision " + precision);
         statement.execute("use " + db_name);
-        statement.execute("create table if not exists " + db_name + "." + tableName + "(ts timestamp, f int)");
+        statement.execute("create table if not exists " + db_name + "." + tableName + " (ts timestamp, f int)");
+        statement.execute("create table if not exists " + db_name + "." + fullTableName + " (ts1 timestamp, ts2 timestamp, ts3 timestamp, ts4 timestamp, ts5 timestamp, ts6 timestamp)");
 
         // Asia/Shanghai +08:00, 2024-01-01 00:00:00
         statement.execute("insert into " + db_name + "." + tableName + " values (\"2024-01-01T00:00:00.123456789+08:00\", 1)");

@@ -35,7 +35,7 @@ public class DataTypeConverUtil {
             case TSDB_DATA_TYPE_BIGINT:
                 return (((long) value) == 0L) ? Boolean.FALSE : Boolean.TRUE;
             case TSDB_DATA_TYPE_TIMESTAMP:
-                return ((Timestamp) value).getTime() == 0L ? Boolean.FALSE : Boolean.TRUE;
+                return ((Instant) value).toEpochMilli() == 0L ? Boolean.FALSE : Boolean.TRUE;
             case TSDB_DATA_TYPE_UBIGINT:
                 return value.equals(new BigDecimal(0)) ? Boolean.FALSE : Boolean.TRUE;
 
@@ -299,16 +299,8 @@ public class DataTypeConverUtil {
                 return tmp.longValue();
             }
             case TSDB_DATA_TYPE_TIMESTAMP: {
-                Timestamp ts = (Timestamp) value;
-                switch (timestampPrecision) {
-                    case TimestampPrecision.MS:
-                    default:
-                        return ts.getTime();
-                    case TimestampPrecision.US:
-                        return ts.getTime() * 1000 + ts.getNanos() / 1000 % 1000;
-                    case TimestampPrecision.NS:
-                        return ts.getTime() * 1000_000 + ts.getNanos() % 1000_000;
-                }
+                Instant ts = (Instant) value;
+                return DateTimeUtils.toLong(ts, timestampPrecision);
             }
             case TSDB_DATA_TYPE_FLOAT: {
                 float tmp = (float) value;
@@ -415,16 +407,8 @@ public class DataTypeConverUtil {
             }
 
             case TSDB_DATA_TYPE_TIMESTAMP: {
-                Timestamp ts = (Timestamp) value;
-                switch (timestampPrecision) {
-                    case TimestampPrecision.MS:
-                    default:
-                        return ts.getTime();
-                    case TimestampPrecision.US:
-                        return ts.getTime() * 1000 + ts.getNanos() / 1000 % 1000;
-                    case TimestampPrecision.NS:
-                        return ts.getTime() * 1000_000 + ts.getNanos() % 1000_000;
-                }
+                Instant ts = (Instant) value;
+                return DateTimeUtils.toLong(ts, timestampPrecision);
             }
 
             case TSDB_DATA_TYPE_NCHAR:
@@ -458,14 +442,16 @@ public class DataTypeConverUtil {
             return Shorts.toByteArray((short) value);
         if (value instanceof Byte)
             return new byte[]{(byte) value};
-
+        if (value instanceof Instant)
+            return Timestamp.from((Instant) value).toString().getBytes();
         return value.toString().getBytes();
     }
 
     public static String getString(Object value) throws SQLException {
         if (value instanceof String)
             return (String) value;
-
+        if (value instanceof Instant)
+            return Timestamp.from((Instant) value).toString();
         if (value instanceof byte[]) {
             String charset = TaosGlobalConfig.getCharset();
             try {
@@ -478,8 +464,9 @@ public class DataTypeConverUtil {
     }
 
     public static Date getDate(Object value, ZoneId zoneId) {
-        if (value instanceof Timestamp)
-            return new Date(((Timestamp) value).getTime());
+        if (value instanceof Instant) {
+            return DateTimeUtils.getDate((Instant) value, zoneId);
+        }
         if (value instanceof byte[]) {
             String charset = TaosGlobalConfig.getCharset();
             String tmp;
@@ -494,8 +481,9 @@ public class DataTypeConverUtil {
     }
 
     public static Time getTime(Object value, ZoneId zoneId) {
-        if (value instanceof Timestamp)
-            return new Time(((Timestamp) value).getTime());
+        if (value instanceof Instant) {
+            return DateTimeUtils.getTime((Instant) value, zoneId);
+        }
         String tmp = "";
         if (value instanceof byte[]) {
             String charset = TaosGlobalConfig.getCharset();
@@ -538,7 +526,7 @@ public class DataTypeConverUtil {
                 return BigDecimal.valueOf((double) value);
 
             case TSDB_DATA_TYPE_TIMESTAMP:
-                return new BigDecimal(((Timestamp) value).getTime());
+                return new BigDecimal(((Instant) value).toEpochMilli());
             case TSDB_DATA_TYPE_NCHAR:
                 return new BigDecimal(value.toString());
             case TSDB_DATA_TYPE_JSON:
@@ -558,7 +546,7 @@ public class DataTypeConverUtil {
         return new BigDecimal(0);
     }
 
-    static public Object parseValue(int type, Object source, int timestampPrecision, ZoneId zoneId){
+    static public Object parseValue(int type, Object source){
         switch (type) {
             case TSDB_DATA_TYPE_BOOL: {
                 byte val = (byte) source;
@@ -577,7 +565,8 @@ public class DataTypeConverUtil {
             case TSDB_DATA_TYPE_BINARY:
             case TSDB_DATA_TYPE_JSON:
             case TSDB_DATA_TYPE_VARBINARY:
-            case TSDB_DATA_TYPE_GEOMETRY:{
+            case TSDB_DATA_TYPE_GEOMETRY:
+            case TSDB_DATA_TYPE_TIMESTAMP:{
                 return source;
             }
             case TSDB_DATA_TYPE_USMALLINT: {
@@ -587,10 +576,6 @@ public class DataTypeConverUtil {
             case TSDB_DATA_TYPE_UINT: {
                 int val = (int) source;
                 return parseUInteger(val);
-            }
-            case TSDB_DATA_TYPE_TIMESTAMP: {
-                long val = (long) source;
-                return parseTimestampColumnDataWithZoneId(val, timestampPrecision, zoneId);
             }
             case TSDB_DATA_TYPE_UBIGINT: {
                 long val = (long) source;
@@ -606,48 +591,34 @@ public class DataTypeConverUtil {
         }
     }
 
-    public static Timestamp parseTimestampColumnData(long value, int timestampPrecision) {
-        if (TimestampPrecision.MS == timestampPrecision)
-            return new Timestamp(value);
 
-        if (TimestampPrecision.US == timestampPrecision) {
-            long epochSec = value / 1000_000L;
-            long nanoAdjustment = value % 1000_000L * 1000L;
-            return Timestamp.from(Instant.ofEpochSecond(epochSec, nanoAdjustment));
-        }
-        if (TimestampPrecision.NS == timestampPrecision) {
-            long epochSec = value / 1000_000_000L;
-            long nanoAdjustment = value % 1000_000_000L;
-            return Timestamp.from(Instant.ofEpochSecond(epochSec, nanoAdjustment));
-        }
-        return null;
-    }
-    public static Timestamp parseTimestampColumnDataWithZoneId(long value, int timestampPrecision, ZoneId zoneId) {
-        if (zoneId == null){
-            return parseTimestampColumnData(value, timestampPrecision);
-        }
 
-        if (TimestampPrecision.MS == timestampPrecision) {
-            Instant instant = Instant.ofEpochMilli(value);
-            LocalDateTime localDateTime = instant.atZone(zoneId).toLocalDateTime();
-            return Timestamp.valueOf(localDateTime);
-        }
-
-        if (TimestampPrecision.US == timestampPrecision) {
-            long epochSec = value / 1000_000L;
-            long nanoAdjustment = value % 1000_000L * 1000L;
-            Instant instant = Instant.ofEpochSecond(epochSec, nanoAdjustment);
-            LocalDateTime localDateTime = instant.atZone(zoneId).toLocalDateTime();
-            return Timestamp.valueOf(localDateTime);
-        }
-        if (TimestampPrecision.NS == timestampPrecision) {
-            long epochSec = value / 1000_000_000L;
-            long nanoAdjustment = value % 1000_000_000L;
-            Instant instant = Instant.ofEpochSecond(epochSec, nanoAdjustment);
-            LocalDateTime localDateTime = instant.atZone(zoneId).toLocalDateTime();
-            return Timestamp.valueOf(localDateTime);
-        }
-        return null;
-    }
+//    public static Timestamp parseTimestampColumnDataWithZoneId(long value, int timestampPrecision, ZoneId zoneId) {
+//        if (zoneId == null){
+//            return parseTimestampColumnData(value, timestampPrecision);
+//        }
+//
+//        if (TimestampPrecision.MS == timestampPrecision) {
+//            Instant instant = Instant.ofEpochMilli(value);
+//            LocalDateTime localDateTime = instant.atZone(zoneId).toLocalDateTime();
+//            return Timestamp.valueOf(localDateTime);
+//        }
+//
+//        if (TimestampPrecision.US == timestampPrecision) {
+//            long epochSec = value / 1000_000L;
+//            long nanoAdjustment = value % 1000_000L * 1000L;
+//            Instant instant = Instant.ofEpochSecond(epochSec, nanoAdjustment);
+//            LocalDateTime localDateTime = instant.atZone(zoneId).toLocalDateTime();
+//            return Timestamp.valueOf(localDateTime);
+//        }
+//        if (TimestampPrecision.NS == timestampPrecision) {
+//            long epochSec = value / 1000_000_000L;
+//            long nanoAdjustment = value % 1000_000_000L;
+//            Instant instant = Instant.ofEpochSecond(epochSec, nanoAdjustment);
+//            LocalDateTime localDateTime = instant.atZone(zoneId).toLocalDateTime();
+//            return Timestamp.valueOf(localDateTime);
+//        }
+//        return null;
+//    }
 
 }

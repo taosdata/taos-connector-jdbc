@@ -148,9 +148,9 @@ public class TSWSPreparedStatementTest {
             stmt.execute("drop table if exists weather_test");
             stmt.execute("create table weather_test(ts timestamp, f1 nchar(4), f2 float, f3 double, f4 timestamp, f5 int, f6 bool, f7 binary(10))");
 
-            TSWSPreparedStatement s = (TSWSPreparedStatement) conn.prepareStatement("insert into ? values(?, ?, ?, ?, ?, ?, ?, ?)");
+            TSWSPreparedStatement s = (TSWSPreparedStatement) conn.prepareStatement("insert into weather_test values(?, ?, ?, ?, ?, ?, ?, ?)");
             Random r = new Random();
-            s.setTableName("weather_test");
+            //s.setTableName("weather_test");
 
             ArrayList<Long> ts = new ArrayList<>();
             for (int i = 0; i < numOfRows; i++) {
@@ -260,9 +260,8 @@ public class TSWSPreparedStatementTest {
             stmt.execute("drop table if exists weather_test");
             stmt.execute("create table weather_test(ts timestamp, f1 nchar(4), f2 float, f3 double, f4 timestamp, f5 int, f6 bool, f7 binary(10))");
 
-            TSWSPreparedStatement s = (TSWSPreparedStatement) conn.prepareStatement("insert into ? (ts, f1, f7) values(?, ?, ?)");
+            TSWSPreparedStatement s = (TSWSPreparedStatement) conn.prepareStatement("insert into weather_test (ts, f1, f7) values(?, ?, ?)");
             Random r = new Random();
-            s.setTableName("weather_test");
 
             ArrayList<Long> ts = new ArrayList<>();
             for (int i = 0; i < numOfRows; i++) {

@@ -76,7 +76,7 @@ Maven 项目中，在 pom.xml 中添加以下依赖：
 <dependency>
  <groupId>com.taosdata.jdbc</groupId>
  <artifactId>taos-jdbcdriver</artifactId>
- <version>3.3.0</version>
+ <version>3.5.0</version>
 </dependency>
 ```
 

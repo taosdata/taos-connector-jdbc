@@ -1,12 +1,13 @@
 package com.taosdata.jdbc.ws;
 
-import com.taosdata.jdbc.*;
-import com.taosdata.jdbc.enums.BindType;
+import com.taosdata.jdbc.AbstractResultSet;
+import com.taosdata.jdbc.BlockData;
+import com.taosdata.jdbc.TSDBError;
+import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.enums.DataType;
 import com.taosdata.jdbc.rs.RestfulResultSet;
 import com.taosdata.jdbc.rs.RestfulResultSetMetaData;
 import com.taosdata.jdbc.ws.entity.*;
-import com.taosdata.jdbc.ws.stmt.entity.StmtResp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,7 +68,7 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
         backFetchExecutor.submit(() -> {
             try {
                 while (!isClosed){
-                    BlockData blockData = BlockData.getEmptyBlockData(fields);
+                    BlockData blockData = BlockData.getEmptyBlockData(fields, timestampPrecision);
 
                     byte[] version = {1, 0};
                     FetchBlockNewResp resp = (FetchBlockNewResp) transport.send(Action.FETCH_BLOCK_NEW.getAction(),
@@ -94,7 +95,7 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
                 Thread.currentThread().interrupt();
             } catch (Exception e) {
                 log.error("fetch block error", e);
-                BlockData blockData = BlockData.getEmptyBlockData(fields);
+                BlockData blockData = BlockData.getEmptyBlockData(fields, timestampPrecision);
                 while (!isClosed) {
                     try {
                         if (blockingQueueOut.offer(blockData, 10, TimeUnit.MILLISECONDS)){
@@ -166,7 +167,7 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
                 throw TSDBError.createSQLException(resp.getCode(), "FETCH DATA ERROR");
             }
             this.reset();
-            BlockData blockData = BlockData.getEmptyBlockData(fields);
+            BlockData blockData = BlockData.getEmptyBlockData(fields, timestampPrecision);
 
             if (resp.isCompleted() || isClosed) {
                 blockData.setCompleted(true);
