@@ -10,7 +10,7 @@ import java.util.Random;
 
 @FixMethodOrder
 public class WsPstmtStmt2Test {
-    String host = "vm98";
+    String host = "127.0.0.1";
     String db_name = "ws_prepare";
     String tableName = "wpt";
     String superTable = "wpt_st";
@@ -247,7 +247,6 @@ public class WsPstmtStmt2Test {
             throw ex;
         }
     }
-
     @Test
     public void testStmt2InsertStdApiWithEscapeChar() throws SQLException {
         String sql = "INSERT INTO `" + db_name + "`.`" + tableName + "` (tbname, groupId, location, ts, current, voltage, phase) VALUES (?,?,?,?,?,?,?)";
@@ -286,6 +285,7 @@ public class WsPstmtStmt2Test {
             throw ex;
         }
     }
+
     @Test
     public void testStmt2InsertStdApiNoTag() throws SQLException {
         // create sub table first

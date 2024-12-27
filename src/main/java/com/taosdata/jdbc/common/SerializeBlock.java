@@ -2,16 +2,12 @@ package com.taosdata.jdbc.common;
 
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
-import com.taosdata.jdbc.enums.TimestampPrecision;
-import com.taosdata.jdbc.utils.DataTypeUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.StringUtils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
@@ -69,6 +65,7 @@ public class SerializeBlock {
         buf[offset] = (byte) (v & 0xFF);
         buf[offset + 1] = (byte) ((v >> 8) & 0xFF);
     }
+
     public static void serializeByteArray(byte[] buf, int offset, byte[] data) {
         System.arraycopy(data, 0, buf, offset, data.length);
     }

@@ -44,13 +44,9 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
     private int toBeBindTagCount = 0;
     private List<Field> fields;
     private boolean isInsert = false;
-
-
     private final Map<Integer, Column> colOrderedMap = new TreeMap<>();
-
     private final PriorityQueue<ColumnInfo> tag = new PriorityQueue<>();
     private final PriorityQueue<ColumnInfo> colListQueue = new PriorityQueue<>();
-
     private List<TableInfo> tableInfoList = new ArrayList<>();
     private TableInfo tableInfo;
 
@@ -514,7 +510,7 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
     }
 
     @Override
-    public void clearParameters() throws SQLException {
+    public void clearParameters() {
         colOrderedMap.clear();
         tag.clear();
         colListQueue.clear();
