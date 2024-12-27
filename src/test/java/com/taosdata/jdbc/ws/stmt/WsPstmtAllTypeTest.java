@@ -58,6 +58,8 @@ public class WsPstmtAllTypeTest {
         Assert.assertArrayEquals(resultSet.getBytes(12), expectedVarBinary);
         Assert.assertArrayEquals(resultSet.getBytes(13), expectedGeometry);
 
+        Date date = new Date(current);
+        Date date1 = resultSet.getDate(1);
         Assert.assertEquals(resultSet.getDate(1), new Date(current));
         Assert.assertEquals(resultSet.getTime(1), new Time(current));
         Assert.assertEquals(resultSet.getTimestamp(1), new Timestamp(current));

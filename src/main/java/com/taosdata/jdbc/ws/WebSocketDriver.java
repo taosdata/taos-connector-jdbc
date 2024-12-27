@@ -44,7 +44,7 @@ public class WebSocketDriver extends AbstractDriver {
             return null;
 
         Properties props = parseURL(url, info);
-        ConnectionParam param = ConnectionParam.getParam(props);
+        ConnectionParam param = ConnectionParam.getParamWs(props);
         return getWSConnection(url, param, props);
 
     }

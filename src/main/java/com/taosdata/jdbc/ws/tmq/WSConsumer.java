@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 import java.nio.ByteOrder;
 import java.sql.SQLException;
 import java.time.Duration;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -35,7 +36,6 @@ public class WSConsumer<V> implements Consumer<V> {
     private long messageId = 0L;
 
     private Collection<String> topics;
-
     @Override
     public void create(Properties properties) throws SQLException {
         factory = new TMQRequestFactory();
@@ -76,15 +76,9 @@ public class WSConsumer<V> implements Consumer<V> {
 
     @Override
     public void subscribe(Collection<String> topics) throws SQLException {
-        Request request = factory.generateSubscribe(param.getConnectionParam().getUser()
-                , param.getConnectionParam().getPassword()
-                , param.getConnectionParam().getDatabase()
-                , param.getGroupId()
-                , param.getClientId()
-                , param.getOffsetRest()
+        Request request = factory.generateSubscribe(param
                 , topics.toArray(new String[0])
                 , String.valueOf(false)
-                , param.getMsgWithTableName()
         );
         SubscribeResp response = (SubscribeResp) transport.send(request);
         if (Code.SUCCESS.getCode() != response.getCode()) {

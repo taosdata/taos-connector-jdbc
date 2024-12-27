@@ -7,9 +7,9 @@ import com.taosdata.jdbc.common.TableInfo;
 import com.taosdata.jdbc.enums.FeildBindType;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.utils.StringUtils;
-import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.entity.Action;
 import com.taosdata.jdbc.ws.entity.Code;
 import com.taosdata.jdbc.ws.entity.Request;
@@ -23,7 +23,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.sql.Date;
 import java.sql.*;
-import java.time.LocalDateTime;
+import java.time.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -44,19 +44,15 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
     private int toBeBindTagCount = 0;
     private List<Field> fields;
     private boolean isInsert = false;
-
-
     private final Map<Integer, Column> colOrderedMap = new TreeMap<>();
-
     private final PriorityQueue<ColumnInfo> tag = new PriorityQueue<>();
     private final PriorityQueue<ColumnInfo> colListQueue = new PriorityQueue<>();
-
     private List<TableInfo> tableInfoList = new ArrayList<>();
     private TableInfo tableInfo;
 
 
-    public TSWSPreparedStatement(Transport transport, ConnectionParam param, String database, AbstractConnection connection, String sql, Long instanceId) throws SQLException {
-        super(transport, database, connection, instanceId);
+    public TSWSPreparedStatement(Transport transport, ConnectionParam param, String database, AbstractConnection connection, String sql, Long instanceId, ZoneId zoneId) throws SQLException {
+        super(transport, database, connection, instanceId, zoneId);
         this.rawSql = sql;
         this.param = param;
         if (!sql.contains("?"))
@@ -162,7 +158,7 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
             throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
         }
 
-        this.resultSet = new BlockResultSet(this, this.transport, resp, this.database);
+        this.resultSet = new BlockResultSet(this, this.transport, resp, this.database, this.zoneId);
         this.affectedRows = -1;
         return this.resultSet;
     }
@@ -329,7 +325,7 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
 
     @Override
     public void setTagTimestamp(int index, Timestamp value) {
-        tag.add(new ColumnInfo(index, Collections.singletonList(value), TSDB_DATA_TYPE_TIMESTAMP));
+        tag.add(new ColumnInfo(index, Collections.singletonList(DateTimeUtils.toInstant(value, this.zoneId)), TSDB_DATA_TYPE_TIMESTAMP));
     }
 
     @Override
@@ -495,7 +491,7 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
 
     @Override
     public void setTimestamp(int parameterIndex, Timestamp x) throws SQLException {
-        colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
+        colOrderedMap.put(parameterIndex, new Column(DateTimeUtils.toInstant(x, this.zoneId), TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
     }
 
     @Override
@@ -514,7 +510,7 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
     }
 
     @Override
-    public void clearParameters() throws SQLException {
+    public void clearParameters() {
         colOrderedMap.clear();
         tag.clear();
         colListQueue.clear();
@@ -548,7 +544,8 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
                 colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_DOUBLE, parameterIndex));
                 break;
             case Types.TIMESTAMP:
-                colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
+                Instant instant = DateTimeUtils.toInstant((Timestamp) x, zoneId);
+                colOrderedMap.put(parameterIndex, new Column(instant, TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
                 break;
             case Types.BINARY:
             case Types.VARCHAR:
@@ -591,12 +588,30 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
             setBytes(parameterIndex, (byte[]) x);
         } else if (x instanceof Double) {
             setDouble(parameterIndex, (Double) x);
+        } else if (x instanceof Date) {
+            setDate(parameterIndex, (Date) x);
         } else if (x instanceof Time) {
             setTime(parameterIndex, (Time) x);
         } else if (x instanceof Timestamp) {
             setTimestamp(parameterIndex, (Timestamp) x);
         } else if (x instanceof LocalDateTime) {
-            setTimestamp(parameterIndex, Timestamp.valueOf((LocalDateTime)x));
+            if (zoneId == null) {
+                setTimestamp(parameterIndex, Timestamp.valueOf((LocalDateTime) x));
+            } else {
+                ZonedDateTime zonedDateTime = ((LocalDateTime) x).atZone(zoneId);
+                Instant instant = zonedDateTime.toInstant();
+                colOrderedMap.put(parameterIndex, new Column( instant, TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
+            }
+        } else if (x instanceof Instant) {
+            colOrderedMap.put(parameterIndex, new Column( x, TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
+        } else if (x instanceof ZonedDateTime) {
+            ZonedDateTime zonedDateTime = (ZonedDateTime) x;
+            Instant instant = zonedDateTime.toInstant();
+            colOrderedMap.put(parameterIndex, new Column(instant, TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
+        } else if (x instanceof OffsetDateTime) {
+            OffsetDateTime offsetDateTime = (OffsetDateTime) x;
+            Instant instant = offsetDateTime.toInstant();
+            colOrderedMap.put(parameterIndex, new Column(instant, TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
         } else {
             throw new SQLException("Unsupported data type: " + x.getClass().getName());
         }
@@ -800,7 +815,8 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
 
     @Override
     public void setTimestamp(int parameterIndex, Timestamp x, Calendar cal) throws SQLException {
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
+       Instant instant = DateTimeUtils.toInstant(x, cal);
+        colOrderedMap.put(parameterIndex, new Column(instant, TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
     }
 
     @Override

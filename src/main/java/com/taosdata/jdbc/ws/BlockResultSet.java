@@ -8,14 +8,14 @@ import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.TaosGlobalConfig;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.utils.DataTypeConverUtil;
+import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.entity.QueryResp;
 
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.sql.*;
-import java.time.Instant;
-import java.time.LocalDateTime;
+import java.time.*;
 import java.time.format.DateTimeParseException;
 import java.util.Calendar;
 
@@ -23,10 +23,12 @@ import static com.taosdata.jdbc.TSDBConstants.*;
 import static com.taosdata.jdbc.utils.UnsignedDataUtils.*;
 
 public class BlockResultSet extends AbstractWSResultSet {
+    private final ZoneId zoneId;
 
     public BlockResultSet(Statement statement, Transport transport,
-                          QueryResp response, String database) throws SQLException {
+                          QueryResp response, String database, ZoneId zoneId) throws SQLException {
         super(statement, transport, response, database);
+        this.zoneId = zoneId;
     }
 
 
@@ -36,8 +38,16 @@ public class BlockResultSet extends AbstractWSResultSet {
             return null;
 
         int type = fields.get(columnIndex - 1).getTaosType();
-        return DataTypeConverUtil.parseValue(type, source, this.timestampPrecision);
+        return DataTypeConverUtil.parseValue(type, source);
+    }
 
+    public Object parseValueWithZoneId(int columnIndex, ZoneId zoneId) {
+        Object source = result.get(columnIndex - 1).get(rowIndex);
+        if (null == source)
+            return null;
+
+        int type = fields.get(columnIndex - 1).getTaosType();
+        return DataTypeConverUtil.parseValue(type, source);
     }
 
     @Override
@@ -52,6 +62,8 @@ public class BlockResultSet extends AbstractWSResultSet {
         wasNull = false;
         if (value instanceof String)
             return (String) value;
+        if (value instanceof Instant)
+            return DateTimeUtils.getTimestamp((Instant) value, zoneId).toString();
 
         if (value instanceof byte[]) {
             String charset = TaosGlobalConfig.getCharset();
@@ -205,7 +217,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             return null;
         }
         wasNull = false;
-        return DataTypeConverUtil.getDate(value);
+        return DataTypeConverUtil.getDate(value, zoneId);
     }
 
     @Override
@@ -218,7 +230,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             return null;
         }
         wasNull = false;
-        return DataTypeConverUtil.getTime(value);
+        return DataTypeConverUtil.getTime(value, zoneId);
     }
 
     @Override
@@ -231,10 +243,13 @@ public class BlockResultSet extends AbstractWSResultSet {
             return null;
         }
         wasNull = false;
+        if (value instanceof Instant)
+            return DateTimeUtils.getTimestamp((Instant) value, zoneId);
         if (value instanceof Timestamp)
             return (Timestamp) value;
         if (value instanceof Long) {
-            return DataTypeConverUtil.parseTimestampColumnData((long) value, this.timestampPrecision);
+            Instant instant = DateTimeUtils.parseTimestampColumnData((long) value, this.timestampPrecision);
+            return DateTimeUtils.getTimestamp(instant, zoneId);
         }
         String tmp = "";
         if (value instanceof byte[]) {
@@ -249,7 +264,7 @@ public class BlockResultSet extends AbstractWSResultSet {
         }
         Timestamp ret;
         try {
-            ret = Utils.parseTimestamp(tmp);
+            ret = DateTimeUtils.parseTimestamp(tmp, zoneId);
         } catch (Exception e) {
             ret = null;
             wasNull = true;
@@ -257,18 +272,27 @@ public class BlockResultSet extends AbstractWSResultSet {
         return ret;
     }
 
-    @Override
-    public Object getObject(int columnIndex) throws SQLException {
+    private Object getObjectInternal(int columnIndex) throws SQLException {
         checkAvailability(columnIndex, fields.size());
 
         Object value = parseValue(columnIndex);
         wasNull = value == null;
         return value;
     }
+    @Override
+    public Object getObject(int columnIndex) throws SQLException {
+        Object value = getObjectInternal(columnIndex);
+
+        if (value instanceof Instant){
+            return DateTimeUtils.getTimestamp((Instant) value, zoneId);
+        } else {
+            return value;
+        }
+    }
 
     @Override
     public <T> T getObject(int columnIndex, Class<T> type) throws SQLException {
-        Object value = getObject(columnIndex);
+        Object value = getObjectInternal(columnIndex);
 
         if (value == null) {
             return null;
@@ -296,9 +320,15 @@ public class BlockResultSet extends AbstractWSResultSet {
                     return type.cast(new BigDecimal(value.toString()));
                 } else if (type == Byte.class && value instanceof Number) {
                     return type.cast(((Number) value).byteValue());
-                } else if (type == LocalDateTime.class && value instanceof Timestamp) {
-                    Timestamp timestamp = (Timestamp) value;
-                    return type.cast(timestamp.toLocalDateTime());
+                } else if (type == LocalDateTime.class && value instanceof Instant) {
+                    Instant instant = (Instant) value;
+                    return type.cast(DateTimeUtils.getLocalDateTime(instant, zoneId));
+                } else if (type == OffsetDateTime.class && value instanceof Instant) {
+                    Instant instant = (Instant) value;
+                    return type.cast(DateTimeUtils.getOffsetDateTime(instant, zoneId));
+                } else if (type == ZonedDateTime.class && value instanceof Instant) {
+                    Instant instant = (Instant) value;
+                    return type.cast(DateTimeUtils.getZonedDateTime(instant, zoneId));
                 } else {
                     throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TYPE_CONVERT_EXCEPTION, "Cannot convert " + value.getClass() + " to " + type);
                 }

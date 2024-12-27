@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.ws.tmq.entity;
 
+import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.tmq.TopicPartition;
 import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.tmq.ConsumerAction;
@@ -24,22 +25,26 @@ public class TMQRequestFactory {
         }
     }
 
-    public Request generateSubscribe(String user, String password, String db, String groupId,
-                                     String clientId, String offsetRest, String[] topics
-            , String enableAutoCommit, String withTableName) {
+    public Request generateSubscribe(ConsumerParam param, String[] topics
+            , String enableAutoCommit) {
         long reqId = this.getId(ConsumerAction.SUBSCRIBE.getAction());
 
         SubscribeReq subscribeReq = new SubscribeReq();
+
         subscribeReq.setReqId(reqId);
-        subscribeReq.setUser(user);
-        subscribeReq.setPassword(password);
-        subscribeReq.setDb(db);
-        subscribeReq.setGroupId(groupId);
-        subscribeReq.setClientId(clientId);
-        subscribeReq.setOffsetRest(offsetRest);
+        subscribeReq.setUser(param.getConnectionParam().getUser());
+        subscribeReq.setPassword(param.getConnectionParam().getPassword());
+        subscribeReq.setDb(param.getConnectionParam().getDatabase());
+        subscribeReq.setGroupId(param.getGroupId());
+        subscribeReq.setClientId(param.getClientId());
+        subscribeReq.setOffsetRest(param.getOffsetRest());
         subscribeReq.setTopics(topics);
         subscribeReq.setAutoCommit(enableAutoCommit);
-        subscribeReq.setWithTableName(withTableName);
+        subscribeReq.setWithTableName(param.getMsgWithTableName());
+        subscribeReq.setTz(param.getConnectionParam().getTz());
+        subscribeReq.setApp(param.getConnectionParam().getAppName());
+        subscribeReq.setIp(param.getConnectionParam().getAppIp());
+
         return new Request(ConsumerAction.SUBSCRIBE.getAction(), subscribeReq);
     }
 

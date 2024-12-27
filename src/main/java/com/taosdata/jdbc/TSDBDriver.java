@@ -119,6 +119,9 @@ public class TSDBDriver extends AbstractDriver {
     public static final String PROPERTY_KEY_RECONNECT_RETRY_COUNT = "reconnectRetryCount";
 
     public static final String PROPERTY_KEY_DISABLE_SSL_CERT_VALIDATION = "disableSSLCertValidation";
+    public static final String PROPERTY_KEY_APP_IP = "app_ip";
+    public static final String PROPERTY_KEY_APP_NAME = "app_name";
+
 
     /**
      * max message number send to server concurrently
@@ -144,8 +147,6 @@ public class TSDBDriver extends AbstractDriver {
      * zero is interpreted as an infinite timeout.
      */
     public static final String HTTP_SOCKET_TIMEOUT = "httpSocketTimeout";
-
-    public static final String HTTP_TIME_ZONE= "tz";
 
     private TSDBDatabaseMetaData dbMetaData = null;
 

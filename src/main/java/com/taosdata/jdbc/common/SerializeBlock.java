@@ -2,14 +2,15 @@ package com.taosdata.jdbc.common;
 
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
-import com.taosdata.jdbc.enums.TimestampPrecision;
+import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.StringUtils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.sql.SQLException;
-import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -253,16 +254,22 @@ public class SerializeBlock {
 
                 for (Object o: objectList){
                     if (o != null) {
-                        if(o instanceof Timestamp) {
-                            Timestamp t = (Timestamp) o;
-                            long v;
-                            if (precision == TimestampPrecision.MS) {
-                                v = t.getTime();
-                            } else if (precision == TimestampPrecision.US) {
-                                v = t.getTime() * 1000L + t.getNanos() / 1000 % 1000;
-                            } else {
-                                v = t.getTime() * 1000_000L + t.getNanos() % 1000_000L;
-                            }
+                        if (o instanceof Instant){
+                            Instant instant = (Instant) o;
+                            long v = DateTimeUtils.toLong(instant, precision);
+
+                            SerializeLong(buf, offset, v);
+                            offset += Long.BYTES;
+                        } else if (o instanceof OffsetDateTime){
+                            OffsetDateTime offsetDateTime = (OffsetDateTime) o;
+                            long v = DateTimeUtils.toLong(offsetDateTime.toInstant(), precision);
+
+                            SerializeLong(buf, offset, v);
+                            offset += Long.BYTES;
+                        } else if (o instanceof ZonedDateTime){
+                            ZonedDateTime zonedDateTime = (ZonedDateTime) o;
+                            long v = DateTimeUtils.toLong(zonedDateTime.toInstant(), precision);
+
                             SerializeLong(buf, offset, v);
                             offset += Long.BYTES;
                         } else if (o instanceof Long){

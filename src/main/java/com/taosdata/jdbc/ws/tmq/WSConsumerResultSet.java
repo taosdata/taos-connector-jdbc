@@ -11,6 +11,7 @@ import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.rs.RestfulResultSet;
 import com.taosdata.jdbc.rs.RestfulResultSetMetaData;
 import com.taosdata.jdbc.utils.DataTypeConverUtil;
+import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.Transport;
 import com.taosdata.jdbc.ws.entity.Code;
@@ -22,6 +23,7 @@ import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.sql.*;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -268,11 +270,12 @@ public class WSConsumerResultSet extends AbstractResultSet {
         if (value instanceof Timestamp)
             return (Timestamp) value;
         if (value instanceof Long) {
-            return DataTypeConverUtil.parseTimestampColumnData((long) value, this.timestampPrecision);
+            Instant instant = DateTimeUtils.parseTimestampColumnData((long) value, this.timestampPrecision);
+            return DateTimeUtils.getTimestamp(instant, null);
         }
         Timestamp ret;
         try {
-            ret = Utils.parseTimestamp(value.toString());
+            ret = DateTimeUtils.parseTimestamp(value.toString(), null);
         } catch (Exception e) {
             ret = null;
             wasNull = true;
@@ -469,7 +472,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
             return null;
 
         int type = fields.get(columnIndex - 1).getTaosType();
-        return DataTypeConverUtil.parseValue(type, source, this.timestampPrecision);
+        return DataTypeConverUtil.parseValue(type, source);
     }
 
     //    ceil(numOfRows/8.0)
