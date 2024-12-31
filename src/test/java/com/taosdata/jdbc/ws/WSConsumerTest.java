@@ -8,10 +8,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.Executors;
@@ -67,6 +64,7 @@ public class WSConsumerTest {
                 for (ConsumerRecord<Map<String, Object>> r : consumerRecords) {
                     Map<String, Object> map = r.value();
                     Assert.assertEquals(7, map.size());
+                    Assert.assertTrue(map.get("ts") instanceof Timestamp);
                 }
             }
             consumer.unsubscribe();
