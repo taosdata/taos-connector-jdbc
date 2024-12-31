@@ -472,6 +472,12 @@ public class WSConsumerResultSet extends AbstractResultSet {
             return null;
 
         int type = fields.get(columnIndex - 1).getTaosType();
+
+        if (type == TSDB_DATA_TYPE_TIMESTAMP){
+            Long o = (Long)DataTypeConverUtil.parseValue(type, source);
+            Instant instant = DateTimeUtils.parseTimestampColumnData(o, this.timestampPrecision);
+            return DateTimeUtils.getTimestamp(instant, null);
+        }
         return DataTypeConverUtil.parseValue(type, source);
     }
 
