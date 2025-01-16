@@ -204,7 +204,7 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
                     }
                 }
 
-                if (result != null && !result.isEmpty() && !isCompleted) {
+                if (!isCompleted) {
                     FetchReq closeReq = new FetchReq();
                     closeReq.setReqId(queryId);
                     closeReq.setId(queryId);
