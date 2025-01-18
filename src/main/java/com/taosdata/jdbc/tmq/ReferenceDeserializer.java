@@ -12,6 +12,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -136,7 +137,11 @@ public class ReferenceDeserializer<V> implements Deserializer<V> {
                 } else if (param.clazz.isAssignableFrom(BigDecimal.class)){
                     BigDecimal bigDecimal = data.getBigDecimal(param.name);
                     param.method.invoke(t, data.wasNull() ? null : bigDecimal);
+                } else if (param.clazz.isAssignableFrom(BigInteger.class)){
+                    BigInteger bigInteger = (BigInteger) data.getObject(param.name);
+                    param.method.invoke(t, data.wasNull() ? null : bigInteger);
                 }
+
             } catch (IllegalAccessException | InvocationTargetException e) {
                 throw new SQLException(this.getClass().getSimpleName() + ": " + param.name
                         + " through method:" + param.method.getName() +" get Data error: ", e);

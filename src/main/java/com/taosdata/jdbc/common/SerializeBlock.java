@@ -7,6 +7,7 @@ import com.taosdata.jdbc.utils.StringUtils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -175,6 +176,23 @@ public class SerializeBlock {
                 }
                 break;
             }
+            case TSDB_DATA_TYPE_UTINYINT: {
+                SerializeInt(buf, offset, objectList.size());
+                offset += Integer.BYTES;
+
+                for (Object o: objectList){
+                    if (o == null) {
+                        buf[offset++] = 0;
+                    } else {
+                        short v = (Short) o;
+                        if (v < 0 || v > 255){
+                            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "utinyint value is out of range");
+                        }
+                        buf[offset++] = (byte) (v & 0xFF);
+                    }
+                }
+                break;
+            }
             case TSDB_DATA_TYPE_SMALLINT: {
                 SerializeInt(buf, offset, objectList.size() * Short.BYTES);
                 offset += Integer.BYTES;
@@ -182,6 +200,25 @@ public class SerializeBlock {
                 for (Object o: objectList){
                     if (o != null) {
                         SerializeShort(buf, offset, (Short) o);
+                    } else {
+                        SerializeShort(buf, offset, (short)0);
+                    }
+
+                    offset += Short.BYTES;
+                }
+                break;
+            }
+            case TSDB_DATA_TYPE_USMALLINT: {
+                SerializeInt(buf, offset, objectList.size() * Short.BYTES);
+                offset += Integer.BYTES;
+
+                for (Object o: objectList){
+                    if (o != null) {
+                        int v = (Integer) o;
+                        if (v < 0 || v > 65535){
+                            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "usmallint value is out of range");
+                        }
+                        SerializeShort(buf, offset, (short) (v & 0xFFFF));
                     } else {
                         SerializeShort(buf, offset, (short)0);
                     }
@@ -204,6 +241,24 @@ public class SerializeBlock {
                 }
                 break;
             }
+            case TSDB_DATA_TYPE_UINT: {
+                SerializeInt(buf, offset, objectList.size() * Integer.BYTES);
+                offset += Integer.BYTES;
+
+                for (Object o: objectList){
+                    if (o != null) {
+                        long v = (Long) o;
+                        if (v < 0 || v > 4294967295L){
+                            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "uint value is out of range");
+                        }
+                        SerializeInt(buf, offset, (int) (v & 0xFFFFFFFFL));
+                    } else {
+                        SerializeInt(buf, offset, 0);
+                    }
+                    offset += Integer.BYTES;
+                }
+                break;
+            }
             case TSDB_DATA_TYPE_BIGINT: {
                 SerializeInt(buf, offset, objectList.size() * Long.BYTES);
                 offset += Integer.BYTES;
@@ -217,6 +272,24 @@ public class SerializeBlock {
                     offset += Long.BYTES;
                 }
                break;
+            }
+            case TSDB_DATA_TYPE_UBIGINT: {
+                SerializeInt(buf, offset, objectList.size() * Long.BYTES);
+                offset += Integer.BYTES;
+
+                for (Object o: objectList){
+                    if (o != null) {
+                        BigInteger v = (BigInteger) o;
+                        if (v.compareTo(BigInteger.ZERO) < 0 || v.compareTo(new BigInteger("18446744073709551615")) > 0){
+                            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "ubigint value is out of range");
+                        }
+                        SerializeLong(buf, offset, v.longValue());
+                    } else {
+                        SerializeLong(buf, offset, 0L);
+                    }
+                    offset += Long.BYTES;
+                }
+                break;
             }
             case TSDB_DATA_TYPE_FLOAT: {
                 SerializeInt(buf, offset, objectList.size() * Integer.BYTES);

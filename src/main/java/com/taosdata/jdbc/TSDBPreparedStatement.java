@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -465,6 +466,11 @@ public class TSDBPreparedStatement extends TSDBStatement implements TaosPrepareS
     }
 
     @Override
+    public void setTagBigInteger(int index, BigInteger value) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
+    }
+
+    @Override
     public void setTagTimestamp(int index, long value) {
         ensureTagCapacity(index);
         this.tableTags.set(index, new TableTagInfo(value, TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP));
@@ -562,6 +568,11 @@ public class TSDBPreparedStatement extends TSDBStatement implements TaosPrepareS
     @Override
     public void setLong(int columnIndex, List<Long> list) throws SQLException {
         setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_BIGINT, Long.BYTES);
+    }
+
+    @Override
+    public void setBigInteger(int columnIndex, List<BigInteger> list) throws SQLException{
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
     }
 
     @Override

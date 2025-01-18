@@ -64,10 +64,15 @@ public abstract class TSDBConstants {
 
     // precision for data types, this is used for metadata
     public static final int BOOLEAN_PRECISION = 1;
-    public static final int TINYINT_PRECISION = 4;
-    public static final int SMALLINT_PRECISION = 6;
-    public static final int INT_PRECISION = 11;
-    public static final int BIGINT_PRECISION = 20;
+    public static final int TINYINT_PRECISION = 3;
+    public static final int UNSIGNED_TINYINT_PRECISION = 3;
+    public static final int SMALLINT_PRECISION = 5;
+    public static final int UNSIGNED_SMALLINT_PRECISION = 5;
+
+    public static final int INT_PRECISION = 10;
+    public static final int UNSIGNED_INT_PRECISION = 10;
+    public static final int BIGINT_PRECISION = 19;
+    public static final int UNSIGNED_BIGINT_PRECISION = 20;
     public static final int FLOAT_PRECISION = 12;
     public static final int DOUBLE_PRECISION = 22;
     public static final int TIMESTAMP_MS_PRECISION = 23;

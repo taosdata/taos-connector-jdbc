@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.sql.Date;
@@ -43,6 +44,8 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
     private int toBeBindColCount = 0;
     private int toBeBindTagCount = 0;
     private List<Field> fields;
+    private ArrayList<Integer> tagTypeList = new ArrayList<>();
+    private ArrayList<Integer> colTypeList = new ArrayList<>();
     private boolean isInsert = false;
     private final Map<Integer, Column> colOrderedMap = new TreeMap<>();
     private final PriorityQueue<ColumnInfo> tag = new PriorityQueue<>();
@@ -84,9 +87,11 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
                 }
                 if (field.getBindType() == FeildBindType.TAOS_FIELD_TAG.getValue()){
                     toBeBindTagCount++;
+                    tagTypeList.add((int) field.getFieldType());
                 }
                 if (field.getBindType() == FeildBindType.TAOS_FIELD_COL.getValue()){
                     toBeBindColCount++;
+                    colTypeList.add((int) field.getFieldType());
                 }
             }
         } else if (prepareResp.getFieldsCount() > 0){
@@ -244,14 +249,26 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
             case TSDB_DATA_TYPE_TINYINT:
                 tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_TINYINT));
                 break;
+            case TSDB_DATA_TYPE_UTINYINT:
+                tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_UTINYINT));
+                break;
             case TSDB_DATA_TYPE_SMALLINT:
                 tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_SMALLINT));
+                break;
+            case TSDB_DATA_TYPE_USMALLINT:
+                tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_USMALLINT));
                 break;
             case TSDB_DATA_TYPE_INT:
                 tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_INT));
                 break;
+            case TSDB_DATA_TYPE_UINT:
+                tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_UINT));
+                break;
             case TSDB_DATA_TYPE_BIGINT:
                 tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_BIGINT));
+                break;
+            case TSDB_DATA_TYPE_UBIGINT:
+                tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_UBIGINT));
                 break;
             case TSDB_DATA_TYPE_FLOAT:
                 tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_FLOAT));
@@ -307,7 +324,10 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
     public void setTagLong(int index, long value) {
         tag.add(new ColumnInfo(index, Collections.singletonList(value), TSDB_DATA_TYPE_BIGINT));
     }
-
+    @Override
+    public void setTagBigInteger(int index, BigInteger value) throws SQLException {
+        tag.add(new ColumnInfo(index, Collections.singletonList(value), TSDB_DATA_TYPE_BIGINT));
+    }
     @Override
     public void setTagFloat(int index, float value) {
         tag.add(new ColumnInfo(index, Collections.singletonList(value), TSDB_DATA_TYPE_FLOAT));
@@ -559,7 +579,11 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
                 break;
             // json
             case Types.OTHER:
-                colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_JSON, parameterIndex));
+                if (x instanceof Number){
+                    colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_UBIGINT, parameterIndex));
+                } else {
+                    colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_JSON, parameterIndex));
+                }
                 break;
             default:
                 throw new SQLException("unsupported type: " + targetSqlType);
@@ -612,6 +636,8 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
             OffsetDateTime offsetDateTime = (OffsetDateTime) x;
             Instant instant = offsetDateTime.toInstant();
             colOrderedMap.put(parameterIndex, new Column(instant, TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
+        } else if (x instanceof BigInteger) {
+            colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_UBIGINT, parameterIndex));
         } else {
             throw new SQLException("Unsupported data type: " + x.getClass().getName());
         }
@@ -643,12 +669,6 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
         for (ColumnInfo columnInfo: tableInfo.getDataList()){
             columnInfo.add(colOrderedMap.get(columnInfo.getIndex()).data);
         }
-//        int j = 0;
-//        for (int index = 0; index < fields.size(); index++) {
-//            if (fields.get(index).getBindType() == FeildBindType.TAOS_FIELD_COL.getValue()) {
-//                tableInfo.getDataList().get(j).getDataList().add();add(new ColumnInfo(index, Collections.singletonList(colOrderedMap.get(index + 1).data), fields.get(index).getFieldType()));
-//            }
-//        }
     }
 
     private void bindAllColWithStdApi() {
@@ -681,7 +701,12 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
                 Column col = entry.getValue();
                 List<Object> list = new ArrayList<>();
                 list.add(col.data);
-                tableInfo.getDataList().add(new ColumnInfo(entry.getKey(), list, col.type));
+
+                int type = col.type;
+                if (isInsert){
+                    type = colTypeList.get(col.index - 1);
+                }
+                tableInfo.getDataList().add(new ColumnInfo(entry.getKey(), list, type));
             }
         } else {
             for (Map.Entry<Integer, Column> entry : colOrderedMap.entrySet()) {
@@ -690,13 +715,21 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
             }
         }
     }
-    private void onlyBindTag() {
+    private void onlyBindTag() throws SQLException {
         if (!tableInfo.getTagInfo().isEmpty()){
             return;
         }
 
+        if (isInsert && tag.size() != toBeBindTagCount){
+            throw new SQLException("tag size is not equal to toBeBindTagCount");
+        }
         while (!tag.isEmpty()) {
-            tableInfo.getTagInfo().add(tag.poll());
+            ColumnInfo columnInfo = tag.poll();
+            if (isInsert && columnInfo.getType() != tagTypeList.get(columnInfo.getIndex())){
+                tableInfo.getTagInfo().add(new ColumnInfo(columnInfo.getIndex(), columnInfo.getDataList(), tagTypeList.get(columnInfo.getIndex())));
+            } else {
+                tableInfo.getTagInfo().add(columnInfo);
+            }
         }
     }
 
@@ -956,7 +989,10 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
     public void setLong(int columnIndex, List<Long> list) throws SQLException {
         setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_BIGINT, Long.BYTES);
     }
-
+    @Override
+    public void setBigInteger(int columnIndex, List<BigInteger> list) throws SQLException {
+        setValueImpl(columnIndex, list, TSDB_DATA_TYPE_UBIGINT, Long.BYTES);
+    }
     @Override
     public void setDouble(int columnIndex, List<Double> list) throws SQLException {
         setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_DOUBLE, Double.BYTES);
@@ -1002,6 +1038,9 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
 
     public <T> void setValueImpl(int columnIndex, List<T> list, int type, int bytes) throws SQLException {
         List<Object> listObject = new ArrayList<>(list);
+        if (isInsert){
+            type = colTypeList.get(columnIndex);
+        }
         ColumnInfo p = new ColumnInfo(columnIndex, listObject, type);
         colListQueue.add(p);
     }
@@ -1013,10 +1052,21 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
         }
 
         while (!tag.isEmpty()){
-            tableInfo.getTagInfo().add(tag.poll());
+            ColumnInfo columnInfo = tag.poll();
+            if (isInsert && columnInfo.getType() != tagTypeList.get(columnInfo.getIndex())){
+                tableInfo.getTagInfo().add(new ColumnInfo(columnInfo.getIndex(), columnInfo.getDataList(), tagTypeList.get(columnInfo.getIndex())));
+            } else {
+                tableInfo.getTagInfo().add(columnInfo);
+            }
+
         }
         while (!colListQueue.isEmpty()) {
-            tableInfo.getDataList().add(colListQueue.poll());
+            ColumnInfo columnInfo = colListQueue.poll();
+            if (isInsert && columnInfo.getType() != colTypeList.get(columnInfo.getIndex())){
+                tableInfo.getDataList().add(new ColumnInfo(columnInfo.getIndex(), columnInfo.getDataList(), colTypeList.get(columnInfo.getIndex())));
+            } else {
+                tableInfo.getDataList().add(columnInfo);
+            }
         }
         tableInfoList.add(tableInfo);
         tableInfo = TableInfo.getEmptyTableInfo();

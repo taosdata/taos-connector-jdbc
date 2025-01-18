@@ -3,6 +3,7 @@ package com.taosdata.jdbc.utils;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.math.BigInteger;
 import java.util.stream.Stream;
 
 public class UtilsTest {
@@ -203,6 +204,15 @@ public class UtilsTest {
 
         // then
         Assert.assertEquals(nativeSql, actual);
+
+    }
+
+    @Test
+    public void ubigintTest() {
+        BigInteger bigInteger = new BigInteger("18446744073709551615");
+        long v = bigInteger.longValue();
+        byte b = (byte)(v & 0xFF);
+        System.out.println(b);
 
     }
 }
