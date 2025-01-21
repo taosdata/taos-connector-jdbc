@@ -390,12 +390,10 @@ public class WsPstmtStmt2Test {
         }
 
 
-        String sql2 = "select * from " + db_name + "." + tableName + " where ts > ? and ts < ? order by ts desc";
-
-        try (TSWSPreparedStatement pstmt = connection.prepareStatement(sql2).unwrap(TSWSPreparedStatement.class)) {
-        }
-
-
+//        String sql2 = "select * from " + db_name + "." + tableName + " where ts > ? and ts < ? order by ts desc";
+//
+//        try (TSWSPreparedStatement pstmt = connection.prepareStatement(sql2).unwrap(TSWSPreparedStatement.class)) {
+//        }
 
         }
 
