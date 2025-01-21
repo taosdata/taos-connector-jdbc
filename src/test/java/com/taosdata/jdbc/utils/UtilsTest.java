@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.utils;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -211,8 +212,7 @@ public class UtilsTest {
     public void ubigintTest() {
         BigInteger bigInteger = new BigInteger("18446744073709551615");
         long v = bigInteger.longValue();
-        byte b = (byte)(v & 0xFF);
-        System.out.println(b);
-
+        short b = (short)(v & 0xFF);
+        Assert.assertEquals(255, b);
     }
 }
