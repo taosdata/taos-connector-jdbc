@@ -9,9 +9,11 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.sql.*;
 import java.time.Duration;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
@@ -26,14 +28,14 @@ public class WSConsumerWithDiffTypeTest {
     @Test
     public void testWSBeanObject() throws Exception {
         try {
-            statement.executeUpdate("insert into " + dbName + ".ct0 values(now, 1, 100, 2.2, 2.3, '1', 12, 2, true, '一', 'POINT(1 1)', '\\x0101', 1.2234, now)");
+            statement.executeUpdate("insert into " + dbName + ".ct0 values(now, 1, 100, 2.2, 2.3, '1', 12, 2, true, '一', 'POINT(1 1)', '\\x0101', 1.2234, now, 255, 65535, 4294967295, 18446744073709551615)");
         } catch (SQLException e) {
             // ignore
         }
         String topic = topics[0];
         // create topic
         statement.executeUpdate("create topic if not exists " + topic +
-                " as select ts, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, t1 from " + dbName + ".ct0");
+                " as select ts, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, t1 from " + dbName + ".ct0");
 
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.CONNECT_USER, "root");
@@ -63,7 +65,68 @@ public class WSConsumerWithDiffTypeTest {
                     Assert.assertEquals("一", bean.getC9());
                     Assert.assertEquals(1.2234, bean.getC12().doubleValue(), 0.000001);
 
+                    Assert.assertEquals(255, bean.getC14());
+                    Assert.assertEquals(65535, bean.getC15());
+                    Assert.assertEquals(4294967295L, bean.getC16());
+                    Assert.assertEquals(new BigInteger("18446744073709551615"), bean.getC17());
+
                     Assert.assertEquals(1000.0, bean.getT1(), 0.000001);
+                }
+            }
+            consumer.unsubscribe();
+        }
+    }
+
+    @Test
+    public void testWSBeanMap() throws Exception {
+        try {
+            statement.executeUpdate("insert into " + dbName + ".ct0 values(now, 1, 100, 2.2, 2.3, '1', 12, 2, true, '一', 'POINT(1 1)', '\\x0101', 1.2234, now, 255, 65535, 4294967295, 18446744073709551615)");
+        } catch (SQLException e) {
+            // ignore
+        }
+        String topic = topics[0];
+        // create topic
+        statement.executeUpdate("create topic if not exists " + topic +
+                " as select ts, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, t1 from " + dbName + ".ct0");
+
+        Properties properties = new Properties();
+        properties.setProperty(TMQConstants.CONNECT_USER, "root");
+        properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
+        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, "127.0.0.1:6041");
+        properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
+        properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
+        properties.setProperty(TMQConstants.GROUP_ID, "ws_bean");
+        properties.setProperty(TMQConstants.CONNECT_TYPE, "ws");
+        properties.setProperty(TMQConstants.AUTO_OFFSET_RESET, "earliest");
+
+        try (TaosConsumer<Map<String, Object>> consumer = new TaosConsumer<>(properties)) {
+            consumer.subscribe(Collections.singletonList(topic));
+            for (int i = 0; i < 10; i++) {
+                ConsumerRecords<Map<String, Object>> consumerRecords = consumer.poll(Duration.ofMillis(100));
+                for (ConsumerRecord<Map<String, Object>> r : consumerRecords) {
+                    Map<String, Object> map = r.value();
+                    Assert.assertEquals(19 , map.size());
+                    Assert.assertTrue(map.get("ts") instanceof Timestamp);
+
+
+                    Assert.assertEquals(1, (int) map.get("c1"));
+                    Assert.assertEquals(100L, map.get("c2"));
+                    Assert.assertEquals(2.2, (float)map.get("c3"), 0.000001);
+                    Assert.assertEquals(2.3, (double)map.get("c4"), 0.000001);
+                    Assert.assertArrayEquals("1".getBytes(), (byte[]) map.get("c5"));
+                    Assert.assertEquals(12, (short)map.get("c6"));
+                    Assert.assertEquals(2, (byte)map.get("c7"));
+                    Assert.assertTrue((boolean) map.get("c8"));
+                    Assert.assertEquals("一", map.get("c9"));
+                    Assert.assertEquals(1.2234, (double)map.get("c12"), 0.000001);
+
+                    Assert.assertEquals(255, (short)map.get("c14"));
+                    Assert.assertEquals(65535, (int)map.get("c15"));
+                    Assert.assertEquals(4294967295L, (long)map.get("c16"));
+                    Assert.assertEquals(new BigInteger("18446744073709551615"), map.get("c17"));
+
+                    Assert.assertEquals(1000.0, (int)map.get("t1"), 0.000001);
+
                 }
             }
             consumer.unsubscribe();
@@ -88,7 +151,9 @@ public class WSConsumerWithDiffTypeTest {
         statement.execute("create database if not exists " + dbName + " WAL_RETENTION_PERIOD 3650");
         statement.execute("use " + dbName);
         statement.execute("create stable if not exists " + superTable
-                + " (ts timestamp, c1 int, c2 bigint, c3 float, c4 double, c5 binary(10), c6 SMALLINT, c7 TINYINT, c8 BOOL, c9 nchar(100), c10 GEOMETRY(100), c11 VARBINARY(100), c12 double, c13 timestamp) tags(t1 int)");
+                + " (ts timestamp, c1 int, c2 bigint, c3 float, c4 double, c5 binary(10), c6 SMALLINT, c7 TINYINT, " +
+                "c8 BOOL, c9 nchar(100), c10 GEOMETRY(100), c11 VARBINARY(100), c12 double, c13 timestamp, " +
+                "c14 tinyint unsigned, c15 smallint unsigned, c16 int unsigned, c17 bigint unsigned) tags(t1 int)");
         statement.execute("create table if not exists ct0 using " + superTable + " tags(1000)");
     }
 
@@ -138,6 +203,11 @@ class Bean {
     private BigDecimal c12;
     private Timestamp c13;
 
+    private short c14;
+    private int c15;
+    private long c16;
+    private BigInteger c17;
+
     @Override
     public String toString() {
         final StringBuffer sb = new StringBuffer("Bean{");
@@ -155,6 +225,12 @@ class Bean {
         sb.append(", c10=").append(java.util.Arrays.toString(c10));
         sb.append(", c11=").append(java.util.Arrays.toString(c11));
         sb.append(", c12=").append(c12);
+        sb.append(", c13=").append(c13);
+        sb.append(", c14=").append(c14);
+        sb.append(", c15=").append(c15);
+        sb.append(", c16=").append(c16);
+        sb.append(", c17=").append(c17);
+
         sb.append('}');
         return sb.toString();
     }
@@ -268,6 +344,39 @@ class Bean {
 
     public void setC13(Timestamp c13) {
         this.c13 = c13;
+    }
+
+
+    public short getC14() {
+        return c14;
+    }
+
+    public void setC14(short c14) {
+        this.c14 = c14;
+    }
+
+    public int getC15() {
+        return c15;
+    }
+
+    public void setC15(int c15) {
+        this.c15 = c15;
+    }
+
+    public long getC16() {
+        return c16;
+    }
+
+    public void setC16(long c16) {
+        this.c16 = c16;
+    }
+
+    public BigInteger getC17() {
+        return c17;
+    }
+
+    public void setC17(BigInteger c17) {
+        this.c17 = c17;
     }
 
     public int getT1() {

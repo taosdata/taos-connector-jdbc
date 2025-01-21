@@ -11,6 +11,7 @@ import com.taosdata.jdbc.enums.TimestampPrecision;
 
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.sql.SQLDataException;
 import java.sql.SQLException;
 import java.sql.Time;
@@ -52,8 +53,8 @@ public class DataTypeConverUtilTest {
         assertFalse(DataTypeConverUtil.getBoolean(TSDB_DATA_TYPE_TIMESTAMP, Instant.ofEpochMilli(0L)));
 
         // Test UBIGINT
-        assertTrue(DataTypeConverUtil.getBoolean(TSDB_DATA_TYPE_UBIGINT, new BigDecimal(1)));
-        assertFalse(DataTypeConverUtil.getBoolean(TSDB_DATA_TYPE_UBIGINT, new BigDecimal(0)));
+        assertTrue(DataTypeConverUtil.getBoolean(TSDB_DATA_TYPE_UBIGINT, new BigInteger("1")));
+        assertFalse(DataTypeConverUtil.getBoolean(TSDB_DATA_TYPE_UBIGINT, new BigInteger("0")));
 
         // Test FLOAT
         assertTrue(DataTypeConverUtil.getBoolean(TSDB_DATA_TYPE_FLOAT, 1.0f));
@@ -125,10 +126,10 @@ public class DataTypeConverUtilTest {
         }
 
         // UBIGINT
-        assertEquals((byte) 127, DataTypeConverUtil.getByte(TSDB_DATA_TYPE_UBIGINT, new BigDecimal(127), 1));
-        assertEquals((byte) -128, DataTypeConverUtil.getByte(TSDB_DATA_TYPE_UBIGINT, new BigDecimal(-128), 1));
+        assertEquals((byte) 127, DataTypeConverUtil.getByte(TSDB_DATA_TYPE_UBIGINT, new BigInteger("127"), 1));
+        assertEquals((byte) -128, DataTypeConverUtil.getByte(TSDB_DATA_TYPE_UBIGINT, new BigInteger("-128"), 1));
         try {
-            DataTypeConverUtil.getByte(TSDB_DATA_TYPE_UBIGINT, new BigDecimal(128), 1);
+            DataTypeConverUtil.getByte(TSDB_DATA_TYPE_UBIGINT, new BigInteger("128"), 1);
             fail("Expected SQLException for UBIGINT out of range");
         } catch (SQLException e) {
             // Expected exception
@@ -198,10 +199,10 @@ public class DataTypeConverUtilTest {
         }
 
         // UBIGINT
-        assertEquals((short) 32767, DataTypeConverUtil.getShort(TSDB_DATA_TYPE_UBIGINT, new BigDecimal(32767), 1));
-        assertEquals((short) -32768, DataTypeConverUtil.getShort(TSDB_DATA_TYPE_UBIGINT, new BigDecimal(-32768), 1));
+        assertEquals((short) 32767, DataTypeConverUtil.getShort(TSDB_DATA_TYPE_UBIGINT, new BigInteger("32767"), 1));
+        assertEquals((short) -32768, DataTypeConverUtil.getShort(TSDB_DATA_TYPE_UBIGINT, new BigInteger("-32768"), 1));
         try {
-            DataTypeConverUtil.getShort(TSDB_DATA_TYPE_UBIGINT, new BigDecimal(32768), 1);
+            DataTypeConverUtil.getShort(TSDB_DATA_TYPE_UBIGINT, new BigInteger("32768"), 1);
             fail("Expected SQLException for UBIGINT out of range");
         } catch (SQLException e) {
             // Expected exception
@@ -265,10 +266,10 @@ public class DataTypeConverUtilTest {
         }
 
         // UBIGINT
-        assertEquals(2147483647, DataTypeConverUtil.getInt(TSDB_DATA_TYPE_UBIGINT, new BigDecimal(2147483647), 1));
-        assertEquals(-2147483648, DataTypeConverUtil.getInt(TSDB_DATA_TYPE_UBIGINT, new BigDecimal(-2147483648), 1));
+        assertEquals(2147483647, DataTypeConverUtil.getInt(TSDB_DATA_TYPE_UBIGINT, new BigInteger("2147483647"), 1));
+        assertEquals(-2147483648, DataTypeConverUtil.getInt(TSDB_DATA_TYPE_UBIGINT, new BigInteger("-2147483648"), 1));
         try {
-            DataTypeConverUtil.getInt(TSDB_DATA_TYPE_UBIGINT, new BigDecimal(2147483648L), 1);
+            DataTypeConverUtil.getInt(TSDB_DATA_TYPE_UBIGINT, new BigInteger("2147483648"), 1);
             fail("Expected SQLException for UBIGINT out of range");
         } catch (SQLException e) {
             // Expected exception
@@ -326,9 +327,9 @@ public class DataTypeConverUtilTest {
         assertEquals(-9223372036854775808L, DataTypeConverUtil.getLong(TSDB_DATA_TYPE_BIGINT, -9223372036854775808L, 1, TimestampPrecision.MS));
 
         // UBIGINT
-        assertEquals(9223372036854775807L, DataTypeConverUtil.getLong(TSDB_DATA_TYPE_UBIGINT, new BigDecimal(9223372036854775807L), 1, TimestampPrecision.MS));
+        assertEquals(9223372036854775807L, DataTypeConverUtil.getLong(TSDB_DATA_TYPE_UBIGINT, new BigInteger("9223372036854775807"), 1, TimestampPrecision.MS));
         try {
-            DataTypeConverUtil.getLong(TSDB_DATA_TYPE_UBIGINT, new BigDecimal("9223372036854775808"), 1, TimestampPrecision.MS);
+            DataTypeConverUtil.getLong(TSDB_DATA_TYPE_UBIGINT, new BigInteger("9223372036854775808"), 1, TimestampPrecision.MS);
             fail("Expected SQLException for UBIGINT out of range");
         } catch (SQLException e) {
             // Expected exception
@@ -391,7 +392,7 @@ public class DataTypeConverUtilTest {
         assertEquals(-9223372036854775808.0f, DataTypeConverUtil.getFloat(TSDB_DATA_TYPE_BIGINT, -9223372036854775808L, 1), 0.0f);
 
         // UBIGINT
-        assertEquals(1234567890123456789.0f, DataTypeConverUtil.getFloat(TSDB_DATA_TYPE_UBIGINT, new BigDecimal("1234567890123456789"), 1), 0.0f);
+        assertEquals(1234567890123456789.0f, DataTypeConverUtil.getFloat(TSDB_DATA_TYPE_UBIGINT, new BigInteger("1234567890123456789"), 1), 0.0f);
 
         // DOUBLE
         assertEquals(3.141592653589793, DataTypeConverUtil.getFloat(TSDB_DATA_TYPE_DOUBLE, 3.141592653589793, 1), 0.0001f);
@@ -426,7 +427,7 @@ public class DataTypeConverUtilTest {
         assertEquals(9223372036854775807.0, DataTypeConverUtil.getDouble(TSDB_DATA_TYPE_BIGINT, 9223372036854775807L, 1, TimestampPrecision.MS), 0.0);
 
         // UBIGINT
-        assertEquals(1.0E19, DataTypeConverUtil.getDouble(TSDB_DATA_TYPE_UBIGINT, new BigDecimal("10000000000000000000"), 1, TimestampPrecision.MS), 0);
+        assertEquals(1.0E19, DataTypeConverUtil.getDouble(TSDB_DATA_TYPE_UBIGINT, new BigInteger("10000000000000000000"), 1, TimestampPrecision.MS), 0);
 
         // FLOAT
         assertEquals(3.14f, DataTypeConverUtil.getDouble(TSDB_DATA_TYPE_FLOAT, 3.14f, 1, TimestampPrecision.MS), 0.0);
@@ -611,7 +612,7 @@ public class DataTypeConverUtilTest {
         assertEquals(now, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_TIMESTAMP, now));
 
         // UBIGINT
-        assertEquals(new BigDecimal("18446744073709551615"), DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_UBIGINT, -1L));
+        assertEquals(new BigInteger("18446744073709551615"), DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_UBIGINT, -1L));
 
         // NCHAR
         int[] ncharData = {65, 66, 67}; // Corresponds to "ABC"
