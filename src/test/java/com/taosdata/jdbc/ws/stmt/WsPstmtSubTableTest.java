@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.ws.stmt;
 
+import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.ws.TSWSPreparedStatement;
 import org.junit.After;
@@ -7,6 +8,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.math.BigInteger;
 import java.sql.*;
 import java.util.Properties;
 
@@ -24,7 +26,7 @@ public class WsPstmtSubTableTest {
         TSWSPreparedStatement statement = (TSWSPreparedStatement) connection.prepareStatement(sql);
         for (int i = 0; i < 10; i++) {
             statement.setTableName(db_name + ".t" + i);
-            statement.setTagInt(1, i);
+            statement.setTagInt(0, i);
             for (int j = 0; j < 10; j++) {
                 statement.setTimestamp(1, new Timestamp(System.currentTimeMillis() + j));
                 statement.setInt(2, j * 10);
@@ -43,23 +45,29 @@ public class WsPstmtSubTableTest {
 
         statement = (TSWSPreparedStatement) connection.prepareStatement(
                 "insert into ? using " + db_name + "." + superTable1 +
-                        " tags (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)  values (?, ?)");
+                        " tags (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)  values (?, ?)");
         statement.setTableName(db_name + ".t_with_tag");
-        statement.setTagByte(1, (byte) 1);
-        statement.setTagShort(2, (short) 2);
-        statement.setTagInt(3, 3);
-        statement.setTagLong(4, 4L);
-        statement.setTagFloat(5, 5.0f);
-        statement.setTagDouble(6, 6.0);
-        statement.setTagString(7, "涛思");
-        statement.setTagNString(8, "数据");
-        statement.setTagBoolean(9, true);
-        statement.setTagTimestamp(10, new Timestamp(System.currentTimeMillis()));
-        statement.setTagString(11, "taosdata");
+        statement.setTagByte(0, (byte) 1);
+        statement.setTagShort(1, (short) 2);
+        statement.setTagInt(2, 3);
+        statement.setTagLong(3, 4L);
+        statement.setTagFloat(4, 5.0f);
+        statement.setTagDouble(5, 6.0);
+        statement.setTagString(6, "涛思");
+        statement.setTagNString(7, "数据");
+        statement.setTagBoolean(8, true);
+        statement.setTagTimestamp(9, new Timestamp(System.currentTimeMillis()));
+        statement.setTagString(10, "taosdata");
+        statement.setTagShort(11, TSDBConstants.MAX_UNSIGNED_BYTE);
+        statement.setTagInt(12,  TSDBConstants.MAX_UNSIGNED_SHORT);
+        statement.setTagLong(13,  TSDBConstants.MAX_UNSIGNED_INT);
+        statement.setTagBigInteger(14, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
+
         statement.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
         statement.setInt(2, 100);
+
         statement.executeUpdate();
-        ResultSet resultSet1 = statement.executeQuery("select t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11 from " + db_name + ".t_with_tag");
+        ResultSet resultSet1 = statement.executeQuery("select t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14,t15 from " + db_name + ".t_with_tag");
         resultSet1.next();
         Assert.assertEquals(1, resultSet1.getByte(1));
         Assert.assertEquals(2, resultSet1.getShort(2));
@@ -71,6 +79,12 @@ public class WsPstmtSubTableTest {
         Assert.assertEquals("数据", resultSet1.getNString(8));
         Assert.assertTrue(resultSet1.getBoolean(9));
         Assert.assertEquals("taosdata", resultSet1.getString(11));
+
+        Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_BYTE, resultSet1.getShort(12));
+        Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_SHORT, resultSet1.getInt(13));
+        Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_INT, resultSet1.getLong(14));
+        Assert.assertEquals(new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG), resultSet1.getObject(15));
+
         resultSet1.close();
         statement.close();
 
@@ -120,7 +134,7 @@ public class WsPstmtSubTableTest {
         statement.execute("create table if not exists " + db_name + "." + superTable + " (ts timestamp, c1 int) tags(t1 int)");
         statement.execute("create table if not exists " + db_name + "." + superTable1 + " (ts timestamp, c1 int) " +
                 "tags(t1 tinyint, t2 smallint, t3 int, t4 bigint, t5 float, t6 double, t7 binary(10), t8 nchar(10), " +
-                "t9 bool, t10 timestamp, t11 varchar(10))");
+                "t9 bool, t10 timestamp, t11 varchar(10), t12 tinyint unsigned, t13 smallint unsigned, t14 int unsigned, t15 bigint unsigned)");
         statement.execute("create table if not exists " + db_name + "." + superTable2 + " (ts timestamp, c1 int) tags (tt json)");
         statement.close();
     }

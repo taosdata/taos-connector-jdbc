@@ -79,7 +79,7 @@ public class WsPStmtAllTypeNullTest {
 
     @Test
     public void testExecuteUpdate2() throws SQLException {
-        String sql = "insert into stb_1 using " + db_name + "." + stableName + " tags (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) values (?, ?)";
+        String sql = "insert into stb_1 using " + db_name + "." + stableName + " tags (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) values (?, ?)";
         TSWSPreparedStatement statement = connection.prepareStatement(sql).unwrap(TSWSPreparedStatement.class);
         long current = System.currentTimeMillis();
 
@@ -98,6 +98,13 @@ public class WsPStmtAllTypeNullTest {
 
         statement.setTagNull(11, TSDB_DATA_TYPE_VARBINARY);
         statement.setTagNull(12, TSDB_DATA_TYPE_GEOMETRY);
+
+
+        statement.setTagNull(13, TSDB_DATA_TYPE_UTINYINT);
+        statement.setTagNull(14, TSDB_DATA_TYPE_USMALLINT);
+        statement.setTagNull(15, TSDB_DATA_TYPE_UINT);
+        statement.setTagNull(16, TSDB_DATA_TYPE_UBIGINT);
+
 
         statement.setTimestamp(0, Collections.singletonList(current));
         statement.setByte(1, Collections.singletonList(null));
@@ -144,6 +151,20 @@ public class WsPStmtAllTypeNullTest {
 
         Assert.assertNull(resultSet.getBytes(14));
         Assert.assertNull(resultSet.getBytes(15));
+
+        resultSet.getShort(16);
+        Assert.assertTrue(resultSet.wasNull());
+
+        resultSet.getInt(17);
+        Assert.assertTrue(resultSet.wasNull());
+
+        resultSet.getLong(18);
+        Assert.assertTrue(resultSet.wasNull());
+
+        Object obj = resultSet.getObject(19);
+        Assert.assertNull(obj);
+
+
         resultSet.close();
         statement.close();
     }
@@ -168,7 +189,8 @@ public class WsPStmtAllTypeNullTest {
 
         statement.execute("create stable if not exists " + db_name + "." + stableName +
                 "(ts timestamp, c1 tinyint) tags (t1 timestamp, t2 tinyint, t3 smallint, t4 int, t5 bigint, " +
-                "t6 float, t7 double, t8 bool, t9 binary(10), t10 nchar(10), t11 varchar(20), t12 varbinary(100), t13 geometry(100))");
+                "t6 float, t7 double, t8 bool, t9 binary(10), t10 nchar(10), t11 varchar(20), t12 varbinary(100), t13 geometry(100)," +
+                " t14 tinyint unsigned, t15 smallint unsigned, t16 int unsigned, t17 bigint unsigned)");
 
         statement.close();
     }

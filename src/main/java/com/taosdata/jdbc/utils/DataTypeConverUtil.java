@@ -10,6 +10,7 @@ import com.taosdata.jdbc.enums.TimestampPrecision;
 
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.sql.*;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -37,7 +38,7 @@ public class DataTypeConverUtil {
             case TSDB_DATA_TYPE_TIMESTAMP:
                 return ((Instant) value).toEpochMilli() == 0L ? Boolean.FALSE : Boolean.TRUE;
             case TSDB_DATA_TYPE_UBIGINT:
-                return value.equals(new BigDecimal(0)) ? Boolean.FALSE : Boolean.TRUE;
+                return value.equals(BigInteger.ZERO) ? Boolean.FALSE : Boolean.TRUE;
 
             case TSDB_DATA_TYPE_FLOAT:
                 return (((float) value) == 0) ? Boolean.FALSE : Boolean.TRUE;
@@ -108,8 +109,8 @@ public class DataTypeConverUtil {
                 return (byte) tmp;
             }
             case TSDB_DATA_TYPE_UBIGINT: {
-                BigDecimal tmp = (BigDecimal) value;
-                if (tmp.compareTo(new BigDecimal(Byte.MIN_VALUE)) < 0 || tmp.compareTo(new BigDecimal(Byte.MAX_VALUE)) > 0)
+                BigInteger tmp = (BigInteger) value;
+                if (tmp.compareTo(BigInteger.valueOf(Byte.MIN_VALUE)) < 0 || tmp.compareTo(BigInteger.valueOf(Byte.MAX_VALUE)) > 0)
                     throwRangeException(value.toString(), columnIndex, Types.TINYINT);
 
                 return tmp.byteValue();
@@ -170,8 +171,8 @@ public class DataTypeConverUtil {
                 return (short) tmp;
             }
             case TSDB_DATA_TYPE_UBIGINT: {
-                BigDecimal tmp = (BigDecimal) value;
-                if (tmp.compareTo(new BigDecimal(Short.MIN_VALUE)) < 0 || tmp.compareTo(new BigDecimal(Short.MAX_VALUE)) > 0)
+                BigInteger tmp = (BigInteger) value;
+                if (tmp.compareTo(BigInteger.valueOf(Short.MIN_VALUE)) < 0 || tmp.compareTo(BigInteger.valueOf(Short.MAX_VALUE)) > 0)
                     throwRangeException(value.toString(), columnIndex, Types.SMALLINT);
                 return tmp.shortValue();
             }
@@ -227,8 +228,8 @@ public class DataTypeConverUtil {
                 return (int) tmp;
             }
             case TSDB_DATA_TYPE_UBIGINT: {
-                BigDecimal tmp = (BigDecimal) value;
-                if (tmp.compareTo(new BigDecimal(Integer.MIN_VALUE)) < 0 || tmp.compareTo(new BigDecimal(Integer.MAX_VALUE)) > 0)
+                BigInteger tmp = (BigInteger) value;
+                if (tmp.compareTo(BigInteger.valueOf(Integer.MIN_VALUE)) < 0 || tmp.compareTo(BigInteger.valueOf(Integer.MAX_VALUE)) > 0)
                     throwRangeException(value.toString(), columnIndex, Types.INTEGER);
                 return tmp.intValue();
             }
@@ -293,8 +294,8 @@ public class DataTypeConverUtil {
                 return (long) value;
 
             case TSDB_DATA_TYPE_UBIGINT: {
-                BigDecimal tmp = (BigDecimal) value;
-                if (tmp.compareTo(new BigDecimal(Long.MIN_VALUE)) < 0 || tmp.compareTo(new BigDecimal(Long.MAX_VALUE)) > 0)
+                BigInteger tmp = (BigInteger) value;
+                if (tmp.compareTo(BigInteger.valueOf(Long.MIN_VALUE)) < 0 || tmp.compareTo(BigInteger.valueOf(Long.MAX_VALUE)) > 0)
                     throwRangeException(value.toString(), columnIndex, Types.BIGINT);
                 return tmp.longValue();
             }
@@ -350,9 +351,7 @@ public class DataTypeConverUtil {
                 return (long) value;
 
             case TSDB_DATA_TYPE_UBIGINT: {
-                BigDecimal tmp = (BigDecimal) value;
-                if (tmp.compareTo(new BigDecimal(Float.MIN_VALUE)) < 0 || tmp.compareTo(new BigDecimal(Float.MAX_VALUE)) > 0)
-                    throwRangeException(value.toString(), columnIndex, Types.FLOAT);
+                BigInteger tmp = (BigInteger) value;
                 return tmp.floatValue();
             }
             case TSDB_DATA_TYPE_DOUBLE: {
@@ -400,9 +399,7 @@ public class DataTypeConverUtil {
                 return (long) value;
 
             case TSDB_DATA_TYPE_UBIGINT: {
-                BigDecimal tmp = (BigDecimal) value;
-                if (tmp.compareTo(new BigDecimal(Double.MIN_VALUE)) < 0 || tmp.compareTo(new BigDecimal(Double.MAX_VALUE)) > 0)
-                    throwRangeException(value.toString(), columnIndex, Types.DOUBLE);
+                BigInteger tmp = (BigInteger) value;
                 return tmp.doubleValue();
             }
 
@@ -519,6 +516,8 @@ public class DataTypeConverUtil {
             case TSDB_DATA_TYPE_UINT:
             case TSDB_DATA_TYPE_BIGINT:
                 return new BigDecimal((long) value);
+            case TSDB_DATA_TYPE_UBIGINT:
+                return new BigDecimal((BigInteger) value);
 
             case TSDB_DATA_TYPE_FLOAT:
                 return BigDecimal.valueOf((float) value);
@@ -579,7 +578,16 @@ public class DataTypeConverUtil {
             }
             case TSDB_DATA_TYPE_UBIGINT: {
                 long val = (long) source;
-                return parseUBigInt(val);
+                return new BigInteger(1, new byte[]{
+                        (byte) (val >>> 56),
+                        (byte) (val >>> 48),
+                        (byte) (val >>> 40),
+                        (byte) (val >>> 32),
+                        (byte) (val >>> 24),
+                        (byte) (val >>> 16),
+                        (byte) (val >>> 8),
+                        (byte) val
+                });
             }
             case TSDB_DATA_TYPE_NCHAR: {
                 int[] tmp = (int[]) source;

@@ -14,6 +14,7 @@ import com.taosdata.jdbc.ws.entity.QueryResp;
 
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.sql.*;
 import java.time.*;
 import java.time.format.DateTimeParseException;
@@ -318,6 +319,8 @@ public class BlockResultSet extends AbstractWSResultSet {
                     return type.cast(((Number) value).floatValue());
                 } else if (type == BigDecimal.class && value instanceof Number) {
                     return type.cast(new BigDecimal(value.toString()));
+                } else if (type == BigInteger.class && value instanceof Number) {
+                    return type.cast(new BigInteger(value.toString()));
                 } else if (type == Byte.class && value instanceof Number) {
                     return type.cast(((Number) value).byteValue());
                 } else if (type == LocalDateTime.class && value instanceof Instant) {

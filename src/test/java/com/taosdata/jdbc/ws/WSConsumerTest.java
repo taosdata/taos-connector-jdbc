@@ -145,6 +145,8 @@ public class WSConsumerTest {
         statement.execute("use " + dbName);
         statement.execute("create stable if not exists " + superTable
                 + " (ts timestamp, c1 int, c2 float, c3 nchar(10), c4 binary(10), c5 bool) tags(t1 int)");
+
+
         statement.execute("create table if not exists ct0 using " + superTable + " tags(1000)");
         statement.execute("create table if not exists ct1 using " + superTable + " tags(2000)");
     }
