@@ -44,10 +44,10 @@ public abstract class TSDBConstants {
     public static final int TSDB_DATA_TYPE_NCHAR = 10;
     /**
      * 系统增加新的无符号数据类型，分别是：
-     * unsigned tinyint， 数值范围：0-254, NULL 为255
-     * unsigned smallint，数值范围： 0-65534， NULL 为65535
-     * unsigned int，数值范围：0-4294967294，NULL 为4294967295u
-     * unsigned bigint，数值范围：0-18446744073709551614u，NULL 为18446744073709551615u。
+     * unsigned tinyint， 数值范围：0-255
+     * unsigned smallint，数值范围： 0-65535
+     * unsigned int，数值范围：0-4294967295
+     * unsigned bigint，数值范围：0-18446744073709551615u。
      * example:
      * create table tb(ts timestamp, a tinyint unsigned, b smallint unsigned, c int unsigned, d bigint unsigned);
      */
@@ -84,6 +84,12 @@ public abstract class TSDBConstants {
     public static final String DEFAULT_PRECISION = "ms";
 
     public static final boolean DEFAULT_BATCH_ERROR_IGNORE = false;
+
+
+    public static final short MAX_UNSIGNED_BYTE = 255;
+    public static final int MAX_UNSIGNED_SHORT = 65535;
+    public static final long MAX_UNSIGNED_INT = 4294967295L;
+    public static final String MAX_UNSIGNED_LONG = "18446744073709551615";
 
     public static String jdbcType2TaosTypeName(int jdbcType) throws SQLException {
         switch (jdbcType) {

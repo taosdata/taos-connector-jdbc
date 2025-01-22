@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.utils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.ws.entity.FetchReq;
 import org.junit.Assert;
 import org.junit.Test;
@@ -15,7 +16,7 @@ public class UInt64SerializerTest {
 
         // 使用 Jackson 将对象转换为 JSON 字符串
         String s = JsonUtil.getObjectWriter().writeValueAsString(fetchReq);
-        Assert.assertTrue(s.contains("18446744073709551615"));
+        Assert.assertTrue(s.contains(TSDBConstants.MAX_UNSIGNED_LONG));
 
         // 使用 Jackson 将 JSON 字符串解析为对象
         FetchReq fetchReq1 = JsonUtil.getObjectReader(FetchReq.class).readValue(s);

@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.ws.stmt;
 
+import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.ws.TSWSPreparedStatement;
 import org.junit.After;
@@ -57,10 +58,10 @@ public class WsPstmtSubTableTest {
         statement.setTagBoolean(8, true);
         statement.setTagTimestamp(9, new Timestamp(System.currentTimeMillis()));
         statement.setTagString(10, "taosdata");
-        statement.setTagShort(11, (short) 255);
-        statement.setTagInt(12,  65535);
-        statement.setTagLong(13,  4294967295L);
-        statement.setTagBigInteger(14, new BigInteger("18446744073709551615"));
+        statement.setTagShort(11, TSDBConstants.MAX_UNSIGNED_BYTE);
+        statement.setTagInt(12,  TSDBConstants.MAX_UNSIGNED_SHORT);
+        statement.setTagLong(13,  TSDBConstants.MAX_UNSIGNED_INT);
+        statement.setTagBigInteger(14, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
 
         statement.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
         statement.setInt(2, 100);
@@ -79,10 +80,10 @@ public class WsPstmtSubTableTest {
         Assert.assertTrue(resultSet1.getBoolean(9));
         Assert.assertEquals("taosdata", resultSet1.getString(11));
 
-        Assert.assertEquals(255, resultSet1.getShort(12));
-        Assert.assertEquals(65535, resultSet1.getInt(13));
-        Assert.assertEquals(4294967295L, resultSet1.getLong(14));
-        Assert.assertEquals(new BigInteger("18446744073709551615"), resultSet1.getObject(15));
+        Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_BYTE, resultSet1.getShort(12));
+        Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_SHORT, resultSet1.getInt(13));
+        Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_INT, resultSet1.getLong(14));
+        Assert.assertEquals(new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG), resultSet1.getObject(15));
 
         resultSet1.close();
         statement.close();

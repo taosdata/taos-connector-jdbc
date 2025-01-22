@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.common;
 
+import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.utils.DateTimeUtils;
@@ -185,7 +186,7 @@ public class SerializeBlock {
                         buf[offset++] = 0;
                     } else {
                         short v = (Short) o;
-                        if (v < 0 || v > 255){
+                        if (v < 0 || v > MAX_UNSIGNED_BYTE){
                             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "utinyint value is out of range");
                         }
                         buf[offset++] = (byte) (v & 0xFF);
@@ -215,7 +216,7 @@ public class SerializeBlock {
                 for (Object o: objectList){
                     if (o != null) {
                         int v = (Integer) o;
-                        if (v < 0 || v > 65535){
+                        if (v < 0 || v > MAX_UNSIGNED_SHORT){
                             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "usmallint value is out of range");
                         }
                         SerializeShort(buf, offset, (short) (v & 0xFFFF));
@@ -248,7 +249,7 @@ public class SerializeBlock {
                 for (Object o: objectList){
                     if (o != null) {
                         long v = (Long) o;
-                        if (v < 0 || v > 4294967295L){
+                        if (v < 0 || v > MAX_UNSIGNED_INT){
                             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "uint value is out of range");
                         }
                         SerializeInt(buf, offset, (int) (v & 0xFFFFFFFFL));
@@ -280,7 +281,7 @@ public class SerializeBlock {
                 for (Object o: objectList){
                     if (o != null) {
                         BigInteger v = (BigInteger) o;
-                        if (v.compareTo(BigInteger.ZERO) < 0 || v.compareTo(new BigInteger("18446744073709551615")) > 0){
+                        if (v.compareTo(BigInteger.ZERO) < 0 || v.compareTo(new BigInteger(MAX_UNSIGNED_LONG)) > 0){
                             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "ubigint value is out of range");
                         }
                         SerializeLong(buf, offset, v.longValue());

@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.utils;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.taosdata.jdbc.TSDBConstants;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -210,7 +211,7 @@ public class UtilsTest {
 
     @Test
     public void ubigintTest() {
-        BigInteger bigInteger = new BigInteger("18446744073709551615");
+        BigInteger bigInteger = new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG);
         long v = bigInteger.longValue();
         short b = (short)(v & 0xFF);
         Assert.assertEquals(255, b);

@@ -4,6 +4,7 @@ package com.taosdata.jdbc.utils;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
+import com.taosdata.jdbc.TSDBConstants;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -612,7 +613,7 @@ public class DataTypeConverUtilTest {
         assertEquals(now, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_TIMESTAMP, now));
 
         // UBIGINT
-        assertEquals(new BigInteger("18446744073709551615"), DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_UBIGINT, -1L));
+        assertEquals(new BigInteger(MAX_UNSIGNED_LONG), DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_UBIGINT, -1L));
 
         // NCHAR
         int[] ncharData = {65, 66, 67}; // Corresponds to "ABC"

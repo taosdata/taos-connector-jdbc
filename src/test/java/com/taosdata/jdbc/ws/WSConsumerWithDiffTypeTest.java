@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.ws;
 
+import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.SpecifyAddress;
@@ -65,10 +66,10 @@ public class WSConsumerWithDiffTypeTest {
                     Assert.assertEquals("一", bean.getC9());
                     Assert.assertEquals(1.2234, bean.getC12().doubleValue(), 0.000001);
 
-                    Assert.assertEquals(255, bean.getC14());
-                    Assert.assertEquals(65535, bean.getC15());
-                    Assert.assertEquals(4294967295L, bean.getC16());
-                    Assert.assertEquals(new BigInteger("18446744073709551615"), bean.getC17());
+                    Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_BYTE, bean.getC14());
+                    Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_SHORT, bean.getC15());
+                    Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_INT, bean.getC16());
+                    Assert.assertEquals(new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG), bean.getC17());
 
                     Assert.assertEquals(1000.0, bean.getT1(), 0.000001);
                 }
@@ -120,10 +121,10 @@ public class WSConsumerWithDiffTypeTest {
                     Assert.assertEquals("一", map.get("c9"));
                     Assert.assertEquals(1.2234, (double)map.get("c12"), 0.000001);
 
-                    Assert.assertEquals(255, (short)map.get("c14"));
-                    Assert.assertEquals(65535, (int)map.get("c15"));
-                    Assert.assertEquals(4294967295L, (long)map.get("c16"));
-                    Assert.assertEquals(new BigInteger("18446744073709551615"), map.get("c17"));
+                    Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_BYTE, (short)map.get("c14"));
+                    Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_SHORT, (int)map.get("c15"));
+                    Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_INT, (long)map.get("c16"));
+                    Assert.assertEquals(new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG), map.get("c17"));
 
                     Assert.assertEquals(1000.0, (int)map.get("t1"), 0.000001);
 

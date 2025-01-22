@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.ws.stmt;
 
+import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.ws.TSWSPreparedStatement;
@@ -44,10 +45,10 @@ public class WsPstmtAllTypeTest {
         statement.setBytes(12, expectedVarBinary);
         statement.setBytes(13, expectedGeometry);
 
-        statement.setShort(14, (short) 255);
-        statement.setInt(15, 65535);
-        statement.setLong(16, 4294967295L);
-        statement.setObject(17, new BigInteger("18446744073709551615"));
+        statement.setShort(14, TSDBConstants.MAX_UNSIGNED_BYTE);
+        statement.setInt(15, TSDBConstants.MAX_UNSIGNED_SHORT);
+        statement.setLong(16, TSDBConstants.MAX_UNSIGNED_INT);
+        statement.setObject(17, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
 
         statement.executeUpdate();
 
@@ -67,10 +68,10 @@ public class WsPstmtAllTypeTest {
         Assert.assertArrayEquals(resultSet.getBytes(12), expectedVarBinary);
         Assert.assertArrayEquals(resultSet.getBytes(13), expectedGeometry);
 
-        Assert.assertEquals(resultSet.getShort(14), (short) 255);
-        Assert.assertEquals(resultSet.getInt(15), 65535);
-        Assert.assertEquals(resultSet.getLong(16), 4294967295L);
-        Assert.assertEquals(resultSet.getObject(17), new BigInteger("18446744073709551615"));
+        Assert.assertEquals(resultSet.getShort(14), TSDBConstants.MAX_UNSIGNED_BYTE);
+        Assert.assertEquals(resultSet.getInt(15), TSDBConstants.MAX_UNSIGNED_SHORT);
+        Assert.assertEquals(resultSet.getLong(16), TSDBConstants.MAX_UNSIGNED_INT);
+        Assert.assertEquals(resultSet.getObject(17), new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
 
 
         Date date = new Date(current);
@@ -103,10 +104,10 @@ public class WsPstmtAllTypeTest {
         statement.setTagString(10, "hello world");
         statement.setTagVarbinary(11, expectedVarBinary);
         statement.setTagGeometry(12, expectedGeometry);
-        statement.setTagShort(13, (short) 255);
-        statement.setTagInt(14,  65535);
-        statement.setTagLong(15,  4294967295L);
-        statement.setTagBigInteger(16, new BigInteger("18446744073709551615"));
+        statement.setTagShort(13, TSDBConstants.MAX_UNSIGNED_BYTE);
+        statement.setTagInt(14,  TSDBConstants.MAX_UNSIGNED_SHORT);
+        statement.setTagLong(15,  TSDBConstants.MAX_UNSIGNED_INT);
+        statement.setTagBigInteger(16, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
 
 
         statement.setTimestamp(0, Collections.singletonList(current));
@@ -134,10 +135,10 @@ public class WsPstmtAllTypeTest {
         Assert.assertArrayEquals(resultSet.getBytes(14), expectedVarBinary);
         Assert.assertArrayEquals(resultSet.getBytes(15), expectedGeometry);
 
-        Assert.assertEquals(255, resultSet.getShort(16));
-        Assert.assertEquals(65535, resultSet.getInt(17));
-        Assert.assertEquals(4294967295L, resultSet.getLong(18));
-        Assert.assertEquals(new BigInteger("18446744073709551615"), resultSet.getObject(19));
+        Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_BYTE, resultSet.getShort(16));
+        Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_SHORT, resultSet.getInt(17));
+        Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_INT, resultSet.getLong(18));
+        Assert.assertEquals(new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG), resultSet.getObject(19));
 
         resultSet.close();
         statement.close();
@@ -160,10 +161,10 @@ public class WsPstmtAllTypeTest {
         statement.setString(11, "陶");
         statement.setBytes(12, expectedVarBinary);
         statement.setBytes(13, expectedGeometry);
-        statement.setShort(14, (short) 255);
-        statement.setInt(15, 65535);
-        statement.setLong(16, 4294967295L);
-        statement.setObject(17, new BigInteger("18446744073709551615"));
+        statement.setShort(14, TSDBConstants.MAX_UNSIGNED_BYTE);
+        statement.setInt(15, TSDBConstants.MAX_UNSIGNED_SHORT);
+        statement.setLong(16, TSDBConstants.MAX_UNSIGNED_INT);
+        statement.setObject(17, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
 
         statement.executeUpdate();
         statement.close();
@@ -174,10 +175,10 @@ public class WsPstmtAllTypeTest {
         String sql = "insert into " + db_name + "." + tableName2 + " values(?, ?, ?, ?, ?)";
         PreparedStatement statement = connection.prepareStatement(sql);
         statement.setTimestamp(1, new Timestamp(0));
-         statement.setShort(2, (short) 256);
-        statement.setInt(3, 65535);
-        statement.setLong(4, 4294967295L);
-        statement.setObject(5, new BigInteger("18446744073709551615"));
+        statement.setShort(2, (short)(TSDBConstants.MAX_UNSIGNED_BYTE + 1));
+        statement.setInt(3, TSDBConstants.MAX_UNSIGNED_SHORT);
+        statement.setLong(4, TSDBConstants.MAX_UNSIGNED_INT);
+        statement.setObject(5, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
 
         statement.executeUpdate();
         statement.close();
@@ -188,9 +189,9 @@ public class WsPstmtAllTypeTest {
         PreparedStatement statement = connection.prepareStatement(sql);
         statement.setTimestamp(1, new Timestamp(0));
         statement.setShort(2, (short) -1);
-        statement.setInt(3, 65535);
-        statement.setLong(4, 4294967295L);
-        statement.setObject(5, new BigInteger("18446744073709551615"));
+        statement.setInt(3, TSDBConstants.MAX_UNSIGNED_SHORT);
+        statement.setLong(4, TSDBConstants.MAX_UNSIGNED_INT);
+        statement.setObject(5, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
 
         statement.executeUpdate();
         statement.close();
@@ -202,9 +203,9 @@ public class WsPstmtAllTypeTest {
         PreparedStatement statement = connection.prepareStatement(sql);
         statement.setTimestamp(1, new Timestamp(0));
         statement.setShort(2, (short) 0);
-        statement.setInt(3, 65536);
-        statement.setLong(4, 4294967295L);
-        statement.setObject(5, new BigInteger("18446744073709551615"));
+        statement.setInt(3, TSDBConstants.MAX_UNSIGNED_SHORT + 1);
+        statement.setLong(4, TSDBConstants.MAX_UNSIGNED_INT);
+        statement.setObject(5, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
 
         statement.executeUpdate();
         statement.close();
@@ -217,8 +218,8 @@ public class WsPstmtAllTypeTest {
         statement.setTimestamp(1, new Timestamp(0));
         statement.setShort(2, (short) 0);
         statement.setInt(3, -1);
-        statement.setLong(4, 4294967295L);
-        statement.setObject(5, new BigInteger("18446744073709551615"));
+        statement.setLong(4, TSDBConstants.MAX_UNSIGNED_INT);
+        statement.setObject(5, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
 
         statement.executeUpdate();
         statement.close();
@@ -231,8 +232,8 @@ public class WsPstmtAllTypeTest {
         statement.setTimestamp(1, new Timestamp(0));
         statement.setShort(2, (short) 0);
         statement.setInt(3, 0);
-        statement.setLong(4, 4294967296L);
-        statement.setObject(5, new BigInteger("18446744073709551615"));
+        statement.setLong(4, TSDBConstants.MAX_UNSIGNED_INT + 1);
+        statement.setObject(5, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
 
         statement.executeUpdate();
         statement.close();
@@ -246,7 +247,7 @@ public class WsPstmtAllTypeTest {
         statement.setShort(2, (short) 0);
         statement.setInt(3, 0);
         statement.setLong(4, -1L);
-        statement.setObject(5, new BigInteger("18446744073709551615"));
+        statement.setObject(5, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
 
         statement.executeUpdate();
         statement.close();
