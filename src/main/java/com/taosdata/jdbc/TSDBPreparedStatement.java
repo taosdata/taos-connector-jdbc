@@ -1,17 +1,3 @@
-/***************************************************************************
- * Copyright (c) 2019 TAOS Data, Inc. <jhtao@taosdata.com>
- *
- * This program is free software: you can use, redistribute, and/or modify
- * it under the terms of the GNU Affero General Public License, version 3
- * or later ("AGPL"), as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
 package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.utils.Utils;
@@ -20,6 +6,7 @@ import java.io.InputStream;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -479,6 +466,11 @@ public class TSDBPreparedStatement extends TSDBStatement implements TaosPrepareS
     }
 
     @Override
+    public void setTagBigInteger(int index, BigInteger value) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
+    }
+
+    @Override
     public void setTagTimestamp(int index, long value) {
         ensureTagCapacity(index);
         this.tableTags.set(index, new TableTagInfo(value, TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP));
@@ -576,6 +568,11 @@ public class TSDBPreparedStatement extends TSDBStatement implements TaosPrepareS
     @Override
     public void setLong(int columnIndex, List<Long> list) throws SQLException {
         setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_BIGINT, Long.BYTES);
+    }
+
+    @Override
+    public void setBigInteger(int columnIndex, List<BigInteger> list) throws SQLException{
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
     }
 
     @Override

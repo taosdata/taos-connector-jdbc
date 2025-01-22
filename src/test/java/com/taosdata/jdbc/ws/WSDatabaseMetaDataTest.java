@@ -63,7 +63,7 @@ public class WSDatabaseMetaDataTest {
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "en_US.UTF-8");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC+8");
         url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
             url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata&batchfetch=true&conmode=1";

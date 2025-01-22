@@ -1,5 +1,6 @@
 package com.taosdata.jdbc;
 
+import java.math.BigInteger;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -20,6 +21,8 @@ public interface TaosPrepareStatement extends PreparedStatement {
     void setTagInt(int index, int value);
 
     void setTagLong(int index, long value);
+
+    void setTagBigInteger(int index, BigInteger value) throws SQLException;
 
     void setTagFloat(int index, float value);
 
@@ -43,6 +46,7 @@ public interface TaosPrepareStatement extends PreparedStatement {
     void setTimestamp(int columnIndex, List<Long> list) throws SQLException;
 
     void setLong(int columnIndex, List<Long> list) throws SQLException;
+    void setBigInteger(int columnIndex, List<BigInteger> list) throws SQLException;
 
     void setDouble(int columnIndex, List<Double> list) throws SQLException;
 

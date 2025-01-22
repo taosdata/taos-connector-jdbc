@@ -4,6 +4,7 @@ import java.sql.ParameterMetaData;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.time.Instant;
 
 public abstract class AbstractParameterMetaData extends WrapperImpl implements ParameterMetaData {
 
@@ -91,6 +92,8 @@ public abstract class AbstractParameterMetaData extends WrapperImpl implements P
 
         if (parameters[param - 1] instanceof Timestamp)
             return Types.TIMESTAMP;
+        if (parameters[param - 1] instanceof Instant)
+            return Types.TIMESTAMP;
         if (parameters[param - 1] instanceof Byte)
             return Types.TINYINT;
         if (parameters[param - 1] instanceof Short)
@@ -117,6 +120,8 @@ public abstract class AbstractParameterMetaData extends WrapperImpl implements P
         if (param < 1 && param >= parameters.length)
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_PARAMETER_INDEX_OUT_RANGE);
 
+        if (parameters[param - 1] instanceof Instant)
+            return TSDBConstants.jdbcType2TaosTypeName(Types.TIMESTAMP);
         if (parameters[param - 1] instanceof Timestamp)
             return TSDBConstants.jdbcType2TaosTypeName(Types.TIMESTAMP);
         if (parameters[param - 1] instanceof Byte)

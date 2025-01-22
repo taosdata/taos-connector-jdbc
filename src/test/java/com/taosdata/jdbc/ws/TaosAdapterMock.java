@@ -170,7 +170,7 @@ public class TaosAdapterMock extends WebSocketServer {
         public void onOpen(ServerHandshake handshakedata) {
             System.out.println("Connected to target server: " + getURI());
             // Optionally, send an initial message to the target server
-            send("Hello from Proxy Server!");
+            // send("Hello from Proxy Server!");
         }
 
 

@@ -8,6 +8,7 @@ import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.CompletableFutureTimeout;
 import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.utils.StringUtils;
+import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.entity.*;
 import org.java_websocket.exceptions.WebsocketNotConnectedException;
 import org.slf4j.Logger;
@@ -441,15 +442,7 @@ public class Transport implements AutoCloseable {
                 boolean reconnected = clientArr.get(currentNodeIndex).reconnectBlocking();
                 if (reconnected) {
                     // send con msgs
-                    ConnectReq connectReq = new ConnectReq();
-                    connectReq.setReqId(ReqId.getReqID());
-                    connectReq.setUser(connectionParam.getUser());
-                    connectReq.setPassword(connectionParam.getPassword());
-                    connectReq.setDb(connectionParam.getDatabase());
-
-                    if (connectionParam.getConnectMode() != 0) {
-                        connectReq.setMode(connectionParam.getConnectMode());
-                    }
+                    ConnectReq connectReq = new ConnectReq(connectionParam);
 
                     ConnectResp auth;
                     auth = (ConnectResp) sendWithoutRetry(new Request(Action.CONN.getAction(), connectReq));

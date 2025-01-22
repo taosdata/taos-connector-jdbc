@@ -8,10 +8,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.Executors;
@@ -67,6 +64,7 @@ public class WSConsumerTest {
                 for (ConsumerRecord<Map<String, Object>> r : consumerRecords) {
                     Map<String, Object> map = r.value();
                     Assert.assertEquals(7, map.size());
+                    Assert.assertTrue(map.get("ts") instanceof Timestamp);
                 }
             }
             consumer.unsubscribe();
@@ -108,6 +106,10 @@ public class WSConsumerTest {
         properties.setProperty(TMQConstants.VALUE_DESERIALIZER, "com.taosdata.jdbc.tmq.ResultDeserializer");
         properties.setProperty(TMQConstants.CONNECT_TYPE, "ws");
 
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_APP_IP, "192.168.1.1");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_APP_NAME, "APP_NAME");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "Asia/Shanghai");
+
         try (TaosConsumer<ResultBean> consumer = new TaosConsumer<>(properties)) {
             consumer.subscribe(Collections.singletonList(topic));
             for (int i = 0; i < 10; i++) {
@@ -143,6 +145,8 @@ public class WSConsumerTest {
         statement.execute("use " + dbName);
         statement.execute("create stable if not exists " + superTable
                 + " (ts timestamp, c1 int, c2 float, c3 nchar(10), c4 binary(10), c5 bool) tags(t1 int)");
+
+
         statement.execute("create table if not exists ct0 using " + superTable + " tags(1000)");
         statement.execute("create table if not exists ct1 using " + superTable + " tags(2000)");
     }

@@ -1,38 +1,19 @@
-/***************************************************************************
- * Copyright (c) 2019 TAOS Data, Inc. <jhtao@taosdata.com>
- *
- * This program is free software: you can use, redistribute, and/or modify
- * it under the terms of the GNU Affero General Public License, version 3
- * or later ("AGPL"), as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
 package com.taosdata.jdbc;
 
-import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
-import com.google.common.primitives.Shorts;
-import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.utils.DataTypeConverUtil;
+import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.Utils;
 
 import java.io.UnsupportedEncodingException;
-import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.sql.SQLDataException;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.sql.Types;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
 import static com.taosdata.jdbc.utils.UnsignedDataUtils.*;
@@ -193,7 +174,7 @@ public class TSDBResultSetBlockData {
                         if (isNull(tmp, j)) {
                             col.add(null);
                         } else {
-                            col.add(DataTypeConverUtil.parseTimestampColumnData(l, this.timestampPrecision));
+                            col.add(DateTimeUtils.parseTimestampColumnData(l, this.timestampPrecision));
                         }
                     }
                     break;
@@ -378,16 +359,18 @@ public class TSDBResultSetBlockData {
         }
         wasNull = false;
         int type = this.columnMetaDataList.get(col).getColType();
-        if (type == TSDB_DATA_TYPE_BIGINT)
-            return DataTypeConverUtil.parseTimestampColumnData((long) obj, this.timestampPrecision);
+        if (type == TSDB_DATA_TYPE_BIGINT) {
+            Instant instant = DateTimeUtils.parseTimestampColumnData((long) obj, this.timestampPrecision);
+            return DateTimeUtils.getTimestamp(instant, null);
+        }
         if (type == TSDB_DATA_TYPE_TIMESTAMP)
-            return (Timestamp) obj;
+            return DateTimeUtils.getTimestamp((Instant) obj, null);
         if (obj instanceof byte[]) {
             String tmp = "";
             String charset = TaosGlobalConfig.getCharset();
             try {
                 tmp = new String((byte[]) obj, charset);
-                return Utils.parseTimestamp(tmp);
+                return DateTimeUtils.parseTimestamp(tmp, null);
             } catch (UnsupportedEncodingException e) {
                 throw new RuntimeException(e.getMessage());
             }

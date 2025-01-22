@@ -68,7 +68,7 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
         backFetchExecutor.submit(() -> {
             try {
                 while (!isClosed){
-                    BlockData blockData = BlockData.getEmptyBlockData(fields);
+                    BlockData blockData = BlockData.getEmptyBlockData(fields, timestampPrecision);
 
                     byte[] version = {1, 0};
                     FetchBlockNewResp resp = (FetchBlockNewResp) transport.send(Action.FETCH_BLOCK_NEW.getAction(),
@@ -95,7 +95,7 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
                 Thread.currentThread().interrupt();
             } catch (Exception e) {
                 log.error("fetch block error", e);
-                BlockData blockData = BlockData.getEmptyBlockData(fields);
+                BlockData blockData = BlockData.getEmptyBlockData(fields, timestampPrecision);
                 while (!isClosed) {
                     try {
                         if (blockingQueueOut.offer(blockData, 10, TimeUnit.MILLISECONDS)){
@@ -167,7 +167,7 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
                 throw TSDBError.createSQLException(resp.getCode(), "FETCH DATA ERROR");
             }
             this.reset();
-            BlockData blockData = BlockData.getEmptyBlockData(fields);
+            BlockData blockData = BlockData.getEmptyBlockData(fields, timestampPrecision);
 
             if (resp.isCompleted() || isClosed) {
                 blockData.setCompleted(true);
@@ -204,7 +204,7 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
                     }
                 }
 
-                if (result != null && !result.isEmpty() && !isCompleted) {
+                if (!isCompleted) {
                     FetchReq closeReq = new FetchReq();
                     closeReq.setReqId(queryId);
                     closeReq.setId(queryId);

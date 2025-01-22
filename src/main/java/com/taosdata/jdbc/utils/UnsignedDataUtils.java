@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.utils;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 
 public class UnsignedDataUtils {
 
@@ -19,10 +20,13 @@ public class UnsignedDataUtils {
         return val & 0xffffffffL;
     }
 
-    public static BigDecimal parseUBigInt(long val) {
-        BigDecimal tmp = new BigDecimal(val >>> 1).multiply(new BigDecimal(2));
+    public static BigInteger parseUBigInt(long val) {
 
-        return (val & 0x1) == 0x1 ? tmp.add(new BigDecimal(1)) : tmp;
+        if (val > 0) {
+            return BigInteger.valueOf(val);
+        }
+
+        return new BigInteger(Long.toUnsignedString(val));
     }
 
 }

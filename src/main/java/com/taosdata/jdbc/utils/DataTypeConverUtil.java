@@ -10,8 +10,11 @@ import com.taosdata.jdbc.enums.TimestampPrecision;
 
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.sql.*;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
@@ -33,9 +36,9 @@ public class DataTypeConverUtil {
             case TSDB_DATA_TYPE_BIGINT:
                 return (((long) value) == 0L) ? Boolean.FALSE : Boolean.TRUE;
             case TSDB_DATA_TYPE_TIMESTAMP:
-                return ((Timestamp) value).getTime() == 0L ? Boolean.FALSE : Boolean.TRUE;
+                return ((Instant) value).toEpochMilli() == 0L ? Boolean.FALSE : Boolean.TRUE;
             case TSDB_DATA_TYPE_UBIGINT:
-                return value.equals(new BigDecimal(0)) ? Boolean.FALSE : Boolean.TRUE;
+                return value.equals(BigInteger.ZERO) ? Boolean.FALSE : Boolean.TRUE;
 
             case TSDB_DATA_TYPE_FLOAT:
                 return (((float) value) == 0) ? Boolean.FALSE : Boolean.TRUE;
@@ -106,8 +109,8 @@ public class DataTypeConverUtil {
                 return (byte) tmp;
             }
             case TSDB_DATA_TYPE_UBIGINT: {
-                BigDecimal tmp = (BigDecimal) value;
-                if (tmp.compareTo(new BigDecimal(Byte.MIN_VALUE)) < 0 || tmp.compareTo(new BigDecimal(Byte.MAX_VALUE)) > 0)
+                BigInteger tmp = (BigInteger) value;
+                if (tmp.compareTo(BigInteger.valueOf(Byte.MIN_VALUE)) < 0 || tmp.compareTo(BigInteger.valueOf(Byte.MAX_VALUE)) > 0)
                     throwRangeException(value.toString(), columnIndex, Types.TINYINT);
 
                 return tmp.byteValue();
@@ -168,8 +171,8 @@ public class DataTypeConverUtil {
                 return (short) tmp;
             }
             case TSDB_DATA_TYPE_UBIGINT: {
-                BigDecimal tmp = (BigDecimal) value;
-                if (tmp.compareTo(new BigDecimal(Short.MIN_VALUE)) < 0 || tmp.compareTo(new BigDecimal(Short.MAX_VALUE)) > 0)
+                BigInteger tmp = (BigInteger) value;
+                if (tmp.compareTo(BigInteger.valueOf(Short.MIN_VALUE)) < 0 || tmp.compareTo(BigInteger.valueOf(Short.MAX_VALUE)) > 0)
                     throwRangeException(value.toString(), columnIndex, Types.SMALLINT);
                 return tmp.shortValue();
             }
@@ -225,8 +228,8 @@ public class DataTypeConverUtil {
                 return (int) tmp;
             }
             case TSDB_DATA_TYPE_UBIGINT: {
-                BigDecimal tmp = (BigDecimal) value;
-                if (tmp.compareTo(new BigDecimal(Integer.MIN_VALUE)) < 0 || tmp.compareTo(new BigDecimal(Integer.MAX_VALUE)) > 0)
+                BigInteger tmp = (BigInteger) value;
+                if (tmp.compareTo(BigInteger.valueOf(Integer.MIN_VALUE)) < 0 || tmp.compareTo(BigInteger.valueOf(Integer.MAX_VALUE)) > 0)
                     throwRangeException(value.toString(), columnIndex, Types.INTEGER);
                 return tmp.intValue();
             }
@@ -291,22 +294,14 @@ public class DataTypeConverUtil {
                 return (long) value;
 
             case TSDB_DATA_TYPE_UBIGINT: {
-                BigDecimal tmp = (BigDecimal) value;
-                if (tmp.compareTo(new BigDecimal(Long.MIN_VALUE)) < 0 || tmp.compareTo(new BigDecimal(Long.MAX_VALUE)) > 0)
+                BigInteger tmp = (BigInteger) value;
+                if (tmp.compareTo(BigInteger.valueOf(Long.MIN_VALUE)) < 0 || tmp.compareTo(BigInteger.valueOf(Long.MAX_VALUE)) > 0)
                     throwRangeException(value.toString(), columnIndex, Types.BIGINT);
                 return tmp.longValue();
             }
             case TSDB_DATA_TYPE_TIMESTAMP: {
-                Timestamp ts = (Timestamp) value;
-                switch (timestampPrecision) {
-                    case TimestampPrecision.MS:
-                    default:
-                        return ts.getTime();
-                    case TimestampPrecision.US:
-                        return ts.getTime() * 1000 + ts.getNanos() / 1000 % 1000;
-                    case TimestampPrecision.NS:
-                        return ts.getTime() * 1000_000 + ts.getNanos() % 1000_000;
-                }
+                Instant ts = (Instant) value;
+                return DateTimeUtils.toLong(ts, timestampPrecision);
             }
             case TSDB_DATA_TYPE_FLOAT: {
                 float tmp = (float) value;
@@ -356,9 +351,7 @@ public class DataTypeConverUtil {
                 return (long) value;
 
             case TSDB_DATA_TYPE_UBIGINT: {
-                BigDecimal tmp = (BigDecimal) value;
-                if (tmp.compareTo(new BigDecimal(Float.MIN_VALUE)) < 0 || tmp.compareTo(new BigDecimal(Float.MAX_VALUE)) > 0)
-                    throwRangeException(value.toString(), columnIndex, Types.FLOAT);
+                BigInteger tmp = (BigInteger) value;
                 return tmp.floatValue();
             }
             case TSDB_DATA_TYPE_DOUBLE: {
@@ -406,23 +399,13 @@ public class DataTypeConverUtil {
                 return (long) value;
 
             case TSDB_DATA_TYPE_UBIGINT: {
-                BigDecimal tmp = (BigDecimal) value;
-                if (tmp.compareTo(new BigDecimal(Double.MIN_VALUE)) < 0 || tmp.compareTo(new BigDecimal(Double.MAX_VALUE)) > 0)
-                    throwRangeException(value.toString(), columnIndex, Types.DOUBLE);
+                BigInteger tmp = (BigInteger) value;
                 return tmp.doubleValue();
             }
 
             case TSDB_DATA_TYPE_TIMESTAMP: {
-                Timestamp ts = (Timestamp) value;
-                switch (timestampPrecision) {
-                    case TimestampPrecision.MS:
-                    default:
-                        return ts.getTime();
-                    case TimestampPrecision.US:
-                        return ts.getTime() * 1000 + ts.getNanos() / 1000 % 1000;
-                    case TimestampPrecision.NS:
-                        return ts.getTime() * 1000_000 + ts.getNanos() % 1000_000;
-                }
+                Instant ts = (Instant) value;
+                return DateTimeUtils.toLong(ts, timestampPrecision);
             }
 
             case TSDB_DATA_TYPE_NCHAR:
@@ -456,14 +439,16 @@ public class DataTypeConverUtil {
             return Shorts.toByteArray((short) value);
         if (value instanceof Byte)
             return new byte[]{(byte) value};
-
+        if (value instanceof Instant)
+            return Timestamp.from((Instant) value).toString().getBytes();
         return value.toString().getBytes();
     }
 
     public static String getString(Object value) throws SQLException {
         if (value instanceof String)
             return (String) value;
-
+        if (value instanceof Instant)
+            return Timestamp.from((Instant) value).toString();
         if (value instanceof byte[]) {
             String charset = TaosGlobalConfig.getCharset();
             try {
@@ -475,9 +460,10 @@ public class DataTypeConverUtil {
         return value.toString();
     }
 
-    public static Date getDate(Object value) {
-        if (value instanceof Timestamp)
-            return new Date(((Timestamp) value).getTime());
+    public static Date getDate(Object value, ZoneId zoneId) {
+        if (value instanceof Instant) {
+            return DateTimeUtils.getDate((Instant) value, zoneId);
+        }
         if (value instanceof byte[]) {
             String charset = TaosGlobalConfig.getCharset();
             String tmp;
@@ -486,14 +472,15 @@ public class DataTypeConverUtil {
             } catch (UnsupportedEncodingException e) {
                 throw new RuntimeException(e.getMessage());
             }
-            return Utils.parseDate(tmp);
+            return DateTimeUtils.parseDate(tmp, zoneId);
         }
-        return Utils.parseDate(value.toString());
+        return DateTimeUtils.parseDate(value.toString(), zoneId);
     }
 
-    public static Time getTime(Object value) {
-        if (value instanceof Timestamp)
-            return new Time(((Timestamp) value).getTime());
+    public static Time getTime(Object value, ZoneId zoneId) {
+        if (value instanceof Instant) {
+            return DateTimeUtils.getTime((Instant) value, zoneId);
+        }
         String tmp = "";
         if (value instanceof byte[]) {
             String charset = TaosGlobalConfig.getCharset();
@@ -507,7 +494,7 @@ public class DataTypeConverUtil {
         }
         Time time = null;
         try {
-            time = Utils.parseTime(tmp);
+            time = DateTimeUtils.parseTime(tmp, zoneId);
         } catch (DateTimeParseException e) {
             throw new RuntimeException(e.getMessage());
         }
@@ -529,6 +516,8 @@ public class DataTypeConverUtil {
             case TSDB_DATA_TYPE_UINT:
             case TSDB_DATA_TYPE_BIGINT:
                 return new BigDecimal((long) value);
+            case TSDB_DATA_TYPE_UBIGINT:
+                return new BigDecimal((BigInteger) value);
 
             case TSDB_DATA_TYPE_FLOAT:
                 return BigDecimal.valueOf((float) value);
@@ -536,7 +525,7 @@ public class DataTypeConverUtil {
                 return BigDecimal.valueOf((double) value);
 
             case TSDB_DATA_TYPE_TIMESTAMP:
-                return new BigDecimal(((Timestamp) value).getTime());
+                return new BigDecimal(((Instant) value).toEpochMilli());
             case TSDB_DATA_TYPE_NCHAR:
                 return new BigDecimal(value.toString());
             case TSDB_DATA_TYPE_JSON:
@@ -556,7 +545,7 @@ public class DataTypeConverUtil {
         return new BigDecimal(0);
     }
 
-    static public Object parseValue(int type, Object source, int timestampPrecision){
+    static public Object parseValue(int type, Object source){
         switch (type) {
             case TSDB_DATA_TYPE_BOOL: {
                 byte val = (byte) source;
@@ -575,7 +564,8 @@ public class DataTypeConverUtil {
             case TSDB_DATA_TYPE_BINARY:
             case TSDB_DATA_TYPE_JSON:
             case TSDB_DATA_TYPE_VARBINARY:
-            case TSDB_DATA_TYPE_GEOMETRY:{
+            case TSDB_DATA_TYPE_GEOMETRY:
+            case TSDB_DATA_TYPE_TIMESTAMP:{
                 return source;
             }
             case TSDB_DATA_TYPE_USMALLINT: {
@@ -586,13 +576,18 @@ public class DataTypeConverUtil {
                 int val = (int) source;
                 return parseUInteger(val);
             }
-            case TSDB_DATA_TYPE_TIMESTAMP: {
-                long val = (long) source;
-                return parseTimestampColumnData(val, timestampPrecision);
-            }
             case TSDB_DATA_TYPE_UBIGINT: {
                 long val = (long) source;
-                return parseUBigInt(val);
+                return new BigInteger(1, new byte[]{
+                        (byte) (val >>> 56),
+                        (byte) (val >>> 48),
+                        (byte) (val >>> 40),
+                        (byte) (val >>> 32),
+                        (byte) (val >>> 24),
+                        (byte) (val >>> 16),
+                        (byte) (val >>> 8),
+                        (byte) val
+                });
             }
             case TSDB_DATA_TYPE_NCHAR: {
                 int[] tmp = (int[]) source;
@@ -603,22 +598,4 @@ public class DataTypeConverUtil {
                 return null;
         }
     }
-
-    public static Timestamp parseTimestampColumnData(long value, int timestampPrecision) {
-        if (TimestampPrecision.MS == timestampPrecision)
-            return new Timestamp(value);
-
-        if (TimestampPrecision.US == timestampPrecision) {
-            long epochSec = value / 1000_000L;
-            long nanoAdjustment = value % 1000_000L * 1000L;
-            return Timestamp.from(Instant.ofEpochSecond(epochSec, nanoAdjustment));
-        }
-        if (TimestampPrecision.NS == timestampPrecision) {
-            long epochSec = value / 1000_000_000L;
-            long nanoAdjustment = value % 1000_000_000L;
-            return Timestamp.from(Instant.ofEpochSecond(epochSec, nanoAdjustment));
-        }
-        return null;
-    }
-
 }
