@@ -29,7 +29,6 @@
 
 ## 获取驱动
 
-
 ### 前置条件
 
 使用 Java Connector 连接数据库前，需要具备以下条件：
@@ -76,22 +75,38 @@
 - 其他参考信息请见 [参考手册](https://docs.taosdata.com/reference/connector/java/)，包含了版本历史、数据类型、示例程序汇总、API 说明和常见问题等。
 
 
-## 贡献
 
-我们鼓励开发者帮助改进这个项目，下面以 Maven 为例，说明本地构建和测试这个项目的流程。
-
-### 前置条件
+## 环境准备
 
 - 已安装 Java 1.8 或以上版本运行时环境和 Maven 3.6 或以上版本，且正确设置了环境变量。
 - 本地已经部署 TDengine，具体步骤请参考[部署服务端](https://docs.taosdata.com/get-started/package/)，且已经启动 taosd 与 taosAdapter。
 
-### 构建
+## 构建
 
 项目目录下执行 `mvn clean package` 构建项目。
 
-### 测试
+## 测试
+### 单元测试
 
 项目目录下执行 `mvn test` 运行测试，测试用例会连接到本地的 TDengine 服务器与 taosAdapter 进行测试。
+### 性能测试
+待补充
+
+## 提交 Issue
+我们欢迎提交 [Github Issue](https://github.com/taosdata/taos-connector-jdbc/issues/new?template=Blank+issue)。 提交时请说明下面信息：
+- 问题描述，是否必现
+- JDBC 驱动版本
+- JDBC 连接参数（不需要用户名密码）
+- TDengine 服务端版本
+
+## 提交 PR
+我们欢迎开发者一起开发本项目，提交 PR 时请参考下面步骤：
+1. Fork 本项目，请参考 ([how to fork a repo](https://docs.github.com/en/get-started/quickstart/fork-a-repo))
+1. 从 main 分支创建一个新分支，请使用有意义的分支名称 (`git checkout -b my_branch`)。注意不要直接在 main 分支上修改。
+1. 修改代码，保证所有单元测试通过，并增加新的单元测试验证修改。
+1. 提交修改到远端分支 (`git push origin my_branch`)。
+1. 在 Github 上创建一个 Pull Request ([how to create a pull request](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request))。
+1. 提交 PR 后，如果 CI 通过，可以在 [codecov](https://app.codecov.io/gh/taosdata/taos-connector-jdbc/) 页面找到自己分支，看单测覆盖率。
 
 ## 引用
 
