@@ -45,7 +45,8 @@
 - [mvnrepository](https://mvnrepository.com/artifact/com.taosdata.jdbc/taos-jdbcdriver)
 - [maven.aliyun](https://maven.aliyun.com/mvn/search)
 
-Maven 项目中，在 pom.xml 中添加以下依赖：
+#### Maven 项目
+在 pom.xml 中添加以下依赖：
 
 ```xml-dtd
 <dependency>
@@ -55,15 +56,15 @@ Maven 项目中，在 pom.xml 中添加以下依赖：
 </dependency>
 ```
 
-Gradle 项目中：
-- 如果你的 build.gradle 文件采用 Groovy 语法：
+#### Gradle 项目：
+如果你的 build.gradle 文件采用 Groovy 语法：
   ```xml-dtd
   dependencies {
-    implementation 'com.taosdata.jdbc:taos-jdbcdriver:3.5.3'
+      implementation 'com.taosdata.jdbc:taos-jdbcdriver:3.5.3'
   }
   ```
 
-- 如果你的 build.gradle.kts 文件使用 Kotlin 语法：
+如果你的 build.gradle.kts 文件使用 Kotlin 语法：
   ```xml-dtd
   dependencies {
       implementation("com.taosdata.jdbc:taos-jdbcdriver:3.5.3")
