@@ -8,6 +8,8 @@
 
 English | [简体中文](./README-CN.md)
 
+[TOC]
+
 ## Introduction
 `taos-jdbcdriver` is the official Java connector for TDengine, allowing Java developers to develop applications that access the TDengine database. `taos-jdbcdriver` implements the standard interfaces of the JDBC driver and supports functions such as data writing, querying, subscription, schemaless writing, and parameter binding.
 
