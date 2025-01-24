@@ -131,8 +131,8 @@ We welcome developers to contribute to this project. When submitting PRs, please
 1. After submitting the PR, if CI passes, you can find your PR on the [codecov](https://app.codecov.io/gh/taosdata/taos-connector-jdbc/pulls) page to check the test coverage.
 
 ## 9. References
-[TDengine Official Website](https://www.tdengine.com/)
-[TDengine GitHub](https://github.com/taosdata/TDengine)
+- [TDengine Official Website](https://www.tdengine.com/) 
+- [TDengine GitHub](https://github.com/taosdata/TDengine) 
 
 ## 10. License
 [MIT License](./LICENSE)
