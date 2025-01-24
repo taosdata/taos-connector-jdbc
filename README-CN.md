@@ -1,6 +1,6 @@
 # TDengine Java Connector
 
-| Github Action Tests                                                                                  | CodeCov                                                                                                                                               |
+| GitHub Action Tests                                                                                  | CodeCov                                                                                                                                               |
 | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ![actions](https://github.com/taosdata/taos-connector-jdbc/actions/workflows/version3.yml/badge.svg) | [![codecov](https://codecov.io/gh/taosdata/taos-connector-jdbc/graph/badge.svg?token=GQRD9WCQ64)](https://codecov.io/gh/taosdata/taos-connector-jdbc) |
 
@@ -38,7 +38,7 @@
 - 已安装 Java 1.8 或以上版本运行时环境和 Maven 3.6 或以上版本
 - 使用原生连接前保证已安装 TDengine 客户端驱动（若使用 Websocket/REST 连接无需安装），具体步骤请参考 [安装客户端驱动](https://docs.taosdata.com/develop/connect/#%E5%AE%89%E8%A3%85%E5%AE%A2%E6%88%B7%E7%AB%AF%E9%A9%B1%E5%8A%A8-taosc)
 
-### 安装连接器
+### 安装驱动
 
 目前 taos-jdbcdriver 已经发布到 [Sonatype Repository](https://search.maven.org/artifact/com.taosdata.jdbc/taos-jdbcdriver) 仓库，且各大仓库都已同步。
 
@@ -90,7 +90,7 @@
 项目目录下执行 `mvn test` 运行测试，测试用例会连接到本地的 TDengine 服务器与 taosAdapter 进行测试。
 
 ## 提交 Issue
-我们欢迎提交 [Github Issue](https://github.com/taosdata/taos-connector-jdbc/issues/new?template=Blank+issue)。 提交时请说明下面信息：
+我们欢迎提交 [GitHub Issue](https://github.com/taosdata/taos-connector-jdbc/issues/new?template=Blank+issue)。 提交时请说明下面信息：
 - 问题描述，是否必现，最好能包含详细调用堆栈。
 - JDBC 驱动版本。
 - JDBC 连接参数（不需要用户名密码）。

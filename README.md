@@ -1,7 +1,7 @@
 # TDengine Java Connector
 
 
-| Github Action Tests                                                                                  | CodeCov                                                                                                                                               |
+| GitHub Action Tests                                                                                  | CodeCov                                                                                                                                               |
 | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ![actions](https://github.com/taosdata/taos-connector-jdbc/actions/workflows/version3.yml/badge.svg) | [![codecov](https://codecov.io/gh/taosdata/taos-connector-jdbc/graph/badge.svg?token=GQRD9WCQ64)](https://codecov.io/gh/taosdata/taos-connector-jdbc) |
 
@@ -36,7 +36,7 @@ Before using the Java Connector to connect to the database, the following condit
 - Java 1.8 or above runtime environment and Maven 3.6 or above installed.
 - Ensure that the TDengine client driver is installed before using the native connection (no installation is required for WebSocket/REST connections). For specific steps, please refer to [Install Client Driver](https://docs.tdengine.com/developer-guide/connecting-to-tdengine/#installing-the-client-driver-taosc).
 
-### Installing the Connector
+### Installing the Driver
 
 The taos-jdbcdriver has been released to the [Sonatype Repository](https://search.maven.org/artifact/com.taosdata.jdbc/taos-jdbcdriver) and synchronized to major repositories.
 
@@ -85,7 +85,7 @@ Execute `mvn clean package` in the project directory to build the project.
 Execute `mvn test` in the project directory to run the tests. The test cases will connect to the local TDengine server and taosAdapter for testing.
 
 ## Submitting Issues
-We welcome the submission of [Github Issue](https://github.com/taosdata/taos-connector-jdbc/issues/new?template=Blank+issue). When submitting, please provide the following information:
+We welcome the submission of [GitHub Issue](https://github.com/taosdata/taos-connector-jdbc/issues/new?template=Blank+issue). When submitting, please provide the following information:
 
 - Problem description, whether it always occurs, and it's best to include a detailed call stack.
 - JDBC driver version.
