@@ -8,7 +8,27 @@
 
 English | [简体中文](./README-CN.md)
 
-[TOC]
+- [TDengine Java Connector](#tdengine-java-connector)
+  - [Introduction](#introduction)
+    - [Connection Methods](#connection-methods)
+    - [JDBC and JRE Version Compatibility](#jdbc-and-jre-version-compatibility)
+    - [Supported Platforms](#supported-platforms)
+  - [Getting the Driver](#getting-the-driver)
+    - [Pre-installation](#pre-installation)
+    - [Installing the Driver](#installing-the-driver)
+      - [Maven Project](#maven-project)
+      - [Gradle Project](#gradle-project)
+  - [Documentation](#documentation)
+  - [Prerequisites](#prerequisites)
+  - [Build](#build)
+  - [Testing](#testing)
+    - [Run tests](#run-tests)
+    - [Adding Test Cases](#adding-test-cases)
+  - [Submitting Issues](#submitting-issues)
+  - [Submitting PRs](#submitting-prs)
+  - [References](#references)
+  - [License](#license)
+
 
 ## Introduction
 `taos-jdbcdriver` is the official Java connector for TDengine, allowing Java developers to develop applications that access the TDengine database. `taos-jdbcdriver` implements the standard interfaces of the JDBC driver and supports functions such as data writing, querying, subscription, schemaless writing, and parameter binding.
@@ -84,7 +104,18 @@ If your build.gradle.kts file uses Kotlin syntax:
 Execute `mvn clean package` in the project directory to build the project.
 
 ## Testing
+### Run tests
 Execute `mvn test` in the project directory to run the tests. The test cases will connect to the local TDengine server and taosAdapter for testing.
+After running the tests, the result similar to the following will be printed eventually. If all test cases pass, both Failures and Errors will be 0.
+```
+[INFO] Results:
+[INFO] 
+[WARNING] Tests run: 2353, Failures: 0, Errors: 0, Skipped: 16
+```
+
+### Adding Test Cases
+All tests are located in the `src/test/java/com/taosdata/jdbc` directory of the project. The directory is divided according to the functions being tested. You can add new test files or add test cases in existing test files.
+The test cases use the JUnit framework. Generally, a connection is established and a database is created in the `before` method, and the database is droped and the connection is released in the `after` method.
 
 ## Submitting Issues
 We welcome the submission of [GitHub Issue](https://github.com/taosdata/taos-connector-jdbc/issues/new?template=Blank+issue). When submitting, please provide the following information:

@@ -7,6 +7,28 @@
 
 简体中文 | [English](./README.md)
 
+- [TDengine Java Connector](#tdengine-java-connector)
+  - [简介](#简介)
+    - [连接方式](#连接方式)
+    - [JDBC 和 JRE 版本兼容性](#jdbc-和-jre-版本兼容性)
+    - [支持的平台](#支持的平台)
+  - [获取驱动](#获取驱动)
+    - [安装前准备](#安装前准备)
+    - [安装驱动](#安装驱动)
+      - [Maven 项目](#maven-项目)
+      - [Gradle 项目](#gradle-项目)
+  - [文档](#文档)
+  - [前置条件](#前置条件)
+  - [构建](#构建)
+  - [测试](#测试)
+    - [运行测试](#运行测试)
+    - [添加用例](#添加用例)
+  - [提交 Issue](#提交-issue)
+  - [提交 PR](#提交-pr)
+  - [引用](#引用)
+  - [许可证](#许可证)
+
+
 ## 简介
 
 `taos-jdbcdriver` 是 TDengine 的官方 Java 语言连接器，Java 开发人员可以通过它开发存取 TDengine 数据库的应用软件。`taos-jdbcdriver` 实现了 JDBC driver 标准的接口，支持数据写入、查询、订阅、schemaless 接口和参数绑定接口等功能。  
@@ -35,8 +57,8 @@
 
 使用 Java Connector 连接数据库前，需要具备以下条件：
 
-- 已安装 Java 1.8 或以上版本运行时环境和 Maven 3.6 或以上版本
-- 使用原生连接前保证已安装 TDengine 客户端驱动（若使用 Websocket/REST 连接无需安装），具体步骤请参考 [安装客户端驱动](https://docs.taosdata.com/develop/connect/#%E5%AE%89%E8%A3%85%E5%AE%A2%E6%88%B7%E7%AB%AF%E9%A9%B1%E5%8A%A8-taosc)
+- 已安装 Java 1.8 或以上版本运行时环境和 Maven 3.6 或以上版本。
+- 使用原生连接前保证已安装 TDengine 客户端驱动（若使用 Websocket/REST 连接无需安装），具体步骤请参考 [安装客户端驱动](https://docs.taosdata.com/develop/connect/#%E5%AE%89%E8%A3%85%E5%AE%A2%E6%88%B7%E7%AB%AF%E9%A9%B1%E5%8A%A8-taosc)。
 
 ### 安装驱动
 
@@ -87,7 +109,18 @@
 项目目录下执行 `mvn clean package` 构建项目。
 
 ## 测试
+### 运行测试
 项目目录下执行 `mvn test` 运行测试，测试用例会连接到本地的 TDengine 服务器与 taosAdapter 进行测试。
+运行测试后，最终会打印类似如下结果。如果所有用例通过，Failures 和 Errors 都是 0.
+```
+[INFO] Results:
+[INFO] 
+[WARNING] Tests run: 2353, Failures: 0, Errors: 0, Skipped: 16
+```
+
+### 添加用例
+所有测试在项目的 `src/test/java/com/taosdata/jdbc` 目录下，按照测试的功能划分了目录，可以新增加测试文件或者在已有的测试文件中添加用例。
+用例使用 JUnit 框架，一般在 `before` 方法中建立连接和创建数据库，在 `after` 方法中删除数据库和释放连接。
 
 ## 提交 Issue
 我们欢迎提交 [GitHub Issue](https://github.com/taosdata/taos-connector-jdbc/issues/new?template=Blank+issue)。 提交时请说明下面信息：
