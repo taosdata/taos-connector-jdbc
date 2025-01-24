@@ -1,4 +1,6 @@
+<!-- omit in toc -->
 # TDengine Java Connector
+<!-- omit in toc -->
 
 | GitHub Action Tests                                                                                  | CodeCov                                                                                                                                               |
 | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -7,27 +9,26 @@
 
 简体中文 | [English](./README.md)
 
-- [TDengine Java Connector](#tdengine-java-connector)
-  - [1. 简介](#1-简介)
-    - [1.1 连接方式](#11-连接方式)
-    - [1.2 JDBC 和 JRE 版本兼容性](#12-jdbc-和-jre-版本兼容性)
-    - [1.3 支持的平台](#13-支持的平台)
-  - [2. 获取驱动](#2-获取驱动)
-    - [2.1 安装前准备](#21-安装前准备)
-    - [2.2 安装驱动](#22-安装驱动)
-      - [2.2.1 Maven 项目](#221-maven-项目)
-      - [2.2.2 Gradle 项目](#222-gradle-项目)
-  - [3. 文档](#3-文档)
-  - [4. 前置条件](#4-前置条件)
-  - [5. 构建](#5-构建)
-  - [6. 测试](#6-测试)
-    - [6.1 运行测试](#61-运行测试)
-    - [6.2 添加用例](#62-添加用例)
-    - [6.3 性能测试](#63-性能测试)
-  - [7. 提交 Issue](#7-提交-issue)
-  - [8. 提交 PR](#8-提交-pr)
-  - [9. 引用](#9-引用)
-  - [10. 许可证](#10-许可证)
+<!-- omit in toc -->
+## 目录
+<!-- omit in toc -->
+
+- [1. 简介](#1-简介)
+  - [1.1 连接方式](#11-连接方式)
+  - [1.2 JDBC 和 JRE 版本兼容性](#12-jdbc-和-jre-版本兼容性)
+  - [1.3 支持的平台](#13-支持的平台)
+- [2. 获取驱动](#2-获取驱动)
+- [3. 文档](#3-文档)
+- [4. 前置条件](#4-前置条件)
+- [5. 构建](#5-构建)
+- [6. 测试](#6-测试)
+  - [6.1 运行测试](#61-运行测试)
+  - [6.2 添加用例](#62-添加用例)
+  - [6.3 性能测试](#63-性能测试)
+- [7. 提交 Issue](#7-提交-issue)
+- [8. 提交 PR](#8-提交-pr)
+- [9. 引用](#9-引用)
+- [10. 许可证](#10-许可证)
 
 
 ## 1. 简介
@@ -54,22 +55,13 @@
 
 ## 2. 获取驱动
 
-### 2.1 安装前准备
-
-使用 Java Connector 连接数据库前，需要具备以下条件：
-
-- 已安装 Java 1.8 或以上版本运行时环境和 Maven 3.6 或以上版本。
-- 使用原生连接前保证已安装 TDengine 客户端驱动（若使用 Websocket/REST 连接无需安装），具体步骤请参考 [安装客户端驱动](https://docs.taosdata.com/develop/connect/#%E5%AE%89%E8%A3%85%E5%AE%A2%E6%88%B7%E7%AB%AF%E9%A9%B1%E5%8A%A8-taosc)。
-
-### 2.2 安装驱动
-
 目前 taos-jdbcdriver 已经发布到 [Sonatype Repository](https://search.maven.org/artifact/com.taosdata.jdbc/taos-jdbcdriver) 仓库，且各大仓库都已同步。
 
 - [sonatype](https://search.maven.org/artifact/com.taosdata.jdbc/taos-jdbcdriver)
 - [mvnrepository](https://mvnrepository.com/artifact/com.taosdata.jdbc/taos-jdbcdriver)
 - [maven.aliyun](https://maven.aliyun.com/mvn/search)
 
-#### 2.2.1 Maven 项目
+**Maven 项目**
 在 pom.xml 中添加以下依赖：
 
 ```xml-dtd
@@ -80,7 +72,7 @@
 </dependency>
 ```
 
-#### 2.2.2 Gradle 项目
+**Gradle 项目**
 如果你的 build.gradle 文件采用 Groovy 语法：
   ```xml-dtd
   dependencies {

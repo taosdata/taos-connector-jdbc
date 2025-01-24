@@ -1,5 +1,6 @@
+<!-- omit in toc -->
 # TDengine Java Connector
-
+<!-- omit in toc -->
 
 | GitHub Action Tests                                                                                  | CodeCov                                                                                                                                               |
 | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -8,27 +9,26 @@
 
 English | [简体中文](./README-CN.md)
 
-- [TDengine Java Connector](#tdengine-java-connector)
-  - [1. Introduction](#1-introduction)
-    - [1.1. Connection Methods](#11-connection-methods)
-    - [1.2 JDBC and JRE Version Compatibility](#12-jdbc-and-jre-version-compatibility)
-    - [1.3 Supported Platforms](#13-supported-platforms)
-  - [2. Getting the Driver](#2-getting-the-driver)
-    - [2.1 Pre-installation](#21-pre-installation)
-    - [2.2 Installing the Driver](#22-installing-the-driver)
-      - [2.2.1 Maven Project](#221-maven-project)
-      - [2.2.2 Gradle Project](#222-gradle-project)
-  - [3. Documentation](#3-documentation)
-  - [4. Prerequisites](#4-prerequisites)
-  - [5. Build](#5-build)
-  - [6. Testing](#6-testing)
-    - [6.1 Test Execution](#61-test-execution)
-    - [6.2 Test Case Addition](#62-test-case-addition)
-    - [6.3 Performance Testing](#63-performance-testing)
-  - [7. Submitting Issues](#7-submitting-issues)
-  - [8. Submitting PRs](#8-submitting-prs)
-  - [9. References](#9-references)
-  - [10. License](#10-license)
+<!-- omit in toc -->
+## Table of Contents
+<!-- omit in toc -->
+
+- [1. Introduction](#1-introduction)
+  - [1.1. Connection Methods](#11-connection-methods)
+  - [1.2 JDBC and JRE Version Compatibility](#12-jdbc-and-jre-version-compatibility)
+  - [1.3 Supported Platforms](#13-supported-platforms)
+- [2. Getting the Driver](#2-getting-the-driver)
+- [3. Documentation](#3-documentation)
+- [4. Prerequisites](#4-prerequisites)
+- [5. Build](#5-build)
+- [6. Testing](#6-testing)
+  - [6.1 Test Execution](#61-test-execution)
+  - [6.2 Test Case Addition](#62-test-case-addition)
+  - [6.3 Performance Testing](#63-performance-testing)
+- [7. Submitting Issues](#7-submitting-issues)
+- [8. Submitting PRs](#8-submitting-prs)
+- [9. References](#9-references)
+- [10. License](#10-license)
 
 
 ## 1. Introduction
@@ -52,22 +52,13 @@ We recommend using the WebSocket connection method. For detailed instructions, p
 
 ## 2. Getting the Driver
 
-### 2.1 Pre-installation 
-
-Before using the Java Connector to connect to the database, the following conditions must be met:
-
-- Java 1.8 or above runtime environment and Maven 3.6 or above installed.
-- Ensure that the TDengine client driver is installed before using the native connection (no installation is required for WebSocket/REST connections). For specific steps, please refer to [Install Client Driver](https://docs.tdengine.com/developer-guide/connecting-to-tdengine/#installing-the-client-driver-taosc).
-
-### 2.2 Installing the Driver
-
 The taos-jdbcdriver has been released to the [Sonatype Repository](https://search.maven.org/artifact/com.taosdata.jdbc/taos-jdbcdriver) and synchronized to major repositories.
 
 - [sonatype](https://search.maven.org/artifact/com.taosdata.jdbc/taos-jdbcdriver)
 - [mvnrepository](https://mvnrepository.com/artifact/com.taosdata.jdbc/taos-jdbcdriver)
 - [maven.aliyun](https://maven.aliyun.com/mvn/search)
 
-#### 2.2.1 Maven Project
+**Maven Project**
 Add the following dependency to your pom.xml:
 
 ```xml-dtd
@@ -78,7 +69,7 @@ Add the following dependency to your pom.xml:
 </dependency>
 ```
 
-#### 2.2.2 Gradle Project
+**Gradle Project**
 
 If your build.gradle file uses Groovy syntax:
   ```xml-dtd
