@@ -33,7 +33,7 @@ We recommend using the WebSocket connection method. For detailed instructions, p
 
 Before using the Java Connector to connect to the database, the following conditions must be met:
 
-- Java 1.8 or above runtime environment and Maven 3.6 or above installed
+- Java 1.8 or above runtime environment and Maven 3.6 or above installed.
 - Ensure that the TDengine client driver is installed before using the native connection (no installation is required for WebSocket/REST connections). For specific steps, please refer to [Install Client Driver](https://docs.tdengine.com/developer-guide/connecting-to-tdengine/#installing-the-client-driver-taosc).
 
 ### Installing the Connector
@@ -88,14 +88,14 @@ Execute `mvn test` in the project directory to run the tests. The test cases wil
 We welcome the submission of [Github Issue](https://github.com/taosdata/taos-connector-jdbc/issues/new?template=Blank+issue). When submitting, please provide the following information:
 
 - Problem description, whether it always occurs, and it's best to include a detailed call stack.
-- JDBC driver version
-- JDBC connection parameters (username and password not required)
-- TDengine server version
+- JDBC driver version.
+- JDBC connection parameters (username and password not required).
+- TDengine server version.
 
 ## Submitting PRs
 We welcome developers to contribute to this project. When submitting PRs, please follow these steps:
 
-1. Fork this project, refer to ([how to fork a repo](https://docs.github.com/en/get-started/quickstart/fork-a-repo))
+1. Fork this project, refer to ([how to fork a repo](https://docs.github.com/en/get-started/quickstart/fork-a-repo)).
 1. Create a new branch from the main branch with a meaningful branch name (`git checkout -b my_branch`). Do not modify the main branch directly.
 1. Modify the code, ensure all unit tests pass, and add new unit tests to verify the changes.
 1. Push the changes to the remote branch (`git push origin my_branch`).

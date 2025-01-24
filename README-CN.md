@@ -91,14 +91,14 @@
 
 ## 提交 Issue
 我们欢迎提交 [Github Issue](https://github.com/taosdata/taos-connector-jdbc/issues/new?template=Blank+issue)。 提交时请说明下面信息：
-- 问题描述，是否必现，最好能包含详细调用堆栈
-- JDBC 驱动版本
-- JDBC 连接参数（不需要用户名密码）
-- TDengine 服务端版本
+- 问题描述，是否必现，最好能包含详细调用堆栈。
+- JDBC 驱动版本。
+- JDBC 连接参数（不需要用户名密码）。
+- TDengine 服务端版本。
 
 ## 提交 PR
 我们欢迎开发者一起开发本项目，提交 PR 时请参考下面步骤：
-1. Fork 本项目，请参考 ([how to fork a repo](https://docs.github.com/en/get-started/quickstart/fork-a-repo))
+1. Fork 本项目，请参考 ([how to fork a repo](https://docs.github.com/en/get-started/quickstart/fork-a-repo))。
 1. 从 main 分支创建一个新分支，请使用有意义的分支名称 (`git checkout -b my_branch`)。注意不要直接在 main 分支上修改。
 1. 修改代码，保证所有单元测试通过，并增加新的单元测试验证修改。
 1. 提交修改到远端分支 (`git push origin my_branch`)。
