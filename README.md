@@ -1,10 +1,17 @@
 <!-- omit in toc -->
 # TDengine Java Connector
 
-| GitHub Action Tests                                                                                  | CodeCov                                                                                                                                               |
-| ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ![actions](https://github.com/taosdata/taos-connector-jdbc/actions/workflows/version3.yml/badge.svg) | [![codecov](https://codecov.io/gh/taosdata/taos-connector-jdbc/graph/badge.svg?token=GQRD9WCQ64)](https://codecov.io/gh/taosdata/taos-connector-jdbc) |
-
+![actions](https://github.com/taosdata/taos-connector-jdbc/actions/workflows/build.yml/badge.svg)
+[![codecov](https://codecov.io/gh/taosdata/taos-connector-jdbc/graph/badge.svg?token=GQRD9WCQ64)](https://codecov.io/gh/taosdata/taos-connector-jdbc)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/m/taosdata/taos-connector-jdbc)
+![GitHub License](https://img.shields.io/github/license/taosdata/taos-connector-jdbc)
+[![Maven Central Version](https://img.shields.io/maven-central/v/com.taosdata.jdbc/taos-jdbcdriver?label=Maven%20Central)](https://central.sonatype.com/artifact/com.taosdata.jdbc/taos-jdbcdriver)
+<br />
+[![Twitter Follow](https://img.shields.io/twitter/follow/tdenginedb?label=TDengine&style=social)](https://twitter.com/tdenginedb)
+[![YouTube Channel](https://img.shields.io/badge/Subscribe_@tdengine--white?logo=youtube&style=social)](https://www.youtube.com/@tdengine)
+[![Discord Community](https://img.shields.io/badge/Join_Discord--white?logo=discord&style=social)](https://discord.com/invite/VZdSuUg4pS)
+[![LinkedIn](https://img.shields.io/badge/Follow_LinkedIn--white?logo=linkedin&style=social)](https://www.linkedin.com/company/tdengine)
+[![StackOverflow](https://img.shields.io/badge/Ask_StackOverflow--white?logo=stackoverflow&style=social&logoColor=orange)](https://stackoverflow.com/questions/tagged/tdengine)
 
 English | [简体中文](./README-CN.md)
 
@@ -73,7 +80,7 @@ We welcome developers to contribute to this project. When submitting PRs, please
 1. Modify the code, ensure all unit tests pass, and add new unit tests to verify the changes.
 1. Push the changes to the remote branch (`git push origin my_branch`).
 1. Create a Pull Request on GitHub ([how to create a pull request](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request)).
-1. After submitting the PR, you can find your PR through the [Pull Request](https://github.com/taosdata/taos-connector-jdbc/pulls). Click on the corresponding link to see if the CI for your PR has passed. If it has passed, it will display "All checks have passed".
+1. After submitting the PR, you can find your PR through the [Pull Request](https://github.com/taosdata/taos-connector-jdbc/pulls). Click on the corresponding link to see if the CI for your PR has passed. If it has passed, it will display "All checks have passed". Regardless of whether the CI passes or not, you can click "Show all checks" -> "Details" to view the detailed test case logs.
 1. After submitting the PR, if CI passes, you can find your PR on the [codecov](https://app.codecov.io/gh/taosdata/taos-connector-jdbc/pulls) page to check the test coverage.
 
 ## 8. References
