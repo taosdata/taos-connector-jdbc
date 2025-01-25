@@ -1,7 +1,7 @@
 <!-- omit in toc -->
 # TDengine Java Connector
 
-![actions](https://github.com/taosdata/taos-connector-jdbc/actions/workflows/build.yml/badge.svg)
+[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/taosdata/taos-connector-jdbc/build.yml)](https://github.com/taosdata/taos-connector-jdbc/actions/workflows/build.yml)
 [![codecov](https://codecov.io/gh/taosdata/taos-connector-jdbc/graph/badge.svg?token=GQRD9WCQ64)](https://codecov.io/gh/taosdata/taos-connector-jdbc)
 ![GitHub commit activity](https://img.shields.io/github/commit-activity/m/taosdata/taos-connector-jdbc)
 ![GitHub License](https://img.shields.io/github/license/taosdata/taos-connector-jdbc)
