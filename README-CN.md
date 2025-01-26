@@ -26,8 +26,9 @@
   - [5.1 运行测试](#51-运行测试)
   - [5.2 添加用例](#52-添加用例)
   - [5.3 性能测试](#53-性能测试)
-- [6. 提交 Issue](#6-提交-issue)
-- [7. 提交 PR](#7-提交-pr)
+- [6. CI/CD](#6-cicd)
+- [7. 提交 Issue](#7-提交-issue)
+- [8. 提交 PR](#8-提交-pr)
 - [9. 引用](#9-引用)
 - [10. 许可证](#10-许可证)
 
@@ -67,14 +68,18 @@
 ### 5.3 性能测试
 性能测试还在开发中。
 
-## 6. 提交 Issue
+## 6. CI/CD
+- [Build Workflow](https://github.com/taosdata/taos-connector-jdbc/actions/workflows/build.yml)
+- [Code Coverage](https://app.codecov.io/gh/taosdata/taos-connector-jdbc)
+
+## 7. 提交 Issue
 我们欢迎提交 [GitHub Issue](https://github.com/taosdata/taos-connector-jdbc/issues/new?template=Blank+issue)。 提交时请说明下面信息：
 - 问题描述，是否必现，最好能包含详细调用堆栈。
 - JDBC 驱动版本。
 - JDBC 连接参数（不需要用户名密码）。
 - TDengine 服务端版本。
 
-## 7. 提交 PR
+## 8. 提交 PR
 我们欢迎开发者一起开发本项目，提交 PR 时请参考下面步骤：
 1. Fork 本项目，请参考 ([how to fork a repo](https://docs.github.com/en/get-started/quickstart/fork-a-repo))。
 1. 从 main 分支创建一个新分支，请使用有意义的分支名称 (`git checkout -b my_branch`)。注意不要直接在 main 分支上修改。
