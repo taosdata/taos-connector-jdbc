@@ -26,10 +26,11 @@ English | [简体中文](./README-CN.md)
   - [5.1 Test Execution](#51-test-execution)
   - [5.2 Test Case Addition](#52-test-case-addition)
   - [5.3 Performance Testing](#53-performance-testing)
-- [6. Submitting Issues](#6-submitting-issues)
-- [7. Submitting PRs](#7-submitting-prs)
-- [8. References](#8-references)
-- [9. License](#9-license)
+- [6. CI/CD](#6-cicd)
+- [7. Submitting Issues](#7-submitting-issues)
+- [8. Submitting PRs](#8-submitting-prs)
+- [9. References](#9-references)
+- [10. License](#10-license)
 
 
 ## 1. Introduction
@@ -64,7 +65,11 @@ The test cases use the JUnit framework. Generally, a connection is established a
 ### 5.3 Performance Testing
 Performance testing is in progress.
 
-## 6. Submitting Issues
+## 6. CI/CD
+- [Build Workflow](https://github.com/taosdata/taos-connector-jdbc/actions/workflows/build.yml)
+- [Code Coverage](https://app.codecov.io/gh/taosdata/taos-connector-jdbc)
+
+## 7. Submitting Issues
 We welcome the submission of [GitHub Issue](https://github.com/taosdata/taos-connector-jdbc/issues/new?template=Blank+issue). When submitting, please provide the following information:
 
 - Problem description, whether it always occurs, and it's best to include a detailed call stack.
@@ -72,7 +77,7 @@ We welcome the submission of [GitHub Issue](https://github.com/taosdata/taos-con
 - JDBC connection parameters (username and password not required).
 - TDengine server version.
 
-## 7. Submitting PRs
+## 8. Submitting PRs
 We welcome developers to contribute to this project. When submitting PRs, please follow these steps:
 
 1. Fork this project, refer to ([how to fork a repo](https://docs.github.com/en/get-started/quickstart/fork-a-repo)).
@@ -83,9 +88,9 @@ We welcome developers to contribute to this project. When submitting PRs, please
 1. After submitting the PR, you can find your PR through the [Pull Request](https://github.com/taosdata/taos-connector-jdbc/pulls). Click on the corresponding link to see if the CI for your PR has passed. If it has passed, it will display "All checks have passed". Regardless of whether the CI passes or not, you can click "Show all checks" -> "Details" to view the detailed test case logs.
 1. After submitting the PR, if CI passes, you can find your PR on the [codecov](https://app.codecov.io/gh/taosdata/taos-connector-jdbc/pulls) page to check the test coverage.
 
-## 8. References
+## 9. References
 - [TDengine Official Website](https://www.tdengine.com/) 
 - [TDengine GitHub](https://github.com/taosdata/TDengine) 
 
-## 9. License
+## 10. License
 [MIT License](./LICENSE)
