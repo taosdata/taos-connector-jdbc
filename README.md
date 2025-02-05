@@ -37,9 +37,9 @@ English | [简体中文](./README-CN.md)
 `taos-jdbcdriver` is the official Java connector for TDengine, allowing Java developers to develop applications that access the TDengine database. `taos-jdbcdriver` implements the standard interfaces of the JDBC driver and supports functions such as data writing, querying, subscription, schemaless writing, and parameter binding.
 
 ## 2. Documentation  
-- For development examples, see [Developer Guide](https://docs.tdengine.com/developer-guide/), which includes how an application can introduce the `taos-jdbcdriver`, as well as examples of data writing, querying, schemaless writing, parameter binding, and data subscription.
-- For other reference information, see [Reference Manual](https://docs.tdengine.com/tdengine-reference/client-libraries/java/), which includes version history, data types, example programs, API descriptions, and FAQs.
-- To learn about TDengine, you can visit the [official documentation](https://docs.tdengine.com).
+- To use JDBC connector, please check [Developer Guide](https://docs.tdengine.com/developer-guide/), which includes how an application can introduce the `taos-jdbcdriver`, as well as examples of data writing, querying, schemaless writing, parameter binding, and data subscription.
+- For other reference information, please check [Reference Manual](https://docs.tdengine.com/tdengine-reference/client-libraries/java/), which includes version history, data types, example programs, API descriptions, and FAQs.
+- This quick guide is mainly for developers who like to contribute/build/test the JDBC connector by themselves. To learn about TDengine, you can visit the [official documentation](https://docs.tdengine.com).
 
 ## 3. Prerequisites
 - Java 1.8 or above runtime environment and Maven 3.6 or above installed, with environment variables correctly set.
