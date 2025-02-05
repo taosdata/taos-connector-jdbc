@@ -38,9 +38,9 @@
 `taos-jdbcdriver` 是 TDengine 的官方 Java 语言连接器，Java 开发人员可以通过它开发存取 TDengine 数据库的应用软件。`taos-jdbcdriver` 实现了 JDBC driver 标准的接口，支持数据写入、查询、无模式写入、参数绑定和数据订阅等功能。  
 
 ## 2. 文档
-- 开发示例请见 [开发指南](https://docs.taosdata.com/develop/)，包含了应用如何引入 `taos-jdbcdriver` 和数据写入、查询、无模式写入、参数绑定和数据订阅等示例。
-- 其他参考信息请见 [参考手册](https://docs.taosdata.com/reference/connector/java/)，包含了版本历史、数据类型、示例程序汇总、API 说明和常见问题等。
-- 如果要学习 TDengine，可以浏览 [官方文档](https://docs.taosdata.com/)。
+- 使用JDBC Connector, 请参考 [开发指南](https://docs.taosdata.com/develop/)，包含了应用如何引入 `taos-jdbcdriver` 和数据写入、查询、无模式写入、参数绑定和数据订阅等示例。
+- 其他参考信息请看 [参考手册](https://docs.taosdata.com/reference/connector/java/)，包含了版本历史、数据类型、示例程序汇总、API 说明和常见问题等。
+- 本README主要是为想自己贡献、编译、测试JDBC Connector的开发者写的。如果要学习 TDengine，可以浏览 [官方文档](https://docs.taosdata.com/)。
 
 ## 3. 前置条件
 
