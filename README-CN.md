@@ -38,14 +38,14 @@
 `taos-jdbcdriver` 是 TDengine 的官方 Java 语言连接器，Java 开发人员可以通过它开发存取 TDengine 数据库的应用软件。`taos-jdbcdriver` 实现了 JDBC driver 标准的接口，支持数据写入、查询、无模式写入、参数绑定和数据订阅等功能。  
 
 ## 2. 文档
-- 使用JDBC Connector, 请参考 [开发指南](https://docs.taosdata.com/develop/)，包含了应用如何引入 `taos-jdbcdriver` 和数据写入、查询、无模式写入、参数绑定和数据订阅等示例。
+- 使用 JDBC Connector, 请参考 [开发指南](https://docs.taosdata.com/develop/)，包含了应用如何引入 `taos-jdbcdriver` 和数据写入、查询、无模式写入、参数绑定和数据订阅等示例。
 - 其他参考信息请看 [参考手册](https://docs.taosdata.com/reference/connector/java/)，包含了版本历史、数据类型、示例程序汇总、API 说明和常见问题等。
-- 本README主要是为想自己贡献、编译、测试JDBC Connector的开发者写的。如果要学习 TDengine，可以浏览 [官方文档](https://docs.taosdata.com/)。
+- 本 README 主要是为想自己贡献、编译、测试 JDBC Connector 的开发者写的。如果要学习 TDengine，可以浏览 [官方文档](https://docs.taosdata.com/)。
 
 ## 3. 前置条件
 
 - 已安装 Java 1.8 或以上版本运行时环境和 Maven 3.6 或以上版本，且正确设置了环境变量。
-- 本地已经部署 TDengine，具体步骤请参考 [部署服务端](https://docs.taosdata.com/get-started/package/)，且已经启动 taosd 与 taosAdapter。
+- 本地已经部署 TDengine，具体步骤请参考 [部署服务端](https://docs.taosdata.com/get-started/package/)，且已经启动 taosd 与 taosAdapter。如果是 Mac 系统，请使用 `sudo ln -s /usr/local/lib/libtaos.dylib /Library/Java/Extensions/libtaos.dylib` 建立 `taos` 动态库软连接。
 
 ## 4. 构建
 
