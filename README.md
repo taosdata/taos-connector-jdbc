@@ -43,7 +43,7 @@ English | [简体中文](./README-CN.md)
 
 ## 3. Prerequisites
 - Java 1.8 or above runtime environment and Maven 3.6 or above installed, with environment variables correctly set.
-- TDengine has been deployed locally. For specific steps, please refer to [Deploy TDengine](https://docs.tdengine.com/get-started/deploy-from-package/). Please make sure taosd and taosAdapter have been started.
+- TDengine has been deployed locally. For specific steps, please refer to [Deploy TDengine](https://docs.tdengine.com/get-started/deploy-from-package/). Please make sure taosd and taosAdapter have been started. If you are using a Mac system, please use the command `sudo ln -s /usr/local/lib/libtaos.dylib /Library/Java/Extensions/libtaos.dylib` to create a symbolic link for the `taos` dynamic library.
 
 ## 4. Build
 Execute `mvn clean package` in the project directory to build the project.
