@@ -1,51 +1,36 @@
 package com.taosdata.jdbc.ws.tmq.entity;
 
-import com.alibaba.fastjson.annotation.JSONField;
-import com.taosdata.jdbc.utils.UInt64Codec;
-import com.taosdata.jdbc.ws.entity.Response;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.taosdata.jdbc.utils.UInt64Deserializer;
+import com.taosdata.jdbc.ws.entity.CommonResp;
 
-public class FetchResp extends Response {
-    private int code;
-    private String message;
+public class FetchResp extends CommonResp {
 
-    @JSONField(name = "message_id", deserializeUsing = UInt64Codec.class)
+    @JsonProperty("message_id")
+    @JsonDeserialize(using = UInt64Deserializer.class)
     private long messageId;
     private boolean completed;
 
-    @JSONField(name = "table_name")
+    @JsonProperty("table_name")
     private String tableName;
 
     private int rows;
 
-    @JSONField(name = "fields_count")
+    @JsonProperty("fields_count")
     private int fieldsCount;
 
-    @JSONField(name = "fields_names")
+    @JsonProperty("fields_names")
     private String[] fieldsNames;
 
-    @JSONField(name = "fields_types")
+    @JsonProperty("fields_types")
     private int[] fieldsTypes;
 
-    @JSONField(name = "fields_lengths")
+    @JsonProperty("fields_lengths")
     private long[] fieldsLengths;
 
     private int precision;
 
-    public int getCode() {
-        return code;
-    }
-
-    public void setCode(int code) {
-        this.code = code;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
-    }
 
     public long getMessageId() {
         return messageId;

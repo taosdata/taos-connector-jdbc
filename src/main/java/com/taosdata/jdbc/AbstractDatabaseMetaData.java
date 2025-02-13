@@ -23,6 +23,10 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
     private static final int DRIVER_MAJAR_VERSION;
     private static final int DRIVER_MINOR_VERSION;
 
+    public static final String NUMERIC_FUNCTIONS = "ABS,ACOS,ASIN,ATAN,CEIL,COS,FLOOR,LOG,POW,ROUND,SIN,SQRT,TAN";
+    public static final String STRING_FUNCTIONS = "CHAR_LENGTH,CONCAT,CONCAT_WS,LENGTH,LOWER,LTRIM,RTRIM,SUBSTR,UPPER";
+    public static final String SYSTEM_FUNCTIONS = "DATABASE,CLIENT_VERSION,SERVER_VERSION,SERVER_STATUS,CURRENT_USER";
+    public static final String TIME_DATE_FUNCTIONS = "NOW,TIMEDIFF,TIMETRUNCATE,TIMEZONE,TODAY";
     private static final Set<String> tableTypeSet = Stream.of("TABLE", "STABLE", "VIEW").collect(Collectors.toSet());
 
     static {
@@ -163,6 +167,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
         return false;
     }
 
+    @Override
     public String getIdentifierQuoteString() throws SQLException {
         return "`";
     }
@@ -172,19 +177,19 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
     }
 
     public String getNumericFunctions() throws SQLException {
-        return null;
+        return NUMERIC_FUNCTIONS;
     }
 
     public String getStringFunctions() throws SQLException {
-        return null;
+        return STRING_FUNCTIONS;
     }
 
     public String getSystemFunctions() throws SQLException {
-        return null;
+        return SYSTEM_FUNCTIONS;
     }
 
     public String getTimeDateFunctions() throws SQLException {
-        return null;
+        return TIME_DATE_FUNCTIONS;
     }
 
     public String getSearchStringEscape() throws SQLException {
@@ -612,8 +617,8 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
             WSConnection wsConnection = (WSConnection) connection;
             //BI模式，只查询用户表，只查表，不查询子表
             if (wsConnection.getParam().getConnectMode() == ConnectionParam.CONNECT_MODE_BI){
-                dbHelperStr = " user ";
-                tableHelperStr = " normal ";
+                dbHelperStr = "user";
+                tableHelperStr = "normal ";
             }
         }
 
@@ -1033,7 +1038,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                     for (String db : sTableMate.keySet()) {
                         for (String s : sTableMate.get(db)) {
                             try (Statement stmt = conn.createStatement();
-                                 ResultSet rs = stmt.executeQuery("describe " + db + "." + s)) {
+                                 ResultSet rs = stmt.executeQuery(generateDescribeSql(db, s))) {
                                 show2RowData(rs, rowDataList, precisions.get(db), db, s, null);
                             }
                         }
@@ -1072,7 +1077,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                 for (String db : sTableMate.keySet()) {
                     for (String s : sTableMate.get(db)) {
                         try (Statement stmt = conn.createStatement();
-                             ResultSet rs = stmt.executeQuery("describe " + db + "." + s)) {
+                             ResultSet rs = stmt.executeQuery(generateDescribeSql(db, s))) {
                             show2RowData(rs, rowDataList, precisions.get(db), db, s, columnNamePattern);
                         }
                     }
@@ -1081,7 +1086,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                 for (Map.Entry<String, Set<String>> dbs : tableMate.entrySet()) {
                     for (String table : dbs.getValue()) {
                         try (Statement stmt = conn.createStatement();
-                             ResultSet rs = stmt.executeQuery("describe " + dbs.getKey() + "." + table)) {
+                             ResultSet rs = stmt.executeQuery(generateDescribeSql(dbs.getKey(), table))) {
                             show2RowData(rs, rowDataList, precisions.get(dbs.getKey()), dbs.getKey(), table, columnNamePattern);
                         }
                     }
@@ -1099,7 +1104,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                     for (String db : stableMate.keySet()) {
                         for (String s : stableMate.get(db)) {
                             try (Statement stmt = conn.createStatement();
-                                 ResultSet rs = stmt.executeQuery("describe " + catalog + "." + s)) {
+                                 ResultSet rs = stmt.executeQuery(generateDescribeSql(catalog, s))) {
                                 show2RowData(rs, rowDataList, precisions.get(catalog), catalog, s, null);
                             }
                         }
@@ -1145,7 +1150,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                     for (Map.Entry<String, Set<String>> dbs : tmpMap.entrySet()) {
                         for (String table : dbs.getValue()) {
                             try (Statement stmt = conn.createStatement();
-                                 ResultSet rs = stmt.executeQuery("describe " + catalog + "." + table)) {
+                                 ResultSet rs = stmt.executeQuery(generateDescribeSql(catalog, table))) {
                                 show2RowData(rs, rowDataList, precisions.get(catalog), catalog, table, columnNamePattern);
                             }
                         }
@@ -1587,7 +1592,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
             WSConnection wsConnection = (WSConnection) conn;
             //BI模式，只查询用户表，只查表，不查询子表
             if (wsConnection.getParam().getConnectMode() == 1){
-                dbHelperStr = " user ";
+                dbHelperStr = "user";
             }
         }
 
@@ -1613,7 +1618,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
 
         DatabaseMetaDataResultSet resultSet = new DatabaseMetaDataResultSet();
         try (Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("describe " + catalog + "." + table)) {
+             ResultSet rs = stmt.executeQuery(generateDescribeSql(catalog, table))) {
             // set up ColumnMetaDataList
             resultSet.setColumnMetaDataList(buildGetPrimaryKeysMetadataList());
             // set rowData
@@ -1720,4 +1725,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
         return col4;
     }
 
+    private String generateDescribeSql(String dbName, String tableName) throws SQLException{
+        return "describe " + dbName + "." + getIdentifierQuoteString() + tableName + getIdentifierQuoteString();
+    }
 }

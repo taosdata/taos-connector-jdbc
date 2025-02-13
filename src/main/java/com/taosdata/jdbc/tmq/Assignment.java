@@ -1,11 +1,11 @@
 package com.taosdata.jdbc.tmq;
 
-import com.alibaba.fastjson.annotation.JSONField;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class Assignment {
-    @JSONField(name = "vgroup_id")
+    @JsonProperty("vgroup_id")
     private int vgId;
-    @JSONField(name = "offset")
+    @JsonProperty("offset")
     private long currentOffset;
     private long begin;
     private long end;

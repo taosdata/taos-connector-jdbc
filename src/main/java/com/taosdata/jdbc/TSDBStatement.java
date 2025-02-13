@@ -1,17 +1,3 @@
-/***************************************************************************
- * Copyright (c) 2019 TAOS Data, Inc. <jhtao@taosdata.com>
- *
- * This program is free software: you can use, redistribute, and/or modify
- * it under the terms of the GNU Affero General Public License, version 3
- * or later ("AGPL"), as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
 package com.taosdata.jdbc;
 
 import java.sql.Connection;
@@ -30,9 +16,10 @@ public class TSDBStatement extends AbstractStatement {
 
     private int queryTimeout;
 
-    TSDBStatement(TSDBConnection connection) {
+    TSDBStatement(TSDBConnection connection, Long instanceId) {
         this.connection = connection;
-        connection.registerStatement(this);
+        this.instanceId = instanceId;
+        connection.registerStatement(this.instanceId, this);
     }
 
     public ResultSet executeQuery(String sql) throws SQLException {
@@ -81,7 +68,6 @@ public class TSDBStatement extends AbstractStatement {
             }
             int timestampPrecision = this.connection.getConnector().getResultTimePrecision(pSql);
             resultSet = new TSDBResultSet(this, this.connection.getConnector(), pSql, timestampPrecision);
-            resultSet.setBatchFetch(this.connection.getBatchFetch());
             return resultSet;
         }
     }
@@ -147,7 +133,7 @@ public class TSDBStatement extends AbstractStatement {
     public void close() throws SQLException {
         if (isClosed)
             return;
-        connection.unregisterStatement(this);
+        connection.unregisterStatement(this.instanceId);
         if (this.resultSet != null && !this.resultSet.isClosed())
             this.resultSet.close();
         isClosed = true;
@@ -199,7 +185,6 @@ public class TSDBStatement extends AbstractStatement {
 
             int timestampPrecision = this.connection.getConnector().getResultTimePrecision(pSql);
             this.resultSet = new TSDBResultSet(this, this.connection.getConnector(), pSql, timestampPrecision);
-            this.resultSet.setBatchFetch(this.connection.getBatchFetch());
             return true;
         }
     }

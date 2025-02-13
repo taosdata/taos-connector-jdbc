@@ -1,47 +1,30 @@
 package com.taosdata.jdbc.ws.tmq.entity;
 
-import com.alibaba.fastjson.annotation.JSONField;
-import com.taosdata.jdbc.utils.UInt64Codec;
-import com.taosdata.jdbc.ws.entity.Response;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.taosdata.jdbc.utils.UInt64Deserializer;
+import com.taosdata.jdbc.ws.entity.CommonResp;
 
-public class PollResp extends Response {
-    private int code;
-    private String message;
-
-    @JSONField(name = "have_message")
+public class PollResp extends CommonResp {
+    @JsonProperty("have_message")
     private boolean haveMessage;
 
     private String topic;
     private String database;
 
-    @JSONField(name = "vgroup_id")
+    @JsonProperty("vgroup_id")
     private int vgroupId;
 
-    @JSONField(name = "message_type")
+    @JsonProperty("message_type")
     private int messageType;
 
-    @JSONField(name = "message_id", deserializeUsing = UInt64Codec.class)
+    @JsonProperty("message_id")
+    @JsonDeserialize(using = UInt64Deserializer.class)
     private long messageId;
 
     private long offset;
 
     private long timing;
-
-    public int getCode() {
-        return code;
-    }
-
-    public void setCode(int code) {
-        this.code = code;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
-    }
 
     public boolean isHaveMessage() {
         return haveMessage;

@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.rs;
 
+import com.taosdata.jdbc.AbstractDatabaseMetaData;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
@@ -162,22 +163,22 @@ public class RestfulDatabaseMetaDataTest {
 
     @Test
     public void getNumericFunctions() throws SQLException {
-        Assert.assertEquals(null, metaData.getNumericFunctions());
+        Assert.assertEquals(AbstractDatabaseMetaData.NUMERIC_FUNCTIONS, metaData.getNumericFunctions());
     }
 
     @Test
     public void getStringFunctions() throws SQLException {
-        Assert.assertEquals(null, metaData.getStringFunctions());
+        Assert.assertEquals(AbstractDatabaseMetaData.STRING_FUNCTIONS, metaData.getStringFunctions());
     }
 
     @Test
     public void getSystemFunctions() throws SQLException {
-        Assert.assertEquals(null, metaData.getSystemFunctions());
+        Assert.assertEquals(AbstractDatabaseMetaData.SYSTEM_FUNCTIONS, metaData.getSystemFunctions());
     }
 
     @Test
     public void getTimeDateFunctions() throws SQLException {
-        Assert.assertEquals(null, metaData.getTimeDateFunctions());
+        Assert.assertEquals(AbstractDatabaseMetaData.TIME_DATE_FUNCTIONS, metaData.getTimeDateFunctions());
     }
 
     @Test

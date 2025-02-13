@@ -5,8 +5,6 @@ public enum WSFunction {
     WS("ws"),
     // tmq
     TMQ("tmq"),
-    // stmt
-    STMT("stmt"),
     //schemaless
     SCHEMALESS("schemaless");;
 

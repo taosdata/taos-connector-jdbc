@@ -7,11 +7,14 @@ import java.net.URL;
 import java.sql.*;
 import java.util.Calendar;
 import java.util.Map;
+import java.util.concurrent.ForkJoinPool;
 
 public abstract class AbstractResultSet extends WrapperImpl implements ResultSet {
     private int fetchSize;
     protected boolean wasNull;
     protected int timestampPrecision;
+
+    private static final ForkJoinPool forkJoinPool = new ForkJoinPool();
 
     public void setTimestampPrecision(int timestampPrecision) {
         this.timestampPrecision = timestampPrecision;
@@ -24,6 +27,11 @@ public abstract class AbstractResultSet extends WrapperImpl implements ResultSet
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_PARAMETER_INDEX_OUT_RANGE, "Column Index out of range, " + columnIndex + " < 1");
         if (columnIndex > bounds)
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_PARAMETER_INDEX_OUT_RANGE, "Column Index out of range, " + columnIndex + " > " + bounds);
+    }
+
+
+    protected ForkJoinPool getForkJoinPool(){
+        return forkJoinPool;
     }
 
     @Override

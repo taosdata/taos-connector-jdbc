@@ -1,7 +1,8 @@
 package com.taosdata.jdbc;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.taosdata.jdbc.enums.ConnectionType;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
@@ -9,17 +10,16 @@ import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.rs.RestfulDriver;
 import com.taosdata.jdbc.utils.HttpClientPoolUtil;
+import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.ws.FutureResponse;
 import com.taosdata.jdbc.ws.InFlightRequest;
 import com.taosdata.jdbc.ws.Transport;
-import com.taosdata.jdbc.ws.entity.Code;
-import com.taosdata.jdbc.ws.entity.Request;
-import com.taosdata.jdbc.ws.entity.Response;
-import com.taosdata.jdbc.ws.schemaless.CommonResp;
+import com.taosdata.jdbc.ws.entity.*;
 import com.taosdata.jdbc.ws.schemaless.ConnReq;
 import com.taosdata.jdbc.ws.schemaless.InsertReq;
 import com.taosdata.jdbc.ws.schemaless.SchemalessAction;
+import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -29,7 +29,10 @@ import java.util.Properties;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Deprecated
+// will be removed in future, please use writer functions in connection object.
 public class SchemalessWriter implements AutoCloseable {
+    private final org.slf4j.Logger log = LoggerFactory.getLogger(SchemalessWriter.class);
+
     // jni
     private TSDBJNIConnector connector;
     private boolean shouldClose = true;
@@ -150,15 +153,20 @@ public class SchemalessWriter implements AutoCloseable {
             this.transport = new Transport(WSFunction.SCHEMALESS, param, inFlightRequest);
 
             this.transport.setTextMessageHandler(message -> {
-                JSONObject jsonObject = JSON.parseObject(message);
-                Response response = jsonObject.toJavaObject(CommonResp.class);
-                FutureResponse remove = inFlightRequest.remove(response.getAction(), response.getReqId());
-                if (null != remove) {
-                    remove.getFuture().complete(response);
+                try {
+                    JsonNode jsonObject = JsonUtil.getObjectReader().readTree(message);
+                    ObjectReader actionReader = JsonUtil.getObjectReader(CommonResp.class);
+                    Response response = actionReader.treeToValue(jsonObject, CommonResp.class);
+                    FutureResponse remove = inFlightRequest.remove(response.getAction(), response.getReqId());
+                    if (null != remove) {
+                        remove.getFuture().complete(response);
+                    }
+                } catch (JsonProcessingException e) {
+                    log.error("Error processing message", e);
                 }
             });
 
-            Transport.checkConnection(transport, connectTime);
+            transport.checkConnection(connectTime);
 
             ConnReq connectReq = new ConnReq();
             connectReq.setReqId(1);

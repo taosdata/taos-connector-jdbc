@@ -147,4 +147,14 @@ public class StringUtils {
         return (char) ('A' + (n - 10));
     }
 
+    public static String getBasicUrl(String url){
+        if (url == null || url.trim().length() == 0) {
+            return "";
+        }
+        int firstIndex = url.indexOf("?");
+        if (firstIndex > 0) {
+            return url.substring(0, firstIndex);
+        }
+        return url;
+    }
 }

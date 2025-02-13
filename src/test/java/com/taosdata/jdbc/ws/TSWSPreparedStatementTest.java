@@ -4,7 +4,9 @@ import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.*;
 
+import java.math.BigInteger;
 import java.sql.*;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Random;
 
@@ -147,15 +149,15 @@ public class TSWSPreparedStatementTest {
             stmt.execute("drop table if exists weather_test");
             stmt.execute("create table weather_test(ts timestamp, f1 nchar(4), f2 float, f3 double, f4 timestamp, f5 int, f6 bool, f7 binary(10))");
 
-            TSWSPreparedStatement s = (TSWSPreparedStatement) conn.prepareStatement("insert into ? values(?, ?, ?, ?, ?, ?, ?, ?)");
+            TSWSPreparedStatement s = (TSWSPreparedStatement) conn.prepareStatement("insert into weather_test values(?, ?, ?, ?, ?, ?, ?, ?)");
             Random r = new Random();
-            s.setTableName("weather_test");
+            //s.setTableName("weather_test");
 
             ArrayList<Long> ts = new ArrayList<>();
             for (int i = 0; i < numOfRows; i++) {
                 ts.add(System.currentTimeMillis() + i);
             }
-            s.setTimestamp(1, ts);
+            s.setTimestamp(0, ts);
 
             int random = 10 + r.nextInt(5);
             ArrayList<String> s2 = new ArrayList<>();
@@ -166,7 +168,7 @@ public class TSWSPreparedStatementTest {
                     s2.add("分支" + i % 4);
                 }
             }
-            s.setNString(2, s2, 4);
+            s.setNString(1, s2, 4);
 
             random = 10 + r.nextInt(5);
             ArrayList<Float> s3 = new ArrayList<>();
@@ -177,7 +179,7 @@ public class TSWSPreparedStatementTest {
                     s3.add(r.nextFloat());
                 }
             }
-            s.setFloat(3, s3);
+            s.setFloat(2, s3);
 
             random = 10 + r.nextInt(5);
             ArrayList<Double> s4 = new ArrayList<>();
@@ -188,7 +190,7 @@ public class TSWSPreparedStatementTest {
                     s4.add(r.nextDouble());
                 }
             }
-            s.setDouble(4, s4);
+            s.setDouble(3, s4);
 
             random = 10 + r.nextInt(5);
             ArrayList<Long> ts2 = new ArrayList<>();
@@ -199,7 +201,7 @@ public class TSWSPreparedStatementTest {
                     ts2.add(System.currentTimeMillis() + i);
                 }
             }
-            s.setTimestamp(5, ts2);
+            s.setTimestamp(4, ts2);
 
             random = 10 + r.nextInt(5);
             ArrayList<Integer> vals = new ArrayList<>();
@@ -210,7 +212,7 @@ public class TSWSPreparedStatementTest {
                     vals.add(r.nextInt());
                 }
             }
-            s.setInt(6, vals);
+            s.setInt(5, vals);
 
             random = 10 + r.nextInt(5);
             ArrayList<Boolean> sb = new ArrayList<>();
@@ -221,7 +223,7 @@ public class TSWSPreparedStatementTest {
                     sb.add(i % 2 == 0);
                 }
             }
-            s.setBoolean(7, sb);
+            s.setBoolean(6, sb);
 
             random = 10 + r.nextInt(5);
             ArrayList<String> s5 = new ArrayList<>();
@@ -232,7 +234,7 @@ public class TSWSPreparedStatementTest {
                     s5.add("test" + i % 10);
                 }
             }
-            s.setString(8, s5, 10);
+            s.setString(7, s5, 10);
 
             s.columnDataAddBatch();
             s.columnDataExecuteBatch();
@@ -259,9 +261,8 @@ public class TSWSPreparedStatementTest {
             stmt.execute("drop table if exists weather_test");
             stmt.execute("create table weather_test(ts timestamp, f1 nchar(4), f2 float, f3 double, f4 timestamp, f5 int, f6 bool, f7 binary(10))");
 
-            TSWSPreparedStatement s = (TSWSPreparedStatement) conn.prepareStatement("insert into ? (ts, f1, f7) values(?, ?, ?)");
+            TSWSPreparedStatement s = (TSWSPreparedStatement) conn.prepareStatement("insert into weather_test (ts, f1, f7) values(?, ?, ?)");
             Random r = new Random();
-            s.setTableName("weather_test");
 
             ArrayList<Long> ts = new ArrayList<>();
             for (int i = 0; i < numOfRows; i++) {
@@ -325,10 +326,16 @@ public class TSWSPreparedStatementTest {
 
             switch (type) {
                 case "tinyint":
+                    s.setTagByte(0, (byte) 1);
+                    break;
                 case "smallint":
+                    s.setTagShort(0, (short) 1);
+                    break;
                 case "int":
-                case "bigint":
                     s.setTagInt(0, 1);
+                    break;
+                case "bigint":
+                    s.setTagLong(0, 1L);
                     break;
                 case "float":
                     s.setTagFloat(0, 1.23f);
@@ -494,8 +501,8 @@ public class TSWSPreparedStatementTest {
 
         long startTime = System.currentTimeMillis();
         for (int i = 0; i < numOfRows; i++) {
-            s.setTimestamp(0, new Timestamp(startTime + i));
-            s.setInt(1, i);
+            s.setTimestamp(1, new Timestamp(startTime + i));
+            s.setInt(2, i);
             s.addBatch();
         }
         s.executeBatch();
@@ -1053,6 +1060,54 @@ public class TSWSPreparedStatementTest {
         Assert.assertEquals("BINARY", parameterMetaData.getParameterTypeName(9));
         Assert.assertEquals("NCHAR", parameterMetaData.getParameterTypeName(10));
     }
+
+
+
+    @Test
+    public void setObjectTest() throws SQLException {
+
+        //private static final String sql_select = "select * from t1 where ts >= ? and ts < ? and f1 >= ?";
+        long ts = System.currentTimeMillis();
+        pstmt_select.setObject(1, new Timestamp(ts - 10000));
+        pstmt_select.setObject(2, new Timestamp(ts + 10000));
+        pstmt_select.setObject(3, 10);
+        pstmt_select.execute();
+    }
+    @Test
+    public void setObjectFullTest() throws SQLException {
+
+        String sql = "INSERT INTO weather_001 USING weather TAGS ('tag_001') VALUES ('2023-10-01 12:00:00', 25, 1234567890123, 23.45, 67.89, 10, 1, true, 'example_binary_data', 'example_nchar_data');";
+        Statement stmt = conn.createStatement();
+        stmt.execute(sql);
+        stmt.close();
+
+        boolean haveResult = false;
+        String query_sql = "SELECT * FROM weather_001 WHERE ts = ?  AND f1 = ? AND f2 = ?  AND f3 > ? AND f4 > ? AND f5 = ? AND f6 = ? AND f7 = ? AND f8 = ? AND f9 = ? and loc = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(query_sql)) {
+            pstmt.setObject(1, LocalDateTime.now());
+            pstmt.setObject(1, Timestamp.valueOf("2023-10-01 12:00:00"));
+            pstmt.setObject(2, 25);
+            pstmt.setObject(3, 1234567890123L);
+            pstmt.setObject(4, 23.44f);
+            pstmt.setObject(5, 67.889);
+            pstmt.setObject(6, (short) 10);
+            pstmt.setObject(7, (byte) 1);
+            pstmt.setObject(8, true);
+            pstmt.setObject(9, "example_binary_data".getBytes());
+            pstmt.setObject(10, "example_nchar_data");
+            pstmt.setObject(11, "tag_001");
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                   haveResult = true;
+                }
+            }
+        }
+
+        assert(haveResult);
+
+    }
+
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void setRowId() throws SQLException {

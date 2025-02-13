@@ -111,11 +111,22 @@ public class TSDBDriver extends AbstractDriver {
 
     public static final String PROPERTY_KEY_ENABLE_COMPRESSION = "enableCompression";
 
+    public static final String PROPERTY_KEY_ENABLE_AUTO_RECONNECT = "enableAutoReconnect";
+
+    public static final String PROPERTY_KEY_SLAVE_CLUSTER_HOST = "slaveClusterHost";
+    public static final String PROPERTY_KEY_SLAVE_CLUSTER_PORT = "slaveClusterPort";
+    public static final String PROPERTY_KEY_RECONNECT_INTERVAL_MS = "reconnectIntervalMs";
+    public static final String PROPERTY_KEY_RECONNECT_RETRY_COUNT = "reconnectRetryCount";
+
+    public static final String PROPERTY_KEY_DISABLE_SSL_CERT_VALIDATION = "disableSSLCertValidation";
+    public static final String PROPERTY_KEY_APP_IP = "app_ip";
+    public static final String PROPERTY_KEY_APP_NAME = "app_name";
+
+
     /**
      * max message number send to server concurrently
      */
     public static final String PROPERTY_KEY_MAX_CONCURRENT_REQUEST = "maxConcurrentRequest";
-
     /**
      * max pool size
      */
@@ -136,8 +147,6 @@ public class TSDBDriver extends AbstractDriver {
      * zero is interpreted as an infinite timeout.
      */
     public static final String HTTP_SOCKET_TIMEOUT = "httpSocketTimeout";
-
-    public static final String HTTP_TIME_ZONE= "tz";
 
     private TSDBDatabaseMetaData dbMetaData = null;
 

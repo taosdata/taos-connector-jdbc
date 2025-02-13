@@ -1,6 +1,6 @@
 package com.taosdata.jdbc.ws.entity;
 
-import com.alibaba.fastjson.annotation.JSONField;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * return from taosadapter
@@ -8,7 +8,7 @@ import com.alibaba.fastjson.annotation.JSONField;
 public class Response {
     private String action;
 
-    @JSONField(name = "req_id")
+    @JsonProperty("req_id")
     private long reqId;
 
     public String getAction() {

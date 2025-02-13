@@ -1,33 +1,39 @@
 package com.taosdata.jdbc.ws;
 
-import com.taosdata.jdbc.AbstractStatement;
-import com.taosdata.jdbc.TSDBDriver;
-import com.taosdata.jdbc.TSDBError;
-import com.taosdata.jdbc.TSDBErrorNumbers;
+import com.taosdata.jdbc.*;
 import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.utils.SqlSyntaxValidator;
 import com.taosdata.jdbc.ws.entity.*;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.ZoneId;
 
 import static com.taosdata.jdbc.utils.SqlSyntaxValidator.getDatabaseName;
 
 public class WSStatement extends AbstractStatement {
     protected Transport transport;
-    private String database;
-    private final Connection connection;
+    protected String database;
+    private final AbstractConnection connection;
 
     private boolean closed;
-    private ResultSet resultSet;
+    protected ResultSet resultSet;
 
     private int queryTimeout = 0;
 
-    public WSStatement(Transport transport, String database, Connection connection) {
+    protected final ZoneId zoneId;
+    protected final ZoneId stdZoneId = ZoneId.of("UTC");
+
+    public WSStatement(Transport transport, String database, AbstractConnection connection, Long instanceId, ZoneId zoneId) {
         this.transport = transport;
         this.database = database;
         this.connection = connection;
+        this.instanceId = instanceId;
+        this.connection.registerStatement(this.instanceId, this);
+        this.zoneId = zoneId;
     }
 
     @Override
@@ -59,6 +65,7 @@ public class WSStatement extends AbstractStatement {
     @Override
     public void close() throws SQLException {
         if (!isClosed()) {
+            this.connection.unregisterStatement(this.instanceId);
             this.closed = true;
             if (resultSet != null && !resultSet.isClosed()) {
                 resultSet.close();
@@ -75,12 +82,15 @@ public class WSStatement extends AbstractStatement {
         if (isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
 
-
         if (null == reqId)
             reqId = ReqId.getReqID();
 
-        Request request = RequestFactory.generateQuery(sql, reqId);
-        Response response = transport.send(request);
+        byte[] sqlBytes = sql.getBytes();
+
+        // write version and sqlLen in little endian byte sequence
+        byte[] result = ByteBuffer.allocate(6).order(ByteOrder.LITTLE_ENDIAN).putShort((short)1).putInt(sqlBytes.length).array();
+        Response response = transport.send(Action.BINARY_QUERY.getAction(),
+                reqId, 0, 6, result, sqlBytes);
 
         QueryResp queryResp = (QueryResp) response;
         if (Code.SUCCESS.getCode() != queryResp.getCode()) {
@@ -96,7 +106,7 @@ public class WSStatement extends AbstractStatement {
             this.affectedRows = queryResp.getAffectedRows();
             return false;
         } else {
-            this.resultSet = new BlockResultSet(this, this.transport, queryResp, this.database);
+            this.resultSet = new BlockResultSet(this, this.transport, queryResp, this.database, this.zoneId);
             this.affectedRows = -1;
             return true;
         }

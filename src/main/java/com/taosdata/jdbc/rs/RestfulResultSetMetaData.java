@@ -2,6 +2,7 @@ package com.taosdata.jdbc.rs;
 
 import com.taosdata.jdbc.WrapperImpl;
 import com.taosdata.jdbc.enums.DataType;
+import com.taosdata.jdbc.utils.DataTypeUtil;
 
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -117,15 +118,7 @@ public class RestfulResultSetMetaData extends WrapperImpl implements ResultSetMe
 
     @Override
     public int getScale(int column) throws SQLException {
-        int type = this.fields.get(column - 1).type;
-        switch (type) {
-            case Types.FLOAT:
-                return 5;
-            case Types.DOUBLE:
-                return 9;
-            default:
-                return 0;
-        }
+        return 0;
     }
 
     @Override

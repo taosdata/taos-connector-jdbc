@@ -7,20 +7,17 @@ import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class TSDBConnection extends AbstractConnection {
-
     private TSDBJNIConnector connector;
     private final TSDBDatabaseMetaData databaseMetaData;
-    private boolean batchFetch;
-
-    private CopyOnWriteArrayList<Statement> statements = new CopyOnWriteArrayList<>();
-
-    public Boolean getBatchFetch() {
-        return this.batchFetch;
-    }
 
     public TSDBConnection(Properties info, TSDBDatabaseMetaData meta) throws SQLException {
         super(info);
@@ -30,11 +27,6 @@ public class TSDBConnection extends AbstractConnection {
                 info.getProperty(TSDBDriver.PROPERTY_KEY_DBNAME),
                 info.getProperty(TSDBDriver.PROPERTY_KEY_USER),
                 info.getProperty(TSDBDriver.PROPERTY_KEY_PASSWORD));
-
-        String batchLoad = info.getProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
-        if (batchLoad != null) {
-            this.batchFetch = Boolean.parseBoolean(batchLoad);
-        }
     }
 
     private void connect(String host, int port, String dbName, String user, String password) throws SQLException {
@@ -53,14 +45,14 @@ public class TSDBConnection extends AbstractConnection {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
         }
 
-        return new TSDBStatement(this);
+        return new TSDBStatement(this, idGenerator.getAndIncrement());
     }
 
     public PreparedStatement prepareStatement(String sql) throws SQLException {
         if (isClosed()) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
         }
-        return new TSDBPreparedStatement(this, sql);
+        return new TSDBPreparedStatement(this, sql, idGenerator.getAndIncrement());
     }
 
     public void close() throws SQLException {
@@ -70,21 +62,19 @@ public class TSDBConnection extends AbstractConnection {
             if (isClosed) {
                 return;
             }
-            for (Statement statement : statements) {
-                statement.close();
+
+            for (Map.Entry<Long, Statement> entry : statementsMap.entrySet()) {
+                Statement value = entry.getValue();
+                value.close();
             }
+            statementsMap.clear();
+
             this.connector.closeConnection();
             this.isClosed = true;
         }
     }
 
-    public void unregisterStatement(Statement stmt) {
-        this.statements.remove(stmt);
-    }
 
-    public void registerStatement(Statement stmt) {
-        this.statements.addIfAbsent(stmt);
-    }
 
     public boolean isClosed() throws SQLException {
         return this.connector != null && this.connector.isClosed();

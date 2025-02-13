@@ -44,6 +44,7 @@ public class ConsumerTest {
         properties.setProperty(TMQConstants.CONNECT_MESSAGE_TIMEOUT, "10000");
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
+        properties.setProperty(TMQConstants.AUTO_OFFSET_RESET, "earliest");
         properties.setProperty(TMQConstants.GROUP_ID, "ws_bean");
         properties.setProperty(TMQConstants.VALUE_DESERIALIZER, "com.taosdata.jdbc.cloud.BeanDeserializer");
         properties.setProperty(TMQConstants.CONNECT_TYPE, "ws");

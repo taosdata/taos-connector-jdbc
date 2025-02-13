@@ -1,15 +1,18 @@
 package com.taosdata.jdbc.rs;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.taosdata.jdbc.*;
 import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.utils.HttpClientPoolUtil;
-import com.taosdata.jdbc.ws.FutureResponse;
-import com.taosdata.jdbc.ws.InFlightRequest;
-import com.taosdata.jdbc.ws.Transport;
-import com.taosdata.jdbc.ws.WSConnection;
+import com.taosdata.jdbc.utils.StringUtils;
+import com.taosdata.jdbc.ws.*;
 import com.taosdata.jdbc.ws.entity.*;
+import com.taosdata.jdbc.utils.JsonUtil;
+import org.slf4j.LoggerFactory;
 
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
@@ -19,7 +22,7 @@ import java.util.Properties;
 import java.util.logging.Logger;
 
 public class RestfulDriver extends AbstractDriver {
-
+    private final org.slf4j.Logger log = LoggerFactory.getLogger(RestfulDriver.class);
     public static final String URL_PREFIX = "jdbc:TAOS-RS://";
 
     static {
@@ -41,12 +44,13 @@ public class RestfulDriver extends AbstractDriver {
             return null;
 
         Properties props = parseURL(url, info);
-        ConnectionParam param = ConnectionParam.getParam(props);
         String batchLoad = info.getProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD);
         if (Boolean.parseBoolean(batchLoad)) {
+            ConnectionParam param = ConnectionParam.getParamWs(props);
             return getWSConnection(url, param, props);
         }
         HttpClientPoolUtil.init(props);
+        ConnectionParam param = ConnectionParam.getParam(props);
 
         String auth = null;
 
@@ -101,52 +105,5 @@ public class RestfulDriver extends AbstractDriver {
     @Override
     public Logger getParentLogger() throws SQLFeatureNotSupportedException {
         throw new SQLFeatureNotSupportedException();
-    }
-
-    private Connection getWSConnection(String url, ConnectionParam param, Properties props) throws SQLException {
-        InFlightRequest inFlightRequest = new InFlightRequest(param.getRequestTimeout(), param.getMaxRequest());
-        Transport transport = new Transport(WSFunction.WS, param, inFlightRequest);
-
-        transport.setTextMessageHandler(message -> {
-            JSONObject jsonObject = JSON.parseObject(message);
-            Action action = Action.of(jsonObject.getString("action"));
-            Response response = jsonObject.toJavaObject(action.getResponseClazz());
-            FutureResponse remove = inFlightRequest.remove(response.getAction(), response.getReqId());
-            if (null != remove) {
-                remove.getFuture().complete(response);
-            }
-        });
-        transport.setBinaryMessageHandler(byteBuffer -> {
-            byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
-            byteBuffer.position(8);
-            long id = byteBuffer.getLong();
-            FutureResponse remove = inFlightRequest.remove(Action.FETCH_BLOCK.getAction(), id);
-            if (null != remove) {
-                FetchBlockResp fetchBlockResp = new FetchBlockResp(id, byteBuffer);
-                remove.getFuture().complete(fetchBlockResp);
-            }
-        });
-
-        Transport.checkConnection(transport, param.getConnectTimeout());
-
-        ConnectReq connectReq = new ConnectReq();
-        connectReq.setReqId(1);
-        connectReq.setUser(param.getUser());
-        connectReq.setPassword(param.getPassword());
-        connectReq.setDb(param.getDatabase());
-        // 目前仅支持bi模式，下游接口值为0，此处做转换
-        if(param.getConnectMode() == ConnectionParam.CONNECT_MODE_BI){
-            connectReq.setMode(0);
-        }
-
-        ConnectResp auth = (ConnectResp) transport.send(new Request(Action.CONN.getAction(), connectReq));
-
-        if (Code.SUCCESS.getCode() != auth.getCode()) {
-            transport.close();
-            throw new SQLException("(0x" + Integer.toHexString(auth.getCode()) + "):" + "auth failure:" + auth.getMessage());
-        }
-
-        TaosGlobalConfig.setCharset(props.getProperty(TSDBDriver.PROPERTY_KEY_CHARSET));
-        return new WSConnection(url, props, transport, param);
     }
 }

@@ -1,17 +1,3 @@
-/***************************************************************************
- * Copyright (c) 2019 TAOS Data, Inc. <jhtao@taosdata.com>
- *
- * This program is free software: you can use, redistribute, and/or modify
- * it under the terms of the GNU Affero General Public License, version 3
- * or later ("AGPL"), as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
 package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.utils.Utils;
@@ -20,33 +6,34 @@ import java.io.InputStream;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collections;
-import java.util.PriorityQueue;
+import java.sql.Date;
+import java.util.*;
 
 /*
  * TDengine only supports a subset of the standard SQL, thus this implementation of the
  * standard JDBC API contains more or less some adjustments customized for certain
  * compatibility needs.
  */
-public class TSDBPreparedStatement extends TSDBStatement implements PreparedStatement {
+public class TSDBPreparedStatement extends TSDBStatement implements TaosPrepareStatement {
     // for jdbc preparedStatement interface
     private String rawSql;
     private Object[] parameters = new Object[0];
     // for parameter binding
     private long nativeStmtHandle;
     private String tableName;
-    private ArrayList<TableTagInfo> tableTags;
+    private List<TableTagInfo> tableTags;
     private int tagValueLength;
     private PriorityQueue<ColumnInfo> queue = new PriorityQueue<>();
 
-    TSDBPreparedStatement(TSDBConnection connection, String sql) throws SQLException {
-        super(connection);
+
+
+    TSDBPreparedStatement(TSDBConnection connection, String sql, Long instanceId) throws SQLException {
+        super(connection, instanceId);
         this.rawSql = sql;
         int parameterCnt = 0;
         if (!sql.contains("?"))
@@ -369,7 +356,7 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
     // parameter binding
     private static class ColumnInfo implements Comparable<ColumnInfo> {
         @SuppressWarnings("rawtypes")
-        private ArrayList data;
+        private List data;
         private int type;
         private int bytes;
         private boolean typeIsSet;
@@ -415,6 +402,7 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
         }
     }
 
+    @Override
     public void setTableName(String name) throws SQLException {
 
         if (this.nativeStmtHandle == 0) {
@@ -436,65 +424,86 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
         }
     }
 
+    @Override
     public void setTagNull(int index, int type) {
         ensureTagCapacity(index);
         this.tableTags.set(index, TableTagInfo.createNullTag(type));
     }
 
+    @Override
     public void setTagBoolean(int index, boolean value) {
         ensureTagCapacity(index);
         this.tableTags.set(index, new TableTagInfo(value, TSDBConstants.TSDB_DATA_TYPE_BOOL));
         this.tagValueLength += Byte.BYTES;
     }
 
+    @Override
     public void setTagInt(int index, int value) {
         ensureTagCapacity(index);
         this.tableTags.set(index, new TableTagInfo(value, TSDBConstants.TSDB_DATA_TYPE_INT));
         this.tagValueLength += Integer.BYTES;
     }
 
+    @Override
     public void setTagByte(int index, byte value) {
         ensureTagCapacity(index);
         this.tableTags.set(index, new TableTagInfo(value, TSDBConstants.TSDB_DATA_TYPE_TINYINT));
         this.tagValueLength += Byte.BYTES;
     }
 
+    @Override
     public void setTagShort(int index, short value) {
         ensureTagCapacity(index);
         this.tableTags.set(index, new TableTagInfo(value, TSDBConstants.TSDB_DATA_TYPE_SMALLINT));
         this.tagValueLength += Short.BYTES;
     }
 
+    @Override
     public void setTagLong(int index, long value) {
         ensureTagCapacity(index);
         this.tableTags.set(index, new TableTagInfo(value, TSDBConstants.TSDB_DATA_TYPE_BIGINT));
         this.tagValueLength += Long.BYTES;
     }
 
+    @Override
+    public void setTagBigInteger(int index, BigInteger value) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
+    }
+
+    @Override
     public void setTagTimestamp(int index, long value) {
         ensureTagCapacity(index);
         this.tableTags.set(index, new TableTagInfo(value, TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP));
         this.tagValueLength += Long.BYTES;
     }
 
+    @Override
+    public void setTagTimestamp(int index, Timestamp value) {
+        throw new RuntimeException("not supported");
+    }
+
+    @Override
     public void setTagFloat(int index, float value) {
         ensureTagCapacity(index);
         this.tableTags.set(index, new TableTagInfo(value, TSDBConstants.TSDB_DATA_TYPE_FLOAT));
         this.tagValueLength += Float.BYTES;
     }
 
+    @Override
     public void setTagDouble(int index, double value) {
         ensureTagCapacity(index);
         this.tableTags.set(index, new TableTagInfo(value, TSDBConstants.TSDB_DATA_TYPE_DOUBLE));
         this.tagValueLength += Double.BYTES;
     }
 
+    @Override
     public void setTagString(int index, String value) {
         ensureTagCapacity(index);
         this.tableTags.set(index, new TableTagInfo(value, TSDBConstants.TSDB_DATA_TYPE_BINARY));
         this.tagValueLength += value.getBytes().length;
     }
 
+    @Override
     public void setTagNString(int index, String value) {
         ensureTagCapacity(index);
         this.tableTags.set(index, new TableTagInfo(value, TSDBConstants.TSDB_DATA_TYPE_NCHAR));
@@ -507,6 +516,7 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
         }
     }
 
+    @Override
     public void setTagJson(int index, String value) {
         ensureTagCapacity(index);
         this.tableTags.set(index, new TableTagInfo(value, TSDBConstants.TSDB_DATA_TYPE_JSON));
@@ -519,75 +529,93 @@ public class TSDBPreparedStatement extends TSDBStatement implements PreparedStat
         }
     }
 
+    @Override
     public void setTagVarbinary(int index, byte[] value) {
         ensureTagCapacity(index);
         this.tableTags.set(index, new TableTagInfo(value, TSDBConstants.TSDB_DATA_TYPE_VARBINARY));
         this.tagValueLength += value.length;
      }
+    @Override
     public void setTagGeometry(int index, byte[] value) {
         ensureTagCapacity(index);
         this.tableTags.set(index, new TableTagInfo(value, TSDBConstants.TSDB_DATA_TYPE_GEOMETRY));
         this.tagValueLength += value.length;
     }
 
-    public <T> void setValueImpl(int columnIndex, ArrayList<T> list, int type, int bytes) throws SQLException {
+    public <T> void setValueImpl(int columnIndex, List<T> list, int type, int bytes) throws SQLException {
         ColumnInfo p = new ColumnInfo();
         p.setType(type);
         p.bytes = bytes;
-        p.data = (ArrayList<?>) list.clone();
+        p.data = list;
         p.index = columnIndex;
         queue.add(p);
     }
 
-    public void setInt(int columnIndex, ArrayList<Integer> list) throws SQLException {
+    @Override
+    public void setInt(int columnIndex, List<Integer> list) throws SQLException {
         setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_INT, Integer.BYTES);
     }
-
-    public void setFloat(int columnIndex, ArrayList<Float> list) throws SQLException {
+    @Override
+    public void setFloat(int columnIndex, List<Float> list) throws SQLException {
         setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_FLOAT, Float.BYTES);
     }
 
-    public void setTimestamp(int columnIndex, ArrayList<Long> list) throws SQLException {
+    @Override
+    public void setTimestamp(int columnIndex, List<Long> list) throws SQLException {
         setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP, Long.BYTES);
     }
 
-    public void setLong(int columnIndex, ArrayList<Long> list) throws SQLException {
+    @Override
+    public void setLong(int columnIndex, List<Long> list) throws SQLException {
         setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_BIGINT, Long.BYTES);
     }
 
-    public void setDouble(int columnIndex, ArrayList<Double> list) throws SQLException {
+    @Override
+    public void setBigInteger(int columnIndex, List<BigInteger> list) throws SQLException{
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
+    }
+
+    @Override
+    public void setDouble(int columnIndex, List<Double> list) throws SQLException {
         setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_DOUBLE, Double.BYTES);
     }
 
-    public void setBoolean(int columnIndex, ArrayList<Boolean> list) throws SQLException {
+    @Override
+    public void setBoolean(int columnIndex, List<Boolean> list) throws SQLException {
         setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_BOOL, Byte.BYTES);
     }
 
-    public void setByte(int columnIndex, ArrayList<Byte> list) throws SQLException {
+    public void setByte(int columnIndex, List<Byte> list) throws SQLException {
         setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_TINYINT, Byte.BYTES);
     }
 
-    public void setShort(int columnIndex, ArrayList<Short> list) throws SQLException {
+    @Override
+    public void setShort(int columnIndex, List<Short> list) throws SQLException {
         setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_SMALLINT, Short.BYTES);
     }
 
-    public void setString(int columnIndex, ArrayList<String> list, int size) throws SQLException {
+    @Override
+    public void setString(int columnIndex, List<String> list, int size) throws SQLException {
         setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_BINARY, size);
     }
 
-    public void setVarbinary(int columnIndex, ArrayList<byte[]> list, int size) throws SQLException {
+    @Override
+    public void setVarbinary(int columnIndex, List<byte[]> list, int size) throws SQLException {
         setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_VARBINARY, size);
     }
 
-    public void setGeometry(int columnIndex, ArrayList<byte[]> list, int size) throws SQLException {
+    @Override
+    public void setGeometry(int columnIndex, List<byte[]> list, int size) throws SQLException {
         setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_GEOMETRY, size);
     }
 
     // note: expand the required space for each NChar character
-    public void setNString(int columnIndex, ArrayList<String> list, int size) throws SQLException {
+    @Override
+    public void setNString(int columnIndex, List<String> list, int size) throws SQLException {
         setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_NCHAR, size * Integer.BYTES);
     }
 
+    @Override
     public void columnDataAddBatch() throws SQLException {
         // pass the data block to native code
         if (rawSql == null) {

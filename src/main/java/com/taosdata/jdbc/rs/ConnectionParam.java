@@ -4,12 +4,16 @@ import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.utils.HttpClientPoolUtil;
+import com.taosdata.jdbc.utils.StringUtils;
+import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.Transport;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
+import java.time.DateTimeException;
+import java.time.ZoneId;
 import java.util.Properties;
 
 public class ConnectionParam {
@@ -20,12 +24,22 @@ public class ConnectionParam {
     private String user;
     private String password;
     private String tz;
+    private ZoneId zoneId;
     private boolean useSsl;
     private int maxRequest;
     private int connectTimeout;
     private int requestTimeout;
     private int connectMode;
     private boolean enableCompression;
+    private boolean enableAutoConnect;
+
+    private String slaveClusterHost;
+    private String slaveClusterPort;
+    private int reconnectIntervalMs;
+    private int reconnectRetryCount;
+    private boolean disableSslCertValidation;
+    private String appName;
+    private String appIp;
 
     static public final int CONNECT_MODE_BI = 1;
 
@@ -43,6 +57,14 @@ public class ConnectionParam {
         this.requestTimeout = builder.requestTimeout;
         this.connectMode = builder.connectMode;
         this.enableCompression = builder.enableCompression;
+        this.slaveClusterHost = builder.slaveClusterHost;
+        this.slaveClusterPort = builder.slaveClusterPort;
+        this.reconnectIntervalMs = builder.reconnectIntervalMs;
+        this.reconnectRetryCount = builder.reconnectRetryCount;
+        this.enableAutoConnect = builder.enableAutoReconnect;
+        this.disableSslCertValidation = builder.disableSslCertValidation;
+        this.appName = builder.appName;
+        this.appIp = builder.appIp;
     }
 
     public String getHost() {
@@ -100,7 +122,13 @@ public class ConnectionParam {
     public void setTz(String tz) {
         this.tz = tz;
     }
+    public ZoneId getZoneId() {
+        return zoneId;
+    }
 
+    public void setZoneId(ZoneId zoneId) {
+        this.zoneId = zoneId;
+    }
     public boolean isUseSsl() {
         return useSsl;
     }
@@ -148,6 +176,95 @@ public class ConnectionParam {
         this.enableCompression = enableCompression;
     }
 
+    public String getSlaveClusterHost() {
+        return slaveClusterHost;
+    }
+
+    public void setSlaveClusterHost(String slaveClusterHost) {
+        this.slaveClusterHost = slaveClusterHost;
+    }
+
+    public String getSlaveClusterPort() {
+        return slaveClusterPort;
+    }
+
+    public void setSlaveClusterPort(String slaveClusterPort) {
+        this.slaveClusterPort = slaveClusterPort;
+    }
+
+    public int getReconnectIntervalMs() {
+        return reconnectIntervalMs;
+    }
+
+    public void setReconnectIntervalMs(int reconnectIntervalMs) {
+        this.reconnectIntervalMs = reconnectIntervalMs;
+    }
+
+    public int getReconnectRetryCount() {
+        return reconnectRetryCount;
+    }
+
+    public void setReconnectRetryCount(int reconnectRetryCount) {
+        this.reconnectRetryCount = reconnectRetryCount;
+    }
+
+    public boolean isEnableAutoConnect() {
+        return enableAutoConnect;
+    }
+    public void setEnableAutoConnect(boolean enableAutoConnect) {
+        this.enableAutoConnect = enableAutoConnect;
+    }
+
+    public boolean isDisableSslCertValidation() {
+        return disableSslCertValidation;
+    }
+
+    public void setDisableSslCertValidation(boolean disableSslCertValidation) {
+        this.disableSslCertValidation = disableSslCertValidation;
+    }
+
+    public String getAppName() {
+        return appName;
+    }
+
+    public void setAppName(String appName) {
+        this.appName = appName;
+    }
+
+    public String getAppIp() {
+        return appIp;
+    }
+
+    public void setAppIp(String appIp) {
+        this.appIp = appIp;
+    }
+
+    public static ConnectionParam getParamWs(Properties perperties) throws SQLException {
+        ConnectionParam connectionParam = getParam(perperties);
+        if (connectionParam.getTz() == null
+                || connectionParam.getTz().contains("+")
+                || connectionParam.getTz().contains("-")
+                || !connectionParam.getTz().contains("/")){
+            // for history reason, we will not support time zone with offset in websocket connection
+            connectionParam.setTz("");
+            return connectionParam;
+        }
+
+        try {
+            ZoneId zoneId = ZoneId.of(connectionParam.getTz());
+            ZoneId defaultZoneId = ZoneId.systemDefault();
+            if (!StringUtils.isEmpty(connectionParam.getTz()) && defaultZoneId.equals(zoneId)){
+                //  for performance, if the time zone is the same as the system default time zone, we ignore it
+                connectionParam.setTz("");
+            } else {
+                connectionParam.setZoneId(zoneId);
+            }
+        } catch (DateTimeException e) {
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid time zone");
+        }
+        return connectionParam;
+    }
+
     public static ConnectionParam getParam(Properties properties) throws SQLException {
         String host = properties.getProperty(TSDBDriver.PROPERTY_KEY_HOST);
         String port = properties.getProperty(TSDBDriver.PROPERTY_KEY_PORT);
@@ -183,7 +300,7 @@ public class ConnectionParam {
                             + ", password: " + properties.getProperty(TSDBDriver.PROPERTY_KEY_PASSWORD));
         }
 
-        String tz = properties.getProperty(TSDBDriver.HTTP_TIME_ZONE);
+        String tz = properties.getProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE);
 
         boolean useSsl = Boolean.parseBoolean(properties.getProperty(TSDBDriver.PROPERTY_KEY_USE_SSL, "false"));
 
@@ -200,9 +317,36 @@ public class ConnectionParam {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "unsupported connect mode");
         }
 
-        boolean enableCompression = Boolean.parseBoolean(properties.getProperty(TSDBDriver.PROPERTY_KEY_ENABLE_COMPRESSION,"false"));
+        String slaveClusterHost = properties.getProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_HOST, "");
+        String slaveClusterPort = properties.getProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_PORT, "");
 
-        return new ConnectionParam.Builder(host, port)
+        int reconnectIntervalMs  = Integer
+                .parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_INTERVAL_MS, "2000"));
+        if (reconnectIntervalMs < 0){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_RECONNECT_INTERVAL_MS");
+        }
+
+        int reconnectRetryCount = Integer
+                .parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_RETRY_COUNT, "3"));
+        if (reconnectRetryCount < 0){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_RECONNECT_RETRY_COUNT");
+        }
+
+        boolean enableCompression = Boolean.parseBoolean(properties.getProperty(TSDBDriver.PROPERTY_KEY_ENABLE_COMPRESSION,"false"));
+        boolean enableAutoReconnect = Boolean.parseBoolean(properties.getProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT,"false"));
+        boolean disableSslCertValidation = Boolean.parseBoolean(properties.getProperty(TSDBDriver.PROPERTY_KEY_DISABLE_SSL_CERT_VALIDATION,"false"));
+
+        String appName = properties.getProperty(TSDBDriver.PROPERTY_KEY_APP_NAME, "java");
+        if (appName.getBytes().length > 23){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid app name, max length is 23");
+        }
+
+        String appIp = properties.getProperty(TSDBDriver.PROPERTY_KEY_APP_IP, "");
+        if (!Utils.isValidIP(appIp)){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid app ip address");
+        }
+
+        return new Builder(host, port)
                 .setDatabase(database)
                 .setCloudToken(cloudToken)
                 .setUserAndPassword(user, password)
@@ -213,6 +357,14 @@ public class ConnectionParam {
                 .setRequestTimeout(requestTimeout)
                 .setConnectMode(connectMode)
                 .setEnableCompression(enableCompression)
+                .setSlaveClusterHost(slaveClusterHost)
+                .setSlaveClusterPort(slaveClusterPort)
+                .setReconnectIntervalMs(reconnectIntervalMs)
+                .setReconnectRetryCount(reconnectRetryCount)
+                .setEnableAutoReconnect(enableAutoReconnect)
+                .setDisableSslCertValidation(disableSslCertValidation)
+                .setAppIp(appIp)
+                .setAppName(appName)
                 .build();
     }
 
@@ -231,6 +383,15 @@ public class ConnectionParam {
         private int connectMode;
 
         private boolean enableCompression;
+        private boolean enableAutoReconnect;
+        private String slaveClusterHost;
+        private String slaveClusterPort;
+        private int reconnectIntervalMs;
+        private int reconnectRetryCount;
+        private boolean disableSslCertValidation;
+
+        private String appName;
+        private String appIp;
 
         public Builder(String host, String port) {
             this.host = host;
@@ -284,6 +445,44 @@ public class ConnectionParam {
 
         public Builder setEnableCompression(boolean enableCompression) {
             this.enableCompression = enableCompression;
+            return this;
+        }
+        public Builder setEnableAutoReconnect(boolean enableAutoReconnect) {
+            this.enableAutoReconnect = enableAutoReconnect;
+            return this;
+        }
+
+        public Builder setSlaveClusterHost(String slaveClusterHost) {
+            this.slaveClusterHost = slaveClusterHost;
+            return this;
+        }
+
+        public Builder setSlaveClusterPort(String slaveClusterPort) {
+            this.slaveClusterPort = slaveClusterPort;
+            return this;
+        }
+
+        public Builder setReconnectIntervalMs(int reconnectIntervalMs) {
+            this.reconnectIntervalMs = reconnectIntervalMs;
+            return this;
+        }
+
+        public Builder setReconnectRetryCount(int reconnectRetryCount) {
+            this.reconnectRetryCount = reconnectRetryCount;
+            return this;
+        }
+
+        public Builder setDisableSslCertValidation(boolean disableSslCertValidation) {
+            this.disableSslCertValidation = disableSslCertValidation;
+            return this;
+        }
+        public Builder setAppName(String appName) {
+            this.appName = appName;
+            return this;
+        }
+
+        public Builder setAppIp(String appIp) {
+            this.appIp = appIp;
             return this;
         }
         public ConnectionParam build() {

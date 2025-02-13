@@ -160,22 +160,22 @@ public class TSDBDatabaseMetaDataTest {
 
     @Test
     public void getNumericFunctions() throws SQLException {
-        Assert.assertEquals(null, metaData.getNumericFunctions());
+        Assert.assertEquals(AbstractDatabaseMetaData.NUMERIC_FUNCTIONS, metaData.getNumericFunctions());
     }
 
     @Test
     public void getStringFunctions() throws SQLException {
-        Assert.assertEquals(null, metaData.getStringFunctions());
+        Assert.assertEquals(AbstractDatabaseMetaData.STRING_FUNCTIONS, metaData.getStringFunctions());
     }
 
     @Test
     public void getSystemFunctions() throws SQLException {
-        Assert.assertEquals(null, metaData.getSystemFunctions());
+        Assert.assertEquals(AbstractDatabaseMetaData.SYSTEM_FUNCTIONS, metaData.getSystemFunctions());
     }
 
     @Test
     public void getTimeDateFunctions() throws SQLException {
-        Assert.assertEquals(null, metaData.getTimeDateFunctions());
+        Assert.assertEquals(AbstractDatabaseMetaData.TIME_DATE_FUNCTIONS, metaData.getTimeDateFunctions());
     }
 
     @Test
@@ -788,7 +788,102 @@ public class TSDBDatabaseMetaDataTest {
             Assert.assertEquals(null, columns.getString(12));
         }
     }
-
+    @Test
+    public void getColumnsUpperTableName() throws SQLException {
+        // when
+        ResultSet columns = metaData.getColumns(db_name, "", "Bigdn1", null);
+        // then
+        ResultSetMetaData meta = columns.getMetaData();
+        columns.next();
+        // column: 1
+        {
+            // TABLE_CAT
+            Assert.assertEquals("TABLE_CAT", meta.getColumnLabel(1));
+            Assert.assertEquals(db_name, columns.getString(1));
+            Assert.assertEquals(db_name, columns.getString("TABLE_CAT"));
+            // TABLE_NAME
+            Assert.assertEquals("TABLE_NAME", meta.getColumnLabel(3));
+            Assert.assertEquals("Bigdn1", columns.getString(3));
+            Assert.assertEquals("Bigdn1", columns.getString("TABLE_NAME"));
+            // COLUMN_NAME
+            Assert.assertEquals("COLUMN_NAME", meta.getColumnLabel(4));
+            Assert.assertEquals("ts", columns.getString(4));
+            Assert.assertEquals("ts", columns.getString("COLUMN_NAME"));
+            // DATA_TYPE
+            Assert.assertEquals("DATA_TYPE", meta.getColumnLabel(5));
+            Assert.assertEquals(Types.TIMESTAMP, columns.getInt(5));
+            Assert.assertEquals(Types.TIMESTAMP, columns.getInt("DATA_TYPE"));
+            // TYPE_NAME
+            Assert.assertEquals("TYPE_NAME", meta.getColumnLabel(6));
+            Assert.assertEquals("TIMESTAMP", columns.getString(6));
+            Assert.assertEquals("TIMESTAMP", columns.getString("TYPE_NAME"));
+            // COLUMN_SIZE
+            Assert.assertEquals("COLUMN_SIZE", meta.getColumnLabel(7));
+            Assert.assertEquals(26, columns.getInt(7));
+            Assert.assertEquals(26, columns.getInt("COLUMN_SIZE"));
+            // DECIMAL_DIGITS
+            Assert.assertEquals("DECIMAL_DIGITS", meta.getColumnLabel(9));
+            Assert.assertEquals(0, columns.getInt(9));
+            Assert.assertEquals(0, columns.getInt("DECIMAL_DIGITS"));
+            Assert.assertEquals(null, columns.getString(9));
+            Assert.assertEquals(null, columns.getString("DECIMAL_DIGITS"));
+            // NUM_PREC_RADIX
+            Assert.assertEquals("NUM_PREC_RADIX", meta.getColumnLabel(10));
+            Assert.assertEquals(10, columns.getInt(10));
+            Assert.assertEquals(10, columns.getInt("NUM_PREC_RADIX"));
+            // NULLABLE
+            Assert.assertEquals("NULLABLE", meta.getColumnLabel(11));
+            Assert.assertEquals(DatabaseMetaData.columnNoNulls, columns.getInt(11));
+            Assert.assertEquals(DatabaseMetaData.columnNoNulls, columns.getInt("NULLABLE"));
+            // REMARKS
+            Assert.assertEquals("REMARKS", meta.getColumnLabel(12));
+            Assert.assertEquals(null, columns.getString(12));
+            Assert.assertEquals(null, columns.getString("REMARKS"));
+        }
+        columns.next();
+        // column: 2
+        {
+            // TABLE_CAT
+            Assert.assertEquals("TABLE_CAT", meta.getColumnLabel(1));
+            Assert.assertEquals(db_name, columns.getString(1));
+            Assert.assertEquals(db_name, columns.getString("TABLE_CAT"));
+            // TABLE_NAME
+            Assert.assertEquals("TABLE_NAME", meta.getColumnLabel(3));
+            Assert.assertEquals("Bigdn1", columns.getString(3));
+            Assert.assertEquals("Bigdn1", columns.getString("TABLE_NAME"));
+            // COLUMN_NAME
+            Assert.assertEquals("COLUMN_NAME", meta.getColumnLabel(4));
+            Assert.assertEquals("cpu_taosd", columns.getString(4));
+            Assert.assertEquals("cpu_taosd", columns.getString("COLUMN_NAME"));
+            // DATA_TYPE
+            Assert.assertEquals("DATA_TYPE", meta.getColumnLabel(5));
+            Assert.assertEquals(Types.FLOAT, columns.getInt(5));
+            Assert.assertEquals(Types.FLOAT, columns.getInt("DATA_TYPE"));
+            // TYPE_NAME
+            Assert.assertEquals("TYPE_NAME", meta.getColumnLabel(6));
+            Assert.assertEquals("FLOAT", columns.getString(6));
+            Assert.assertEquals("FLOAT", columns.getString("TYPE_NAME"));
+            // COLUMN_SIZE
+            Assert.assertEquals("COLUMN_SIZE", meta.getColumnLabel(7));
+            Assert.assertEquals(12, columns.getInt(7));
+            Assert.assertEquals(12, columns.getInt("COLUMN_SIZE"));
+            // DECIMAL_DIGITS
+            Assert.assertEquals("DECIMAL_DIGITS", meta.getColumnLabel(9));
+            Assert.assertEquals(5, columns.getInt(9));
+            Assert.assertEquals(5, columns.getInt("DECIMAL_DIGITS"));
+            // NUM_PREC_RADIX
+            Assert.assertEquals("NUM_PREC_RADIX", meta.getColumnLabel(10));
+            Assert.assertEquals(10, columns.getInt(10));
+            Assert.assertEquals(10, columns.getInt("NUM_PREC_RADIX"));
+            // NULLABLE
+            Assert.assertEquals("NULLABLE", meta.getColumnLabel(11));
+            Assert.assertEquals(DatabaseMetaData.columnNullable, columns.getInt(11));
+            Assert.assertEquals(DatabaseMetaData.columnNullable, columns.getInt("NULLABLE"));
+            // REMARKS
+            Assert.assertEquals("REMARKS", meta.getColumnLabel(12));
+            Assert.assertEquals(null, columns.getString(12));
+        }
+    }
     @Test
     public void getColumnPrivileges() throws SQLException {
         Assert.assertNotNull(metaData.getColumnPrivileges("", "", "", ""));
@@ -827,6 +922,39 @@ public class TSDBDatabaseMetaDataTest {
             Assert.assertEquals("TABLE_NAME", meta.getColumnLabel(3));
             Assert.assertEquals("dn1", rs.getString(3));
             Assert.assertEquals("dn1", rs.getString("TABLE_NAME"));
+            // COLUMN_NAME
+            Assert.assertEquals("COLUMN_NAME", meta.getColumnLabel(4));
+            Assert.assertEquals("ts", rs.getString(4));
+            Assert.assertEquals("ts", rs.getString("COLUMN_NAME"));
+            // KEY_SEQ
+            Assert.assertEquals("KEY_SEQ", meta.getColumnLabel(5));
+            Assert.assertEquals(1, rs.getShort(5));
+            Assert.assertEquals(1, rs.getShort("KEY_SEQ"));
+            // DATA_TYPE
+            Assert.assertEquals("PK_NAME", meta.getColumnLabel(6));
+            Assert.assertEquals("ts", rs.getString(6));
+            Assert.assertEquals("ts", rs.getString("PK_NAME"));
+        }
+    }
+
+    @Test
+    public void getPrimaryKeysUpperTableName() throws SQLException {
+        ResultSet rs = metaData.getPrimaryKeys(db_name, "", "Bigdn1");
+        ResultSetMetaData meta = rs.getMetaData();
+        rs.next();
+        {
+            // TABLE_CAT
+            Assert.assertEquals("TABLE_CAT", meta.getColumnLabel(1));
+            Assert.assertEquals(db_name, rs.getString(1));
+            Assert.assertEquals(db_name, rs.getString("TABLE_CAT"));
+            // TABLE_SCHEM
+            Assert.assertEquals("TABLE_SCHEM", meta.getColumnLabel(2));
+            Assert.assertEquals(null, rs.getString(2));
+            Assert.assertEquals(null, rs.getString("TABLE_SCHEM"));
+            // TABLE_NAME
+            Assert.assertEquals("TABLE_NAME", meta.getColumnLabel(3));
+            Assert.assertEquals("Bigdn1", rs.getString(3));
+            Assert.assertEquals("Bigdn1", rs.getString("TABLE_NAME"));
             // COLUMN_NAME
             Assert.assertEquals("COLUMN_NAME", meta.getColumnLabel(4));
             Assert.assertEquals("ts", rs.getString(4));
@@ -1098,6 +1226,7 @@ public class TSDBDatabaseMetaDataTest {
                             " band_speed float, io_read float, io_write float, req_http bigint, req_select bigint," +
                             " req_insert bigint) tags (dnodeid int, fqdn binary(128))");
             statement.executeUpdate("create table if not exists dn1 using dn tags(1, 'fqdn')");
+            statement.executeUpdate("create table if not exists `Bigdn1` using dn tags(2, 'fqdn2')");
         }
         metaData = connection.getMetaData().unwrap(TSDBDatabaseMetaData.class);
     }

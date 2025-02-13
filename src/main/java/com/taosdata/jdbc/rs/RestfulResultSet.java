@@ -1,9 +1,8 @@
 package com.taosdata.jdbc.rs;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
-import com.alibaba.fastjson.serializer.SerializerFeature;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
@@ -13,6 +12,8 @@ import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.enums.DataType;
 import com.taosdata.jdbc.enums.TimestampPrecision;
+import com.taosdata.jdbc.utils.DateTimeUtils;
+import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.Utils;
 
 import java.math.BigDecimal;
@@ -71,24 +72,23 @@ public class RestfulResultSet extends AbstractResultSet {
      *
      * @param resultJson: 包含data信息的结果集，有sql返回的结果集
      ***/
-    public RestfulResultSet(String database, Statement statement, JSONObject resultJson) throws SQLException {
+    public RestfulResultSet(String database, Statement statement, JsonNode resultJson) throws SQLException {
         this.statement = statement;
 
         // get column metadata
-        JSONArray columnMeta = resultJson.getJSONArray("column_meta");
+        JsonNode columnMeta = resultJson.get("column_meta");
         // get row data
-        JSONArray data = resultJson.getJSONArray("data");
+        JsonNode data = resultJson.get("data");
 
         // parse column_meta
         parseColumnMeta_new(columnMeta);
         this.metaData = new RestfulResultSetMetaData(database, columns);
 
-        if (data == null || data.isEmpty())
+        if (data == null || !data.isArray() || data.size() == 0)
             return;
         // parse row data
-        for (int rowIndex = 0; rowIndex < data.size(); rowIndex++) {
+        for (JsonNode jsonRow : data) {
             List<Object> row = new ArrayList<>();
-            JSONArray jsonRow = data.getJSONArray(rowIndex);
             for (int colIndex = 0; colIndex < this.metaData.getColumnCount(); colIndex++) {
                 row.add(parseColumnData(jsonRow, colIndex, columns.get(colIndex)));
             }
@@ -100,67 +100,79 @@ public class RestfulResultSet extends AbstractResultSet {
      * use this method after TDengine-2.0.18.0 to parse column meta, restful add column_meta in resultSet
      * @Param columnMeta
      */
-    private void parseColumnMeta_new(JSONArray columnMeta) {
+    private void parseColumnMeta_new(JsonNode columnMeta) {
         columnNames.clear();
         columns.clear();
         for (int colIndex = 0; colIndex < columnMeta.size(); colIndex++) {
-            JSONArray col = columnMeta.getJSONArray(colIndex);
-            String col_name = col.getString(0);
-            String typeName = col.getString(1);
+            JsonNode col = columnMeta.get(colIndex);
+            String col_name = col.get(0).asText();
+            String typeName = col.get(1).asText();
             DataType type = DataType.getDataType(typeName);
             int col_type = type.getJdbcTypeValue();
-            int col_length = col.getInteger(2);
+            int col_length = col.get(2).asInt();
             columnNames.add(col_name);
             columns.add(new Field(col_name, col_type, col_length, "", type.getTaosTypeValue()));
         }
     }
 
-    private Object parseColumnData(JSONArray row, int colIndex, Field field) throws SQLException {
+    private Object parseColumnData(JsonNode row, int colIndex, Field field) throws SQLException {
         int taosType = field.taos_type;
+        if (row.get(colIndex).isNull()){
+            return null;
+        }
+
         switch (taosType) {
             case TSDBConstants.TSDB_DATA_TYPE_NULL:
                 return null;
             case TSDBConstants.TSDB_DATA_TYPE_BOOL:
-                return row.getBoolean(colIndex);
+                return row.get(colIndex).asBoolean();
             case TSDBConstants.TSDB_DATA_TYPE_TINYINT:
-                return row.getByte(colIndex);
+                return (byte) row.get(colIndex).asInt();
             case TSDBConstants.TSDB_DATA_TYPE_SMALLINT:
-                return row.getShort(colIndex);
+                return (short) row.get(colIndex).asInt();
             case TSDBConstants.TSDB_DATA_TYPE_INT:
-                return row.getInteger(colIndex);
+                return row.get(colIndex).asInt();
             case TSDBConstants.TSDB_DATA_TYPE_BIGINT:
-                return row.getLong(colIndex);
+                return row.get(colIndex).asLong();
             case TSDBConstants.TSDB_DATA_TYPE_FLOAT:
-                return row.getFloat(colIndex);
+                return row.get(colIndex).floatValue();
             case TSDBConstants.TSDB_DATA_TYPE_DOUBLE:
-                return row.getDouble(colIndex);
+                return row.get(colIndex).doubleValue();
             case TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP:
                 return parseTimestampColumnData(row, colIndex);
             case TSDBConstants.TSDB_DATA_TYPE_BINARY:
 
                 int type = field.type;
                 if (Types.BINARY == type) {
-                    return row.getString(colIndex) == null ? null : row.getString(colIndex).getBytes();
-                }else {
-                    return row.getString(colIndex) == null ? null : row.getString(colIndex);
+                    return row.get(colIndex).isNull() ? null : row.get(colIndex).asText().getBytes();
+                } else {
+                    return row.get(colIndex).isNull() ? null : row.get(colIndex).asText();
                 }
             case TSDBConstants.TSDB_DATA_TYPE_NCHAR:
-                return row.getString(colIndex) == null ? null : row.getString(colIndex);
+                return row.get(colIndex).isNull() ? null : row.get(colIndex).asText();
             case TSDBConstants.TSDB_DATA_TYPE_JSON:
-                //  all json tag or just a json tag value
-                return row.get(colIndex) != null && (row.get(colIndex) instanceof String || row.get(colIndex) instanceof JSONObject)
-                        ? JSON.toJSONString(row.get(colIndex), SerializerFeature.WriteMapNullValue)
-                        : row.get(colIndex);
+                // all json tag or just a json tag value
+                ObjectWriter objectWriter = JsonUtil.getObjectWriter(JsonNode.class);
+                JsonNode jsonNode = row.get(colIndex);
+                if (jsonNode != null && !jsonNode.isNull() && (jsonNode.isTextual() || jsonNode.isObject())) {
+                    try{
+                        return objectWriter.writeValueAsString(jsonNode);
+                    } catch (JsonProcessingException e) {
+                        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, e.getMessage());
+                    }
+                } else {
+                    return jsonNode;
+                }
             default:
                 return row.get(colIndex);
         }
     }
 
-    public Timestamp parseTimestampColumnData(JSONArray row, int colIndex) throws SQLException {
-        if (row.get(colIndex) == null)
+    public Timestamp parseTimestampColumnData(JsonNode row, int colIndex) throws SQLException {
+        if (row.get(colIndex).isNull())
             return null;
 
-        String value = row.getString(colIndex);
+        String value = row.get(colIndex).asText();
         int index = value.lastIndexOf(":");
         // ns timestamp: yyyy-MM-ddTHH:mm:ss.SSSSSSSSS+0x:00
         if (index > 19) {
@@ -202,6 +214,7 @@ public class RestfulResultSet extends AbstractResultSet {
         public int getTaosType() {
             return taos_type;
         }
+        public String getName() {return name;}
     }
 
     @Override
@@ -253,6 +266,7 @@ public class RestfulResultSet extends AbstractResultSet {
         wasNull = value == null;
         if (value == null)
             return 0;
+
         long valueAsLong = Long.parseLong(value.toString());
         if (valueAsLong < Byte.MIN_VALUE || valueAsLong > Byte.MAX_VALUE)
             throwRangeException(value.toString(), columnIndex, Types.TINYINT);
@@ -313,6 +327,7 @@ public class RestfulResultSet extends AbstractResultSet {
                     return ts.getTime() * 1000_000 + ts.getNanos() % 1000_000;
             }
         }
+
         long valueAsLong = 0;
         try {
             valueAsLong = Long.parseLong(value.toString());
@@ -334,6 +349,8 @@ public class RestfulResultSet extends AbstractResultSet {
             return (float) value;
         if (value instanceof Double)
             return new Float((Double) value);
+        if (value instanceof JsonNode)
+            return ((JsonNode) value).floatValue();
         return Float.parseFloat(value.toString());
     }
 
@@ -350,6 +367,8 @@ public class RestfulResultSet extends AbstractResultSet {
             return (double) value;
         if (value instanceof Float)
             return (float) value;
+        if (value instanceof JsonNode)
+            return ((JsonNode) value).doubleValue();
         return Double.parseDouble(value.toString());
     }
 
@@ -387,7 +406,7 @@ public class RestfulResultSet extends AbstractResultSet {
             return null;
         if (value instanceof Timestamp)
             return new Date(((Timestamp) value).getTime());
-        return Utils.parseDate(value.toString());
+        return DateTimeUtils.parseDate(value.toString(), null);
     }
 
     @Override
@@ -402,7 +421,7 @@ public class RestfulResultSet extends AbstractResultSet {
             return new Time(((Timestamp) value).getTime());
         Time time = null;
         try {
-            time = Utils.parseTime(value.toString());
+            time = DateTimeUtils.parseTime(value.toString(), null);
         } catch (DateTimeParseException ignored) {
         }
         return time;
@@ -427,7 +446,7 @@ public class RestfulResultSet extends AbstractResultSet {
         }
         Timestamp ret;
         try {
-            ret = Utils.parseTimestamp(value.toString());
+            ret = DateTimeUtils.parseTimestamp(value.toString(), null);
         } catch (Exception e) {
             ret = null;
             wasNull = true;

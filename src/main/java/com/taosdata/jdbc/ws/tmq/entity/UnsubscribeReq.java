@@ -1,10 +1,10 @@
 package com.taosdata.jdbc.ws.tmq.entity;
 
-import com.alibaba.fastjson.annotation.JSONField;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.taosdata.jdbc.ws.entity.Payload;
 
 public class UnsubscribeReq extends Payload {
-    @JSONField(name = "req_id")
+    @JsonProperty("req_id")
     private long reqId;
 
     @Override

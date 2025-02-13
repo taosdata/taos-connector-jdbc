@@ -1,10 +1,12 @@
 package com.taosdata.jdbc.ws;
 
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.taosdata.jdbc.SchemalessWriter;
+import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
+import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -59,8 +61,85 @@ public class SchemalessTest {
         Assert.assertEquals(lines.length, rowCnt);
         rs.close();
         statement.close();
+        writer.close();
+    }
+    @Test
+    public void testLine2() throws SQLException {
+        // given
+        String[] lines = new String[]{
+                "st,t1=3i64,t2=4f64,t3=\"t3\" c1=3i64,c3=L\"passit\",c2=false,c4=4f64 1626006833639000000",
+                "st,t1=4i64,t3=\"t4\",t2=5f64,t4=5f64 c1=3i64,c3=L\"passitagin\",c2=true,c4=5f64,c5=5f64 1626006833640000000"};
+
+        // when
+        SchemalessWriter writer = new SchemalessWriter(connection, dbName);
+        writer.write(lines, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS, 10000, 100L);
+
+        // then
+        Statement statement = connection.createStatement();
+        statement.executeUpdate("use " + dbName);
+        ResultSet rs = statement.executeQuery("show tables");
+        Assert.assertNotNull(rs);
+        ResultSetMetaData metaData = rs.getMetaData();
+        Assert.assertTrue(metaData.getColumnCount() > 0);
+        int rowCnt = 0;
+        while (rs.next()) {
+            rowCnt++;
+        }
+        Assert.assertEquals(lines.length, rowCnt);
+        rs.close();
+        statement.close();
+        writer.close();
     }
 
+    @Test
+    @Description("line insert")
+    public void testWriteRaw() throws SQLException {
+        // given
+        String line = "st,t1=3i64,t2=4f64,t3=\"t3\" c1=3i64,c3=L\"passit\",c2=false,c4=4f64 1626006833639000000";
+
+        SchemalessWriter writer = new SchemalessWriter(connection, dbName);
+        writer.writeRaw(line, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS);
+
+        // then
+        Statement statement = connection.createStatement();
+        statement.executeUpdate("use " + dbName);
+        ResultSet rs = statement.executeQuery("show tables");
+        Assert.assertNotNull(rs);
+        ResultSetMetaData metaData = rs.getMetaData();
+        Assert.assertTrue(metaData.getColumnCount() > 0);
+        int rowCnt = 0;
+        while (rs.next()) {
+            rowCnt++;
+        }
+        Assert.assertEquals(1, rowCnt);
+        rs.close();
+        statement.close();
+        writer.close();
+    }
+    @Test
+    public void testWriteRaw2() throws SQLException {
+        // given
+        String line = "st,t1=3i64,t2=4f64,t3=\"t3\" c1=3i64,c3=L\"passit\",c2=false,c4=4f64 1626006833639000000";
+        // when
+        SchemalessWriter writer = new SchemalessWriter(connection, dbName);
+        writer.writeRaw(line, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS, 10000, 100L);
+
+        // then
+        Statement statement = connection.createStatement();
+        statement.executeUpdate("use " + dbName);
+        ResultSet rs = statement.executeQuery("show tables");
+        Assert.assertNotNull(rs);
+        ResultSetMetaData metaData = rs.getMetaData();
+        Assert.assertTrue(metaData.getColumnCount() > 0);
+        int rowCnt = 0;
+        while (rs.next()) {
+            rowCnt++;
+        }
+        Assert.assertEquals(1, rowCnt);
+        rs.close();
+        statement.close();
+        writer.close();
+    }
     @Test
     public void testLineTtl() throws SQLException {
         // given
@@ -70,6 +149,7 @@ public class SchemalessTest {
 
         // when
         writer.write(lines, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS, dbName_ttl, 1000, 1L);
+        writer.close();
     }
 
 
@@ -100,10 +180,11 @@ public class SchemalessTest {
         Assert.assertEquals(lines.length, rowCnt);
         rs.close();
         statement.close();
+        writer.close();
     }
 
     @Test
-    public void jsonInsert() throws SQLException {
+    public void jsonInsert() throws SQLException, JsonProcessingException {
         // given
         String json = "[\n" +
                 "  {\n" +
@@ -143,9 +224,11 @@ public class SchemalessTest {
             rowCnt++;
         }
 
-        Assert.assertEquals(((JSONArray) JSONObject.parse(json)).size(), rowCnt);
+        JsonNode jsonArray = JsonUtil.getObjectReader().readTree(json);
+        Assert.assertEquals(jsonArray.size(), rowCnt);
         rs.close();
         statement.close();
+        writer.close();
     }
 
     @Test
@@ -173,6 +256,7 @@ public class SchemalessTest {
         Assert.assertEquals(list.size(), rowCnt);
         rs.close();
         statement.close();
+        writer.close();
     }
 
     @AfterClass

@@ -1,26 +1,30 @@
 package com.taosdata.jdbc.ws.tmq.entity;
 
-import com.alibaba.fastjson.annotation.JSONField;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.taosdata.jdbc.ws.entity.Payload;
 
 public class SubscribeReq extends Payload {
     private String user;
     private String password;
     private String db;
-    @JSONField(name = "group_id")
+    @JsonProperty("group_id")
     private String groupId;
-    @JSONField(name = "client_id")
+    @JsonProperty("client_id")
     private String clientId;
-    @JSONField(name = "offset_rest")
+    @JsonProperty("offset_rest")
     private String offsetRest;
     private String[] topics;
 
-    @JSONField(name = "auto_commit")
+    @JsonProperty("auto_commit")
     private String autoCommit;
-    @JSONField(name = "auto_commit_interval_ms")
+    @JsonProperty("auto_commit_interval_ms")
     private String autoCommitIntervalMs;
-    @JSONField(name = "with_table_name")
+    @JsonProperty("with_table_name")
     private String withTableName;
+
+    private String tz;
+    private String app;
+    private String ip;
 
     public String getUser() {
         return user;
@@ -101,4 +105,29 @@ public class SubscribeReq extends Payload {
     public void setWithTableName(String withTableName) {
         this.withTableName = withTableName;
     }
+
+    public String getTz() {
+        return tz;
+    }
+
+    public void setTz(String tz) {
+        this.tz = tz;
+    }
+
+    public String getApp() {
+        return app;
+    }
+
+    public void setApp(String app) {
+        this.app = app;
+    }
+
+    public String getIp() {
+        return ip;
+    }
+
+    public void setIp(String ip) {
+        this.ip = ip;
+    }
+
 }

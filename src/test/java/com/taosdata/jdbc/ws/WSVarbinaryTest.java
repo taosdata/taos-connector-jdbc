@@ -32,7 +32,6 @@ public class WSVarbinaryTest {
 
 
     @Test
-    @Ignore
     public void testPrepare() throws SQLException {
         TSWSPreparedStatement preparedStatement = (TSWSPreparedStatement) connection.prepareStatement("insert into " + dbName + "." + tableStmt + " values (?, ?)");
         preparedStatement.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
@@ -47,7 +46,6 @@ public class WSVarbinaryTest {
     }
 
     @Test
-    @Ignore
     public void testPrepareOld() throws SQLException {
         TSWSPreparedStatement preparedStatement = (TSWSPreparedStatement) connection.prepareStatement("insert into " + dbName + "." + tableStmt + " values (?, ?)");
 
@@ -58,7 +56,7 @@ public class WSVarbinaryTest {
 
         ArrayList<byte[]> list1 = new ArrayList<>();
         list1.add(expectedArray);
-        preparedStatement.setVarbinary(2, list1, 20);
+        preparedStatement.setVarbinary(1, list1, 20);
 
         preparedStatement.columnDataAddBatch();
         preparedStatement.columnDataExecuteBatch();

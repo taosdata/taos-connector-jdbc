@@ -1,17 +1,3 @@
-/***************************************************************************
- * Copyright (c) 2019 TAOS Data, Inc. <jhtao@taosdata.com>
- *
- * This program is free software: you can use, redistribute, and/or modify
- * it under the terms of the GNU Affero General Public License, version 3
- * or later ("AGPL"), as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
 package com.taosdata.jdbc;
 
 import java.sql.SQLException;
@@ -40,6 +26,9 @@ public abstract class TSDBConstants {
     public static final int TMQ_CONSUMER_NULL = -120;
     public static final int TMQ_CONSUMER_CREATE_ERROR = -121;
 
+    // TSDB Error Code
+    public static final int  TIMESTAMP_DATA_OUT_OF_RANGE  = 0x60b;
+
     // TSDB Data Types
     public static final int TSDB_DATA_TYPE_NULL = 0;
     public static final int TSDB_DATA_TYPE_BOOL = 1;
@@ -55,10 +44,10 @@ public abstract class TSDBConstants {
     public static final int TSDB_DATA_TYPE_NCHAR = 10;
     /**
      * 系统增加新的无符号数据类型，分别是：
-     * unsigned tinyint， 数值范围：0-254, NULL 为255
-     * unsigned smallint，数值范围： 0-65534， NULL 为65535
-     * unsigned int，数值范围：0-4294967294，NULL 为4294967295u
-     * unsigned bigint，数值范围：0-18446744073709551614u，NULL 为18446744073709551615u。
+     * unsigned tinyint， 数值范围：0-255
+     * unsigned smallint，数值范围： 0-65535
+     * unsigned int，数值范围：0-4294967295
+     * unsigned bigint，数值范围：0-18446744073709551615u。
      * example:
      * create table tb(ts timestamp, a tinyint unsigned, b smallint unsigned, c int unsigned, d bigint unsigned);
      */
@@ -75,10 +64,15 @@ public abstract class TSDBConstants {
 
     // precision for data types, this is used for metadata
     public static final int BOOLEAN_PRECISION = 1;
-    public static final int TINYINT_PRECISION = 4;
-    public static final int SMALLINT_PRECISION = 6;
-    public static final int INT_PRECISION = 11;
-    public static final int BIGINT_PRECISION = 20;
+    public static final int TINYINT_PRECISION = 3;
+    public static final int UNSIGNED_TINYINT_PRECISION = 3;
+    public static final int SMALLINT_PRECISION = 5;
+    public static final int UNSIGNED_SMALLINT_PRECISION = 5;
+
+    public static final int INT_PRECISION = 10;
+    public static final int UNSIGNED_INT_PRECISION = 10;
+    public static final int BIGINT_PRECISION = 19;
+    public static final int UNSIGNED_BIGINT_PRECISION = 20;
     public static final int FLOAT_PRECISION = 12;
     public static final int DOUBLE_PRECISION = 22;
     public static final int TIMESTAMP_MS_PRECISION = 23;
@@ -90,6 +84,12 @@ public abstract class TSDBConstants {
     public static final String DEFAULT_PRECISION = "ms";
 
     public static final boolean DEFAULT_BATCH_ERROR_IGNORE = false;
+
+
+    public static final short MAX_UNSIGNED_BYTE = 255;
+    public static final int MAX_UNSIGNED_SHORT = 65535;
+    public static final long MAX_UNSIGNED_INT = 4294967295L;
+    public static final String MAX_UNSIGNED_LONG = "18446744073709551615";
 
     public static String jdbcType2TaosTypeName(int jdbcType) throws SQLException {
         switch (jdbcType) {

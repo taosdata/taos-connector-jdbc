@@ -1,32 +1,17 @@
-/***************************************************************************
- * Copyright (c) 2019 TAOS Data, Inc. <jhtao@taosdata.com>
- *
- * This program is free software: you can use, redistribute, and/or modify
- * it under the terms of the GNU Affero General Public License, version 3
- * or later ("AGPL"), as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *****************************************************************************/
 package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.enums.DataType;
+import com.taosdata.jdbc.utils.DataTypeUtil;
 
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.sql.Timestamp;
-import java.sql.Types;
 import java.util.List;
 
 public class TSDBResultSetMetaData extends WrapperImpl implements ResultSetMetaData {
 
     private String tableName = "";
     private String database = "";
-    List<ColumnMetaData> colMetaDataList;
+    private List<ColumnMetaData> colMetaDataList;
 
     public TSDBResultSetMetaData(List<ColumnMetaData> metaDataList) {
         this.colMetaDataList = metaDataList;
@@ -137,15 +122,7 @@ public class TSDBResultSetMetaData extends WrapperImpl implements ResultSetMetaD
         if (column < 1 && column >= colMetaDataList.size())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_PARAMETER_INDEX_OUT_RANGE);
 
-        ColumnMetaData meta = this.colMetaDataList.get(column - 1);
-        switch (meta.getColType()) {
-            case TSDBConstants.TSDB_DATA_TYPE_FLOAT:
-                return 5;
-            case TSDBConstants.TSDB_DATA_TYPE_DOUBLE:
-                return 9;
-            default:
-                return 0;
-        }
+        return 0;
     }
 
     public String getTableName(int column) throws SQLException {

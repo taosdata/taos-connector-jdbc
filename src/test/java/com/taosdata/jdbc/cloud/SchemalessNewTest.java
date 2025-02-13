@@ -14,13 +14,12 @@ import java.sql.*;
 
 public class SchemalessNewTest {
     String url = null;
-    public static SchemalessWriter writer;
     public static Connection connection;
     String dbName = "javatest";
 
     @Before
     public void before() throws SQLException {
-        String url = System.getenv("TDENGINE_CLOUD_URL");
+        url = System.getenv("TDENGINE_CLOUD_URL");
         if (url == null || "".equals(url.trim())) {
             System.out.println("Environment variable for CloudTest not set properly");
             return;

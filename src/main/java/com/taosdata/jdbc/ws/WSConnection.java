@@ -9,8 +9,9 @@ import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.rs.RestfulDatabaseMetaData;
 import com.taosdata.jdbc.utils.ReqId;
+import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.entity.*;
-import com.taosdata.jdbc.ws.schemaless.CommonResp;
+import com.taosdata.jdbc.ws.entity.CommonResp;
 import com.taosdata.jdbc.ws.schemaless.InsertReq;
 import com.taosdata.jdbc.ws.schemaless.SchemalessAction;
 
@@ -18,16 +19,18 @@ import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class WSConnection extends AbstractConnection {
+
+    public static boolean g_FirstConnection = true;
     private final Transport transport;
     private final DatabaseMetaData metaData;
     private String database;
     private final ConnectionParam param;
-    CopyOnWriteArrayList<Statement> statementList = new CopyOnWriteArrayList<>();
     private final AtomicLong insertId = new AtomicLong(0);
 
     public WSConnection(String url, Properties properties, Transport transport, ConnectionParam param) {
@@ -45,9 +48,9 @@ public class WSConnection extends AbstractConnection {
 
         if (this.getClientInfo(TSDBDriver.PROPERTY_KEY_DBNAME) != null)
             database = this.getClientInfo(TSDBDriver.PROPERTY_KEY_DBNAME);
-        WSStatement statement = new WSStatement(transport, database, this);
+        WSStatement statement = new WSStatement(transport, database, this, idGenerator.getAndIncrement(), param.getZoneId());
 
-        statementList.add(statement);
+        statementsMap.put(statement.getInstanceId(), statement);
         return statement;
     }
 
@@ -60,7 +63,13 @@ public class WSConnection extends AbstractConnection {
             database = this.getClientInfo(TSDBDriver.PROPERTY_KEY_DBNAME);
 
         if (transport != null && !transport.isClosed()) {
-            return new TSWSPreparedStatement(transport, param, database, this, sql);
+            return new TSWSPreparedStatement(transport,
+                    param,
+                    database,
+                    this,
+                    sql,
+                    idGenerator.getAndIncrement(),
+                    param.getZoneId());
         } else {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
         }
@@ -68,9 +77,11 @@ public class WSConnection extends AbstractConnection {
 
     @Override
     public void close() throws SQLException {
-        for (Statement statement : statementList) {
-            statement.close();
+        for (Map.Entry<Long, Statement> entry : statementsMap.entrySet()) {
+            Statement value = entry.getValue();
+            value.close();
         }
+        statementsMap.clear();
         transport.close();
     }
 
@@ -90,16 +101,7 @@ public class WSConnection extends AbstractConnection {
     public static void reInitTransport(Transport transport, ConnectionParam param, String db) throws SQLException {
         transport.disconnectAndReconnect();
 
-        ConnectReq connectReq = new ConnectReq();
-        connectReq.setReqId(ReqId.getReqID());
-        connectReq.setUser(param.getUser());
-        connectReq.setPassword(param.getPassword());
-        connectReq.setDb(db);
-        // 目前仅支持bi模式，下游接口值为0，此处做转换
-        if(param.getConnectMode() == ConnectionParam.CONNECT_MODE_BI){
-            connectReq.setMode(0);
-        }
-
+        ConnectReq connectReq = new ConnectReq(param);
         ConnectResp auth = (ConnectResp) transport.send(new Request(Action.CONN.getAction(), connectReq));
 
         if (Code.SUCCESS.getCode() != auth.getCode()) {

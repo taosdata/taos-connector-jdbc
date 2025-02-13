@@ -1,35 +1,41 @@
 package com.taosdata.jdbc.ws.tmq;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.common.Consumer;
 import com.taosdata.jdbc.enums.TmqMessageType;
 import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.tmq.*;
+import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.ws.FutureResponse;
 import com.taosdata.jdbc.ws.InFlightRequest;
 import com.taosdata.jdbc.ws.Transport;
+import com.taosdata.jdbc.ws.entity.Action;
 import com.taosdata.jdbc.ws.entity.Code;
-import com.taosdata.jdbc.ws.entity.FetchBlockResp;
 import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.entity.Response;
 import com.taosdata.jdbc.ws.tmq.entity.*;
+import org.slf4j.LoggerFactory;
 
 import java.nio.ByteOrder;
 import java.sql.SQLException;
 import java.time.Duration;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class WSConsumer<V> implements Consumer<V> {
+    private final org.slf4j.Logger log = LoggerFactory.getLogger(WSConsumer.class);
     private Transport transport;
     private ConsumerParam param;
     private TMQRequestFactory factory;
     private long lastCommitTime = 0;
     private long messageId = 0L;
 
+    private Collection<String> topics;
     @Override
     public void create(Properties properties) throws SQLException {
         factory = new TMQRequestFactory();
@@ -39,47 +45,47 @@ public class WSConsumer<V> implements Consumer<V> {
         transport = new Transport(WSFunction.TMQ, param.getConnectionParam(), inFlightRequest);
 
         transport.setTextMessageHandler(message -> {
-            JSONObject jsonObject = JSON.parseObject(message);
-            ConsumerAction action = ConsumerAction.of(jsonObject.getString("action"));
-            Response response = jsonObject.toJavaObject(action.getResponseClazz());
-            FutureResponse remove = inFlightRequest.remove(response.getAction(), response.getReqId());
-            if (null != remove) {
-                remove.getFuture().complete(response);
+            try {
+                JsonNode jsonObject = JsonUtil.getObjectReader().readTree(message);
+                ConsumerAction action = ConsumerAction.of(jsonObject.get("action").asText());
+                ObjectReader actionReader = JsonUtil.getObjectReader(action.getResponseClazz());
+                Response response = actionReader.treeToValue(jsonObject, action.getResponseClazz());
+                FutureResponse remove = inFlightRequest.remove(response.getAction(), response.getReqId());
+                if (null != remove) {
+                    remove.getFuture().complete(response);
+                }
+            } catch (JsonProcessingException e) {
+                log.error("Error processing message", e);
             }
         });
         transport.setBinaryMessageHandler(byteBuffer -> {
             byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
-            byteBuffer.position(8);
+            byteBuffer.position(26);
             // request_id
             long id = byteBuffer.getLong();
-            byteBuffer.position(24);
-            FutureResponse remove = inFlightRequest.remove(ConsumerAction.FETCH_BLOCK.getAction(), id);
+            byteBuffer.position(8);
+            FutureResponse remove = inFlightRequest.remove(ConsumerAction.FETCH_RAW_DATA.getAction(), id);
             if (null != remove) {
-                FetchBlockResp fetchBlockResp = new FetchBlockResp(id, byteBuffer);
+                FetchRawBlockResp fetchBlockResp = new FetchRawBlockResp(byteBuffer);
                 remove.getFuture().complete(fetchBlockResp);
             }
         });
 
-        Transport.checkConnection(transport, param.getConnectionParam().getConnectTimeout());
+        transport.checkConnection(param.getConnectionParam().getConnectTimeout());
     }
 
     @Override
     public void subscribe(Collection<String> topics) throws SQLException {
-        Request request = factory.generateSubscribe(param.getConnectionParam().getUser()
-                , param.getConnectionParam().getPassword()
-                , param.getConnectionParam().getDatabase()
-                , param.getGroupId()
-                , param.getClientId()
-                , param.getOffsetRest()
+        Request request = factory.generateSubscribe(param
                 , topics.toArray(new String[0])
                 , String.valueOf(false)
-                , param.getMsgWithTableName()
         );
         SubscribeResp response = (SubscribeResp) transport.send(request);
         if (Code.SUCCESS.getCode() != response.getCode()) {
             throw new SQLException("subscribe topic error, code: (0x" + Integer.toHexString(response.getCode())
                     + "), message: " + response.getMessage());
         }
+        this.topics = topics;
     }
 
     @Override
@@ -103,8 +109,17 @@ public class WSConsumer<V> implements Consumer<V> {
         return Arrays.stream(response.getTopics()).collect(Collectors.toSet());
     }
 
-    @Override
-    public ConsumerRecords<V> poll(Duration timeout, Deserializer<V> deserializer) throws SQLException {
+    private boolean handleReconnect() throws SQLException {
+        if (transport.doReconnectCurNode()){
+            subscribe(this.topics);
+            return true;
+        } else {
+            transport.close();
+            return false;
+        }
+    }
+
+    private ConsumerRecords<V> doPoll(Duration timeout, Deserializer<V> deserializer) throws SQLException{
         if (param.isAutoCommit() && (0 != messageId)) {
             long now = System.currentTimeMillis();
             if (now - lastCommitTime > param.getAutoCommitInterval()) {
@@ -115,11 +130,11 @@ public class WSConsumer<V> implements Consumer<V> {
 
         Request request = factory.generatePoll(timeout.toMillis());
         PollResp pollResp = (PollResp) transport.send(request);
+
         if (Code.SUCCESS.getCode() != pollResp.getCode()) {
             throw new SQLException("consumer poll error, code: (0x" + Integer.toHexString(pollResp.getCode()) + "), message: " + pollResp.getMessage());
         }
         if (!pollResp.isHaveMessage()) {
-
             return ConsumerRecords.emptyRecord();
         }
 
@@ -128,6 +143,8 @@ public class WSConsumer<V> implements Consumer<V> {
             return ConsumerRecords.emptyRecord();
         }
         messageId = pollResp.getMessageId();
+
+
         ConsumerRecords<V> records = new ConsumerRecords<>();
         try (WSConsumerResultSet rs = new WSConsumerResultSet(transport, factory, pollResp.getMessageId(), pollResp.getDatabase())) {
             while (rs.next()) {
@@ -142,6 +159,32 @@ public class WSConsumer<V> implements Consumer<V> {
             }
         }
         return records;
+    }
+
+    @Override
+    public ConsumerRecords<V> poll(Duration timeout, Deserializer<V> deserializer) throws SQLException {
+
+        try {
+            return doPoll(timeout, deserializer);
+        } catch (SQLException e) {
+            if ((e.getErrorCode() == TSDBErrorNumbers.ERROR_CONNECTION_CLOSED
+                    && !transport.isClosed()
+                    && this.param.getConnectionParam().isEnableAutoConnect()
+                    && handleReconnect())) {
+                // when reconnect success, skip once auto commit for the message id is invalid
+                messageId = 0;
+                return ConsumerRecords.emptyRecord();
+            }
+            // time out due to connection lost
+            if (e.getErrorCode() == TSDBErrorNumbers.ERROR_QUERY_TIMEOUT
+                    && !transport.isClosed()
+                    && transport.isConnectionLost()
+                    && handleReconnect()) {
+                messageId = 0;
+                return ConsumerRecords.emptyRecord();
+            }
+            throw e;
+        }
     }
 
     @Override
