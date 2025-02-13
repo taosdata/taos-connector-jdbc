@@ -159,8 +159,7 @@ public class RestfulResultSetMetaData extends WrapperImpl implements ResultSetMe
 
     @Override
     public String getColumnClassName(int column) throws SQLException {
-        int type = this.fields.get(column - 1).type;
-        return DataTypeUtil.getColumnClassName(type);
+        int taosType = fields.get(column - 1).taos_type;
+        return DataType.convertTaosType2DataType(taosType).getClassName();
     }
-
 }

@@ -156,7 +156,7 @@ public class TSDBResultSetMetaData extends WrapperImpl implements ResultSetMetaD
     }
 
     public String getColumnClassName(int column) throws SQLException {
-        int columnType = getColumnType(column);
-        return DataTypeUtil.getColumnClassName(columnType);
+        ColumnMetaData meta = this.colMetaDataList.get(column - 1);
+        return DataType.convertTaosType2DataType(meta.getColType()).getClassName();
     }
 }

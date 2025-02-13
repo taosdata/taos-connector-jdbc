@@ -4,44 +4,47 @@ import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.utils.StringUtils;
 
+import java.math.BigInteger;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.sql.Types;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
 
 public enum DataType {
-    NULL("NULL", Types.NULL, TSDB_DATA_TYPE_NULL, 0),
-    BOOL("BOOL", Types.BOOLEAN, TSDB_DATA_TYPE_BOOL, BOOLEAN_PRECISION),
-
-    TINYINT("TINYINT", Types.TINYINT, TSDB_DATA_TYPE_TINYINT, TINYINT_PRECISION),
-    UTINYINT("TINYINT UNSIGNED", Types.SMALLINT, TSDB_DATA_TYPE_UTINYINT, UNSIGNED_TINYINT_PRECISION),
-    USMALLINT("SMALLINT UNSIGNED", Types.INTEGER, TSDB_DATA_TYPE_USMALLINT, UNSIGNED_SMALLINT_PRECISION),
-    SMALLINT("SMALLINT", Types.SMALLINT, TSDB_DATA_TYPE_SMALLINT, SMALLINT_PRECISION),
-    UINT("INT UNSIGNED", Types.BIGINT, TSDB_DATA_TYPE_UINT, UNSIGNED_INT_PRECISION),
-    INT("INT", Types.INTEGER, TSDB_DATA_TYPE_INT, INT_PRECISION),
-    UBIGINT("BIGINT UNSIGNED", Types.OTHER, TSDB_DATA_TYPE_UBIGINT, UNSIGNED_BIGINT_PRECISION),
-    BIGINT("BIGINT", Types.BIGINT, TSDB_DATA_TYPE_BIGINT, BIGINT_PRECISION),
-    FLOAT("FLOAT", Types.FLOAT, TSDB_DATA_TYPE_FLOAT, FLOAT_PRECISION),
-    DOUBLE("DOUBLE", Types.DOUBLE, TSDB_DATA_TYPE_DOUBLE, DOUBLE_PRECISION),
-    BINARY("BINARY", Types.VARCHAR, TSDB_DATA_TYPE_BINARY, 0),
-    VARCHAR("VARCHAR", Types.VARCHAR, TSDB_DATA_TYPE_VARCHAR, 0),
-    TIMESTAMP("TIMESTAMP", Types.TIMESTAMP, TSDB_DATA_TYPE_TIMESTAMP, 0),
-    NCHAR("NCHAR", Types.NCHAR, TSDB_DATA_TYPE_NCHAR, 0),
-    JSON("JSON", Types.OTHER, TSDB_DATA_TYPE_JSON, 0),
-    VARBINARY("VARBINARY", Types.VARBINARY, TSDB_DATA_TYPE_VARBINARY, 0),
-    GEOMETRY("GEOMETRY", Types.BINARY, TSDB_DATA_TYPE_GEOMETRY, 0),
+    NULL("NULL", Types.NULL, Object.class, TSDB_DATA_TYPE_NULL, 0),
+    BOOL("BOOL", Types.BOOLEAN, Boolean.class, TSDB_DATA_TYPE_BOOL, BOOLEAN_PRECISION),
+    TINYINT("TINYINT", Types.TINYINT, Byte.class, TSDB_DATA_TYPE_TINYINT, TINYINT_PRECISION),
+    UTINYINT("TINYINT UNSIGNED", Types.TINYINT, Short.class, TSDB_DATA_TYPE_UTINYINT, TINYINT_PRECISION),
+    USMALLINT("SMALLINT UNSIGNED", Types.SMALLINT, Integer.class, TSDB_DATA_TYPE_USMALLINT, SMALLINT_PRECISION),
+    SMALLINT("SMALLINT", Types.SMALLINT, Short.class, TSDB_DATA_TYPE_SMALLINT, SMALLINT_PRECISION),
+    UINT("INT UNSIGNED", Types.INTEGER, Long.class, TSDB_DATA_TYPE_UINT, INT_PRECISION),
+    INT("INT", Types.INTEGER, Integer.class, TSDB_DATA_TYPE_INT, INT_PRECISION),
+    UBIGINT("BIGINT UNSIGNED", Types.BIGINT, BigInteger.class, TSDB_DATA_TYPE_UBIGINT, BIGINT_PRECISION),
+    BIGINT("BIGINT", Types.BIGINT, Long.class, TSDB_DATA_TYPE_BIGINT, BIGINT_PRECISION),
+    FLOAT("FLOAT", Types.FLOAT, Float.class, TSDB_DATA_TYPE_FLOAT, FLOAT_PRECISION),
+    DOUBLE("DOUBLE", Types.DOUBLE, Double.class, TSDB_DATA_TYPE_DOUBLE, DOUBLE_PRECISION),
+    BINARY("BINARY", Types.VARCHAR, String.class, TSDB_DATA_TYPE_BINARY, 0),
+    VARCHAR("VARCHAR", Types.VARCHAR, String.class, TSDB_DATA_TYPE_VARCHAR, 0),
+    TIMESTAMP("TIMESTAMP", Types.TIMESTAMP, Timestamp.class, TSDB_DATA_TYPE_TIMESTAMP, 0),
+    NCHAR("NCHAR", Types.NCHAR, String.class, TSDB_DATA_TYPE_NCHAR, 0),
+    JSON("JSON", Types.OTHER, String.class, TSDB_DATA_TYPE_JSON, 0),
+    VARBINARY("VARBINARY", Types.VARBINARY, null, TSDB_DATA_TYPE_VARBINARY, 0),
+    GEOMETRY("GEOMETRY", Types.BINARY, null, TSDB_DATA_TYPE_GEOMETRY, 0),
     ;
 
     private final String typeName;
     private final int jdbcTypeValue;
+    private final Class<?> javaClass;
     private final int taosTypeValue;
     private final int size;
 
-    DataType(String typeName, int jdbcTypeValue, int taosTypeValue, int size) {
+    DataType(String typeName, int jdbcTypeValue, Class<?> javaClass, int taosTypeValue, int size) {
         this.typeName = typeName;
         this.jdbcTypeValue = jdbcTypeValue;
         this.taosTypeValue = taosTypeValue;
         this.size = size;
+        this.javaClass = javaClass;
     }
 
     public String getTypeName() {
@@ -54,6 +57,13 @@ public enum DataType {
 
     public int getJdbcTypeValue() {
         return jdbcTypeValue;
+    }
+
+    public String getClassName() {
+        if (this.javaClass == null) {
+            return "[B";
+        }
+        return this.javaClass.getName();
     }
 
     public int getSize() {
