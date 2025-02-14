@@ -1,31 +1,26 @@
 package com.taosdata.jdbc.tmq;
 
+import com.taosdata.jdbc.enums.TmqMessageType;
+
 public class ConsumerRecord<V> {
     private final String topic;
 
     private final String dbName;
     private final int vGroupId;
     private long offset;
+
+    private TmqMessageType messageType;
     private final V value;
 
-    public ConsumerRecord(String topic,
-                          String dbName,
-                          int vGroupId,
-                          V value) {
-        this.topic = topic;
-        this.dbName = dbName;
-        this.vGroupId = vGroupId;
-        this.value = value;
+    // 私有构造函数，只能通过 Builder 来创建对象
+    private ConsumerRecord(Builder<V> builder) {
+        this.topic = builder.topic;
+        this.dbName = builder.dbName;
+        this.vGroupId = builder.vGroupId;
+        this.offset = builder.offset;
+        this.messageType = builder.messageType;
+        this.value = builder.value;
     }
-
-    public ConsumerRecord(String topic, String dbName, int vGroupId, long offset, V value) {
-        this.topic = topic;
-        this.dbName = dbName;
-        this.vGroupId = vGroupId;
-        this.offset = offset;
-        this.value = value;
-    }
-
     public String getTopic() {
         return topic;
     }
@@ -44,5 +39,46 @@ public class ConsumerRecord<V> {
 
     public long getOffset() {
         return offset;
+    }
+
+
+    public static class Builder<V> {
+        private String topic;
+        private String dbName;
+        private Integer vGroupId;
+        private long offset = 0; // 可以设置默认值
+        private TmqMessageType messageType;
+        private V value;
+        public Builder<V> topic(String topic) {
+            this.topic = topic;
+            return this;
+        }
+        public Builder<V> dbName(String dbName) {
+            this.dbName = dbName;
+            return this;
+        }
+        public Builder<V> vGroupId(int vGroupId) {
+            this.vGroupId = vGroupId;
+            return this;
+        }
+        public Builder<V> offset(long offset) {
+            this.offset = offset;
+            return this;
+        }
+        public Builder<V> messageType(TmqMessageType messageType) {
+            this.messageType = messageType;
+            return this;
+        }
+        public Builder<V> value(V value) {
+            this.value = value;
+            return this;
+        }
+        public ConsumerRecord<V> build() {
+            // 检查必要字段是否已设置
+            if (topic == null || dbName == null || vGroupId == null || value == null || messageType == null) {
+                throw new IllegalStateException("Topic, dbName, vGroupId, messageType and value are required.");
+            }
+            return new ConsumerRecord<>(this);
+        }
     }
 }

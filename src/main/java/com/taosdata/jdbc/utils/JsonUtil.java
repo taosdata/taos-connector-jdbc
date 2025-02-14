@@ -2,7 +2,9 @@ package com.taosdata.jdbc.utils;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.taosdata.jdbc.ws.tmq.meta.*;
 
 import java.text.SimpleDateFormat;
 
@@ -48,5 +50,15 @@ public class JsonUtil {
 
         // register JavaTimeModule
         objectMapper.registerModule(new JavaTimeModule());
+
+        // register meta deserializers
+        SimpleModule module = new SimpleModule();
+
+        module.addDeserializer(AlterType.class, new AlterTypeDeserializer());
+        module.addDeserializer(TableType.class, new TableTypeDeserializer());
+        module.addDeserializer(MetaType.class, new MetaTypeDeserializer());
+        module.addDeserializer(Meta.class, new MetaDeserializer());
+
+        objectMapper.registerModule(module);
     }
 }

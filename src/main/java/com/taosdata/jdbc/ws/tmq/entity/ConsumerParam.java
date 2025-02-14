@@ -18,6 +18,7 @@ public class ConsumerParam {
     private final boolean autoCommit;
     private long autoCommitInterval;
     private String msgWithTableName;
+    private String enableBatchMeta;
 
     public ConsumerParam(Properties properties) throws SQLException {
         if (null != properties.getProperty(TMQConstants.CONNECT_URL)) {
@@ -48,6 +49,7 @@ public class ConsumerParam {
 
 
         msgWithTableName = properties.getProperty(TMQConstants.MSG_WITH_TABLE_NAME);
+        enableBatchMeta = properties.getProperty(TMQConstants.MSG_ENABLE_BATCH_META, null);
     }
 
     public ConnectionParam getConnectionParam() {
@@ -101,4 +103,13 @@ public class ConsumerParam {
     public void setMsgWithTableName(String msgWithTableName) {
         this.msgWithTableName = msgWithTableName;
     }
+
+    public String getEnableBatchMeta() {
+        return enableBatchMeta;
+    }
+
+    public void setEnableBatchMeta(String enableBatchMeta) {
+        this.enableBatchMeta = enableBatchMeta;
+    }
+
 }

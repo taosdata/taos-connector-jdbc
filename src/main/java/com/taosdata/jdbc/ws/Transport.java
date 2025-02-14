@@ -6,20 +6,20 @@ import com.taosdata.jdbc.common.SerializeBlock;
 import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.CompletableFutureTimeout;
-import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.utils.StringUtils;
-import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.entity.*;
 import org.java_websocket.exceptions.WebsocketNotConnectedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.Socket;
-import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.security.cert.X509Certificate;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
@@ -27,11 +27,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
-
-import javax.net.SocketFactory;
-import javax.net.ssl.*;
-import java.net.URI;
-import java.security.cert.X509Certificate;
 
 import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT;
 

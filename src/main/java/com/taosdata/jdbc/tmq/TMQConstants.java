@@ -77,6 +77,8 @@ public class TMQConstants {
      * connect type websocket or jni, default is jni
      */
     public static final String CONNECT_TYPE = "td.connect.type";
+
+    public static final String MSG_ENABLE_BATCH_META = "enable_batch_meta";
     /**
      * Key used to retrieve the token value from the properties instance passed to
      * the driver.
