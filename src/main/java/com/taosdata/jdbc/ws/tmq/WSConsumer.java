@@ -152,15 +152,16 @@ public class WSConsumer<V> implements Consumer<V> {
             for (Meta meta : fetchJsonMetaResp.getData().getMetas()){
                 TopicPartition tp = new TopicPartition(pollResp.getTopic(), pollResp.getVgroupId());
 
-                ConsumerRecord<Meta> r = new ConsumerRecord.Builder<Meta>()
+                ConsumerRecord<V> r = new ConsumerRecord.Builder<V>()
                     .topic(pollResp.getTopic())
                     .dbName(pollResp.getDatabase())
                     .vGroupId(pollResp.getVgroupId())
                     .offset(pollResp.getOffset())
                     .messageType(TmqMessageType.TMQ_RES_TABLE_META)
-                    .value(meta)
+                    .meta(meta)
+                    .value(null)
                     .build();
-                    records.put(tp, (ConsumerRecord<V>) r);
+                    records.put(tp, r);
             }
             return records;
         }
@@ -186,6 +187,7 @@ public class WSConsumer<V> implements Consumer<V> {
                         .vGroupId(vGroupId)
                         .offset(pollResp.getOffset())
                         .messageType(TmqMessageType.TMQ_RES_DATA)
+                        .meta(null)
                         .value(v)
                         .build();
                 records.put(tp, r);

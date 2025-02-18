@@ -1,7 +1,9 @@
 package com.taosdata.jdbc.ws.tmq.meta;
+
+import java.util.Objects;
+
 public abstract class Meta {
     private MetaType type;
-    private Sql sql;
     private String tableName;
     private TableType tableType;
 
@@ -12,15 +14,6 @@ public abstract class Meta {
     public void setType(MetaType type) {
         this.type = type;
     }
-
-    public Sql getSql() {
-        return sql;
-    }
-
-    public void setSql(Sql sql) {
-        this.sql = sql;
-    }
-
     public String getTableName() {
         return tableName;
     }
@@ -35,5 +28,18 @@ public abstract class Meta {
 
     public void setTableType(TableType tableType) {
         this.tableType = tableType;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Meta meta = (Meta) o;
+        return type == meta.type && Objects.equals(tableName, meta.tableName) && tableType == meta.tableType;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(type, tableName, tableType);
     }
 }

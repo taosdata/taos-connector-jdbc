@@ -5,7 +5,7 @@ import java.util.List;
 public class ChildTableInfo extends Meta {
     private String using;
     private int tagNum;
-    private List<Column> tags;
+    private List<Tag> tags;
 
     public String getUsing() {
         return using;
@@ -23,11 +23,11 @@ public class ChildTableInfo extends Meta {
         this.tagNum = tagNum;
     }
 
-    public List<Column> getTags() {
+    public List<Tag> getTags() {
         return tags;
     }
 
-    public void setTags(List<Column> tags) {
+    public void setTags(List<Tag> tags) {
         this.tags = tags;
     }
 }

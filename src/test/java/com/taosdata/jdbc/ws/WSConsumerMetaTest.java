@@ -1,15 +1,14 @@
 package com.taosdata.jdbc.ws;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.tmq.*;
+import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.SpecifyAddress;
-import com.taosdata.jdbc.ws.tmq.meta.Meta;
-import com.taosdata.jdbc.ws.tmq.meta.MetaCreateChildTable;
-import com.taosdata.jdbc.ws.tmq.meta.MetaType;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import com.taosdata.jdbc.ws.tmq.meta.*;
+import org.junit.*;
 
 import java.sql.*;
 import java.time.Duration;
@@ -23,16 +22,15 @@ public class WSConsumerMetaTest {
     private static final String host = "127.0.0.1";
     private static final String dbName = "tmq_ws_test";
     private static final String superTable = "st";
+    private static final String superTableJson = "st_json";
     private static Connection connection;
     private static Statement statement;
-    private static String[] topics = {"topic_ws_map", "topic_ws_bean"};
+    private static String[] topics = {"topic_ws_map", "topic_db", "topic_json"};
 
     private static volatile int count = 0;
 
     @Test
     public void testCreateChildTable() throws Exception {
-        AtomicInteger a = new AtomicInteger(1);
-
         String topic = topics[0];
         // create topic
         statement.executeUpdate("create topic if not exists " + topic + " only meta as STABLE " + superTable);
@@ -48,27 +46,404 @@ public class WSConsumerMetaTest {
         properties.setProperty(TMQConstants.CONNECT_TYPE, "ws");
         properties.setProperty(TMQConstants.MSG_ENABLE_BATCH_META, "1");
 
-        try (TaosConsumer<Meta> consumer = new TaosConsumer<>(properties)) {
+        try (TaosConsumer<Map<String, Object>> consumer = new TaosConsumer<>(properties)) {
             consumer.subscribe(Collections.singletonList(topic));
             consumer.poll(Duration.ofMillis(100));
             {
-                int idx = a.getAndIncrement();
-                String sql = String.format("create table if not exists %s using %s.%s tags(%s, '%s')", "ct" + idx, dbName, superTable, idx, "t" + idx);
+                int idx = 1;
+                String sql = String.format("create table if not exists %s using %s.%s tags(%s, '%s', %s)", "ct" + idx, dbName, superTable, idx, "t" + idx, "true");
                 statement.execute(sql);
             }
 
-            while (true) {
-                ConsumerRecords<Meta> consumerRecords = consumer.poll(Duration.ofMillis(100));
+            MetaCreateChildTable dstMeta = new MetaCreateChildTable();
+            dstMeta.setType(MetaType.CREATE);
+            dstMeta.setTableName("ct1");
+            dstMeta.setTableType(TableType.CHILD);
+            dstMeta.setUsing("st");
+            dstMeta.setTagNum(3);
+            List<Tag> tags = new ArrayList<>();
+            tags.add(new Tag("t1", 4, JsonUtil.getObjectMapper().getNodeFactory().numberNode(1)));
+            tags.add(new Tag("t2", 8, JsonUtil.getObjectMapper().getNodeFactory().textNode("\"t1\"")));
+            tags.add(new Tag("t3", 1, JsonUtil.getObjectMapper().getNodeFactory().numberNode(1)));
+            dstMeta.setTags(tags);
+            dstMeta.setCreateList(new ArrayList<>());
 
-                for (ConsumerRecord<Meta> r : consumerRecords) {
-                    MetaCreateChildTable meta = (MetaCreateChildTable) r.value();
-                    Assert.assertEquals(MetaType.CREATE, meta.getType());
-                    Assert.assertEquals("ct1", meta.getTableName());
+            while (true) {
+                ConsumerRecords<Map<String, Object>> consumerRecords = consumer.poll(Duration.ofMillis(100));
+
+                for (ConsumerRecord<Map<String, Object>> r : consumerRecords) {
+                    MetaCreateChildTable meta = (MetaCreateChildTable) r.getMeta();
+                    Assert.assertEquals(dstMeta, meta);
+
+                    System.out.println(JsonUtil.getObjectMapper().writeValueAsString(meta));
                 }
                 if (!consumerRecords.isEmpty()){
                     break;
                 }
             }
+            consumer.unsubscribe();
+        }
+    }
+
+    @Test
+    public void testCreateChildTableJson() throws Exception {
+        String topic = topics[2];
+        // create topic
+        statement.executeUpdate("create topic if not exists " + topic + " only meta as STABLE " + superTableJson);
+
+        Properties properties = new Properties();
+        properties.setProperty(TMQConstants.CONNECT_USER, "root");
+        properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
+        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, "127.0.0.1:6041");
+        properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
+        properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
+        properties.setProperty(TMQConstants.AUTO_OFFSET_RESET, "latest");
+        properties.setProperty(TMQConstants.GROUP_ID, "ws_map");
+        properties.setProperty(TMQConstants.CONNECT_TYPE, "ws");
+        properties.setProperty(TMQConstants.MSG_ENABLE_BATCH_META, "1");
+
+        try (TaosConsumer<Map<String, Object>> consumer = new TaosConsumer<>(properties)) {
+            consumer.subscribe(Collections.singletonList(topic));
+            consumer.poll(Duration.ofMillis(100));
+            {
+                int idx = 1;
+                String sql = String.format("create table if not exists %s using %s.%s tags('%s')", "et" + idx, dbName, superTableJson, "{\"a\":1}");
+                statement.execute(sql);
+            }
+
+            MetaCreateChildTable dstMeta = new MetaCreateChildTable();
+            dstMeta.setType(MetaType.CREATE);
+            dstMeta.setTableName("et1");
+            dstMeta.setTableType(TableType.CHILD);
+            dstMeta.setUsing("st_json");
+            dstMeta.setTagNum(1);
+            List<Tag> tags = new ArrayList<>();
+            tags.add(new Tag("t1", 15, JsonUtil.getObjectMapper().getNodeFactory().textNode("{\"a\":1}")));
+            dstMeta.setTags(tags);
+            dstMeta.setCreateList(new ArrayList<>());
+
+            int i;
+            for (i = 0; i < 10; i++) {
+                ConsumerRecords<Map<String, Object>> consumerRecords = consumer.poll(Duration.ofMillis(100));
+
+                for (ConsumerRecord<Map<String, Object>> r : consumerRecords) {
+                    MetaCreateChildTable meta = (MetaCreateChildTable) r.getMeta();
+                    Assert.assertEquals(dstMeta, meta);
+                }
+                if (!consumerRecords.isEmpty()){
+                    break;
+                }
+            }
+
+            if (i == 10) {
+                throw new RuntimeException("Can't get create meta");
+            }
+            consumer.unsubscribe();
+        }
+    }
+    @Test
+    public void testCreateMultiChildTable() throws Exception {
+        String topic = topics[0];
+        // create topic
+        statement.executeUpdate("create topic if not exists " + topic + " only meta as STABLE " + superTable);
+
+        Properties properties = new Properties();
+        properties.setProperty(TMQConstants.CONNECT_USER, "root");
+        properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
+        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, "127.0.0.1:6041");
+        properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
+        properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
+        properties.setProperty(TMQConstants.AUTO_OFFSET_RESET, "latest");
+        properties.setProperty(TMQConstants.GROUP_ID, "ws_map");
+        properties.setProperty(TMQConstants.CONNECT_TYPE, "ws");
+        properties.setProperty(TMQConstants.MSG_ENABLE_BATCH_META, "1");
+
+        int subTableNum = 9;
+        try (TaosConsumer<Map<String, Object>> consumer = new TaosConsumer<>(properties)) {
+            consumer.subscribe(Collections.singletonList(topic));
+            consumer.poll(Duration.ofMillis(100));
+            {
+                String sql = "create table if not exists ";
+                for (int idx = 1; idx <= subTableNum; idx++) {
+                    sql += String.format("%s using %s.%s tags(%s, '%s', %s)", "dt" + idx, dbName, superTable, idx, "t" + idx, "true");
+                }
+                statement.execute(sql);
+            }
+
+            int changeNum = subTableNum;
+            int loop = 0;
+
+            List<MetaCreateChildTable> metaList = new ArrayList<>();
+            while (changeNum > 0) {
+                ConsumerRecords<Map<String, Object>> consumerRecords = consumer.poll(Duration.ofMillis(100));
+
+                for (ConsumerRecord<Map<String, Object>> r : consumerRecords) {
+                    MetaCreateChildTable meta = (MetaCreateChildTable) r.getMeta();
+                    Assert.assertEquals(MetaType.CREATE, meta.getType());
+                    metaList.add(meta);
+                    if (!meta.getCreateList().isEmpty()){
+                        changeNum -= meta.getCreateList().size();
+                    } else {
+                        changeNum--;
+                    }
+                    loop++;
+                }
+            }
+
+            List<Integer> tags = new ArrayList<>();
+            for (MetaCreateChildTable metaCreateChildTable : metaList){
+                if (!metaCreateChildTable.getCreateList().isEmpty()){
+                    for (ChildTableInfo childTableInfo : metaCreateChildTable.getCreateList()){
+                        tags.add(childTableInfo.getTags().get(0).getValue().asInt());
+                    }
+                } else {
+                    tags.add(metaCreateChildTable.getTags().get(0).getValue().asInt());
+                }
+            }
+
+            System.out.println(JsonUtil.getObjectMapper().writeValueAsString(metaList));
+            tags.sort(Integer::compareTo);
+            for (int i = 1; i <= subTableNum; i++){
+                Assert.assertTrue(i == tags.get(i - 1));
+            }
+            consumer.unsubscribe();
+        }
+    }
+    @Test
+    public void testCreateSuperTable() throws Exception {
+        String topic = topics[1];
+        // create topic
+        statement.executeUpdate("create topic if not exists " + topic + " only meta as database " + dbName);
+
+        Properties properties = new Properties();
+        properties.setProperty(TMQConstants.CONNECT_USER, "root");
+        properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
+        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, "127.0.0.1:6041");
+        properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
+        properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
+        properties.setProperty(TMQConstants.AUTO_OFFSET_RESET, "latest");
+        properties.setProperty(TMQConstants.GROUP_ID, "ws_map");
+        properties.setProperty(TMQConstants.CONNECT_TYPE, "ws");
+        properties.setProperty(TMQConstants.MSG_ENABLE_BATCH_META, "1");
+
+        try (TaosConsumer<Map<String, Object>> consumer = new TaosConsumer<>(properties)) {
+            consumer.subscribe(Collections.singletonList(topic));
+            consumer.poll(Duration.ofMillis(100));
+            {
+                int idx = 1;
+                statement.execute("create stable if not exists " + superTable + idx
+                        + " (ts timestamp, c1 int) tags(t1 int, t2 bool)");
+            }
+
+            MetaCreateSuperTable dstMeta = new MetaCreateSuperTable();
+            dstMeta.setType(MetaType.CREATE);
+            dstMeta.setTableName("st1");
+            dstMeta.setTableType(TableType.SUPER);
+            List<Column> columns = new ArrayList<>();
+            columns.add(new Column("ts", 9, null, false, "delta-i", "lz4", "medium"));
+            columns.add(new Column("c1", 4, null, false, "simple8b", "lz4", "medium"));
+            dstMeta.setColumns(columns);
+            List<Column> tags = new ArrayList<>();
+            tags.add(new Column("t1", 4, null, null, null, null, null));
+            tags.add(new Column("t2", 1, null, null, null, null, null));
+            dstMeta.setTags(tags);
+
+            while (true) {
+                ConsumerRecords<Map<String, Object>> consumerRecords = consumer.poll(Duration.ofMillis(100));
+
+                for (ConsumerRecord<Map<String, Object>> r : consumerRecords) {
+                    MetaCreateSuperTable meta = (MetaCreateSuperTable) r.getMeta();
+                    System.out.println(JsonUtil.getObjectMapper().writeValueAsString(meta));
+                    Assert.assertEquals(dstMeta, meta);
+                }
+                if (!consumerRecords.isEmpty()){
+                    break;
+                }
+            }
+
+            consumer.unsubscribe();
+        }
+    }
+
+    @Test
+    public void testDropSuperTable() throws Exception {
+        String topic = topics[1];
+        // create topic
+        statement.executeUpdate("create topic if not exists " + topic + " only meta as database " + dbName);
+
+        Properties properties = new Properties();
+        properties.setProperty(TMQConstants.CONNECT_USER, "root");
+        properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
+        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, "127.0.0.1:6041");
+        properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
+        properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
+        properties.setProperty(TMQConstants.AUTO_OFFSET_RESET, "latest");
+        properties.setProperty(TMQConstants.GROUP_ID, "ws_map");
+        properties.setProperty(TMQConstants.CONNECT_TYPE, "ws");
+        properties.setProperty(TMQConstants.MSG_ENABLE_BATCH_META, "1");
+
+        try (TaosConsumer<Map<String, Object>> consumer = new TaosConsumer<>(properties)) {
+            consumer.subscribe(Collections.singletonList(topic));
+            consumer.poll(Duration.ofMillis(100));
+            {
+                int idx = 2;
+                statement.execute("create stable if not exists " + superTable + idx
+                        + " (ts timestamp, c1 int) tags(t1 int, t2 bool)");
+
+                statement.execute("drop stable if exists " + superTable + idx);
+            }
+
+            MetaDropSuperTable dstMeta = new MetaDropSuperTable();
+            dstMeta.setType(MetaType.DROP);
+            dstMeta.setTableName("st2");
+            dstMeta.setTableType(TableType.SUPER);
+
+            boolean getDrop = false;
+            int maxLoop = 10;
+            do {
+                ConsumerRecords<Map<String, Object>> consumerRecords = consumer.poll(Duration.ofMillis(100));
+
+                for (ConsumerRecord<Map<String, Object>> r : consumerRecords) {
+                    if (r.getMeta().getType() == MetaType.DROP) {
+                        MetaDropSuperTable meta = (MetaDropSuperTable) r.getMeta();
+                        Assert.assertEquals(dstMeta, meta);
+                        System.out.println(JsonUtil.getObjectMapper().writeValueAsString(meta));
+                        getDrop = true;
+                        break;
+                    }
+                }
+                maxLoop--;
+                if (maxLoop < 0){
+                    throw new RuntimeException("Can't get drop meta");
+                }
+            } while (!getDrop);
+
+            consumer.unsubscribe();
+        }
+    }
+
+    @Ignore
+    @Test
+    public void testDropChildTable() throws Exception {
+        String topic = topics[0];
+        // create topic
+        statement.executeUpdate("create topic if not exists " + topic + " only meta as STABLE " + superTable);
+
+        Properties properties = new Properties();
+        properties.setProperty(TMQConstants.CONNECT_USER, "root");
+        properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
+        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, "127.0.0.1:6041");
+        properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
+        properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
+        properties.setProperty(TMQConstants.AUTO_OFFSET_RESET, "latest");
+        properties.setProperty(TMQConstants.GROUP_ID, "ws_map");
+        properties.setProperty(TMQConstants.CONNECT_TYPE, "ws");
+        properties.setProperty(TMQConstants.MSG_ENABLE_BATCH_META, "1");
+
+        int subTableNum = 5;
+        try (TaosConsumer<Map<String, Object>> consumer = new TaosConsumer<>(properties)) {
+            consumer.subscribe(Collections.singletonList(topic));
+            consumer.poll(Duration.ofMillis(100));
+            {
+                String sql = "create table if not exists ";
+                for (int idx = 1; idx <= subTableNum; idx++) {
+                    sql += String.format(" %s using %s.%s tags(%s, '%s', %s)", "cht" + idx, dbName, superTable, idx, "t" + idx, "true");
+                }
+                statement.execute(sql);
+
+                String dropSql = "drop table if exists ";
+                for (int idx = 1; idx <= subTableNum; idx++) {
+                    dropSql += String.format(" cht" + idx + ", ");
+                }
+
+                dropSql = dropSql.substring(0, dropSql.length() - 2);
+                statement.execute(dropSql);
+            }
+
+            boolean getDrop = false;
+
+            List<String> dropChildTableNameList = new ArrayList<>();
+            do {
+                ConsumerRecords<Map<String, Object>> consumerRecords = consumer.poll(Duration.ofMillis(100));
+
+                for (ConsumerRecord<Map<String, Object>> r : consumerRecords) {
+                    if (r.getMeta().getType() == MetaType.DROP) {
+                        MetaDropChildTable meta = (MetaDropChildTable) r.getMeta();
+                        dropChildTableNameList.addAll(meta.getTableNameList());
+                        System.out.println(JsonUtil.getObjectMapper().writeValueAsString(meta));
+
+                        if (dropChildTableNameList.size() == subTableNum) {
+                            getDrop = true;
+                            break;
+                        }
+                    }
+                }
+            } while (!getDrop);
+
+            consumer.unsubscribe();
+        }
+    }
+
+    @Test
+    public void testAlterTable() throws Exception {
+        String topic = topics[0];
+        // create topic
+        statement.executeUpdate("create topic if not exists " + topic + " only meta as STABLE " + superTable);
+
+        Properties properties = new Properties();
+        properties.setProperty(TMQConstants.CONNECT_USER, "root");
+        properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
+        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, "127.0.0.1:6041");
+        properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
+        properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
+        properties.setProperty(TMQConstants.AUTO_OFFSET_RESET, "latest");
+        properties.setProperty(TMQConstants.GROUP_ID, "ws_map");
+        properties.setProperty(TMQConstants.CONNECT_TYPE, "ws");
+        properties.setProperty(TMQConstants.MSG_ENABLE_BATCH_META, "1");
+
+        int subTableNum = 5;
+        try (TaosConsumer<Map<String, Object>> consumer = new TaosConsumer<>(properties)) {
+            consumer.subscribe(Collections.singletonList(topic));
+            consumer.poll(Duration.ofMillis(100));
+            {
+                int idx = 1001;
+                String sql = String.format("create table if not exists %s using %s.%s tags(%s, '%s', %s)", "ct" + idx, dbName, superTable, idx, "t" + idx, "true");
+                statement.execute(sql);
+
+                String alterSql = String.format("alter table ct" + idx + " set tag t1=1001, t2='tt1001', t3=false");
+                statement.execute(alterSql);
+            }
+
+            MetaAlterTable metaDst = new MetaAlterTable();
+            metaDst.setType(MetaType.ALTER);
+            metaDst.setTableName("ct1001");
+            metaDst.setTableType(TableType.CHILD);
+            metaDst.setAlterType(15);
+            metaDst.setColType(0);
+            metaDst.setColLength(0);
+            metaDst.setColValueNull(false);
+            List<TagAlter> tags = new ArrayList<>();
+            tags.add(new TagAlter("t1", "1001", false));
+            tags.add(new TagAlter("t2", "\"tt1001\"", false));
+            tags.add(new TagAlter("t3", "fal", false));
+            metaDst.setTags(tags);
+            ObjectMapper mapper = JsonUtil.getObjectMapper();
+            mapper.configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
+
+            boolean getAlter = false;
+            do {
+                ConsumerRecords<Map<String, Object>> consumerRecords = consumer.poll(Duration.ofMillis(100));
+
+                for (ConsumerRecord<Map<String, Object>> r : consumerRecords) {
+                    if (r.getMeta().getType() == MetaType.ALTER) {
+                        MetaAlterTable meta = (MetaAlterTable) r.getMeta();
+                        Assert.assertEquals(metaDst, meta);
+                        System.out.println("====" + JsonUtil.getObjectMapper().writeValueAsString(meta));
+                        getAlter = true;
+                    }
+                }
+            } while (!getAlter);
+
             consumer.unsubscribe();
         }
     }
@@ -92,7 +467,9 @@ public class WSConsumerMetaTest {
         statement.execute("create database if not exists " + dbName + " WAL_RETENTION_PERIOD 3650");
         statement.execute("use " + dbName);
         statement.execute("create stable if not exists " + superTable
-                + " (ts timestamp, c1 int) tags(t1 int, t2 varchar(10))");
+                + " (ts timestamp, c1 int) tags(t1 int, t2 varchar(10), t3 bool)");
+        statement.execute("create stable if not exists " + superTableJson
+                + " (ts timestamp, c1 int) tags(t1 json)");
     }
 
     @AfterClass

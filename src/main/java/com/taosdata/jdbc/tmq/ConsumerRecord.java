@@ -1,15 +1,18 @@
 package com.taosdata.jdbc.tmq;
 
 import com.taosdata.jdbc.enums.TmqMessageType;
+import com.taosdata.jdbc.ws.tmq.meta.Meta;
 
 public class ConsumerRecord<V> {
     private final String topic;
 
     private final String dbName;
     private final int vGroupId;
-    private long offset;
+    private final long offset;
 
-    private TmqMessageType messageType;
+    private final TmqMessageType messageType;
+
+    private final Meta meta;
     private final V value;
 
     // 私有构造函数，只能通过 Builder 来创建对象
@@ -19,6 +22,7 @@ public class ConsumerRecord<V> {
         this.vGroupId = builder.vGroupId;
         this.offset = builder.offset;
         this.messageType = builder.messageType;
+        this.meta = builder.meta;
         this.value = builder.value;
     }
     public String getTopic() {
@@ -41,6 +45,14 @@ public class ConsumerRecord<V> {
         return offset;
     }
 
+    public TmqMessageType getMessageType() {
+        return messageType;
+    }
+
+    public Meta getMeta() {
+        return meta;
+    }
+
 
     public static class Builder<V> {
         private String topic;
@@ -48,6 +60,8 @@ public class ConsumerRecord<V> {
         private Integer vGroupId;
         private long offset = 0; // 可以设置默认值
         private TmqMessageType messageType;
+
+        private Meta meta;
         private V value;
         public Builder<V> topic(String topic) {
             this.topic = topic;
@@ -69,15 +83,30 @@ public class ConsumerRecord<V> {
             this.messageType = messageType;
             return this;
         }
+
+        public Builder<V> meta(Meta meta) {
+            this.meta = meta;
+            return this;
+        }
         public Builder<V> value(V value) {
             this.value = value;
             return this;
         }
         public ConsumerRecord<V> build() {
             // 检查必要字段是否已设置
-            if (topic == null || dbName == null || vGroupId == null || value == null || messageType == null) {
-                throw new IllegalStateException("Topic, dbName, vGroupId, messageType and value are required.");
+            if (messageType == TmqMessageType.TMQ_RES_DATA){
+                if (topic == null || dbName == null || vGroupId == null || value == null) {
+                    throw new IllegalStateException("for data type, Topic, dbName, vGroupId and value are required.");
+                }
+            } else if (messageType == TmqMessageType.TMQ_RES_TABLE_META){
+                // 检查必要字段是否已设置
+                if (topic == null || dbName == null || vGroupId == null || meta == null) {
+                    throw new IllegalStateException("for meta type, Topic, dbName, vGroupId, meta are required.");
+                }
+            } else {
+                throw new IllegalStateException("Unknown messageType: " + messageType);
             }
+
             return new ConsumerRecord<>(this);
         }
     }

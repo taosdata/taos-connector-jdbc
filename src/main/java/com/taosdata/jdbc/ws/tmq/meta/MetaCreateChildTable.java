@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.ws.tmq.meta;
 
 import java.util.List;
+import java.util.Objects;
 
 public class MetaCreateChildTable extends Meta {
     private String using;
@@ -40,4 +41,17 @@ public class MetaCreateChildTable extends Meta {
         this.createList = createList;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        if (!super.equals(o)) return false;
+        MetaCreateChildTable that = (MetaCreateChildTable) o;
+        return tagNum == that.tagNum && Objects.equals(using, that.using) && Objects.equals(tags, that.tags) && Objects.equals(createList, that.createList);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(super.hashCode(), using, tagNum, tags, createList);
+    }
 }

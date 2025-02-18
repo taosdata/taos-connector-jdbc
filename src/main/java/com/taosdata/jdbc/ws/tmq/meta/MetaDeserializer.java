@@ -42,7 +42,7 @@ public class MetaDeserializer extends StdDeserializer<Meta> {
             } else if (MetaType.DROP.toString().equalsIgnoreCase(type)) {
                 return mapper.treeToValue(node, MetaDropSuperTable.class);
             } else if (MetaType.ALTER.toString().equalsIgnoreCase(type)) {
-                return mapper.treeToValue(node, MetaDropSuperTable.class);
+                return mapper.treeToValue(node, MetaAlterTable.class);
             }
         } else if (TableType.NORMAL.toString().equalsIgnoreCase(tableType)) {
             if (MetaType.CREATE.toString().equalsIgnoreCase(type)) {
@@ -50,7 +50,7 @@ public class MetaDeserializer extends StdDeserializer<Meta> {
             } else if (MetaType.DROP.toString().equalsIgnoreCase(type)) {
                 return mapper.treeToValue(node, MetaDropNormalTable.class);
             } else if (MetaType.ALTER.toString().equalsIgnoreCase(type)) {
-                return mapper.treeToValue(node, MetaDropNormalTable.class);
+                return mapper.treeToValue(node, MetaAlterTable.class);
             }
         } else if (TableType.CHILD.toString().equalsIgnoreCase(tableType)) {
             if (MetaType.CREATE.toString().equalsIgnoreCase(type)) {
@@ -58,7 +58,7 @@ public class MetaDeserializer extends StdDeserializer<Meta> {
             } else if (MetaType.DROP.toString().equalsIgnoreCase(type)) {
                 return mapper.treeToValue(node, MetaDropChildTable.class);
             } else if (MetaType.ALTER.toString().equalsIgnoreCase(type)) {
-                return mapper.treeToValue(node, MetaDropChildTable.class);
+                return mapper.treeToValue(node, MetaAlterTable.class);
             }
         }
         return null;

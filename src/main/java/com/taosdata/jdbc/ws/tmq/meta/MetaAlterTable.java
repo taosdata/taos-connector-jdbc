@@ -1,5 +1,8 @@
 package com.taosdata.jdbc.ws.tmq.meta;
 
+import java.util.List;
+import java.util.Objects;
+
 public class MetaAlterTable extends Meta {
 //          "alterType":1, // 4-set tag=new value, 5-add column, 6-drop column, 7-modify column length, 10-rename column name
 //                         // 1-add tag, 2-drop tag, 3-rename tag name, 8-modify tag length, 9-modify table option
@@ -16,6 +19,7 @@ public class MetaAlterTable extends Meta {
     private int colLength;
     private String colValue;
     private boolean colValueNull;
+    private List<TagAlter> tags;
 
     public int getAlterType() {
         return alterType;
@@ -71,6 +75,35 @@ public class MetaAlterTable extends Meta {
 
     public void setColValueNull(boolean colValueNull) {
         this.colValueNull = colValueNull;
+    }
+
+    public List<TagAlter> getTags() {
+        return tags;
+    }
+
+    public void setTags(List<TagAlter> tags) {
+        this.tags = tags;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        if (!super.equals(o)) return false;
+        MetaAlterTable that = (MetaAlterTable) o;
+        return alterType == that.alterType
+                && colType == that.colType
+                && colLength == that.colLength
+                && colValueNull == that.colValueNull
+                && Objects.equals(colName, that.colName)
+                && Objects.equals(colNewName, that.colNewName)
+                && Objects.equals(colValue, that.colValue)
+                && Objects.equals(tags, that.tags);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(super.hashCode(), alterType, colName, colNewName, colType, colLength, colValue, colValueNull, tags);
     }
 
 }
