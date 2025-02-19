@@ -1,6 +1,5 @@
 package com.taosdata.jdbc.ws;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.taosdata.jdbc.TSDBDriver;
@@ -13,10 +12,7 @@ import org.junit.*;
 import java.sql.*;
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class WSConsumerMetaTest {
     private static final String host = "127.0.0.1";
@@ -26,8 +22,6 @@ public class WSConsumerMetaTest {
     private static Connection connection;
     private static Statement statement;
     private static String[] topics = {"topic_ws_map", "topic_db", "topic_json"};
-
-    private static volatile int count = 0;
 
     @Test
     public void testCreateChildTable() throws Exception {
@@ -73,9 +67,8 @@ public class WSConsumerMetaTest {
 
                 for (ConsumerRecord<Map<String, Object>> r : consumerRecords) {
                     MetaCreateChildTable meta = (MetaCreateChildTable) r.getMeta();
-                    Assert.assertEquals(dstMeta, meta);
-
                     System.out.println(JsonUtil.getObjectMapper().writeValueAsString(meta));
+                    Assert.assertEquals(dstMeta, meta);
                 }
                 if (!consumerRecords.isEmpty()){
                     break;
@@ -152,7 +145,7 @@ public class WSConsumerMetaTest {
         properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
         properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, "127.0.0.1:6041");
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
-        properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
+        properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "false");
         properties.setProperty(TMQConstants.AUTO_OFFSET_RESET, "latest");
         properties.setProperty(TMQConstants.GROUP_ID, "ws_map");
         properties.setProperty(TMQConstants.CONNECT_TYPE, "ws");
@@ -186,7 +179,10 @@ public class WSConsumerMetaTest {
                     } else {
                         changeNum--;
                     }
-                    loop++;
+                }
+                loop++;
+                if (loop > 10){
+                    throw new RuntimeException("Can't get create meta");
                 }
             }
 
@@ -206,6 +202,7 @@ public class WSConsumerMetaTest {
             for (int i = 1; i <= subTableNum; i++){
                 Assert.assertTrue(i == tags.get(i - 1));
             }
+            consumer.commitSync();
             consumer.unsubscribe();
         }
     }
@@ -220,7 +217,7 @@ public class WSConsumerMetaTest {
         properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
         properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, "127.0.0.1:6041");
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
-        properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
+        properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "false");
         properties.setProperty(TMQConstants.AUTO_OFFSET_RESET, "latest");
         properties.setProperty(TMQConstants.GROUP_ID, "ws_map");
         properties.setProperty(TMQConstants.CONNECT_TYPE, "ws");
@@ -261,6 +258,7 @@ public class WSConsumerMetaTest {
                 }
             }
 
+            consumer.commitSync();
             consumer.unsubscribe();
         }
     }
@@ -306,8 +304,8 @@ public class WSConsumerMetaTest {
                 for (ConsumerRecord<Map<String, Object>> r : consumerRecords) {
                     if (r.getMeta().getType() == MetaType.DROP) {
                         MetaDropSuperTable meta = (MetaDropSuperTable) r.getMeta();
-                        Assert.assertEquals(dstMeta, meta);
                         System.out.println(JsonUtil.getObjectMapper().writeValueAsString(meta));
+                        Assert.assertEquals(dstMeta, meta);
                         getDrop = true;
                         break;
                     }
@@ -322,7 +320,6 @@ public class WSConsumerMetaTest {
         }
     }
 
-    @Ignore
     @Test
     public void testDropChildTable() throws Exception {
         String topic = topics[0];
@@ -368,7 +365,7 @@ public class WSConsumerMetaTest {
 
                 for (ConsumerRecord<Map<String, Object>> r : consumerRecords) {
                     if (r.getMeta().getType() == MetaType.DROP) {
-                        MetaDropChildTable meta = (MetaDropChildTable) r.getMeta();
+                        MetaDropTable meta = (MetaDropTable) r.getMeta();
                         dropChildTableNameList.addAll(meta.getTableNameList());
                         System.out.println(JsonUtil.getObjectMapper().writeValueAsString(meta));
 
@@ -447,6 +444,77 @@ public class WSConsumerMetaTest {
             consumer.unsubscribe();
         }
     }
+
+//    @Test
+//    public void testDeleteData() throws Exception {
+//        String topic = topics[0];
+//        // create topic
+//        statement.executeUpdate("create topic if not exists " + topic + " only meta as STABLE " + superTable);
+//
+//        Properties properties = new Properties();
+//        properties.setProperty(TMQConstants.CONNECT_USER, "root");
+//        properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
+//        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, "127.0.0.1:6041");
+//        properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
+//        properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "false");
+//        properties.setProperty(TMQConstants.AUTO_OFFSET_RESET, "latest");
+//        properties.setProperty(TMQConstants.GROUP_ID, "ws_map");
+//        properties.setProperty(TMQConstants.CONNECT_TYPE, "ws");
+//        properties.setProperty(TMQConstants.MSG_ENABLE_BATCH_META, "1");
+//
+//        try (TaosConsumer<Map<String, Object>> consumer = new TaosConsumer<>(properties)) {
+//            consumer.subscribe(Collections.singletonList(topic));
+//            consumer.poll(Duration.ofMillis(100));
+//            {
+//                int idx = 1002;
+//                String sql = String.format("create table if not exists %s using %s.%s tags(%s, '%s', %s)", "ct" + idx, dbName, superTable, idx, "t" + idx, "true");
+//                statement.execute(sql);
+//
+//                String insertSql = String.format("insert into ct" + idx + " values ('2021-01-01 00:00:00', 1)");
+//                statement.execute(insertSql);
+//
+//                String deleteSql = String.format("delete from ct" + idx + " where ts = '2021-01-01 00:00:00'");
+//                statement.execute(deleteSql);
+//            }
+//
+//            MetaAlterTable metaDst = new MetaAlterTable();
+//            metaDst.setType(MetaType.DELETE);
+//            metaDst.setTableName("ct1002");
+//            metaDst.setAlterType(15);
+//            metaDst.setColType(0);
+//            metaDst.setColLength(0);
+//            metaDst.setColValueNull(false);
+//            List<TagAlter> tags = new ArrayList<>();
+//            tags.add(new TagAlter("t1", "1001", false));
+//            tags.add(new TagAlter("t2", "\"tt1001\"", false));
+//            tags.add(new TagAlter("t3", "fal", false));
+//            metaDst.setTags(tags);
+//            ObjectMapper mapper = JsonUtil.getObjectMapper();
+//            mapper.configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
+//
+//            boolean getDelete = false;
+//            for(int i = 0; i < 10; i++){
+//                ConsumerRecords<Map<String, Object>> consumerRecords = consumer.poll(Duration.ofMillis(100));
+//
+//                for (ConsumerRecord<Map<String, Object>> r : consumerRecords) {
+//                    if (r.getMeta().getType() == MetaType.DELETE) {
+//                        MetaDeleteData meta = (MetaDeleteData) r.getMeta();
+//                        System.out.println("====" + JsonUtil.getObjectMapper().writeValueAsString(meta));
+//                        Assert.assertEquals(metaDst, meta);
+//                        getDelete = true;
+//                        break;
+//                    }
+//                }
+//                if (getDelete){
+//                    break;
+//                }
+//
+//            }
+//
+//            consumer.commitSync();
+//            consumer.unsubscribe();
+//        }
+//    }
 
     @BeforeClass
     public static void before() throws SQLException {

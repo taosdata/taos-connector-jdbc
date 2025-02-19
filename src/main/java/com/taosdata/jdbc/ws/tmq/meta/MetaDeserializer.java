@@ -5,7 +5,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 
 import java.io.IOException;
@@ -26,41 +25,35 @@ public class MetaDeserializer extends StdDeserializer<Meta> {
         JsonNode node = mapper.readTree(p);
 
         String type = node.get("type").asText();
-        String tableType = node.get("tableType").asText();
 
-        Meta result = getMetaBasedOnTableType(mapper, node, type, tableType);
-        if (result == null) {
-            throw new IllegalArgumentException("Unsupported combination of 'type' and 'tableType' values: type=" + type + ", tableType=" + tableType);
+        String tableType = null;
+        if (null != node.get("tableType")){
+            tableType = node.get("tableType").asText();
         }
-        return result;
+
+        return getMetaBasedOnTableType(mapper, node, type, tableType);
     }
 
     private Meta getMetaBasedOnTableType(ObjectCodec mapper, JsonNode node, String type, String tableType) throws JsonProcessingException {
-        if (TableType.SUPER.toString().equalsIgnoreCase(tableType)) {
-            if (MetaType.CREATE.toString().equalsIgnoreCase(type)) {
+        if (MetaType.CREATE.toString().equalsIgnoreCase(type)) {
+            if (TableType.SUPER.toString().equalsIgnoreCase(tableType)) {
                 return mapper.treeToValue(node, MetaCreateSuperTable.class);
-            } else if (MetaType.DROP.toString().equalsIgnoreCase(type)) {
-                return mapper.treeToValue(node, MetaDropSuperTable.class);
-            } else if (MetaType.ALTER.toString().equalsIgnoreCase(type)) {
-                return mapper.treeToValue(node, MetaAlterTable.class);
-            }
-        } else if (TableType.NORMAL.toString().equalsIgnoreCase(tableType)) {
-            if (MetaType.CREATE.toString().equalsIgnoreCase(type)) {
+            } else if (TableType.NORMAL.toString().equalsIgnoreCase(tableType)) {
                 return mapper.treeToValue(node, MetaCreateNormalTable.class);
-            } else if (MetaType.DROP.toString().equalsIgnoreCase(type)) {
-                return mapper.treeToValue(node, MetaDropNormalTable.class);
-            } else if (MetaType.ALTER.toString().equalsIgnoreCase(type)) {
-                return mapper.treeToValue(node, MetaAlterTable.class);
-            }
-        } else if (TableType.CHILD.toString().equalsIgnoreCase(tableType)) {
-            if (MetaType.CREATE.toString().equalsIgnoreCase(type)) {
+            } else if (TableType.CHILD.toString().equalsIgnoreCase(tableType)) {
                 return mapper.treeToValue(node, MetaCreateChildTable.class);
-            } else if (MetaType.DROP.toString().equalsIgnoreCase(type)) {
-                return mapper.treeToValue(node, MetaDropChildTable.class);
-            } else if (MetaType.ALTER.toString().equalsIgnoreCase(type)) {
-                return mapper.treeToValue(node, MetaAlterTable.class);
             }
+        } else if (MetaType.DROP.toString().equalsIgnoreCase(type)) {
+            if (TableType.SUPER.toString().equalsIgnoreCase(tableType)) {
+                return mapper.treeToValue(node, MetaDropSuperTable.class);
+            } else {
+                return mapper.treeToValue(node, MetaDropTable.class);
+            }
+        } else if (MetaType.ALTER.toString().equalsIgnoreCase(type)) {
+            return mapper.treeToValue(node, MetaAlterTable.class);
+        } else if (MetaType.DELETE.toString().equalsIgnoreCase(type)){
+//            return mapper.treeToValue(node, MetaDeleteData.class);
         }
-        return null;
+        throw new IllegalArgumentException("Unsupported combination of 'type' and 'tableType' values: type=" + type + ", tableType=" + tableType);
     }
 }
