@@ -21,7 +21,8 @@ public class SubscribeReq extends Payload {
     private String autoCommitIntervalMs;
     @JsonProperty("with_table_name")
     private String withTableName;
-
+    @JsonProperty("enable_batch_meta")
+    private String enableBatchMeta;
     private String tz;
     private String app;
     private String ip;
@@ -130,4 +131,11 @@ public class SubscribeReq extends Payload {
         this.ip = ip;
     }
 
+    public String getEnableBatchMeta() {
+        return enableBatchMeta;
+    }
+
+    public void setEnableBatchMeta(String enableBatchMeta) {
+        this.enableBatchMeta = enableBatchMeta;
+    }
 }

@@ -18,6 +18,7 @@ import com.taosdata.jdbc.ws.entity.Code;
 import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.entity.Response;
 import com.taosdata.jdbc.ws.tmq.entity.*;
+import com.taosdata.jdbc.ws.tmq.meta.Meta;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteOrder;
@@ -119,6 +120,7 @@ public class WSConsumer<V> implements Consumer<V> {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private ConsumerRecords<V> doPoll(Duration timeout, Deserializer<V> deserializer) throws SQLException{
         if (param.isAutoCommit() && (0 != messageId)) {
             long now = System.currentTimeMillis();
@@ -138,8 +140,33 @@ public class WSConsumer<V> implements Consumer<V> {
             return ConsumerRecords.emptyRecord();
         }
 
+        if (pollResp.getMessageType() == TmqMessageType.TMQ_RES_TABLE_META.getCode() || pollResp.getMessageType() == TmqMessageType.TMQ_RES_METADATA.getCode()) {
+            Request fetchJsonMetaReq = factory.generateFetchJsonMeata(pollResp.getMessageId());
+            FetchJsonMetaResp fetchJsonMetaResp = (FetchJsonMetaResp) transport.send(fetchJsonMetaReq);
+            if (Code.SUCCESS.getCode() != fetchJsonMetaResp.getCode()) {
+                throw new SQLException("consumer fetch json meta error, code: (0x" + Integer.toHexString(fetchJsonMetaResp.getCode()) + "), message: " + fetchJsonMetaResp.getMessage());
+            }
+            messageId = pollResp.getMessageId();
+            ConsumerRecords<V> records = new ConsumerRecords<>();
+
+            for (Meta meta : fetchJsonMetaResp.getData().getMetas()){
+                TopicPartition tp = new TopicPartition(pollResp.getTopic(), pollResp.getVgroupId());
+
+                ConsumerRecord<V> r = new ConsumerRecord.Builder<V>()
+                    .topic(pollResp.getTopic())
+                    .dbName(pollResp.getDatabase())
+                    .vGroupId(pollResp.getVgroupId())
+                    .offset(pollResp.getOffset())
+                    .messageType(TmqMessageType.TMQ_RES_TABLE_META)
+                    .meta(meta)
+                    .value(null)
+                    .build();
+                    records.put(tp, r);
+            }
+            return records;
+        }
+
         if (pollResp.getMessageType() != TmqMessageType.TMQ_RES_DATA.getCode()) {
-            // TODO handle other message type
             return ConsumerRecords.emptyRecord();
         }
         messageId = pollResp.getMessageId();
@@ -154,7 +181,15 @@ public class WSConsumer<V> implements Consumer<V> {
                 TopicPartition tp = new TopicPartition(topic, vGroupId);
 
                 V v = deserializer.deserialize(rs, topic, dbName);
-                ConsumerRecord<V> r = new ConsumerRecord<>(topic, dbName, vGroupId, pollResp.getOffset(), v);
+                ConsumerRecord<V> r = new ConsumerRecord.Builder<V>()
+                        .topic(topic)
+                        .dbName(dbName)
+                        .vGroupId(vGroupId)
+                        .offset(pollResp.getOffset())
+                        .messageType(TmqMessageType.TMQ_RES_DATA)
+                        .meta(null)
+                        .value(v)
+                        .build();
                 records.put(tp, r);
             }
         }
