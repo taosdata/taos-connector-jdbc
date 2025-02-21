@@ -1,7 +1,7 @@
 package com.taosdata.jdbc.ws.tmq.meta;
 
 public enum MetaType {
-    // 类型，create-创建表，drop-删除表，alter-修改表，delete-删除数据
+    // Type: "CREATE" - Create tables, "DROP" - Drop tables, "ALTER" - Alter a table, "DELETE" - Delete data
     CREATE,
     DROP,
     ALTER,

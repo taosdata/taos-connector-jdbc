@@ -15,7 +15,6 @@ public class ConsumerRecord<V> {
     private final Meta meta;
     private final V value;
 
-    // 私有构造函数，只能通过 Builder 来创建对象
     private ConsumerRecord(Builder<V> builder) {
         this.topic = builder.topic;
         this.dbName = builder.dbName;
@@ -58,7 +57,7 @@ public class ConsumerRecord<V> {
         private String topic;
         private String dbName;
         private Integer vGroupId;
-        private long offset = 0; // 可以设置默认值
+        private long offset = 0;
         private TmqMessageType messageType;
 
         private Meta meta;
@@ -93,13 +92,13 @@ public class ConsumerRecord<V> {
             return this;
         }
         public ConsumerRecord<V> build() {
-            // 检查必要字段是否已设置
+
+            //Check whether the necessary fields have been set.
             if (messageType == TmqMessageType.TMQ_RES_DATA){
                 if (topic == null || dbName == null || vGroupId == null || value == null) {
                     throw new IllegalStateException("for data type, Topic, dbName, vGroupId and value are required.");
                 }
             } else if (messageType == TmqMessageType.TMQ_RES_TABLE_META){
-                // 检查必要字段是否已设置
                 if (topic == null || dbName == null || vGroupId == null || meta == null) {
                     throw new IllegalStateException("for meta type, Topic, dbName, vGroupId, meta are required.");
                 }

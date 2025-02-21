@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 
 import java.io.IOException;
 
-// 自定义反序列化器
 public class TableTypeDeserializer extends JsonDeserializer<TableType> {
     @Override
     public TableType deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
