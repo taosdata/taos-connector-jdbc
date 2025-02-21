@@ -140,7 +140,7 @@ public class WSConsumer<V> implements Consumer<V> {
             return ConsumerRecords.emptyRecord();
         }
 
-        if (pollResp.getMessageType() == TmqMessageType.TMQ_RES_TABLE_META.getCode()) {
+        if (pollResp.getMessageType() == TmqMessageType.TMQ_RES_TABLE_META.getCode() || pollResp.getMessageType() == TmqMessageType.TMQ_RES_METADATA.getCode()) {
             Request fetchJsonMetaReq = factory.generateFetchJsonMeata(pollResp.getMessageId());
             FetchJsonMetaResp fetchJsonMetaResp = (FetchJsonMetaResp) transport.send(fetchJsonMetaReq);
             if (Code.SUCCESS.getCode() != fetchJsonMetaResp.getCode()) {

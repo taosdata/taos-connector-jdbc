@@ -43,16 +43,18 @@ public class MetaDeserializer extends StdDeserializer<Meta> {
             } else if (TableType.CHILD.toString().equalsIgnoreCase(tableType)) {
                 return mapper.treeToValue(node, MetaCreateChildTable.class);
             }
-        } else if (MetaType.DROP.toString().equalsIgnoreCase(type)) {
+        }
+
+        if (MetaType.DROP.toString().equalsIgnoreCase(type)) {
             if (TableType.SUPER.toString().equalsIgnoreCase(tableType)) {
                 return mapper.treeToValue(node, MetaDropSuperTable.class);
             } else {
                 return mapper.treeToValue(node, MetaDropTable.class);
             }
-        } else if (MetaType.ALTER.toString().equalsIgnoreCase(type)) {
+        }
+
+        if (MetaType.ALTER.toString().equalsIgnoreCase(type)) {
             return mapper.treeToValue(node, MetaAlterTable.class);
-        } else if (MetaType.DELETE.toString().equalsIgnoreCase(type)){
-//            return mapper.treeToValue(node, MetaDeleteData.class);
         }
         throw new IllegalArgumentException("Unsupported combination of 'type' and 'tableType' values: type=" + type + ", tableType=" + tableType);
     }
