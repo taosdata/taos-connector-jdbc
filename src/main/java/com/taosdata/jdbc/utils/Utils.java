@@ -21,6 +21,7 @@ import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ForkJoinPool;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -28,6 +29,7 @@ import java.util.stream.IntStream;
 
 public class Utils {
 
+    private static final ForkJoinPool forkJoinPool = new ForkJoinPool();
     private static final Pattern ptn = Pattern.compile(".*?'");
     public static String escapeSingleQuota(String origin) {
         Matcher m = ptn.matcher(origin);
@@ -192,4 +194,9 @@ public class Utils {
             return false;
         }
     }
+
+    public static ForkJoinPool getForkJoinPool() {
+        return forkJoinPool;
+    }
+
 }
