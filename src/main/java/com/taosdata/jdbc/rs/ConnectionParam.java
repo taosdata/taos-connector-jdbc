@@ -41,6 +41,14 @@ public class ConnectionParam {
     private String appName;
     private String appIp;
 
+    private int lingerMs;
+    private boolean copyData;
+    private int batchSizeByRow;
+    private int cacheSizeByRow;
+    private int backendWriteThreadNum;
+    private boolean strictCheck;
+    private int retryTimes;
+    private String asyncWrite;
     static public final int CONNECT_MODE_BI = 1;
 
     private ConnectionParam(Builder builder) {
@@ -65,180 +73,236 @@ public class ConnectionParam {
         this.disableSslCertValidation = builder.disableSslCertValidation;
         this.appName = builder.appName;
         this.appIp = builder.appIp;
-    }
-
-    public String getHost() {
-        return host;
+        this.lingerMs = builder.lingerMs;
+        this.copyData = builder.copyData;
+        this.batchSizeByRow = builder.batchSizeByRow;
+        this.cacheSizeByRow = builder.cacheSizeByRow;
+        this.backendWriteThreadNum = builder.backendWriteThreadNum;
+        this.strictCheck = builder.strictCheck;
+        this.retryTimes = builder.retryTimes;
+        this.asyncWrite = builder.asyncWrite;
     }
 
     public void setHost(String host) {
         this.host = host;
     }
 
-    public String getPort() {
-        return port;
-    }
-
     public void setPort(String port) {
         this.port = port;
-    }
-
-    public String getDatabase() {
-        return database;
     }
 
     public void setDatabase(String database) {
         this.database = database;
     }
 
-    public String getCloudToken() {
-        return cloudToken;
-    }
-
     public void setCloudToken(String cloudToken) {
         this.cloudToken = cloudToken;
-    }
-
-    public String getUser() {
-        return user;
     }
 
     public void setUser(String user) {
         this.user = user;
     }
 
-    public String getPassword() {
-        return password;
-    }
-
     public void setPassword(String password) {
         this.password = password;
-    }
-
-    public String getTz() {
-        return tz;
     }
 
     public void setTz(String tz) {
         this.tz = tz;
     }
-    public ZoneId getZoneId() {
-        return zoneId;
-    }
 
     public void setZoneId(ZoneId zoneId) {
         this.zoneId = zoneId;
-    }
-    public boolean isUseSsl() {
-        return useSsl;
     }
 
     public void setUseSsl(boolean useSsl) {
         this.useSsl = useSsl;
     }
 
-    public int getMaxRequest() {
-        return maxRequest;
-    }
-
     public void setMaxRequest(int maxRequest) {
         this.maxRequest = maxRequest;
-    }
-
-    public int getConnectTimeout() {
-        return connectTimeout;
     }
 
     public void setConnectTimeout(int connectTimeout) {
         this.connectTimeout = connectTimeout;
     }
 
-    public int getRequestTimeout() {
-        return requestTimeout;
-    }
-
     public void setRequestTimeout(int requestTimeout) {
         this.requestTimeout = requestTimeout;
-    }
-
-    public int getConnectMode() {
-        return connectMode;
     }
 
     public void setConnectMode(int connectMode) {
         this.connectMode = connectMode;
     }
 
-    public boolean isEnableCompression() {
-        return enableCompression;
-    }
     public void setEnableCompression(boolean enableCompression) {
         this.enableCompression = enableCompression;
     }
 
-    public String getSlaveClusterHost() {
-        return slaveClusterHost;
+    public void setEnableAutoConnect(boolean enableAutoConnect) {
+        this.enableAutoConnect = enableAutoConnect;
     }
 
     public void setSlaveClusterHost(String slaveClusterHost) {
         this.slaveClusterHost = slaveClusterHost;
     }
 
-    public String getSlaveClusterPort() {
-        return slaveClusterPort;
-    }
-
     public void setSlaveClusterPort(String slaveClusterPort) {
         this.slaveClusterPort = slaveClusterPort;
-    }
-
-    public int getReconnectIntervalMs() {
-        return reconnectIntervalMs;
     }
 
     public void setReconnectIntervalMs(int reconnectIntervalMs) {
         this.reconnectIntervalMs = reconnectIntervalMs;
     }
 
-    public int getReconnectRetryCount() {
-        return reconnectRetryCount;
-    }
-
     public void setReconnectRetryCount(int reconnectRetryCount) {
         this.reconnectRetryCount = reconnectRetryCount;
-    }
-
-    public boolean isEnableAutoConnect() {
-        return enableAutoConnect;
-    }
-    public void setEnableAutoConnect(boolean enableAutoConnect) {
-        this.enableAutoConnect = enableAutoConnect;
-    }
-
-    public boolean isDisableSslCertValidation() {
-        return disableSslCertValidation;
     }
 
     public void setDisableSslCertValidation(boolean disableSslCertValidation) {
         this.disableSslCertValidation = disableSslCertValidation;
     }
 
-    public String getAppName() {
-        return appName;
-    }
-
     public void setAppName(String appName) {
         this.appName = appName;
-    }
-
-    public String getAppIp() {
-        return appIp;
     }
 
     public void setAppIp(String appIp) {
         this.appIp = appIp;
     }
 
+    public void setLingerMs(int lingerMs) {
+        this.lingerMs = lingerMs;
+    }
+
+    public void setCopyData(boolean copyData) {
+        this.copyData = copyData;
+    }
+
+    public void setBatchSizeByRow(int batchSizeByRow) {
+        this.batchSizeByRow = batchSizeByRow;
+    }
+
+    public void setCacheSizeByRow(int cacheSizeByRow) {
+        this.cacheSizeByRow = cacheSizeByRow;
+    }
+
+    public void setBackendWriteThreadNum(int backendWriteThreadNum) {
+        this.backendWriteThreadNum = backendWriteThreadNum;
+    }
+
+    public void setStrictCheck(boolean strictCheck) {
+        this.strictCheck = strictCheck;
+    }
+
+    public void setRetryTimes(int retryTimes) {
+        this.retryTimes = retryTimes;
+    }
+
+    public void setAsyncWrite(String asyncWrite) {
+        this.asyncWrite = asyncWrite;
+    }
+    public String getHost() {
+        return host;
+    }
+    public String getPort() {
+        return port;
+    }
+    public String getDatabase() {
+        return database;
+    }
+    public String getCloudToken() {
+        return cloudToken;
+    }
+
+    public String getUser() {
+        return user;
+    }
+    public String getPassword() {
+        return password;
+    }
+    public String getTz() {
+        return tz;
+    }
+    public ZoneId getZoneId() {
+        return zoneId;
+    }
+    public boolean isUseSsl() {
+        return useSsl;
+    }
+    public int getMaxRequest() {
+        return maxRequest;
+    }
+    public int getConnectTimeout() {
+        return connectTimeout;
+    }
+    public int getRequestTimeout() {
+        return requestTimeout;
+    }
+    public int getConnectMode() {
+        return connectMode;
+    }
+    public boolean isEnableCompression() {
+        return enableCompression;
+    }
+    public String getSlaveClusterHost() {
+        return slaveClusterHost;
+    }
+    public String getSlaveClusterPort() {
+        return slaveClusterPort;
+    }
+    public int getReconnectIntervalMs() {
+        return reconnectIntervalMs;
+    }
+    public int getReconnectRetryCount() {
+        return reconnectRetryCount;
+    }
+    public boolean isEnableAutoConnect() {
+        return enableAutoConnect;
+    }
+
+    public boolean isDisableSslCertValidation() {
+        return disableSslCertValidation;
+    }
+
+    public String getAppName() {
+        return appName;
+    }
+    public String getAppIp() {
+        return appIp;
+    }
+
+    public int getLingerMs() {
+        return lingerMs;
+    }
+
+    public boolean isCopyData() {
+        return copyData;
+    }
+
+    public int getBatchSizeByRow() {
+        return batchSizeByRow;
+    }
+
+    public int getCacheSizeByRow() {
+        return cacheSizeByRow;
+    }
+
+    public int getBackendWriteThreadNum() {
+        return backendWriteThreadNum;
+    }
+
+    public boolean isStrictCheck() {
+        return strictCheck;
+    }
+
+    public int getRetryTimes() {
+        return retryTimes;
+    }
+
+    public String getAsyncWrite() {
+        return asyncWrite;
+    }
     public static ConnectionParam getParamWs(Properties perperties) throws SQLException {
         ConnectionParam connectionParam = getParam(perperties);
         if (connectionParam.getTz() == null
@@ -346,6 +410,43 @@ public class ConnectionParam {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid app ip address");
         }
 
+        int lingerMs = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_LINGER_MS, "0"));
+        if (lingerMs < 0){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_LINGER_MS");
+        }
+
+        boolean copyData = Boolean.parseBoolean(properties.getProperty(TSDBDriver.PROPERTY_KEY_COPY_DATA, "false"));
+
+        int batchSizeByRow = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_BATCH_SIZE_BY_ROW, "10000"));
+        if (batchSizeByRow < 0){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_BATCH_SIZE_BY_ROW");
+        }
+
+        int cacheSizeByRow = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_CACHE_SIZE_BY_ROW, "100000"));
+        if (cacheSizeByRow < 0){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_CACHE_SIZE_BY_ROW");
+        }
+
+        if (batchSizeByRow > cacheSizeByRow || cacheSizeByRow % batchSizeByRow != 0){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "PROPERTY_KEY_CACHE_SIZE_BY_ROW must be an integer multiple of PROPERTY_KEY_BATCH_SIZE_BY_ROW");
+        }
+
+        int backendWriteThreadNum = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_BACKEND_WRITE_THREAD_NUM, "10"));
+        if (backendWriteThreadNum < 0){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_BACKEND_WRITE_THREAD_NUM");
+        }
+
+        boolean strictCheck = Boolean.parseBoolean(properties.getProperty(TSDBDriver.PROPERTY_KEY_STRICT_CHECK, "false"));
+        int retryTimes = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_RETRY_TIMES, "3"));
+        if (retryTimes < 0){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_RETRY_TIMES");
+        }
+
+        String asyncWrite = properties.getProperty(TSDBDriver.PROPERTY_KEY_ASYNC_WRITE, "");
+        if (!asyncWrite.equals("") && !asyncWrite.equalsIgnoreCase("STMT")){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "PROPERTY_KEY_ASYNC_WRITE only support STMT");
+        }
+
         return new Builder(host, port)
                 .setDatabase(database)
                 .setCloudToken(cloudToken)
@@ -365,6 +466,14 @@ public class ConnectionParam {
                 .setDisableSslCertValidation(disableSslCertValidation)
                 .setAppIp(appIp)
                 .setAppName(appName)
+                .setLingerMs(lingerMs)
+                .setCopyData(copyData)
+                .setBatchSizeByRow(batchSizeByRow)
+                .setCacheSizeByRow(cacheSizeByRow)
+                .setBackendWriteThreadNum(backendWriteThreadNum)
+                .setStrictCheck(strictCheck)
+                .setRetryTimes(retryTimes)
+                .setAsyncWrite(asyncWrite)
                 .build();
     }
 
@@ -392,6 +501,14 @@ public class ConnectionParam {
 
         private String appName;
         private String appIp;
+        private int lingerMs;
+        private boolean copyData;
+        private int batchSizeByRow;
+        private int cacheSizeByRow;
+        private int backendWriteThreadNum;
+        private boolean strictCheck;
+        private int retryTimes;
+        private String asyncWrite;
 
         public Builder(String host, String port) {
             this.host = host;
@@ -483,6 +600,46 @@ public class ConnectionParam {
 
         public Builder setAppIp(String appIp) {
             this.appIp = appIp;
+            return this;
+        }
+
+        public Builder setLingerMs(int lingerMs) {
+            this.lingerMs = lingerMs;
+            return this;
+        }
+
+        public Builder setCopyData(boolean copyData) {
+            this.copyData = copyData;
+            return this;
+        }
+
+        public Builder setBatchSizeByRow(int batchSizeByRow) {
+            this.batchSizeByRow = batchSizeByRow;
+            return this;
+        }
+
+        public Builder setCacheSizeByRow(int cacheSizeByRow) {
+            this.cacheSizeByRow = cacheSizeByRow;
+            return this;
+        }
+
+        public Builder setBackendWriteThreadNum(int backendWriteThreadNum) {
+            this.backendWriteThreadNum = backendWriteThreadNum;
+            return this;
+        }
+
+        public Builder setStrictCheck(boolean strictCheck) {
+            this.strictCheck = strictCheck;
+            return this;
+        }
+
+        public Builder setRetryTimes(int retryTimes) {
+            this.retryTimes = retryTimes;
+            return this;
+        }
+
+        public Builder setAsyncWrite(String asyncWrite) {
+            this.asyncWrite = asyncWrite;
             return this;
         }
         public ConnectionParam build() {

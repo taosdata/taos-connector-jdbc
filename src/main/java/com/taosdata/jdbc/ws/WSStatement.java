@@ -11,6 +11,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.ZoneId;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.taosdata.jdbc.utils.SqlSyntaxValidator.getDatabaseName;
 
@@ -19,7 +20,7 @@ public class WSStatement extends AbstractStatement {
     protected String database;
     private final AbstractConnection connection;
 
-    private boolean closed;
+    protected AtomicBoolean closed = new AtomicBoolean(false);
     protected ResultSet resultSet;
 
     private int queryTimeout = 0;
@@ -66,7 +67,7 @@ public class WSStatement extends AbstractStatement {
     public void close() throws SQLException {
         if (!isClosed()) {
             this.connection.unregisterStatement(this.instanceId);
-            this.closed = true;
+            this.closed.set(true);
             if (resultSet != null && !resultSet.isClosed()) {
                 resultSet.close();
             }
@@ -150,6 +151,6 @@ public class WSStatement extends AbstractStatement {
 
     @Override
     public boolean isClosed() throws SQLException {
-        return closed;
+        return closed.get();
     }
 }
