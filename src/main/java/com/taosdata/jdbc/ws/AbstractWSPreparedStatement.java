@@ -1113,14 +1113,14 @@ public class AbstractWSPreparedStatement extends WSStatement implements TaosPrep
             throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
         }
 
-        // execute
-        Request request = RequestFactory.generateExec(stmtId, reqId);
-        Stmt2ExecResp resp = (Stmt2ExecResp) transport.send(request);
-        if (Code.SUCCESS.getCode() != resp.getCode()) {
-            throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
-        }
+//        // execute
+//        Request request = RequestFactory.generateExec(stmtId, reqId);
+//        Stmt2ExecResp resp = (Stmt2ExecResp) transport.send(request);
+//        if (Code.SUCCESS.getCode() != resp.getCode()) {
+//            throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
+//        }
 
-        this.affectedRows = resp.getAffected();
+//        this.affectedRows = resp.getAffected();
         return this.affectedRows;
     }
 
