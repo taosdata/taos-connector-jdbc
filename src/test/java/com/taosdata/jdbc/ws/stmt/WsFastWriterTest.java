@@ -13,13 +13,13 @@ import java.util.Random;
 
 @FixMethodOrder
 public class WsFastWriterTest {
-    String host = "vm98";
+    String host = "localhost";
     String db_name = "ws_fw";
     String tableName = "wpt";
     String superTable = "wpt_st";
     Connection connection;
 
-    int numOfSubTable = 1000;
+    int numOfSubTable = 100;
     int numOfRow = 100;
     private static final Random random = new Random(System.currentTimeMillis());
 
@@ -78,27 +78,16 @@ public class WsFastWriterTest {
         long end = System.currentTimeMillis();
         System.out.println("Time cost: " + (end - start) + "ms");
 
-        String sql2 = "select * from " + db_name + "." + tableName + " where ts > ? order by ts desc limit ?";
+        String sql2 = "select count(*) from " + db_name + "." + tableName;
 
-        try (TSWSPreparedStatement pstmt = connection.prepareStatement(sql2).unwrap(TSWSPreparedStatement.class)) {
-            pstmt.setTimestamp(0, new Timestamp(System.currentTimeMillis() - 1000));
-            pstmt.setInt(2, 5);
-            ResultSet rs = pstmt.executeQuery();
+        Statement statement = connection.createStatement();
+        statement.execute(sql2);
 
-            int rows = 0;
-            while (rs.next()) {
-                rows++;
-                System.out.println("ts-1: " + rs.getTimestamp(1) + ", current: " + rs.getFloat(2) + ", voltage: " + rs.getInt(3) + ", phase: " + rs.getFloat(4));
-            }
-            Assert.assertEquals(6, rows);
-        } catch (Exception ex) {
-            System.out.printf("Failed to query table meters using stmt, %sErrMessage: %s%n",
-                    ex instanceof SQLException ? "ErrCode: " + ((SQLException) ex).getErrorCode() + ", " : "",
-                    ex.getMessage());
-            ex.printStackTrace();
-            throw ex;
-        }
-
+        ResultSet rs = statement.getResultSet();
+        rs.next();
+        Assert.assertEquals(numOfSubTable * numOfRow, rs.getInt(1));
+        rs.close();
+        statement.close();
     }
 
     @Before

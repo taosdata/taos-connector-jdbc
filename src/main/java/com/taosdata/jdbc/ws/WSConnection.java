@@ -1,9 +1,6 @@
 package com.taosdata.jdbc.ws;
 
-import com.taosdata.jdbc.AbstractConnection;
-import com.taosdata.jdbc.TSDBDriver;
-import com.taosdata.jdbc.TSDBError;
-import com.taosdata.jdbc.TSDBErrorNumbers;
+import com.taosdata.jdbc.*;
 import com.taosdata.jdbc.enums.FeildBindType;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
@@ -24,6 +21,8 @@ import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CopyOnWriteArrayList;

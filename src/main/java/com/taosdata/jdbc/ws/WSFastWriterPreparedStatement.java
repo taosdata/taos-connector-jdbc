@@ -13,11 +13,9 @@ import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.Utils;
-import com.taosdata.jdbc.ws.entity.Action;
-import com.taosdata.jdbc.ws.entity.Code;
-import com.taosdata.jdbc.ws.entity.FetchBlockNewResp;
-import com.taosdata.jdbc.ws.entity.Request;
+import com.taosdata.jdbc.ws.entity.*;
 import com.taosdata.jdbc.ws.stmt2.entity.*;
+import com.taosdata.jdbc.ws.stmt2.entity.RequestFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -39,25 +37,14 @@ import static com.taosdata.jdbc.TSDBConstants.*;
 
 public class WSFastWriterPreparedStatement extends AbstractWSPreparedStatement {
 
-    private boolean copyData = false;
-    private final long[] reqIdArray;
-    private final long[] stmtIdArray;
-
-    private int addBatchCounts = 0;
-
+    private final boolean copyData;
     private final int writeThreadNum;
-    private final LinkedBlockingQueue<Map<Integer, Column>> originDataCache = new LinkedBlockingQueue<>();
-
-
-    private final LinkedBlockingQueue<FastWriteMsg> msgQueue = new LinkedBlockingQueue<>();
-//    private ThreadPoolExecutor dataDistributionThread =  (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
     private ThreadPoolExecutor writerThreads;
     private ArrayList<LinkedBlockingQueue<Map<Integer, Column>>> writeQueueList;
-    private static final ForkJoinPool calcThreadPool = Utils.getForkJoinPool();
-    private final AtomicInteger totalWriteQueueSize;
-
+    private final AtomicInteger processedRowCount = new AtomicInteger(0);
     private volatile SQLException lastException;
-
+    private List<WorkerThread> workerThreadList;
+    private int addBatchCounts = 0;
 
     public WSFastWriterPreparedStatement(Transport transport, ConnectionParam param, String database, AbstractConnection connection, String sql, Long instanceId, Stmt2PrepareResp prepareResp) throws SQLException {
         super(transport, param, database, connection, sql, instanceId, prepareResp);
@@ -65,134 +52,40 @@ public class WSFastWriterPreparedStatement extends AbstractWSPreparedStatement {
         copyData = param.isCopyData();
         writeThreadNum = param.getBackendWriteThreadNum();
 
-        stmtIdArray = new long[param.getBackendWriteThreadNum()];
-        reqIdArray = new long[param.getBackendWriteThreadNum()];
-
-        for (int i = 0; i < param.getBackendWriteThreadNum(); i++){
-            long reqId = ReqId.getReqID();
-            Request request = RequestFactory.generateInit(reqId, true, true);
-            Stmt2Resp resp = (Stmt2Resp) transport.send(request);
-            if (Code.SUCCESS.getCode() != resp.getCode()) {
-                // close other stmt
-                closeAllStmt();
-                throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
-            }
-
-            long stmtId = resp.getStmtId();
-            Request prepare = RequestFactory.generatePrepare(stmtId, reqId, sql);
-            Stmt2PrepareResp res = (Stmt2PrepareResp) transport.send(prepare);
-            if (Code.SUCCESS.getCode() != res.getCode()) {
-                // close other stmt
-                closeAllStmt();
-                throw new SQLException("(0x" + Integer.toHexString(res.getCode()) + "):" + res.getMessage());
-            }
-
-            reqIdArray[i] = reqId;
-            stmtIdArray[i] = stmtId;
-        }
-
-//        dataDistributionThread =  (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
         writerThreads =  (ThreadPoolExecutor) Executors.newFixedThreadPool(writeThreadNum);
         writeQueueList = new ArrayList<>(writeThreadNum);
         for (int i = 0; i < writeThreadNum; i++){
             writeQueueList.add(new LinkedBlockingQueue<>(param.getCacheSizeByRow()));
         }
 
-        totalWriteQueueSize = new AtomicInteger(param.getCacheSizeByRow() * writeThreadNum);
+        workerThreadList = new ArrayList<>(writeThreadNum);
 
+        CommonResp res = null;
         for (int i = 0; i < writeThreadNum; i++){
             WorkerThread workerThread = new WorkerThread(
                     writeQueueList.get(i),
-                    param.getBatchSizeByRow(),
-                    fields,
-                    reqIdArray[i],
-                    stmtIdArray[i],
-                    toBeBindTableNameIndex,
-                    toBeBindTagCount,
-                    toBeBindColCount,
-                    precision,
+                    sql,
                     transport,
-                    closed
+                    param,
+                    closed,
+                    processedRowCount
             );
-
-            // 提交任务到线程池
-            writerThreads.submit(workerThread);
+            workerThreadList.add(workerThread);
+           res = workerThread.initStmt();
+           if (res.getCode() != Code.SUCCESS.getCode()){
+               break;
+           }
         }
 
-
-
-
-
-
-//        // start distribute thread
-//        dataDistributionThread.submit(() -> {
-//            try {
-//                while (!isClosed()){
-//
-//                    FastWriteMsg msg = msgQueue.take();
-//                    switch (msg.getMessageType()) {
-//                        case EXCEEDS_BATCH_SIZE:
-//                            if (originDataCache.size() < param.getBatchSizeByRow()){
-//                                break;
-//                            }
-//                            if (totalWriteQueueSize.get() > 0) {
-//                                totalWriteQueueSize.decrementAndGet();
-//                                ArrayList<Map<Integer, Column>> batchList = new ArrayList<>(param.getBatchSizeByRow());
-//                                for (int i = 0; i < param.getBatchSizeByRow(); i++) {
-//                                    Map<Integer, Column> map = originDataCache.take();
-//                                    batchList.add(map);
-//                                }
-//                                for (int i = 0; i < writeThreadNum; i++) {
-//                                    LinkedBlockingQueue<byte[]> l = writeQueueList.get(i);
-//                                    if (l.size() < WRITE_QUEUE_SIZE) {
-//                                        SerializeBatchData serializeBatchData = new SerializeBatchData(batchList,
-//                                                l,
-//                                                fields,
-//                                                reqIdArray[i],
-//                                                stmtIdArray[i],
-//                                                toBeBindTableNameIndex,
-//                                                toBeBindTagCount,
-//                                                toBeBindColCount,
-//                                                precision,
-//                                                lastException);
-//                                        calcThreadPool.submit(serializeBatchData::clac);
-//                                    }
-//                                }
-//                            }
-//                            break;
-//                        case LINGER_MS_EXPIRED:
-//
-//                            break;
-//                        case WRITE_COMPLETED:
-//                            break;
-//                    }
-//
-//                }
-//            } catch (InterruptedException ignored) {
-//                Thread.currentThread().interrupt();
-//            } catch (Exception e) {
-//                log.error("fetch block error", e);
-//                BlockData blockData = BlockData.getEmptyBlockData(fields, timestampPrecision);
-//                while (!isClosed) {
-//                    try {
-//                        if (blockingQueueOut.offer(blockData, 10, TimeUnit.MILLISECONDS)){
-//                            break;
-//                        }
-//                    } catch (InterruptedException ignored) {
-//                        Thread.currentThread().interrupt();
-//                        return;
-//                    }
-//                }
-//            }
-//        });
-    }
-
-    private void closeAllStmt() throws SQLException {
-        for (int i = 0; i < param.getBackendWriteThreadNum(); i++){
-            if (stmtIdArray[i] > 0){
-                Request close = RequestFactory.generateClose(stmtIdArray[i], reqIdArray[i]);
-                transport.sendWithoutResponse(close);
+        if (res != null && res.getCode() != Code.SUCCESS.getCode()){
+            for (WorkerThread workerThread : workerThreadList){
+                workerThread.releaseStmt();
             }
+            throw new SQLException("(0x" + Integer.toHexString(res.getCode()) + "):" + res.getMessage());
+        }
+
+        for (WorkerThread workerThread : workerThreadList){
+            writerThreads.submit(workerThread);
         }
     }
 
@@ -200,16 +93,15 @@ public class WSFastWriterPreparedStatement extends AbstractWSPreparedStatement {
         Map<Integer, Column> dstMap = new HashMap<>();
         originalMap.forEach((key, src) -> {
             Column dst = src;
-            if (src.getData() instanceof Timestamp && copyData) {
+            if (copyData && src.getData() instanceof Timestamp) {
                      dst = new Column(new Timestamp(((Timestamp) src.getData()).getTime()), src.getType(), src.getIndex());
             }
 
-            if (src.getData() instanceof byte[] && copyData) {
+            if (copyData && src.getData() instanceof byte[]) {
                 byte[] srcBytes = (byte[]) src.getData();
                 byte[] copiedValue = new byte[srcBytes.length];
                 System.arraycopy(srcBytes, 0, copiedValue, 0, srcBytes.length);
                 dst = new Column(copiedValue, src.getType(), src.getIndex());
-
             }
 
             dstMap.put(key, dst);
@@ -242,29 +134,9 @@ public class WSFastWriterPreparedStatement extends AbstractWSPreparedStatement {
 
     @Override
     public int executeUpdate() throws SQLException {
-//        if (!this.isInsert){
-//            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "The insert SQL must be prepared.");
-//        }
-//
-//        if (fields.isEmpty()){
-//            return this.executeUpdate(this.rawSql);
-//        }
-//
-//        if (colOrderedMap.size() == fields.size()){
-//            // bind all
-//            bindAllColWithStdApi();
-//        } else{
-//            // mixed standard api and extended api, only support one table
-//            onlyBindTag();
-//            onlyBindCol();
-//        }
-//
-//        if (isTableInfoEmpty()){
-//            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_WITH_EXECUTEUPDATE, "no data to be bind");
-//        }
-//
-//        tableInfoList.add(tableInfo);
-//        return executeBatchImpl();
+        if (isClosed())
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
+
 
         return 0;
     }
@@ -296,9 +168,8 @@ public class WSFastWriterPreparedStatement extends AbstractWSPreparedStatement {
             } catch (InterruptedException ignored) {
             }
 
-            addBatchCounts++;
+            processedRowCount.incrementAndGet();
         } else {
-            addBatchCounts = 0;
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "Only support standard jdbc bind api.");
         }
     }
@@ -336,162 +207,183 @@ public class WSFastWriterPreparedStatement extends AbstractWSPreparedStatement {
             }
         }
 
-        Stmt2Resp errRes = null;
-
-        for (int i = 0; i < param.getBackendWriteThreadNum(); i++) {
-            Request close = RequestFactory.generateClose(stmtIdArray[i], reqIdArray[i]);
-            Stmt2Resp resp = (Stmt2Resp) transport.send(close);
-
-            if (Code.SUCCESS.getCode() != resp.getCode()) {
-                errRes = resp;
-            }
-        }
-        if (errRes != null) {
-            throw new SQLException("(0x" + Integer.toHexString(errRes.getCode()) + "):" + errRes.getMessage());
+        for (WorkerThread workerThread : workerThreadList){
+            workerThread.releaseStmt();
         }
     }
 
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
-        if (this.getResultSet() == null)
-            return null;
-        return getResultSet().getMetaData();
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD, "Fast write mode only support insert.");
     }
 
     @Override
     public void columnDataAddBatch() throws SQLException {
-//        if (!colOrderedMap.isEmpty()){
-//            throw new SQLException("column data is not empty");
-//        }
-//
-//        while (!tag.isEmpty()){
-//            ColumnInfo columnInfo = tag.poll();
-//            if (isInsert && columnInfo.getType() != tagTypeList.get(columnInfo.getIndex())){
-//                tableInfo.getTagInfo().add(new ColumnInfo(columnInfo.getIndex(), columnInfo.getDataList(), tagTypeList.get(columnInfo.getIndex())));
-//            } else {
-//                tableInfo.getTagInfo().add(columnInfo);
-//            }
-//
-//        }
-//        while (!colListQueue.isEmpty()) {
-//            ColumnInfo columnInfo = colListQueue.poll();
-//            if (isInsert && columnInfo.getType() != colTypeList.get(columnInfo.getIndex())){
-//                tableInfo.getDataList().add(new ColumnInfo(columnInfo.getIndex(), columnInfo.getDataList(), colTypeList.get(columnInfo.getIndex())));
-//            } else {
-//                tableInfo.getDataList().add(columnInfo);
-//            }
-//        }
-//        tableInfoList.add(tableInfo);
-//        tableInfo = TableInfo.getEmptyTableInfo();
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
     }
 
 
     @Override
     public void columnDataExecuteBatch() throws SQLException {
-
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
     }
 
+    @Override
     public void columnDataCloseBatch() throws SQLException {
-        this.close();
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
     }
 
 
     static class WorkerThread implements Runnable {
         private final LinkedBlockingQueue<Map<Integer, Column>> dataQueue;
         private final int batchSize;
-        private final List<Field> fields;
-        private final long reqId;
-        private final long stmtId;
-        private final int toBeBindTableNameIndex;
-        private final int toBeBindTagCount;
-        private final int toBeBindColCount;
-        private final int precision;
+        private final String sql;
+        private long reqId;
+        private long stmtId = 0;
+        private List<Field> fields;
+        private int toBeBindTableNameIndex;
+        private int toBeBindTagCount;
+        private int toBeBindColCount;
+        private int precision;
 
         private final List<TableInfo> tableInfoList = new ArrayList<>();
         private TableInfo tableInfo = TableInfo.getEmptyTableInfo();
 
 
         private final Transport transport;
+        private final ConnectionParam connectionParam;
 
         private final AtomicBoolean isClosed;
+        private final AtomicInteger processedRowCount;
 
         public WorkerThread(LinkedBlockingQueue<Map<Integer, Column>> taskQueue,
-                            int batchSize,
-                            List<Field> fields,
-                            long reqId,
-                            long stmtId,
-                            int toBeBindTableNameIndex,
-                            int toBeBindTagCount,
-                            int toBeBindColCount,
-                            int precision,
+                            String sql,
                             Transport transport,
-                            AtomicBoolean isClosed) {
+                            ConnectionParam param,
+                            AtomicBoolean isClosed,
+                            AtomicInteger processedRowCount) {
             this.dataQueue = taskQueue;
-            this.batchSize = batchSize;
-            this.fields = fields;
-            this.reqId = reqId;
-            this.stmtId = stmtId;
-            this.toBeBindTableNameIndex = toBeBindTableNameIndex;
-            this.toBeBindTagCount = toBeBindTagCount;
-            this.toBeBindColCount = toBeBindColCount;
-            this.precision = precision;
+            this.batchSize = param.getBatchSizeByRow();
+            this.sql = sql;
             this.transport = transport;
+            this.connectionParam = param;
             this.isClosed = isClosed;
+            this.processedRowCount = processedRowCount;
+        }
+
+        public CommonResp initStmt() throws SQLException {
+            long tmpReqID = ReqId.getReqID();
+            Request request = RequestFactory.generateInit(reqId, true, true);
+            Stmt2Resp resp = (Stmt2Resp) transport.send(request);
+            if (Code.SUCCESS.getCode() != resp.getCode()) {
+                return resp;
+            }
+            long tmpStmtId = resp.getStmtId();
+            this.reqId = tmpReqID;
+            this.stmtId = tmpStmtId;
+
+            Request prepare = RequestFactory.generatePrepare(stmtId, reqId, sql);
+            Stmt2PrepareResp prepareResp = (Stmt2PrepareResp) transport.send(prepare);
+
+            fields = prepareResp.getFields();
+            if (!fields.isEmpty()){
+                precision = fields.get(0).getPrecision();
+            }
+            for (int i = 0; i < fields.size(); i++){
+                Field field = fields.get(i);
+                if (field.getBindType() == FeildBindType.TAOS_FIELD_TBNAME.getValue()){
+                    toBeBindTableNameIndex = i;
+                }
+                if (field.getBindType() == FeildBindType.TAOS_FIELD_TAG.getValue()){
+                    toBeBindTagCount++;
+                }
+                if (field.getBindType() == FeildBindType.TAOS_FIELD_COL.getValue()){
+                    toBeBindColCount++;
+                }
+            }
+
+            return prepareResp;
+        }
+
+        public void releaseStmt() throws SQLException {
+            if (stmtId != 0){
+                Request close = RequestFactory.generateClose(stmtId, reqId);
+                transport.send(close);
+            }
+
         }
 
         @Override
         public void run() {
-            int totalRow = 0;
-            while (!isClosed.get() || !dataQueue.isEmpty()) {
+            while (!(isClosed.get() && dataQueue.isEmpty())) {
+                int polledRow = 0;
+                int size = 0;
                 try {
-                    if (dataQueue.size() > batchSize || isClosed.get()) {
-                        int brows = 0;
-                        int size = Math.min(dataQueue.size(), this.batchSize);
-                        for (int i = 0; i < size; i++) {
-                            Map<Integer, Column> map = dataQueue.take();
-                            processOneRow(map);
-                            totalRow++;
-                            brows++;
+                    if (dataQueue.isEmpty()) {
+                        Map<Integer, Column> map = dataQueue.poll(100, TimeUnit.MILLISECONDS);
+                        if (map == null) {
+                            continue;
                         }
-
-                        if (!isTableInfoEmpty()) {
-                            tableInfoList.add(tableInfo);
-                        }
-
-                        byte[] rawBlock = SerializeBlock.getStmt2BindBlock(
-                                reqId,
-                                stmtId,
-                                tableInfoList,
-                                toBeBindTableNameIndex,
-                                toBeBindTagCount,
-                                toBeBindColCount,
-                                precision);
-
-                        // 执行写入
-                        // bind
-                        Stmt2Resp bindResp = (Stmt2Resp) transport.send(Action.STMT2_BIND.getAction(),
-                                reqId, rawBlock);
-                        if (Code.SUCCESS.getCode() != bindResp.getCode()) {
-                            throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
-                        }
-
-                        // execute
-                        Request request = RequestFactory.generateExec(stmtId, reqId);
-                        Stmt2ExecResp resp = (Stmt2ExecResp) transport.send(request);
-                        if (Code.SUCCESS.getCode() != resp.getCode()) {
-                            throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
-                        }
-
-                        tableInfo = TableInfo.getEmptyTableInfo();
-                        tableInfoList.clear();
+                        processOneRow(map);
+                        polledRow++;
                     }
+
+                    size = Math.min(dataQueue.size(), this.batchSize - polledRow);
+                    for (int i = 0; i < size; i++) {
+                        Map<Integer, Column> map = dataQueue.take();
+                        processOneRow(map);
+                    }
+
+                    if (!isTableInfoEmpty()) {
+                        tableInfoList.add(tableInfo);
+                    }
+
+                    wirteBlockWithRetry();
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 } catch (SQLException e) {
-                    tableInfo = TableInfo.getEmptyTableInfo();
-                    tableInfoList.clear();
-                    // record error
-                    throw new RuntimeException(e);
+                    // log error
+                } finally {
+                    processedRowCount.addAndGet(-size - polledRow);
+                }
+            }
+        }
+
+
+        private void wirteBlockWithRetry() throws SQLException {
+            byte[] rawBlock = SerializeBlock.getStmt2BindBlock(
+                    reqId,
+                    stmtId,
+                    tableInfoList,
+                    toBeBindTableNameIndex,
+                    toBeBindTagCount,
+                    toBeBindColCount,
+                    precision);
+
+            tableInfo = TableInfo.getEmptyTableInfo();
+            tableInfoList.clear();
+
+            for (int i = 0; i < connectionParam.getRetryTimes(); i++) {
+                try {
+                    // bind
+                    Stmt2Resp bindResp = (Stmt2Resp) transport.send(Action.STMT2_BIND.getAction(),
+                            reqId, rawBlock);
+                    if (Code.SUCCESS.getCode() != bindResp.getCode()) {
+                        throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
+                    }
+
+                    // execute
+                    Request request = RequestFactory.generateExec(stmtId, reqId);
+                    Stmt2ExecResp resp = (Stmt2ExecResp) transport.send(request);
+                    if (Code.SUCCESS.getCode() != resp.getCode()) {
+                        throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
+                    }
+                    return;
+                } catch (SQLException e) {
+                    // only retry timeout
+                    if (e.getErrorCode() != TSDBErrorNumbers.ERROR_QUERY_TIMEOUT) {
+                        break;
+                    }
                 }
             }
         }

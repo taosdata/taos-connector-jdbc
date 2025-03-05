@@ -1089,6 +1089,41 @@ public class AbstractWSPreparedStatement extends WSStatement implements TaosPrep
         executeBatchImpl();
     }
 
+
+    public byte[] genData() throws SQLException {
+        if (tableInfoList.isEmpty()) {
+            throw new SQLException("batch data is empty");
+        }
+
+        byte[] rawBlock;
+        try {
+            rawBlock = SerializeBlock.getStmt2BindBlock(reqId, stmtId, tableInfoList, toBeBindTableNameIndex, toBeBindTagCount, toBeBindColCount, precision);
+        } finally {
+            this.clearParameters();
+        }
+
+        return rawBlock;
+    }
+
+    public int columnDataExecuteBatch(byte[] data) throws SQLException {
+        // bind
+        Stmt2Resp bindResp = (Stmt2Resp) transport.send(Action.STMT2_BIND.getAction(),
+                reqId, data);
+        if (Code.SUCCESS.getCode() != bindResp.getCode()) {
+            throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
+        }
+
+        // execute
+        Request request = RequestFactory.generateExec(stmtId, reqId);
+        Stmt2ExecResp resp = (Stmt2ExecResp) transport.send(request);
+        if (Code.SUCCESS.getCode() != resp.getCode()) {
+            throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
+        }
+
+        this.affectedRows = resp.getAffected();
+        return this.affectedRows;
+    }
+
     public void columnDataCloseBatch() throws SQLException {
         this.close();
     }

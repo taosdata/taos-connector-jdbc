@@ -22,12 +22,8 @@ public class WSStatement extends AbstractStatement {
 
     protected AtomicBoolean closed = new AtomicBoolean(false);
     protected ResultSet resultSet;
-
     private int queryTimeout = 0;
-
     protected final ZoneId zoneId;
-    protected final ZoneId stdZoneId = ZoneId.of("UTC");
-
     public WSStatement(Transport transport, String database, AbstractConnection connection, Long instanceId, ZoneId zoneId) {
         this.transport = transport;
         this.database = database;
