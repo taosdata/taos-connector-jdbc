@@ -5,48 +5,36 @@ import com.taosdata.jdbc.common.Column;
 import com.taosdata.jdbc.common.ColumnInfo;
 import com.taosdata.jdbc.common.SerializeBlock;
 import com.taosdata.jdbc.common.TableInfo;
-import com.taosdata.jdbc.enums.FastWriterMsgType;
 import com.taosdata.jdbc.enums.FeildBindType;
-import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.rs.ConnectionParam;
-import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.utils.StringUtils;
-import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.entity.*;
 import com.taosdata.jdbc.ws.stmt2.entity.*;
 import com.taosdata.jdbc.ws.stmt2.entity.RequestFactory;
+import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.Reader;
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.sql.Date;
 import java.sql.*;
-import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
-import static com.taosdata.jdbc.TSDBConstants.*;
-
-public class WSFastWriterPreparedStatement extends AbstractWSPreparedStatement {
+public class WSFWPreparedStatement extends AbsWSPreparedStatement {
+    private final org.slf4j.Logger log = LoggerFactory.getLogger(AbstractDriver.class);
 
     private final boolean copyData;
     private final int writeThreadNum;
     private ThreadPoolExecutor writerThreads;
     private ArrayList<LinkedBlockingQueue<Map<Integer, Column>>> writeQueueList;
-    private final AtomicInteger processedRowCount = new AtomicInteger(0);
+    private final AtomicInteger remainingUnprocessedRows = new AtomicInteger(0);
+    private final AtomicInteger batchInsertedRows = new AtomicInteger(0);
     private volatile SQLException lastException;
     private List<WorkerThread> workerThreadList;
     private int addBatchCounts = 0;
 
-    public WSFastWriterPreparedStatement(Transport transport, ConnectionParam param, String database, AbstractConnection connection, String sql, Long instanceId, Stmt2PrepareResp prepareResp) throws SQLException {
+    public WSFWPreparedStatement(Transport transport, ConnectionParam param, String database, AbstractConnection connection, String sql, Long instanceId, Stmt2PrepareResp prepareResp) throws SQLException {
         super(transport, param, database, connection, sql, instanceId, prepareResp);
 
         copyData = param.isCopyData();
@@ -68,7 +56,8 @@ public class WSFastWriterPreparedStatement extends AbstractWSPreparedStatement {
                     transport,
                     param,
                     closed,
-                    processedRowCount
+                    remainingUnprocessedRows,
+                    batchInsertedRows
             );
             workerThreadList.add(workerThread);
            res = workerThread.initStmt();
@@ -122,7 +111,7 @@ public class WSFastWriterPreparedStatement extends AbstractWSPreparedStatement {
         if (isInsert){
             executeUpdate();
         } else {
-            executeQuery();
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "Only support insert.");
         }
 
         return !isInsert;
@@ -137,10 +126,22 @@ public class WSFastWriterPreparedStatement extends AbstractWSPreparedStatement {
         if (isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
 
+        waitWriteCompleted();
 
-        return 0;
+        int affectedRows = batchInsertedRows.get();
+        batchInsertedRows.set(0);
+        return affectedRows;
     }
 
+    private void waitWriteCompleted() {
+        while (remainingUnprocessedRows.get() != 0) {
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException ignored) {
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
 
     @Override
     public void addBatch() throws SQLException {
@@ -168,7 +169,8 @@ public class WSFastWriterPreparedStatement extends AbstractWSPreparedStatement {
             } catch (InterruptedException ignored) {
             }
 
-            processedRowCount.incrementAndGet();
+            remainingUnprocessedRows.incrementAndGet();
+            addBatchCounts++;
         } else {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "Only support standard jdbc bind api.");
         }
@@ -192,6 +194,8 @@ public class WSFastWriterPreparedStatement extends AbstractWSPreparedStatement {
             return;
 
         super.close();
+
+        waitWriteCompleted();
 
         // wait backFetchExecutor to finish
         if (writerThreads != null) {
@@ -235,6 +239,8 @@ public class WSFastWriterPreparedStatement extends AbstractWSPreparedStatement {
 
 
     static class WorkerThread implements Runnable {
+        private final org.slf4j.Logger log = LoggerFactory.getLogger(AbstractDriver.class);
+
         private final LinkedBlockingQueue<Map<Integer, Column>> dataQueue;
         private final int batchSize;
         private final String sql;
@@ -245,6 +251,7 @@ public class WSFastWriterPreparedStatement extends AbstractWSPreparedStatement {
         private int toBeBindTagCount;
         private int toBeBindColCount;
         private int precision;
+        private int reconnectCount = 0;
 
         private final List<TableInfo> tableInfoList = new ArrayList<>();
         private TableInfo tableInfo = TableInfo.getEmptyTableInfo();
@@ -254,21 +261,24 @@ public class WSFastWriterPreparedStatement extends AbstractWSPreparedStatement {
         private final ConnectionParam connectionParam;
 
         private final AtomicBoolean isClosed;
-        private final AtomicInteger processedRowCount;
+        private final AtomicInteger remainingUnprocessedRows;
+        private final AtomicInteger batchInsertedRows;
 
         public WorkerThread(LinkedBlockingQueue<Map<Integer, Column>> taskQueue,
                             String sql,
                             Transport transport,
                             ConnectionParam param,
                             AtomicBoolean isClosed,
-                            AtomicInteger processedRowCount) {
+                            AtomicInteger remainingUnprocessedRows,
+                            AtomicInteger batchInsertedRows) {
             this.dataQueue = taskQueue;
             this.batchSize = param.getBatchSizeByRow();
             this.sql = sql;
             this.transport = transport;
             this.connectionParam = param;
             this.isClosed = isClosed;
-            this.processedRowCount = processedRowCount;
+            this.remainingUnprocessedRows = remainingUnprocessedRows;
+            this.batchInsertedRows = batchInsertedRows;
         }
 
         public CommonResp initStmt() throws SQLException {
@@ -310,7 +320,6 @@ public class WSFastWriterPreparedStatement extends AbstractWSPreparedStatement {
                 Request close = RequestFactory.generateClose(stmtId, reqId);
                 transport.send(close);
             }
-
         }
 
         @Override
@@ -338,19 +347,20 @@ public class WSFastWriterPreparedStatement extends AbstractWSPreparedStatement {
                         tableInfoList.add(tableInfo);
                     }
 
-                    wirteBlockWithRetry();
+                    writeBlockWithRetry();
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 } catch (SQLException e) {
-                    // log error
+                    log.error("Error in write data to server, rows: {}, code: {}, msg: {}",
+                            (polledRow + size), e.getErrorCode(), e.getMessage());
                 } finally {
-                    processedRowCount.addAndGet(-size - polledRow);
+                    remainingUnprocessedRows.addAndGet(-size - polledRow);
                 }
             }
         }
 
 
-        private void wirteBlockWithRetry() throws SQLException {
+        private void writeBlockWithRetry() throws SQLException {
             byte[] rawBlock = SerializeBlock.getStmt2BindBlock(
                     reqId,
                     stmtId,
@@ -378,11 +388,20 @@ public class WSFastWriterPreparedStatement extends AbstractWSPreparedStatement {
                     if (Code.SUCCESS.getCode() != resp.getCode()) {
                         throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
                     }
+
+                    int affectedRows = resp.getAffected();
+                    batchInsertedRows.addAndGet(affectedRows);
                     return;
                 } catch (SQLException e) {
                     // only retry timeout
                     if (e.getErrorCode() != TSDBErrorNumbers.ERROR_QUERY_TIMEOUT) {
                         break;
+                    }
+
+                    int trueReconnectCoount = transport.getReconnectCount();
+                    if (reconnectCount != trueReconnectCoount) {
+                        reconnectCount = trueReconnectCoount;
+                        initStmt();
                     }
                 }
             }
@@ -397,7 +416,7 @@ public class WSFastWriterPreparedStatement extends AbstractWSPreparedStatement {
         public void processOneRow(Map<Integer, Column> colOrderedMap) {
             if (isTableInfoEmpty()) {
                 // first time, bind all
-                bindAllToTableInfo(colOrderedMap);
+                bindAllToTableInfo(fields, colOrderedMap, tableInfo);
             } else {
                 Object tbname = colOrderedMap.get(toBeBindTableNameIndex + 1).getData();
                 if ((tbname instanceof String && tableInfo.getTableName().equals(tbname))
@@ -410,28 +429,7 @@ public class WSFastWriterPreparedStatement extends AbstractWSPreparedStatement {
                     // different table, flush tableInfo and create a new one
                     tableInfoList.add(tableInfo);
                     tableInfo = TableInfo.getEmptyTableInfo();
-                    bindAllToTableInfo(colOrderedMap);
-                }
-            }
-        }
-
-        public void bindAllToTableInfo(Map<Integer, Column> colOrderedMap) {
-            for (int index = 0; index < fields.size(); index++) {
-                if (fields.get(index).getBindType() == FeildBindType.TAOS_FIELD_TBNAME.getValue()) {
-                    if (colOrderedMap.get(index + 1).getData() instanceof byte[]) {
-                        tableInfo.setTableName(new String((byte[]) colOrderedMap.get(index + 1).getData(), StandardCharsets.UTF_8));
-                    }
-                    if (colOrderedMap.get(index + 1).getData() instanceof String) {
-                        tableInfo.setTableName((String) colOrderedMap.get(index + 1).getData());
-                    }
-                } else if (fields.get(index).getBindType() == FeildBindType.TAOS_FIELD_TAG.getValue()) {
-                    LinkedList<Object> list = new LinkedList<>();
-                    list.add(colOrderedMap.get(index + 1).getData());
-                    tableInfo.getTagInfo().add(new ColumnInfo(index + 1, list, fields.get(index).getFieldType()));
-                } else if (fields.get(index).getBindType() == FeildBindType.TAOS_FIELD_COL.getValue()) {
-                    LinkedList<Object> list = new LinkedList<>();
-                    list.add(colOrderedMap.get(index + 1).getData());
-                    tableInfo.getDataList().add(new ColumnInfo(index + 1, list, fields.get(index).getFieldType()));
+                    bindAllToTableInfo(fields, colOrderedMap, tableInfo);
                 }
             }
         }

@@ -26,6 +26,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT;
@@ -41,9 +42,9 @@ public class Transport implements AutoCloseable {
     public static final int TSDB_CODE_RPC_NETWORK_UNAVAIL = 0x0B;
     public static final int TSDB_CODE_RPC_SOMENODE_NOT_CONNECTED = 0x20;
 
+    private AtomicInteger reconnectCount = new AtomicInteger(0);
 
-
-    private final ArrayList<WSClient> clientArr = new ArrayList<>();;
+    private final ArrayList<WSClient> clientArr = new ArrayList<>();
     private final InFlightRequest inFlightRequest;
     private long timeout;
     private volatile boolean  closed = false;
@@ -123,6 +124,7 @@ public class Transport implements AutoCloseable {
         for (int i = 0; i < clientArr.size() && this.connectionParam.isEnableAutoConnect(); i++){
             boolean reconnected = reconnectCurNode();
             if (reconnected){
+                reconnectCount.incrementAndGet();
                 log.debug("reconnect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri));
                 return;
             }
@@ -455,5 +457,9 @@ public class Transport implements AutoCloseable {
             }
         }
         return false;
+    }
+
+    public int getReconnectCount() {
+        return reconnectCount.get();
     }
 }

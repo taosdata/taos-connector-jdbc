@@ -23,9 +23,7 @@ public class WsFastWriterTest {
     int numOfRow = 100;
     private static final Random random = new Random(System.currentTimeMillis());
 
-
-    @Test
-    public void testStmt2InsertStdApiNoTag() throws SQLException {
+    public void createSubTable() throws SQLException{
         // create sub table first
         String createSql = "create table";
         for (int i = 1; i <= numOfSubTable; i++) {
@@ -40,6 +38,11 @@ public class WsFastWriterTest {
             ex.printStackTrace();
             throw ex;
         }
+    }
+
+    @Test
+    public void testStmt2InsertStdApiNoTag() throws SQLException {
+        createSubTable();
 
         String sql = "INSERT INTO " + db_name + "." + tableName + "(tbname, ts, current, voltage, phase) VALUES (?,?,?,?,?)";
 
@@ -58,6 +61,7 @@ public class WsFastWriterTest {
                     pstmt.addBatch();
                 }
                 int[] exeResult = pstmt.executeBatch();
+                Assert.assertEquals(exeResult.length, numOfSubTable);
 
                 for (int ele : exeResult){
                     Assert.assertEquals(ele, Statement.SUCCESS_NO_INFO);

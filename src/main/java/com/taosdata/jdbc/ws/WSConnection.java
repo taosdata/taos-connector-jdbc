@@ -7,7 +7,6 @@ import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.rs.RestfulDatabaseMetaData;
 import com.taosdata.jdbc.utils.ReqId;
-import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.entity.*;
 import com.taosdata.jdbc.ws.entity.CommonResp;
 import com.taosdata.jdbc.ws.schemaless.InsertReq;
@@ -21,11 +20,8 @@ import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class WSConnection extends AbstractConnection {
@@ -94,7 +90,7 @@ public class WSConnection extends AbstractConnection {
             }
 
             if ((sql.startsWith("ASYNC_INSERT") || "STMT".equalsIgnoreCase(param.getAsyncWrite())) && isInsert && isSuperTable) {
-                return new WSFastWriterPreparedStatement(transport,
+                return new WSFWPreparedStatement(transport,
                         param,
                         database,
                         this,

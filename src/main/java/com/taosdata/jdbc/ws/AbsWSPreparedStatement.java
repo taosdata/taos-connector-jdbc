@@ -15,7 +15,6 @@ import com.taosdata.jdbc.ws.entity.Code;
 import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.stmt2.entity.*;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
@@ -30,7 +29,7 @@ import java.util.stream.Collectors;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
 
-public class AbstractWSPreparedStatement extends WSStatement implements TaosPrepareStatement {
+public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareStatement {
     private static final List<Object> nullTag = Collections.singletonList(null);
 
     protected final ConnectionParam param;
@@ -53,13 +52,13 @@ public class AbstractWSPreparedStatement extends WSStatement implements TaosPrep
     private TableInfo tableInfo;
 
 
-    public AbstractWSPreparedStatement(Transport transport,
-                                       ConnectionParam param,
-                                       String database,
-                                       AbstractConnection connection,
-                                       String sql,
-                                       Long instanceId,
-                                       Stmt2PrepareResp prepareResp) throws SQLException {
+    public AbsWSPreparedStatement(Transport transport,
+                                  ConnectionParam param,
+                                  String database,
+                                  AbstractConnection connection,
+                                  String sql,
+                                  Long instanceId,
+                                  Stmt2PrepareResp prepareResp) throws SQLException {
         super(transport, database, connection, instanceId, param.getZoneId());
         this.rawSql = sql;
         this.param = param;
@@ -637,7 +636,7 @@ public class AbstractWSPreparedStatement extends WSStatement implements TaosPrep
         }
     }
 
-    private void bindAllToTableInfo(){
+    public static void bindAllToTableInfo(List<Field> fields, Map<Integer, Column> colOrderedMap, TableInfo tableInfo){
         for (int index = 0; index < fields.size(); index++) {
             if (fields.get(index).getBindType() == FeildBindType.TAOS_FIELD_TBNAME.getValue()) {
                 if (colOrderedMap.get(index + 1).getData() instanceof byte[]){
@@ -668,7 +667,7 @@ public class AbstractWSPreparedStatement extends WSStatement implements TaosPrep
     private void bindAllColWithStdApi() {
         if (isTableInfoEmpty()) {
             // first time, bind all
-            bindAllToTableInfo();
+            bindAllToTableInfo(fields, colOrderedMap, tableInfo);
         } else {
             if (toBeBindTableNameIndex >= 0) {
                 Object tbname = colOrderedMap.get(toBeBindTableNameIndex + 1).getData();
@@ -680,7 +679,7 @@ public class AbstractWSPreparedStatement extends WSStatement implements TaosPrep
                     // different table, flush tableInfo and create a new one
                     tableInfoList.add(tableInfo);
                     tableInfo = TableInfo.getEmptyTableInfo();
-                    bindAllToTableInfo();
+                    bindAllToTableInfo(fields, colOrderedMap, tableInfo);
                 }
             } else {
                 // must same table
