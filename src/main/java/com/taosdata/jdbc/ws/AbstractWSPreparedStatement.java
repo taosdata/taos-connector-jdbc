@@ -762,8 +762,8 @@ public class AbstractWSPreparedStatement extends WSStatement implements TaosPrep
 
     @Override
     public void close() throws SQLException {
-        super.close();
         if (!isClosed()){
+            super.close();
             Request close = RequestFactory.generateClose(stmtId, reqId);
             Stmt2Resp resp = (Stmt2Resp) transport.send(close);
             if (Code.SUCCESS.getCode() != resp.getCode()) {
