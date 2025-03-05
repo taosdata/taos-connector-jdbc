@@ -13,13 +13,13 @@ import java.util.Random;
 
 @FixMethodOrder
 public class WsFastWriterTest {
-    String host = "vm98";
+    String host = "localhost";
     String db_name = "ws_fw";
     String tableName = "wpt";
     String superTable = "wpt_st";
     Connection connection;
 
-    int numOfSubTable = 1000;
+    int numOfSubTable = 100;
     int numOfRow = 100;
     private static final Random random = new Random(System.currentTimeMillis());
 

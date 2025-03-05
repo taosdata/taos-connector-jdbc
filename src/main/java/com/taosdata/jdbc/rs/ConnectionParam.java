@@ -40,8 +40,6 @@ public class ConnectionParam {
     private boolean disableSslCertValidation;
     private String appName;
     private String appIp;
-
-    private int lingerMs;
     private boolean copyData;
     private int batchSizeByRow;
     private int cacheSizeByRow;
@@ -73,7 +71,6 @@ public class ConnectionParam {
         this.disableSslCertValidation = builder.disableSslCertValidation;
         this.appName = builder.appName;
         this.appIp = builder.appIp;
-        this.lingerMs = builder.lingerMs;
         this.copyData = builder.copyData;
         this.batchSizeByRow = builder.batchSizeByRow;
         this.cacheSizeByRow = builder.cacheSizeByRow;
@@ -169,10 +166,6 @@ public class ConnectionParam {
 
     public void setAppIp(String appIp) {
         this.appIp = appIp;
-    }
-
-    public void setLingerMs(int lingerMs) {
-        this.lingerMs = lingerMs;
     }
 
     public void setCopyData(boolean copyData) {
@@ -271,11 +264,6 @@ public class ConnectionParam {
     public String getAppIp() {
         return appIp;
     }
-
-    public int getLingerMs() {
-        return lingerMs;
-    }
-
     public boolean isCopyData() {
         return copyData;
     }
@@ -410,11 +398,6 @@ public class ConnectionParam {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid app ip address");
         }
 
-        int lingerMs = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_LINGER_MS, "0"));
-        if (lingerMs < 0){
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_LINGER_MS");
-        }
-
         boolean copyData = Boolean.parseBoolean(properties.getProperty(TSDBDriver.PROPERTY_KEY_COPY_DATA, "false"));
 
         int batchSizeByRow = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_BATCH_SIZE_BY_ROW, "10000"));
@@ -466,7 +449,6 @@ public class ConnectionParam {
                 .setDisableSslCertValidation(disableSslCertValidation)
                 .setAppIp(appIp)
                 .setAppName(appName)
-                .setLingerMs(lingerMs)
                 .setCopyData(copyData)
                 .setBatchSizeByRow(batchSizeByRow)
                 .setCacheSizeByRow(cacheSizeByRow)
@@ -501,7 +483,6 @@ public class ConnectionParam {
 
         private String appName;
         private String appIp;
-        private int lingerMs;
         private boolean copyData;
         private int batchSizeByRow;
         private int cacheSizeByRow;
@@ -600,11 +581,6 @@ public class ConnectionParam {
 
         public Builder setAppIp(String appIp) {
             this.appIp = appIp;
-            return this;
-        }
-
-        public Builder setLingerMs(int lingerMs) {
-            this.lingerMs = lingerMs;
             return this;
         }
 
