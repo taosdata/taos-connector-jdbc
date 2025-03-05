@@ -16,7 +16,7 @@ public class WsFastWriterTest {
     String host = "localhost";
     String db_name = "ws_fw";
     String tableName = "wpt";
-    String superTable = "wpt_st";
+    String tableNameCopyData = "wpt_cp";
     Connection connection;
 
     int numOfSubTable = 100;
@@ -42,11 +42,9 @@ public class WsFastWriterTest {
 
     @Test
     public void testStmt2InsertStdApiNoTag() throws SQLException {
-        createSubTable();
 
         String sql = "INSERT INTO " + db_name + "." + tableName + "(tbname, ts, current, voltage, phase) VALUES (?,?,?,?,?)";
 
-        long start = System.currentTimeMillis();
         long current = System.currentTimeMillis();
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             for (int j = 0; j < numOfRow; j++) {
@@ -67,54 +65,84 @@ public class WsFastWriterTest {
                     Assert.assertEquals(ele, Statement.SUCCESS_NO_INFO);
                 }
             }
-            // you can check exeResult here
-            System.out.println("Successfully inserted " + (numOfSubTable * numOfRow) + " rows to power.meters.");
-        } catch (Exception ex) {
-            // please refer to the JDBC specifications for detailed exceptions info
-            System.out.printf("Failed to insert to table meters using stmt, %sErrMessage: %s%n",
-                    ex instanceof SQLException ? "ErrCode: " + ((SQLException) ex).getErrorCode() + ", " : "",
-                    ex.getMessage());
-            // Print stack trace for context in examples. Use logging in production.
-            ex.printStackTrace();
-            throw ex;
         }
 
-        long end = System.currentTimeMillis();
-        System.out.println("Time cost: " + (end - start) + "ms");
+        Assert.assertEquals(numOfSubTable * numOfRow, getSqlRows("select count(*) from " + db_name + "." + tableName));
+}
 
-        String sql2 = "select count(*) from " + db_name + "." + tableName;
+    @Test
+    public void testCopyData() throws SQLException {
+        String sql = "INSERT INTO " + db_name + "." + tableNameCopyData + "(tbname, ts, b, groupId) VALUES (?,?,?,?)";
 
+        long current = System.currentTimeMillis();
+        Timestamp ts = new Timestamp(current);
+        byte[] bytes = new byte[10];
+
+        try (Connection con= getConnection(true);
+             PreparedStatement pstmt = con.prepareStatement(sql)) {
+            for (int j = 0; j < numOfRow; j++) {
+                for (int i = 1; i <= numOfSubTable; i++) {
+                    // set columns
+                    pstmt.setString(1, "cpd_bind_" + i);
+                    pstmt.setTimestamp(2, ts);
+                    pstmt.setBytes(3, bytes);
+                    pstmt.setInt(4, i);
+                    pstmt.addBatch();
+                }
+
+                ts.setTime(ts.getTime() + 1000); // 增加 1 s
+                bytes[0] = (byte)(bytes[0] + 1);
+
+                int[] exeResult = pstmt.executeBatch();
+                Assert.assertEquals(exeResult.length, numOfSubTable);
+
+                for (int ele : exeResult){
+                    Assert.assertEquals(ele, Statement.SUCCESS_NO_INFO);
+                }
+            }
+        }
+
+        Assert.assertEquals(numOfSubTable * numOfRow, getSqlRows("select count(*) from " + db_name + "." + tableNameCopyData));
+        Assert.assertEquals(numOfSubTable, getSqlRows("select count(*) from " + db_name + "." + tableNameCopyData + " where b = '\\x63000000000000000000'"));
+    }
+
+
+    private int getSqlRows(String sql) throws SQLException {
         Statement statement = connection.createStatement();
-        statement.execute(sql2);
-
+        statement.execute(sql);
         ResultSet rs = statement.getResultSet();
         rs.next();
-        Assert.assertEquals(numOfSubTable * numOfRow, rs.getInt(1));
+        int count = rs.getInt(1);
         rs.close();
         statement.close();
+        return count;
     }
+
 
     @Before
     public void before() throws SQLException {
-        String url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
-        if (url == null) {
-            url = "jdbc:TAOS-WS://" + host + ":6041/?user=root&password=taosdata";
-        } else {
-            url += "?user=root&password=taosdata&batchfetch=true";
-        }
-        Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_ASYNC_WRITE, "stmt");
-
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_SIZE_BY_ROW, "500");
-        //properties.setProperty(TSDBDriver.PROPERTY_KEY_BACKEND_WRITE_THREAD_NUM, "1");
-
-        connection = DriverManager.getConnection(url, properties);
+        connection = getConnection(false);
         Statement statement = connection.createStatement();
         statement.execute("drop database if exists " + db_name);
         statement.execute("create database " + db_name);
         statement.execute("use " + db_name);
         statement.execute("create stable if not exists " + db_name + "." + tableName + " (ts TIMESTAMP, current FLOAT, voltage INT, phase FLOAT) TAGS (groupId INT, location BINARY(24))");
+        statement.execute("create stable if not exists " + db_name + "." + tableNameCopyData + " (ts TIMESTAMP, b varbinary(10)) TAGS (groupId INT)");
         statement.close();
+
+        createSubTable();
+    }
+
+    private Connection getConnection(boolean copydata) throws SQLException {
+        String url = "jdbc:TAOS-WS://" + host + ":6041/?user=root&password=taosdata";
+        Properties properties = new Properties();
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_ASYNC_WRITE, "stmt");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_SIZE_BY_ROW, "500");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_BACKEND_WRITE_THREAD_NUM, "1");
+        if (copydata) {
+            properties.setProperty(TSDBDriver.PROPERTY_KEY_COPY_DATA, "true");
+        }
+        return DriverManager.getConnection(url, properties);
     }
 
     @After

@@ -96,5 +96,41 @@ public class RestfulConnectionParamTest {
         // Test disableSslCertValidation
         connectionParam.setDisableSslCertValidation(true);
         assertTrue(connectionParam.isDisableSslCertValidation());
+
+        // Test appName
+        connectionParam.setAppName("testAppName");
+        assertEquals("testAppName", connectionParam.getAppName());
+
+        // Test appIp
+        connectionParam.setAppIp("testAppIp");
+        assertEquals("testAppIp", connectionParam.getAppIp());
+
+        // Test copyData
+        connectionParam.setCopyData(true);
+        assertTrue(connectionParam.isCopyData());
+
+        // Test batchSizeByRow
+        connectionParam.setBatchSizeByRow(100);
+        assertEquals(100, connectionParam.getBatchSizeByRow());
+
+        // Test cacheSizeByRow
+        connectionParam.setCacheSizeByRow(1000);
+        assertEquals(1000, connectionParam.getCacheSizeByRow());
+
+        // Test backendWriteThreadNum
+        connectionParam.setBackendWriteThreadNum(4);
+        assertEquals(4, connectionParam.getBackendWriteThreadNum());
+
+        // Test strictCheck
+        connectionParam.setStrictCheck(true);
+        assertTrue(connectionParam.isStrictCheck());
+
+        // Test retryTimes
+        connectionParam.setRetryTimes(3);
+        assertEquals(3, connectionParam.getRetryTimes());
+
+        // Test asyncWrite
+        connectionParam.setAsyncWrite("stmt");
+        assertEquals("stmt", connectionParam.getAsyncWrite());
     }
 }

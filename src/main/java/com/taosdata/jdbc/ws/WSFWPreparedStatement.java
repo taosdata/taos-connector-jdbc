@@ -82,10 +82,6 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
         Map<Integer, Column> dstMap = new HashMap<>();
         originalMap.forEach((key, src) -> {
             Column dst = src;
-            if (copyData && src.getData() instanceof Timestamp) {
-                     dst = new Column(new Timestamp(((Timestamp) src.getData()).getTime()), src.getType(), src.getIndex());
-            }
-
             if (copyData && src.getData() instanceof byte[]) {
                 byte[] srcBytes = (byte[]) src.getData();
                 byte[] copiedValue = new byte[srcBytes.length];
