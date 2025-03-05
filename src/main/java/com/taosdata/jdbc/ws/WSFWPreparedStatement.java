@@ -99,11 +99,6 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
     }
 
     @Override
-    public boolean execute(String sql, Long reqId) throws SQLException {
-        return super.execute(sql, reqId);
-    }
-
-    @Override
     public boolean execute() throws SQLException {
         if (isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
