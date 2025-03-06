@@ -59,8 +59,15 @@ public class WSConnection extends AbstractConnection {
         if (isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
 
-        if (this.getClientInfo(TSDBDriver.PROPERTY_KEY_DBNAME) != null)
+        if (this.getClientInfo(TSDBDriver.PROPERTY_KEY_DBNAME) != null) {
             database = this.getClientInfo(TSDBDriver.PROPERTY_KEY_DBNAME);
+        }
+
+        boolean fastWriteSql = false;
+        if (sql.startsWith("ASYNC_INSERT")){
+            sql = sql.substring("ASYNC_".length());
+            fastWriteSql = true;
+        }
 
         if (transport != null && !transport.isClosed()) {
             long reqId = ReqId.getReqID();
@@ -89,7 +96,7 @@ public class WSConnection extends AbstractConnection {
                 }
             }
 
-            if ((sql.startsWith("ASYNC_INSERT") || "STMT".equalsIgnoreCase(param.getAsyncWrite())) && isInsert && isSuperTable) {
+            if ((fastWriteSql || "STMT".equalsIgnoreCase(param.getAsyncWrite())) && isInsert && isSuperTable) {
                 return new WSFWPreparedStatement(transport,
                         param,
                         database,

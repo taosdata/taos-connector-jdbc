@@ -304,7 +304,7 @@ public class Transport implements AutoCloseable {
             clientArr.get(currentNodeIndex).send(reqString);
         } catch (Exception e) {
             inFlightRequest.remove(request.getAction(), request.id());
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage() == null ? "" : e.getMessage());
         }
 
         CompletableFuture<Response> responseFuture = CompletableFutureTimeout.orTimeout(

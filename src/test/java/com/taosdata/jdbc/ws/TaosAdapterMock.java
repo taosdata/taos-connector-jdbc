@@ -89,7 +89,9 @@ public class TaosAdapterMock extends WebSocketServer {
 
         // Forward the message to the target server
         TargetWebSocketClient targetClient = clientMap.get(conn);
-        targetClient.send(message);
+        if (targetClient != null){
+            targetClient.send(message);
+        }
     }
 
     @Override
@@ -98,7 +100,9 @@ public class TaosAdapterMock extends WebSocketServer {
 
         // Forward the message to the target server
         TargetWebSocketClient targetClient = clientMap.get(conn);
-        targetClient.send(message);
+        if (targetClient != null){
+            targetClient.send(message);
+        }
     }
 
     /**
@@ -141,7 +145,7 @@ public class TaosAdapterMock extends WebSocketServer {
         clientMap.clear();
 
         // Stop the server with a 1-second timeout
-        this.stop();
+        this.stop(10000, "Server stopped");
         System.out.println("WebSocket Proxy Server stopped.");
     }
 

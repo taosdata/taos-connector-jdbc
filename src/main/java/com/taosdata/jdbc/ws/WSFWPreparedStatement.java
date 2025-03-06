@@ -119,9 +119,7 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
 
         waitWriteCompleted();
 
-        int affectedRows = batchInsertedRows.get();
-        batchInsertedRows.set(0);
-        return affectedRows;
+        return batchInsertedRows.getAndSet(0);
     }
 
     private void waitWriteCompleted() {
@@ -290,6 +288,9 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
             if (!fields.isEmpty()){
                 precision = fields.get(0).getPrecision();
             }
+
+            toBeBindTagCount = 0;
+            toBeBindColCount = 0;
             for (int i = 0; i < fields.size(); i++){
                 Field field = fields.get(i);
                 if (field.getBindType() == FeildBindType.TAOS_FIELD_TBNAME.getValue()){
@@ -320,7 +321,7 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
                 int size = 0;
                 try {
                     if (dataQueue.isEmpty()) {
-                        Map<Integer, Column> map = dataQueue.poll(100, TimeUnit.MILLISECONDS);
+                        Map<Integer, Column> map = dataQueue.poll(10, TimeUnit.MILLISECONDS);
                         if (map == null) {
                             continue;
                         }
@@ -339,6 +340,8 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
                     }
 
                     writeBlockWithRetry();
+                    tableInfo = TableInfo.getEmptyTableInfo();
+                    tableInfoList.clear();
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 } catch (SQLException e) {
@@ -352,20 +355,24 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
 
 
         private void writeBlockWithRetry() throws SQLException {
-            byte[] rawBlock = SerializeBlock.getStmt2BindBlock(
-                    reqId,
-                    stmtId,
-                    tableInfoList,
-                    toBeBindTableNameIndex,
-                    toBeBindTagCount,
-                    toBeBindColCount,
-                    precision);
-
-            tableInfo = TableInfo.getEmptyTableInfo();
-            tableInfoList.clear();
-
             for (int i = 0; i < connectionParam.getRetryTimes(); i++) {
+                byte[] rawBlock = null;
                 try {
+                    rawBlock = SerializeBlock.getStmt2BindBlock(
+                            reqId,
+                            stmtId,
+                            tableInfoList,
+                            toBeBindTableNameIndex,
+                            toBeBindTagCount,
+                            toBeBindColCount,
+                            precision);
+                } catch (SQLException e) {
+                    log.error("Error in serialize data to block, code: {}, msg: {}",
+                            e.getErrorCode(), e.getMessage());
+                    break;
+                }
+
+                try{
                     // bind
                     Stmt2Resp bindResp = (Stmt2Resp) transport.send(Action.STMT2_BIND.getAction(),
                             reqId, rawBlock);
@@ -382,17 +389,24 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
 
                     int affectedRows = resp.getAffected();
                     batchInsertedRows.addAndGet(affectedRows);
-                    return;
+                    break;
                 } catch (SQLException e) {
+                    log.error("Error in writeBlockWithRetry, retry times: {},  code: {}, msg: {}", i,
+                            e.getErrorCode(), e.getMessage());
+
+                    // check if connection is reestablished, if so, need to reinit stmt obj and retry
+                    int trueReconnectCoount = transport.getReconnectCount();
+                    if (reconnectCount != trueReconnectCoount) {
+                        log.error("connection reestablished, need to init stmt obj");
+
+                        reconnectCount = trueReconnectCoount;
+                        initStmt();
+                        continue;
+                    }
+
                     // only retry timeout
                     if (e.getErrorCode() != TSDBErrorNumbers.ERROR_QUERY_TIMEOUT) {
                         break;
-                    }
-
-                    int trueReconnectCoount = transport.getReconnectCount();
-                    if (reconnectCount != trueReconnectCoount) {
-                        reconnectCount = trueReconnectCoount;
-                        initStmt();
                     }
                 }
             }
