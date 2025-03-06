@@ -1,10 +1,7 @@
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.*;
-import com.taosdata.jdbc.common.Column;
-import com.taosdata.jdbc.common.ColumnInfo;
-import com.taosdata.jdbc.common.SerializeBlock;
-import com.taosdata.jdbc.common.TableInfo;
+import com.taosdata.jdbc.common.*;
 import com.taosdata.jdbc.enums.FeildBindType;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.ReqId;
@@ -132,11 +129,35 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
         }
     }
 
+    private void checkDataLength(Map<Integer, Column> map) throws SQLException {
+        for (int i = 0; i < fields.size(); i++){
+            Field field = fields.get(i);
+            Column column = map.get(i + 1);
+            if (DataLengthCfg.getDataLength(column.getType()) == null && field.getBindType() != FeildBindType.TAOS_FIELD_TBNAME.getValue()){
+                if (column.getData() instanceof byte[]){
+                    byte[] data = (byte[]) column.getData();
+                    if (data.length > field.getBytes()){
+                        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "data length is too long, column index " + i);
+                    }
+                }
+                if (column.getData() instanceof String){
+                    String data = (String) column.getData();
+                    if (data.getBytes().length > field.getBytes()){
+                        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "data length is too long, column index " + i);
+                    }
+                }
+            }
+        }
+    }
     @Override
     public void addBatch() throws SQLException {
         if (colOrderedMap.size() == fields.size()){
             // jdbc standard bind api
             Map<Integer, Column> map = copyMap(colOrderedMap);
+
+            if (param.isStrictCheck()){
+                checkDataLength(map);
+            }
 
             int hashCode;
             Object o = map.get(toBeBindTableNameIndex + 1).getData();

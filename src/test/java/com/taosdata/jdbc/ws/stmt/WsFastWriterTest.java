@@ -114,10 +114,17 @@ public class WsFastWriterTest {
 
     @Test
     public void testReconnect() throws SQLException, InterruptedException {
+        taosAdapterMock = new TaosAdapterMock(proxyPort);
+        taosAdapterMock.start();
+
+        while (!taosAdapterMock.isReady()){
+            Thread.sleep(10);
+        }
+
         String sql = "INSERT INTO " + db_name + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
 
         long current = System.currentTimeMillis();
-        try (Connection con = getConnection(false, proxyPort);
+        try (Connection con = getConnection(false, false, proxyPort);
              PreparedStatement pstmt = con.prepareStatement(sql)) {
             for (int j = 0; j < numOfRow; j++) {
                 current = current + 1000;
@@ -149,6 +156,10 @@ public class WsFastWriterTest {
         }
 
         Assert.assertEquals(numOfSubTable * numOfRow, getSqlRows("select count(*) from " + db_name + "." + tableReconnect));
+
+        if (taosAdapterMock != null) {
+            taosAdapterMock.stopServer();
+        }
     }
 
 
@@ -183,6 +194,43 @@ public class WsFastWriterTest {
         }
 
         Assert.assertEquals(numOfSubTable * numOfRow, getSqlRows("select count(*) from " + db_name + "." + asyncSqlTable));
+    }
+
+    @Test(expected = SQLException.class)
+    public void testStrictCheck() throws SQLException, InterruptedException {
+        String sql = "INSERT INTO " + db_name + "." + tableNameCopyData + "(tbname, ts, b, groupId) VALUES (?,?,?,?)";
+
+        long current = System.currentTimeMillis();
+        Timestamp ts = new Timestamp(current);
+        byte[] bytes = new byte[100];
+
+        try (Connection con= getConnection(true, true);
+             PreparedStatement pstmt = con.prepareStatement(sql)) {
+            for (int j = 0; j < numOfRow; j++) {
+                for (int i = 1; i <= numOfSubTable; i++) {
+                    // set columns
+                    pstmt.setString(1, "cpd_bind_" + i);
+                    pstmt.setTimestamp(2, ts);
+                    pstmt.setBytes(3, bytes);
+                    pstmt.setInt(4, i);
+                    pstmt.addBatch();
+                }
+
+                ts.setTime(ts.getTime() + 1000); // 增加 1 s
+                bytes[0] = (byte)(bytes[0] + 1);
+
+                int[] exeResult = pstmt.executeBatch();
+                Assert.assertEquals(exeResult.length, numOfSubTable);
+
+                for (int ele : exeResult){
+                    Assert.assertEquals(ele, Statement.SUCCESS_NO_INFO);
+                }
+            }
+        }
+
+        Assert.assertEquals(numOfSubTable * numOfRow, getSqlRows("select count(*) from " + db_name + "." + tableNameCopyData));
+        Assert.assertEquals(numOfSubTable, getSqlRows("select count(*) from " + db_name + "." + tableNameCopyData + " where b = '\\x63000000000000000000'"));
+
     }
 
     @Test(expected = SQLException.class)
@@ -235,9 +283,6 @@ public class WsFastWriterTest {
 
     @Before
     public void before() throws SQLException {
-        taosAdapterMock = new TaosAdapterMock(proxyPort);
-        taosAdapterMock.start();
-
         connection = getConnection(false);
         Statement statement = connection.createStatement();
         statement.execute("drop database if exists " + db_name);
@@ -252,17 +297,20 @@ public class WsFastWriterTest {
         createSubTable();
     }
 
-    private Connection getConnection(boolean copydata) throws SQLException {
-        return getConnection(copydata, 6041);
+    private Connection getConnection(boolean copyData) throws SQLException {
+        return getConnection(copyData, false, 6041);
     }
 
+    private Connection getConnection(boolean copyData, boolean strictCheck) throws SQLException {
+        return getConnection(copyData, strictCheck, 6041);
+    }
     private Connection getConnectionNormal() throws SQLException {
         String url = "jdbc:TAOS-WS://" + host + ":" + 6041 + "/?user=root&password=taosdata";
         Properties properties = new Properties();
         return DriverManager.getConnection(url, properties);
     }
 
-    private Connection getConnection(boolean copydata, int port) throws SQLException {
+    private Connection getConnection(boolean copyData, boolean strictCheck, int port) throws SQLException {
         String url = "jdbc:TAOS-WS://" + host + ":" + port + "/?user=root&password=taosdata";
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ASYNC_WRITE, "stmt");
@@ -272,8 +320,12 @@ public class WsFastWriterTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, "5000");
 
-        if (copydata) {
+        if (copyData) {
             properties.setProperty(TSDBDriver.PROPERTY_KEY_COPY_DATA, "true");
+        }
+
+        if (strictCheck){
+            properties.setProperty(TSDBDriver.PROPERTY_KEY_STRICT_CHECK, "true");
         }
         return DriverManager.getConnection(url, properties);
     }
@@ -285,8 +337,6 @@ public class WsFastWriterTest {
         }
         connection.close();
 
-        if (taosAdapterMock != null) {
-            taosAdapterMock.stopServer();
-        }
+
     }
 }

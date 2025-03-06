@@ -17,6 +17,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class TaosAdapterMock extends WebSocketServer {
 
+    volatile boolean isReady = false;
+
     // Target WebSocket server URI
 
     // Mapping between client connections and their corresponding target connections
@@ -45,11 +47,12 @@ public class TaosAdapterMock extends WebSocketServer {
         TargetWebSocketClient targetClient = null;
         try {
             targetClient = new TargetWebSocketClient(conn, new URI("ws://localhost:6041/ws"));
+            targetClient.connectBlocking();
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
-        targetClient.connect();
-
         // Map the client connection to the target connection
         clientMap.put(conn, targetClient);
     }
@@ -129,6 +132,7 @@ public class TaosAdapterMock extends WebSocketServer {
     @Override
     public void onStart() {
         System.out.println("WebSocket Proxy Server started successfully!");
+        isReady = true;
     }
 
     /**
@@ -231,5 +235,9 @@ public class TaosAdapterMock extends WebSocketServer {
                 closeBlocking();
             }
         }
+    }
+
+    public boolean isReady() {
+        return isReady;
     }
 }
