@@ -285,7 +285,62 @@ public class WSFastWriterPreparedStatement extends AbstractWSPreparedStatement {
             Request prepare = RequestFactory.generatePrepare(stmtId, reqId, sql);
             Stmt2PrepareResp prepareResp = (Stmt2PrepareResp) transport.send(prepare);
 
+            if (prepareResp.getFields() == null){
+                List<Field> fields = new LinkedList<>();
+                Field field = new Field();
+                // tbname
+                field.setFieldType((byte) TSDBConstants.TSDB_DATA_TYPE_VARCHAR);
+                field.setBindType((byte) FeildBindType.TAOS_FIELD_TBNAME.getValue());
+                field.setName("tbname");
+                field.setPrecision((byte)0);
+                field.setScale((byte)0);
+                field.setBytes(20);
+                fields.add(field);
+
+                field = new Field();
+                field.setFieldType((byte) TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP);
+                field.setBindType((byte) FeildBindType.TAOS_FIELD_COL.getValue());
+                field.setName("ts");
+                field.setPrecision((byte)0);
+                field.setScale((byte)0);
+                field.setBytes(8);
+                fields.add(field);
+
+                field = new Field();
+                field.setFieldType((byte) TSDBConstants.TSDB_DATA_TYPE_FLOAT);
+                field.setBindType((byte) FeildBindType.TAOS_FIELD_COL.getValue());
+                field.setName("current");
+                field.setPrecision((byte)0);
+                field.setScale((byte)0);
+                field.setBytes(4);
+                fields.add(field);
+
+                field = new Field();
+                field.setFieldType((byte) TSDBConstants.TSDB_DATA_TYPE_INT);
+                field.setBindType((byte) FeildBindType.TAOS_FIELD_COL.getValue());
+                field.setName("voltage");
+                field.setPrecision((byte)0);
+                field.setScale((byte)0);
+                field.setBytes(4);
+                fields.add(field);
+
+                field = new Field();
+                field.setFieldType((byte) TSDBConstants.TSDB_DATA_TYPE_FLOAT);
+                field.setBindType((byte) FeildBindType.TAOS_FIELD_COL.getValue());
+                field.setName("phase");
+                field.setPrecision((byte)0);
+                field.setScale((byte)0);
+                field.setBytes(4);
+                fields.add(field);
+
+                prepareResp.setFieldsCount(fields.size());
+                prepareResp.setFields(fields);
+            }
             fields = prepareResp.getFields();
+
+
+
+
             if (!fields.isEmpty()){
                 precision = fields.get(0).getPrecision();
             }
