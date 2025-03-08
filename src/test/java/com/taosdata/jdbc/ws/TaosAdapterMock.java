@@ -143,10 +143,10 @@ public class TaosAdapterMock extends WebSocketServer {
     public void stopServer() throws InterruptedException {
         System.out.println("Shutting down WebSocket Proxy Server...");
         // Close all target connections
-        for (TargetWebSocketClient targetClient : clientMap.values()) {
-            targetClient.closeConnection();
-        }
-        clientMap.clear();
+//        for (TargetWebSocketClient targetClient : clientMap.values()) {
+//            targetClient.closeConnection();
+//        }
+//        clientMap.clear();
 
         // Stop the server with a 1-second timeout
         this.stop(10000, "Server stopped");

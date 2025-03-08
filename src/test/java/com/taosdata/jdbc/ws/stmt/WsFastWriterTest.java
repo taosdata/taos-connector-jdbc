@@ -1,26 +1,22 @@
 package com.taosdata.jdbc.ws.stmt;
 
-import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.TSDBDriver;
-import com.taosdata.jdbc.utils.SpecifyAddress;
-import com.taosdata.jdbc.ws.TSWSPreparedStatement;
 import com.taosdata.jdbc.ws.TaosAdapterMock;
 import com.taosdata.jdbc.ws.WSFWPreparedStatement;
 import org.junit.*;
 
 import java.sql.*;
-import java.util.ArrayList;
 import java.util.Properties;
 import java.util.Random;
 
 @FixMethodOrder
 public class WsFastWriterTest {
-    private String host = "localhost";
-    private String db_name = "ws_fw";
-    private String tableName = "wpt";
-    private  String tableNameCopyData = "wpt_cp";
-    private String tableReconnect = "wpt_rc";
-    private String asyncSqlTable = "wpt_async";
+    private final String host = "localhost";
+    private final String db_name = "ws_fw";
+    private final String tableName = "wpt";
+    private final String tableNameCopyData = "wpt_cp";
+    private final String tableReconnect = "wpt_rc";
+    private final String asyncSqlTable = tableReconnect;
     private Connection connection;
     private TaosAdapterMock taosAdapterMock;
     private final int numOfSubTable = 100;
@@ -163,6 +159,40 @@ public class WsFastWriterTest {
     }
 
 
+    @Test
+    @Ignore
+    public void manualTest() throws SQLException, InterruptedException {
+
+        String sql = "INSERT INTO " + db_name + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
+
+        long current = System.currentTimeMillis();
+        try (Connection con = getConnection(false, false, 6041);
+             PreparedStatement pstmt = con.prepareStatement(sql)) {
+            for (int j = 0; j < numOfRow; j++) {
+                current = current + 1000;
+                for (int i = 1; i <= numOfSubTable; i++) {
+                    // set columns
+                    pstmt.setString(1, "rc_bind_" + i);
+                    pstmt.setTimestamp(2, new Timestamp(current));
+                    pstmt.setInt(3, random.nextInt(300));
+                    pstmt.setInt(4, i);
+                    pstmt.addBatch();
+                }
+                int[] exeResult = pstmt.executeBatch();
+                Assert.assertEquals(exeResult.length, numOfSubTable);
+
+                for (int ele : exeResult){
+                    Assert.assertEquals(ele, Statement.SUCCESS_NO_INFO);
+                }
+
+                int affectedRows = pstmt.executeUpdate();
+                Assert.assertEquals(numOfSubTable, affectedRows);
+            }
+        }
+
+        Assert.assertEquals(numOfSubTable * numOfRow, getSqlRows("select count(*) from " + db_name + "." + tableReconnect));
+    }
+
 
     @Test
     public void testAsyncSql() throws SQLException, InterruptedException {
@@ -291,7 +321,6 @@ public class WsFastWriterTest {
         statement.execute("create stable if not exists " + db_name + "." + tableName + " (ts TIMESTAMP, current FLOAT, voltage INT, phase FLOAT) TAGS (groupId INT, location BINARY(24))");
         statement.execute("create stable if not exists " + db_name + "." + tableNameCopyData + " (ts TIMESTAMP, b varbinary(10)) TAGS (groupId INT)");
         statement.execute("create stable if not exists " + db_name + "." + tableReconnect + " (ts TIMESTAMP, i INT) TAGS (groupId INT)");
-        statement.execute("create stable if not exists " + db_name + "." + asyncSqlTable + " (ts TIMESTAMP, i INT) TAGS (groupId INT)");
         statement.close();
 
         createSubTable();
@@ -315,7 +344,7 @@ public class WsFastWriterTest {
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ASYNC_WRITE, "stmt");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_SIZE_BY_ROW, "100");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_BACKEND_WRITE_THREAD_NUM, "1");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_BACKEND_WRITE_THREAD_NUM, "5");
 
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, "5000");

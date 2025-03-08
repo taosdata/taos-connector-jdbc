@@ -6,6 +6,7 @@ import com.taosdata.jdbc.enums.FeildBindType;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.utils.StringUtils;
+import com.taosdata.jdbc.utils.SyncObj;
 import com.taosdata.jdbc.ws.entity.*;
 import com.taosdata.jdbc.ws.stmt2.entity.*;
 import com.taosdata.jdbc.ws.stmt2.entity.RequestFactory;
@@ -27,8 +28,10 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
     private ArrayList<LinkedBlockingQueue<Map<Integer, Column>>> writeQueueList;
     private final AtomicInteger remainingUnprocessedRows = new AtomicInteger(0);
     private final AtomicInteger batchInsertedRows = new AtomicInteger(0);
+    private final AtomicInteger flushIn = new AtomicInteger(0);
     private volatile SQLException lastException;
     private List<WorkerThread> workerThreadList;
+    private final SyncObj syncObj = new SyncObj();
     private int addBatchCounts = 0;
 
     public WSFWPreparedStatement(Transport transport, ConnectionParam param, String database, AbstractConnection connection, String sql, Long instanceId, Stmt2PrepareResp prepareResp) throws SQLException {
@@ -54,8 +57,10 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
                     param,
                     closed,
                     remainingUnprocessedRows,
-                    batchInsertedRows
-            );
+                    batchInsertedRows,
+                    flushIn,
+                    syncObj
+                    );
             workerThreadList.add(workerThread);
            res = workerThread.initStmt();
            if (res.getCode() != Code.SUCCESS.getCode()){
@@ -120,11 +125,11 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
     }
 
     private void waitWriteCompleted() {
+        flushIn.incrementAndGet();
         while (remainingUnprocessedRows.get() != 0) {
             try {
-                Thread.sleep(1);
+                syncObj.await();
             } catch (InterruptedException ignored) {
-                Thread.currentThread().interrupt();
             }
         }
     }
@@ -200,12 +205,11 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
 
     @Override
     public void close() throws SQLException {
+        waitWriteCompleted();
         if (isClosed())
             return;
 
         super.close();
-
-        waitWriteCompleted();
 
         // wait backFetchExecutor to finish
         if (writerThreads != null) {
@@ -249,8 +253,7 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
 
 
     static class WorkerThread implements Runnable {
-        private final org.slf4j.Logger log = LoggerFactory.getLogger(AbstractDriver.class);
-
+        private final org.slf4j.Logger log = LoggerFactory.getLogger(WorkerThread.class);
         private final LinkedBlockingQueue<Map<Integer, Column>> dataQueue;
         private final int batchSize;
         private final String sql;
@@ -262,17 +265,15 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
         private int toBeBindColCount;
         private int precision;
         private int reconnectCount = 0;
-
         private final List<TableInfo> tableInfoList = new ArrayList<>();
         private TableInfo tableInfo = TableInfo.getEmptyTableInfo();
-
-
         private final Transport transport;
         private final ConnectionParam connectionParam;
-
         private final AtomicBoolean isClosed;
         private final AtomicInteger remainingUnprocessedRows;
         private final AtomicInteger batchInsertedRows;
+        private final AtomicInteger flushIn;
+        private final SyncObj syncObj;
 
         public WorkerThread(LinkedBlockingQueue<Map<Integer, Column>> taskQueue,
                             String sql,
@@ -280,7 +281,9 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
                             ConnectionParam param,
                             AtomicBoolean isClosed,
                             AtomicInteger remainingUnprocessedRows,
-                            AtomicInteger batchInsertedRows) {
+                            AtomicInteger batchInsertedRows,
+                            AtomicInteger flushIn,
+                            SyncObj syncObj) {
             this.dataQueue = taskQueue;
             this.batchSize = param.getBatchSizeByRow();
             this.sql = sql;
@@ -289,6 +292,8 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
             this.isClosed = isClosed;
             this.remainingUnprocessedRows = remainingUnprocessedRows;
             this.batchInsertedRows = batchInsertedRows;
+            this.flushIn = flushIn;
+            this.syncObj = syncObj;
         }
 
         public CommonResp initStmt() throws SQLException {
@@ -337,11 +342,17 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
 
         @Override
         public void run() {
+            int flushInLocal = 0;
             while (!(isClosed.get() && dataQueue.isEmpty())) {
                 int polledRow = 0;
                 int size = 0;
                 try {
                     if (dataQueue.isEmpty()) {
+                        if (flushIn.get() != flushInLocal) {
+                            flushInLocal = flushIn.get();
+                            syncObj.signal();
+                        }
+
                         Map<Integer, Column> map = dataQueue.poll(10, TimeUnit.MILLISECONDS);
                         if (map == null) {
                             continue;
@@ -366,16 +377,23 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 } catch (SQLException e) {
-                    log.error("Error in write data to server, rows: {}, code: {}, msg: {}",
+                    log.error("Error in write data to server, stmt id: {}, req id: {}" +
+                                    "rows: {}, code: {}, msg: {}",
+                            stmtId,
+                            reqId,
                             (polledRow + size), e.getErrorCode(), e.getMessage());
                 } finally {
-                    remainingUnprocessedRows.addAndGet(-size - polledRow);
+                    if ((size + polledRow) > 0) {
+                        remainingUnprocessedRows.addAndGet(-size - polledRow);
+                    }
                 }
             }
+
+            syncObj.signal();
         }
 
 
-        private void writeBlockWithRetry() throws SQLException {
+        private void writeBlockWithRetry() throws SQLException, InterruptedException {
             for (int i = 0; i < connectionParam.getRetryTimes(); i++) {
                 byte[] rawBlock = null;
                 try {
@@ -388,7 +406,9 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
                             toBeBindColCount,
                             precision);
                 } catch (SQLException e) {
-                    log.error("Error in serialize data to block, code: {}, msg: {}",
+                    log.error("Error in serialize data to block, stmt id: {}, req id: {}" +
+                                    "code: {}, msg: {}",
+                            stmtId, reqId,
                             e.getErrorCode(), e.getMessage());
                     break;
                 }
@@ -410,9 +430,13 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
 
                     int affectedRows = resp.getAffected();
                     batchInsertedRows.addAndGet(affectedRows);
-                    break;
+                    return;
                 } catch (SQLException e) {
-                    log.error("Error in writeBlockWithRetry, retry times: {},  code: {}, msg: {}", i,
+                    log.error("Error in writeBlockWithRetry, stmt id: {}, req id: {}" +
+                                    "retry times: {}, code: {}, msg: {}",
+                            stmtId,
+                            reqId,
+                            i,
                             e.getErrorCode(), e.getMessage());
 
                     // check if connection is reestablished, if so, need to reinit stmt obj and retry
@@ -427,6 +451,7 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
 
                     // only retry timeout
                     if (e.getErrorCode() != TSDBErrorNumbers.ERROR_QUERY_TIMEOUT) {
+                        Thread.sleep(connectionParam.getReconnectIntervalMs());
                         break;
                     }
                 }

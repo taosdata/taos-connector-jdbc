@@ -121,21 +121,27 @@ public class Transport implements AutoCloseable {
     }
 
     private void reconnect() throws SQLException {
-        for (int i = 0; i < clientArr.size() && this.connectionParam.isEnableAutoConnect(); i++){
-            boolean reconnected = reconnectCurNode();
-            if (reconnected){
-                reconnectCount.incrementAndGet();
-                log.debug("reconnect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri));
+        synchronized (this) {
+            if (isConnected()){
                 return;
             }
 
-            log.debug("reconnect failed to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri));
+            for (int i = 0; i < clientArr.size() && this.connectionParam.isEnableAutoConnect(); i++) {
+                boolean reconnected = reconnectCurNode();
+                if (reconnected) {
+                    reconnectCount.incrementAndGet();
+                    log.debug("reconnect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri));
+                    return;
+                }
 
-            currentNodeIndex =  (currentNodeIndex + 1) % clientArr.size();
+                log.debug("reconnect failed to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri));
+
+                currentNodeIndex = (currentNodeIndex + 1) % clientArr.size();
+            }
+
+            close();
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
         }
-
-        close();
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
     }
 
     private void tmqRethrowConnectionCloseException() throws SQLException {
@@ -461,5 +467,9 @@ public class Transport implements AutoCloseable {
 
     public int getReconnectCount() {
         return reconnectCount.get();
+    }
+
+    public boolean isConnected() {
+        return clientArr.get(currentNodeIndex).isOpen();
     }
 }
