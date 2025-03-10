@@ -4,9 +4,11 @@ import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.enums.DataType;
 import com.taosdata.jdbc.rs.RestfulResultSet;
 import com.taosdata.jdbc.rs.RestfulResultSetMetaData;
+import com.taosdata.jdbc.utils.DecimalUtil;
 import com.taosdata.jdbc.ws.tmq.ConsumerAction;
 import com.taosdata.jdbc.ws.entity.Response;
 
+import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
@@ -190,7 +192,7 @@ public class FetchRawBlockResp extends Response {
         int bytes = parseZigzagVariableByteInteger();
         parseZigzagVariableByteInteger(); // skip colid
         String name = parseName();
-        return new RestfulResultSet.Field(name, jdbcType, bytes, "", taosType);
+        return new RestfulResultSet.Field(name, jdbcType, bytes, "", taosType, 0);
     }
 
     private void skipSchema(boolean withTableName){
@@ -357,6 +359,24 @@ public class FetchRawBlockResp extends Response {
                     }
                     break;
                 }
+                case TSDB_DATA_TYPE_DECIMAL128:
+                case TSDB_DATA_TYPE_DECIMAL64:
+                    int dataLen = type == TSDB_DATA_TYPE_DECIMAL128 ? 16 : 8;
+                    length = bitMapOffset;
+                    byte[] tmp = new byte[bitMapOffset];
+                    buffer.get(tmp);
+                    for (int j = 0; j < numOfRows; j++) {
+                        byte[] tb = new byte[dataLen];
+                        buffer.get(tb);
+
+                        if (isNull(tmp, j)) {
+                            col.add(null);
+                        } else {
+                            BigDecimal t = DecimalUtil.getBigDecimal(tb, lengths.get(i));
+                            col.add(t);
+                        }
+                    }
+                    break;
                 default:
                     // unknown type, do nothing
                     col.add(null);
