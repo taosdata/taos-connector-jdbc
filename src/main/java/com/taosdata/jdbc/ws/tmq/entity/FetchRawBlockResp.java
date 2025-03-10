@@ -207,11 +207,21 @@ public class FetchRawBlockResp extends Response {
         }
     }
 
+    private int getScaleFromRowBlock(ByteBuffer buffer, int pHeader, int colIndex) {
+        // for decimal: |___bytes___|__empty__|___prec___|__scale___|
+        int backupPos = buffer.position();
+        buffer.position(pHeader);
+        buffer.position(buffer.position() + colIndex * 5 + 1);
+        int scale = buffer.getInt();
+        buffer.position(backupPos);
+        return scale & 0xFF;
+    }
 
     private void fetchBlockData() throws SQLException {
         buffer.position(buffer.position() + 8);
         int numOfRows = buffer.getInt();
         int bitMapOffset = bitmapLen(numOfRows);
+        int beforeColLenPos = buffer.position() + 16;
         int pHeader = buffer.position() + 16 + fields.size() * 5;
         buffer.position(pHeader);
         List<Integer> lengths = new ArrayList<>(fields.size());
@@ -223,6 +233,10 @@ public class FetchRawBlockResp extends Response {
         for (int i = 0; i < fields.size(); i++) {
             List<Object> col = resultData.get(i);
             int type = fields.get(i).getTaosType();
+            int scale = 0;
+            if (type == TSDB_DATA_TYPE_DECIMAL128 || type == TSDB_DATA_TYPE_DECIMAL64) {
+                scale = getScaleFromRowBlock(buffer, beforeColLenPos, i);
+            }
             switch (type) {
                 case TSDB_DATA_TYPE_BOOL:
                 case TSDB_DATA_TYPE_TINYINT:
@@ -372,7 +386,7 @@ public class FetchRawBlockResp extends Response {
                         if (isNull(tmp, j)) {
                             col.add(null);
                         } else {
-                            BigDecimal t = DecimalUtil.getBigDecimal(tb, lengths.get(i));
+                            BigDecimal t = DecimalUtil.getBigDecimal(tb, scale);
                             col.add(t);
                         }
                     }
