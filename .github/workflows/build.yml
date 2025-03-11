@@ -1,4 +1,4 @@
-name: version3
+name: build
 
 on:
   push:
@@ -64,7 +64,6 @@ jobs:
           distribution: 'temurin' # See 'Supported distributions' for available options
           java-version: ${{ matrix.java }}
           java-package: jdk
-          maven-version: ${{ matrix.maven }}
 
       - name: Test
         env:

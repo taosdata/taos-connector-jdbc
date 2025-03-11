@@ -44,6 +44,7 @@ public class TMQRequestFactory {
         subscribeReq.setTz(param.getConnectionParam().getTz());
         subscribeReq.setApp(param.getConnectionParam().getAppName());
         subscribeReq.setIp(param.getConnectionParam().getAppIp());
+        subscribeReq.setEnableBatchMeta(param.getEnableBatchMeta());
 
         return new Request(ConsumerAction.SUBSCRIBE.getAction(), subscribeReq);
     }
@@ -128,5 +129,13 @@ public class TMQRequestFactory {
         commitOffsetReq.setVgroupId(topicPartition.getVGroupId());
         commitOffsetReq.setOffset(offset);
         return new Request(ConsumerAction.COMMIT_OFFSET.getAction(), commitOffsetReq);
+    }
+
+    public Request generateFetchJsonMeata(long messageId){
+        long reqId = this.getId(ConsumerAction.FETCH_JSON_META.getAction());
+        FetchJsonMetaReq fetchJsonMetaReq = new FetchJsonMetaReq();
+        fetchJsonMetaReq.setReqId(reqId);
+        fetchJsonMetaReq.setMessageId(messageId);
+        return new Request(ConsumerAction.FETCH_JSON_META.getAction(), fetchJsonMetaReq);
     }
 }

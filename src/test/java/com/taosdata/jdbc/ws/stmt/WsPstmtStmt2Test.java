@@ -390,12 +390,30 @@ public class WsPstmtStmt2Test {
         }
 
 
-//        String sql2 = "select * from " + db_name + "." + tableName + " where ts > ? and ts < ? order by ts desc";
-//
-//        try (TSWSPreparedStatement pstmt = connection.prepareStatement(sql2).unwrap(TSWSPreparedStatement.class)) {
-//        }
+        String sql2 = "select * from " + db_name + "." + tableName + " where ts > ? and ts < ? order by ts desc limit ?, ?";
 
+        try (TSWSPreparedStatement pstmt = connection.prepareStatement(sql2).unwrap(TSWSPreparedStatement.class)) {
+            pstmt.setTimestamp(0, new Timestamp(System.currentTimeMillis() - 1000));
+            pstmt.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
+            pstmt.setInt(2, 5);
+            pstmt.setInt(3, 6);
+            ResultSet rs = pstmt.executeQuery();
+
+            int rows = 0;
+            while (rs.next()) {
+                rows++;
+                System.out.println("ts-1: " + rs.getTimestamp(1) + ", current: " + rs.getFloat(2) + ", voltage: " + rs.getInt(3) + ", phase: " + rs.getFloat(4));
+            }
+            Assert.assertEquals(6, rows);
+        } catch (Exception ex) {
+            System.out.printf("Failed to query table meters using stmt, %sErrMessage: %s%n",
+                    ex instanceof SQLException ? "ErrCode: " + ((SQLException) ex).getErrorCode() + ", " : "",
+                    ex.getMessage());
+            ex.printStackTrace();
+            throw ex;
         }
+
+    }
 
     @Before
     public void before() throws SQLException {
