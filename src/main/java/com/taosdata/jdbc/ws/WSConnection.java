@@ -9,6 +9,7 @@ import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.rs.RestfulDatabaseMetaData;
 import com.taosdata.jdbc.utils.ReqId;
+import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.entity.*;
 import com.taosdata.jdbc.ws.entity.CommonResp;
 import com.taosdata.jdbc.ws.schemaless.InsertReq;
@@ -47,7 +48,7 @@ public class WSConnection extends AbstractConnection {
 
         if (this.getClientInfo(TSDBDriver.PROPERTY_KEY_DBNAME) != null)
             database = this.getClientInfo(TSDBDriver.PROPERTY_KEY_DBNAME);
-        WSStatement statement = new WSStatement(transport, database, this, idGenerator.getAndIncrement());
+        WSStatement statement = new WSStatement(transport, database, this, idGenerator.getAndIncrement(), param.getZoneId());
 
         statementsMap.put(statement.getInstanceId(), statement);
         return statement;
@@ -62,7 +63,13 @@ public class WSConnection extends AbstractConnection {
             database = this.getClientInfo(TSDBDriver.PROPERTY_KEY_DBNAME);
 
         if (transport != null && !transport.isClosed()) {
-            return new TSWSPreparedStatement(transport, param, database, this, sql, idGenerator.getAndIncrement());
+            return new TSWSPreparedStatement(transport,
+                    param,
+                    database,
+                    this,
+                    sql,
+                    idGenerator.getAndIncrement(),
+                    param.getZoneId());
         } else {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
         }
@@ -94,16 +101,7 @@ public class WSConnection extends AbstractConnection {
     public static void reInitTransport(Transport transport, ConnectionParam param, String db) throws SQLException {
         transport.disconnectAndReconnect();
 
-        ConnectReq connectReq = new ConnectReq();
-        connectReq.setReqId(ReqId.getReqID());
-        connectReq.setUser(param.getUser());
-        connectReq.setPassword(param.getPassword());
-        connectReq.setDb(db);
-        // 目前仅支持bi模式，下游接口值为0，此处做转换
-        if(param.getConnectMode() == ConnectionParam.CONNECT_MODE_BI){
-            connectReq.setMode(0);
-        }
-
+        ConnectReq connectReq = new ConnectReq(param);
         ConnectResp auth = (ConnectResp) transport.send(new Request(Action.CONN.getAction(), connectReq));
 
         if (Code.SUCCESS.getCode() != auth.getCode()) {

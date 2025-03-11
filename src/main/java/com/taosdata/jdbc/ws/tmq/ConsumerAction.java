@@ -19,6 +19,8 @@ public enum ConsumerAction {
     COMMITTED("committed", CommittedResp.class),
     POSITION("position", PositionResp.class),
     LIST_TOPICS("list_topics", ListTopicsResp.class),
+    FETCH_JSON_META("fetch_json_meta", FetchJsonMetaResp.class),
+
     ;
 
     private final String action;

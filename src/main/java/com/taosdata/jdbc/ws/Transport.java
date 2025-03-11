@@ -6,19 +6,20 @@ import com.taosdata.jdbc.common.SerializeBlock;
 import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.CompletableFutureTimeout;
-import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.ws.entity.*;
 import org.java_websocket.exceptions.WebsocketNotConnectedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.Socket;
-import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.security.cert.X509Certificate;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
@@ -26,11 +27,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
-
-import javax.net.SocketFactory;
-import javax.net.ssl.*;
-import java.net.URI;
-import java.security.cert.X509Certificate;
 
 import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT;
 
@@ -195,7 +191,7 @@ public class Transport implements AutoCloseable {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
         }
 
-        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream(24 + rawData.length + rawData2.length);
         try {
             buffer.write(SerializeBlock.longToBytes(reqId));
             buffer.write(SerializeBlock.longToBytes(resultId));
@@ -238,6 +234,46 @@ public class Transport implements AutoCloseable {
         }
         return response;
     }
+
+    public Response send(String action, long reqId, byte[] buffer) throws SQLException {
+        if (isClosed()){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
+        }
+
+
+        Response response;
+        CompletableFuture<Response> completableFuture = new CompletableFuture<>();
+        try {
+            inFlightRequest.put(new FutureResponse(action, reqId, completableFuture));
+        } catch (InterruptedException | TimeoutException e) {
+            throw new SQLException(e);
+        }
+
+        try {
+            clientArr.get(currentNodeIndex).send(buffer);
+        } catch (WebsocketNotConnectedException e) {
+            tmqRethrowConnectionCloseException();
+            reconnect();
+            try {
+                clientArr.get(currentNodeIndex).send(buffer);
+            }catch (Exception ex){
+                inFlightRequest.remove(action, reqId);
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());
+            }
+        }
+
+        String reqString = "action:" + action + ", reqId:" + reqId;
+        CompletableFuture<Response> responseFuture = CompletableFutureTimeout.orTimeout(completableFuture, timeout, TimeUnit.MILLISECONDS, reqString);
+        try {
+            response = responseFuture.get();
+            handleErrInMasterSlaveMode(response);
+        } catch (InterruptedException | ExecutionException e) {
+            inFlightRequest.remove(action, reqId);
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_QUERY_TIMEOUT, e.getMessage());
+        }
+        return response;
+    }
+
     private void handleErrInMasterSlaveMode(Response response) throws InterruptedException{
         if (clientArr.size() > 1 && response instanceof CommonResp){
             CommonResp commonResp = (CommonResp) response;
@@ -401,15 +437,7 @@ public class Transport implements AutoCloseable {
                 boolean reconnected = clientArr.get(currentNodeIndex).reconnectBlocking();
                 if (reconnected) {
                     // send con msgs
-                    ConnectReq connectReq = new ConnectReq();
-                    connectReq.setReqId(ReqId.getReqID());
-                    connectReq.setUser(connectionParam.getUser());
-                    connectReq.setPassword(connectionParam.getPassword());
-                    connectReq.setDb(connectionParam.getDatabase());
-
-                    if (connectionParam.getConnectMode() != 0) {
-                        connectReq.setMode(connectionParam.getConnectMode());
-                    }
+                    ConnectReq connectReq = new ConnectReq(connectionParam);
 
                     ConnectResp auth;
                     auth = (ConnectResp) sendWithoutRetry(new Request(Action.CONN.getAction(), connectReq));

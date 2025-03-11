@@ -2,6 +2,7 @@ package com.taosdata.jdbc.tmq;
 
 import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.common.Consumer;
+import com.taosdata.jdbc.enums.TmqMessageType;
 
 import java.sql.SQLException;
 import java.time.Duration;
@@ -73,7 +74,14 @@ public class JNIConsumer<V> implements  Consumer<V> {
         try (TMQResultSet rs = new TMQResultSet(connector, resultSet, timestampPrecision, dbName, tableName)) {
             while (rs.next()) {
                 V v = deserializer.deserialize(rs, topic, dbName);
-                ConsumerRecord<V> r = new ConsumerRecord<>(topic, dbName, vGroupId, offset, v);
+                ConsumerRecord<V> r = new ConsumerRecord.Builder<V>()
+                        .topic(topic)
+                        .dbName(dbName)
+                        .vGroupId(vGroupId)
+                        .offset(offset)
+                        .messageType(TmqMessageType.TMQ_RES_DATA)
+                        .value(v)
+                        .build();
                 records.put(tp, r);
             }
         }

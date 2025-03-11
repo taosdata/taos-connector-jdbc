@@ -1,9 +1,12 @@
 package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.rs.RestfulResultSet;
+import com.taosdata.jdbc.utils.DataTypeConverUtil;
+import com.taosdata.jdbc.utils.DateTimeUtils;
 
 import java.nio.ByteBuffer;
 import java.sql.SQLException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Semaphore;
@@ -19,9 +22,15 @@ public class BlockData {
     private int numOfRows;
     private ByteBuffer buffer;
     private List<RestfulResultSet.Field> fields;
-    Semaphore semaphore;
+    private final Semaphore semaphore;
+    private int precision;
 
-    public BlockData(List<List<Object>> data, int returnCode, int numOfRows, ByteBuffer buffer, List<RestfulResultSet.Field> fields) {
+    public BlockData(List<List<Object>> data,
+                     int returnCode,
+                     int numOfRows,
+                     ByteBuffer buffer,
+                     List<RestfulResultSet.Field> fields,
+                     int precision) {
         this.data = data;
         this.returnCode = returnCode;
         this.numOfRows = numOfRows;
@@ -29,10 +38,11 @@ public class BlockData {
         this.fields = fields;
         this.semaphore = new Semaphore(0);
         this.isCompleted = false;
+        this.precision = precision;
     }
 
-    public static BlockData getEmptyBlockData(List<RestfulResultSet.Field> fields) {
-        return new BlockData(null, 0, 0, null, fields);
+    public static BlockData getEmptyBlockData(List<RestfulResultSet.Field> fields, int precision) {
+        return new BlockData(null, 0, 0, null, fields, precision);
     }
 
     public void handleData() {
@@ -106,8 +116,7 @@ public class BlockData {
                             break;
                         }
                         case TSDB_DATA_TYPE_BIGINT:
-                        case TSDB_DATA_TYPE_UBIGINT:
-                        case TSDB_DATA_TYPE_TIMESTAMP: {
+                        case TSDB_DATA_TYPE_UBIGINT: {
                             length = bitMapOffset;
                             byte[] tmp = new byte[bitMapOffset];
                             buffer.get(tmp);
@@ -117,6 +126,21 @@ public class BlockData {
                                     col.add(null);
                                 } else {
                                     col.add(l);
+                                }
+                            }
+                            break;
+                        }
+                        case TSDB_DATA_TYPE_TIMESTAMP: {
+                            length = bitMapOffset;
+                            byte[] tmp = new byte[bitMapOffset];
+                            buffer.get(tmp);
+                            for (int j = 0; j < numOfRows; j++) {
+                                long l = buffer.getLong();
+                                if (isNull(tmp, j)) {
+                                    col.add(null);
+                                } else {
+                                    Instant instant = DateTimeUtils.parseTimestampColumnData(l, precision);
+                                    col.add(instant);
                                 }
                             }
                             break;

@@ -1,0 +1,94 @@
+name: build
+
+on:
+  push:
+    branches:
+      - main
+      - '3.0'
+    paths-ignore:
+      - 'LICENSE'
+      - '*.md'
+      - '*.txt'
+  pull_request:
+    branches:
+      - main
+      - '3.0'
+    paths-ignore:
+      - 'LICENSE'
+      - '*.md'
+      - '*.txt'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        #        os: [ ubuntu-latest,macos-latest,windows-latest ]
+        os: [ Ubuntu-22.04 ]
+        java: [ 8 ]
+        maven: [ '3.6.3' ]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Get current branch name
+        id: branch
+        run: |
+          if [ "${{ github.ref_type }}" == "branch" ]; then
+            echo "::set-output name=branch_name::${{ github.ref_name }}"
+          else
+            echo "Not a branch push. Skipping."
+            exit 1
+          fi
+
+      - name: checkout TDengine
+        uses: actions/checkout@v3
+        with:
+          repository: 'taosdata/TDengine'
+          path: 'TDengine'
+          ref: ${{ steps.branch.outputs.branch_name }}
+
+      - name: prepare install
+        run: | 
+          sudo apt-get install  -y libgeos-dev
+          geos-config --version
+     
+      - name: install TDengine
+        run: cd TDengine && mkdir debug && cd debug && cmake .. -DBUILD_JDBC=false -DBUILD_TOOLS=false -DBUILD_HTTP=false -DBUILD_DEPENDENCY_TESTS=false && make && sudo make install
+
+      - name: shell
+        run: |
+          cat >start.sh<<EOF 
+          ulimit -n 65535 && TAOS_SUPPORT_VNODES=256 taosd
+          EOF
+
+      - name: taosd
+        run: nohup sudo sh ./start.sh &
+
+      - name: start taosadapter
+        run: sudo taosadapter &
+
+      - name: checkout
+        uses: actions/checkout@v3
+
+      - name: set up java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin' # See 'Supported distributions' for available options
+          java-version: ${{ matrix.java }}
+          java-package: jdk
+
+      - name: Test
+        env:
+          TDENGINE_CLOUD_URL: ${{ secrets.TDENGINE_CLOUD_URL }}
+        run: mvn -B clean verify --file pom.xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: target/site/jacoco/jacoco.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+          verbose: true
+
+
+

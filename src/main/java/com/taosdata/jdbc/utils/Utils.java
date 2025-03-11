@@ -3,13 +3,19 @@ package com.taosdata.jdbc.utils;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
+import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.ws.entity.ConnectReq;
 
 import java.lang.reflect.Constructor;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
@@ -23,49 +29,6 @@ import java.util.stream.IntStream;
 public class Utils {
 
     private static final Pattern ptn = Pattern.compile(".*?'");
-    private static final DateTimeFormatter milliSecFormatter = new DateTimeFormatterBuilder().appendPattern("yyyy-MM-dd HH:mm:ss.SSS").toFormatter();
-    private static final DateTimeFormatter microSecFormatter = new DateTimeFormatterBuilder().appendPattern("yyyy-MM-dd HH:mm:ss.SSSSSS").toFormatter();
-    private static final DateTimeFormatter nanoSecFormatter = new DateTimeFormatterBuilder().appendPattern("yyyy-MM-dd HH:mm:ss.SSSSSSSSS").toFormatter();
-
-    public static Time parseTime(String timestampStr) throws DateTimeParseException {
-        LocalDateTime dateTime = parseLocalDateTime(timestampStr);
-        return dateTime != null ? Time.valueOf(dateTime.toLocalTime()) : null;
-    }
-
-    public static Date parseDate(String timestampStr) {
-        LocalDateTime dateTime = parseLocalDateTime(timestampStr);
-        return dateTime != null ? Date.valueOf(String.valueOf(dateTime)) : null;
-    }
-
-    public static Timestamp parseTimestamp(String timeStampStr) {
-        LocalDateTime dateTime = parseLocalDateTime(timeStampStr);
-        return dateTime != null ? Timestamp.valueOf(dateTime) : null;
-    }
-
-    private static LocalDateTime parseLocalDateTime(String timeStampStr) {
-        try {
-            return parseMilliSecTimestamp(timeStampStr);
-        } catch (DateTimeParseException e) {
-            try {
-                return parseMicroSecTimestamp(timeStampStr);
-            } catch (DateTimeParseException ee) {
-                return parseNanoSecTimestamp(timeStampStr);
-            }
-        }
-    }
-
-    private static LocalDateTime parseMilliSecTimestamp(String timeStampStr) throws DateTimeParseException {
-        return LocalDateTime.parse(timeStampStr, milliSecFormatter);
-    }
-
-    private static LocalDateTime parseMicroSecTimestamp(String timeStampStr) throws DateTimeParseException {
-        return LocalDateTime.parse(timeStampStr, microSecFormatter);
-    }
-
-    private static LocalDateTime parseNanoSecTimestamp(String timeStampStr) throws DateTimeParseException {
-        return LocalDateTime.parse(timeStampStr, nanoSecFormatter);
-    }
-
     public static String escapeSingleQuota(String origin) {
         Matcher m = ptn.matcher(origin);
         StringBuilder sb = new StringBuilder();
@@ -221,4 +184,12 @@ public class Utils {
         }
     }
 
+    public static boolean isValidIP(String ip) {
+        try {
+            InetAddress address = InetAddress.getByName(ip);
+            return true;
+        } catch (UnknownHostException e) {
+            return false;
+        }
+    }
 }

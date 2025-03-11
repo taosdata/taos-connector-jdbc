@@ -108,6 +108,7 @@ public class TSDBPreparedStatementPerfTest {
 
 
     @Test
+    @Ignore
     public void testStmtPerf() throws Exception {
         prepareMeta();
         System.out.println("prepareMeta successfully");

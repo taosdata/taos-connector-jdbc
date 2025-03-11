@@ -44,12 +44,13 @@ public class RestfulDriver extends AbstractDriver {
             return null;
 
         Properties props = parseURL(url, info);
-        ConnectionParam param = ConnectionParam.getParam(props);
         String batchLoad = info.getProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD);
         if (Boolean.parseBoolean(batchLoad)) {
+            ConnectionParam param = ConnectionParam.getParamWs(props);
             return getWSConnection(url, param, props);
         }
         HttpClientPoolUtil.init(props);
+        ConnectionParam param = ConnectionParam.getParam(props);
 
         String auth = null;
 

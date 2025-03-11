@@ -1,12 +1,13 @@
 package com.taosdata.jdbc.ws;
 
-import com.taosdata.jdbc.*;
-import com.taosdata.jdbc.enums.BindType;
+import com.taosdata.jdbc.AbstractResultSet;
+import com.taosdata.jdbc.BlockData;
+import com.taosdata.jdbc.TSDBError;
+import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.enums.DataType;
 import com.taosdata.jdbc.rs.RestfulResultSet;
 import com.taosdata.jdbc.rs.RestfulResultSetMetaData;
 import com.taosdata.jdbc.ws.entity.*;
-import com.taosdata.jdbc.ws.stmt.entity.StmtResp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +42,9 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
     BlockingQueue<BlockData> blockingQueueOut = new LinkedBlockingQueue<>(CACHE_SIZE);
     ThreadPoolExecutor backFetchExecutor;
     ForkJoinPool dataHandleExecutor = getForkJoinPool();
+
+    private int fetchBlockNum = 0;
+    private final int START_BACKEND_FETCH_BLOCK_NUM = 3;
     protected AbstractWSResultSet(Statement statement, Transport transport,
                                QueryResp response, String database) throws SQLException {
         this.statement = statement;
@@ -57,12 +61,14 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
         }
         this.metaData = new RestfulResultSetMetaData(database, fields);
         this.timestampPrecision = response.getPrecision();
+    }
 
+    private void startBackendFetch(){
         backFetchExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
         backFetchExecutor.submit(() -> {
             try {
                 while (!isClosed){
-                    BlockData blockData = BlockData.getEmptyBlockData(fields);
+                    BlockData blockData = BlockData.getEmptyBlockData(fields, timestampPrecision);
 
                     byte[] version = {1, 0};
                     FetchBlockNewResp resp = (FetchBlockNewResp) transport.send(Action.FETCH_BLOCK_NEW.getAction(),
@@ -89,7 +95,7 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
                 Thread.currentThread().interrupt();
             } catch (Exception e) {
                 log.error("fetch block error", e);
-                BlockData blockData = BlockData.getEmptyBlockData(fields);
+                BlockData blockData = BlockData.getEmptyBlockData(fields, timestampPrecision);
                 while (!isClosed) {
                     try {
                         if (blockingQueueOut.offer(blockData, 10, TimeUnit.MILLISECONDS)){
@@ -126,26 +132,55 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
             return true;
         }
 
-        BlockData blockData;
-        try {
-            blockData = blockingQueueOut.take();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "FETCH DATA INTERRUPTED");
+        fetchBlockNum++;
+        if (fetchBlockNum > START_BACKEND_FETCH_BLOCK_NUM) {
+            if (backFetchExecutor == null) {
+                startBackendFetch();
+            }
+            BlockData blockData;
+            try {
+                blockData = blockingQueueOut.take();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "FETCH DATA INTERRUPTED");
+            }
+
+            if (blockData.getReturnCode() != Code.SUCCESS.getCode()) {
+                throw TSDBError.createSQLException(blockData.getReturnCode(), "FETCH DATA ERROR");
+            }
+            this.reset();
+            if (blockData.isCompleted()) {
+                this.isCompleted = true;
+                return false;
+            }
+            blockData.waitTillOK();
+            this.result = blockData.getData();
+            this.numOfRows = blockData.getNumOfRows();
+        } else {
+
+            byte[] version = {1, 0};
+            FetchBlockNewResp resp = (FetchBlockNewResp) transport.send(Action.FETCH_BLOCK_NEW.getAction(),
+                    reqId, queryId, 7, version);
+            resp.init();
+
+            if (Code.SUCCESS.getCode() != resp.getCode()) {
+                throw TSDBError.createSQLException(resp.getCode(), "FETCH DATA ERROR");
+            }
+            this.reset();
+            BlockData blockData = BlockData.getEmptyBlockData(fields, timestampPrecision);
+
+            if (resp.isCompleted() || isClosed) {
+                blockData.setCompleted(true);
+                return false;
+            }
+
+            blockData.setBuffer(resp.getBuffer());
+            blockData.handleData();
+
+            this.result = blockData.getData();
+            this.numOfRows = blockData.getNumOfRows();
         }
 
-        if (blockData.getReturnCode() != Code.SUCCESS.getCode()){
-            throw TSDBError.createSQLException(blockData.getReturnCode(), "FETCH DATA ERROR");
-        }
-        this.reset();
-        if (blockData.isCompleted()){
-            this.isCompleted = true;
-            return false;
-        }
-        blockData.waitTillOK();
-
-        this.result = blockData.getData();
-        this.numOfRows = blockData.getNumOfRows();
         return true;
     }
 
@@ -156,18 +191,20 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
                 this.isClosed = true;
 
                 // wait backFetchExecutor to finish
-                while (backFetchExecutor.getActiveCount() != 0) {
-                    try {
-                        Thread.sleep(1);
-                    } catch (InterruptedException ignored) {
-                        Thread.currentThread().interrupt();
+                if (backFetchExecutor != null) {
+                    while (backFetchExecutor.getActiveCount() != 0) {
+                        try {
+                            Thread.sleep(1);
+                        } catch (InterruptedException ignored) {
+                            Thread.currentThread().interrupt();
+                        }
+                    }
+                    if (!backFetchExecutor.isShutdown()) {
+                        backFetchExecutor.shutdown();
                     }
                 }
-                if (!backFetchExecutor.isShutdown()){
-                    backFetchExecutor.shutdown();
-                }
 
-                if (result != null && !result.isEmpty() && !isCompleted) {
+                if (!isCompleted) {
                     FetchReq closeReq = new FetchReq();
                     closeReq.setReqId(queryId);
                     closeReq.setId(queryId);
