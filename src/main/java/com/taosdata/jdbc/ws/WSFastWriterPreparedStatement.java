@@ -370,6 +370,7 @@ public class WSFastWriterPreparedStatement extends AbstractWSPreparedStatement {
 
         @Override
         public void run() {
+            LinkedList<Long>  delayMs = new LinkedList<>();
             while (!(isClosed.get() && dataQueue.isEmpty())) {
                 int polledRow = 0;
                 int size = 0;
@@ -393,7 +394,11 @@ public class WSFastWriterPreparedStatement extends AbstractWSPreparedStatement {
                         tableInfoList.add(tableInfo);
                     }
 
+                    Instant t = (Instant)tableInfoList.get(0).getDataList().get(0).getDataList().get(0);
                     wirteBlockWithRetry();
+
+                    long now = System.currentTimeMillis();
+                    delayMs.add(now - t.toEpochMilli());
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 } catch (SQLException e) {
@@ -402,8 +407,31 @@ public class WSFastWriterPreparedStatement extends AbstractWSPreparedStatement {
                     processedRowCount.addAndGet(-size - polledRow);
                 }
             }
+
+            if (!delayMs.isEmpty()) {
+                long sum = delayMs.stream().mapToLong(Long::longValue).sum();
+                long avg = sum / delayMs.size();
+                double p99 = calculatePercentile(delayMs, 99);
+                double p95 = calculatePercentile(delayMs, 95);
+                System.out.println("Thread " + Thread.currentThread().getName()
+                        + " avg delay: " + avg + "ms"
+                        + " max delay: " + delayMs.stream().max(Long::compareTo).get() + "ms"
+                        + " min delay: " + delayMs.stream().min(Long::compareTo).get() + "ms"
+                        + " p99 delay: " + p99 + "ms"
+                        + " p95 delay: " + p95 + "ms"
+                );
+            }
         }
 
+        public static double calculatePercentile(LinkedList<Long> data, double percentile) {
+            if (data == null || data.size() == 0) {
+                return 0;
+            }
+            // 对数组进行排序
+            data.sort(Comparator.naturalOrder());
+            int index = (int) Math.ceil(percentile / 100.0 * data.size()) - 1;
+            return data.get(index);
+        }
 
         private void wirteBlockWithRetry() throws SQLException {
             byte[] rawBlock = SerializeBlock.getStmt2BindBlock(
