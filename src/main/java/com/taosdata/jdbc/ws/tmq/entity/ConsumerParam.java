@@ -37,6 +37,18 @@ public class ConsumerParam {
         knownKeys.add(TMQConstants.VALUE_DESERIALIZER_ENCODING);
         knownKeys.add(TMQConstants.CONNECT_TYPE);
         knownKeys.add(TMQConstants.CONNECT_URL);
+
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_ENABLE_COMPRESSION);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_HOST);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_PORT);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_RECONNECT_INTERVAL_MS);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_RECONNECT_RETRY_COUNT);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_DISABLE_SSL_CERT_VALIDATION);
+
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_APP_IP);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_APP_NAME);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_TIME_ZONE);
     }
 
     private ConnectionParam connectionParam;
