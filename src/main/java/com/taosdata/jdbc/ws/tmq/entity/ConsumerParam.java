@@ -8,9 +8,37 @@ import com.taosdata.jdbc.tmq.TMQConstants;
 import com.taosdata.jdbc.utils.StringUtils;
 
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Properties;
 
 public class ConsumerParam {
+    private static final HashSet<String> knownKeys = new HashSet<>();
+    static {
+
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_USER);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_PASSWORD);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_HOST);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_PORT);
+
+        knownKeys.add(TMQConstants.CONNECT_USER);
+        knownKeys.add(TMQConstants.CONNECT_PASS);
+        knownKeys.add(TMQConstants.CONNECT_IP);
+        knownKeys.add(TMQConstants.CONNECT_PORT);
+        knownKeys.add(TMQConstants.ENABLE_AUTO_COMMIT);
+        knownKeys.add(TMQConstants.GROUP_ID);
+        knownKeys.add(TMQConstants.CLIENT_ID);
+        knownKeys.add(TMQConstants.AUTO_OFFSET_RESET);
+        knownKeys.add(TMQConstants.AUTO_COMMIT_INTERVAL);
+        knownKeys.add(TMQConstants.MSG_WITH_TABLE_NAME);
+        knownKeys.add(TMQConstants.MSG_ENABLE_BATCH_META);
+        knownKeys.add(TMQConstants.BOOTSTRAP_SERVERS);
+        knownKeys.add(TMQConstants.VALUE_DESERIALIZER);
+        knownKeys.add(TMQConstants.VALUE_DESERIALIZER_ENCODING);
+        knownKeys.add(TMQConstants.CONNECT_TYPE);
+        knownKeys.add(TMQConstants.CONNECT_URL);
+    }
+
     private ConnectionParam connectionParam;
     private String groupId;
     private String clientId;
@@ -19,6 +47,8 @@ public class ConsumerParam {
     private long autoCommitInterval;
     private String msgWithTableName;
     private String enableBatchMeta;
+
+    private HashMap<String, String> config = new HashMap<>();
 
     public ConsumerParam(Properties properties) throws SQLException {
         if (null != properties.getProperty(TMQConstants.CONNECT_URL)) {
@@ -50,6 +80,12 @@ public class ConsumerParam {
 
         msgWithTableName = properties.getProperty(TMQConstants.MSG_WITH_TABLE_NAME);
         enableBatchMeta = properties.getProperty(TMQConstants.MSG_ENABLE_BATCH_META, null);
+
+        for (String key : properties.stringPropertyNames()) {
+            if (!knownKeys.contains(key)) {
+                config.put(key, properties.getProperty(key));
+            }
+        }
     }
 
     public ConnectionParam getConnectionParam() {
@@ -110,6 +146,10 @@ public class ConsumerParam {
 
     public void setEnableBatchMeta(String enableBatchMeta) {
         this.enableBatchMeta = enableBatchMeta;
+    }
+
+    public HashMap<String, String> getConfig() {
+        return config;
     }
 
 }
