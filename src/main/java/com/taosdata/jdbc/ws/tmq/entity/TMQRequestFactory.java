@@ -45,6 +45,7 @@ public class TMQRequestFactory {
         subscribeReq.setApp(param.getConnectionParam().getAppName());
         subscribeReq.setIp(param.getConnectionParam().getAppIp());
         subscribeReq.setEnableBatchMeta(param.getEnableBatchMeta());
+        subscribeReq.setConfig(param.getConfig());
 
         return new Request(ConsumerAction.SUBSCRIBE.getAction(), subscribeReq);
     }
