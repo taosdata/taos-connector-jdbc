@@ -25,7 +25,7 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
     private final boolean copyData;
     private final int writeThreadNum;
     private ThreadPoolExecutor writerThreads;
-    private ArrayList<LinkedBlockingQueue<Map<Integer, Column>>> writeQueueList;
+    private ArrayList<ArrayBlockingQueue<Map<Integer, Column>>> writeQueueList;
     private final AtomicInteger remainingUnprocessedRows = new AtomicInteger(0);
     private final AtomicInteger batchInsertedRows = new AtomicInteger(0);
     private final AtomicInteger flushIn = new AtomicInteger(0);
@@ -43,7 +43,7 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
         writerThreads =  (ThreadPoolExecutor) Executors.newFixedThreadPool(writeThreadNum);
         writeQueueList = new ArrayList<>(writeThreadNum);
         for (int i = 0; i < writeThreadNum; i++){
-            writeQueueList.add(new LinkedBlockingQueue<>(param.getCacheSizeByRow()));
+            writeQueueList.add(new ArrayBlockingQueue<>(param.getCacheSizeByRow()));
         }
 
         workerThreadList = new ArrayList<>(writeThreadNum);
@@ -254,7 +254,7 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
 
     static class WorkerThread implements Runnable {
         private final org.slf4j.Logger log = LoggerFactory.getLogger(WorkerThread.class);
-        private final LinkedBlockingQueue<Map<Integer, Column>> dataQueue;
+        private final ArrayBlockingQueue<Map<Integer, Column>> dataQueue;
         private final int batchSize;
         private final String sql;
         private long reqId;
@@ -275,7 +275,7 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
         private final AtomicInteger flushIn;
         private final SyncObj syncObj;
 
-        public WorkerThread(LinkedBlockingQueue<Map<Integer, Column>> taskQueue,
+        public WorkerThread(ArrayBlockingQueue<Map<Integer, Column>> taskQueue,
                             String sql,
                             Transport transport,
                             ConnectionParam param,

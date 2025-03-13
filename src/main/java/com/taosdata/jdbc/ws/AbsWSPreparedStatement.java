@@ -1071,14 +1071,14 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
         Stmt2Resp bindResp = (Stmt2Resp) transport.send(Action.STMT2_BIND.getAction(),
                 reqId, rawBlock);
         if (Code.SUCCESS.getCode() != bindResp.getCode()) {
-            throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
+            throw TSDBError.createSQLException(bindResp.getCode(), "(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
         }
 
         // execute
         Request request = RequestFactory.generateExec(stmtId, reqId);
         Stmt2ExecResp resp = (Stmt2ExecResp) transport.send(request);
         if (Code.SUCCESS.getCode() != resp.getCode()) {
-            throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
+            throw TSDBError.createSQLException(bindResp.getCode(), "(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
         }
 
         this.affectedRows = resp.getAffected();
