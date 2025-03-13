@@ -482,10 +482,10 @@ public class SerializeBlock {
         List<Short> tableNameSizeList = new ArrayList<>();
         if (toBeBindTableNameIndex >= 0) {
             for (TableInfo tableInfo: tableInfoList) {
-                if (StringUtils.isEmpty(tableInfo.getTableName())){
+                if (tableInfo.getTableName().length == 0){
                     throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table name is empty");
                 }
-                int tableNameSize = tableInfo.getTableName().length() + 1;
+                int tableNameSize = tableInfo.getTableName().length + 1;
                 totalTableNameSize += tableNameSize;
                 tableNameSizeList.add((short) tableNameSize);
             }
@@ -611,12 +611,12 @@ public class SerializeBlock {
             }
 
             for (TableInfo tableInfo: tableInfoList){
-                if (StringUtils.isEmpty(tableInfo.getTableName())) {
+                if (tableInfo.getTableName().length == 0) {
                     throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table name is empty");
                 }
 
-                serializeByteArray(buf, offset, tableInfo.getTableName().getBytes());
-                offset += tableInfo.getTableName().length();
+                serializeByteArray(buf, offset, tableInfo.getTableName());
+                offset += tableInfo.getTableName().length;
                 buf[offset++] = 0;
             }
         }

@@ -5,23 +5,23 @@ import java.util.List;
 
 public class TableInfo {
     private  List<ColumnInfo> dataList;
-    private  String tableName;
+    private  byte[] tableName;
     private  List<ColumnInfo> tagInfo;
 
-    public TableInfo(List<ColumnInfo> dataList, String tableName, List<ColumnInfo> tagInfo) {
+    public TableInfo(List<ColumnInfo> dataList, byte[] tableName, List<ColumnInfo> tagInfo) {
         this.dataList = dataList;
         this.tableName = tableName;
         this.tagInfo = tagInfo;
     }
 
     public static TableInfo getEmptyTableInfo() {
-        return new TableInfo(new ArrayList<>(), "", new ArrayList<>());
+        return new TableInfo(new ArrayList<>(), new byte[0], new ArrayList<>());
     }
     public List<ColumnInfo> getDataList() {
         return dataList;
     }
 
-    public String getTableName() {
+    public byte[] getTableName() {
         return tableName;
     }
 
@@ -33,7 +33,7 @@ public class TableInfo {
         this.dataList = dataList;
     }
 
-    public void setTableName(String tableName) {
+    public void setTableName(byte[] tableName) {
         this.tableName = tableName;
     }
 

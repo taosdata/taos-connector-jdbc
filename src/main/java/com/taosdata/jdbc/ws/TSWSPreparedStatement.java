@@ -647,10 +647,10 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
         for (int index = 0; index < fields.size(); index++) {
             if (fields.get(index).getBindType() == FeildBindType.TAOS_FIELD_TBNAME.getValue()) {
                 if (colOrderedMap.get(index + 1).data instanceof byte[]){
-                    tableInfo.setTableName(new String((byte[])colOrderedMap.get(index + 1).data, StandardCharsets.UTF_8));
+                    tableInfo.setTableName((byte[]) colOrderedMap.get(index + 1).data);
                 }
                 if (colOrderedMap.get(index + 1).data instanceof String){
-                    tableInfo.setTableName((String) colOrderedMap.get(index + 1).data);
+                    tableInfo.setTableName(((String) colOrderedMap.get(index + 1).data).getBytes());
                 }
             } else if (fields.get(index).getBindType() == FeildBindType.TAOS_FIELD_TAG.getValue()) {
                 LinkedList<Object> list = new LinkedList<>();
@@ -748,7 +748,7 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
     }
 
     private boolean isTableInfoEmpty(){
-        return StringUtils.isEmpty(tableInfo.getTableName())
+        return tableInfo.getTableName().length == 0
                 && tableInfo.getTagInfo().isEmpty()
                 && tableInfo.getDataList().isEmpty();
     }
@@ -1115,14 +1115,6 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
 
     @Override
     public void setTableName(String name) throws SQLException {
-        this.tableInfo.setTableName(name);
+        this.tableInfo.setTableName(name.getBytes());
     }
-
-    private void ensureTagCapacity(int index) {
-        if (this.tableInfo.getTagInfo().size() < index + 1) {
-            int delta = index + 1 - this.tableInfo.getTagInfo().size();
-            this.tableInfo.getTagInfo().addAll(Collections.nCopies(delta, null));
-        }
-    }
-
 }
