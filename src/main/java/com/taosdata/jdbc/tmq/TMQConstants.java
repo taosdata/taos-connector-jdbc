@@ -12,7 +12,7 @@ public class TMQConstants {
     private TMQConstants() {
     }
 
-    public static final Set<String> configSet = new HashSet<>();
+    public static final Set<String> knownKeys = new HashSet<>();
 
     public static final String GROUP_ID = "group.id";
 
@@ -122,15 +122,10 @@ public class TMQConstants {
 
 
     static {
-        configSet.add(GROUP_ID);
-        configSet.add(CLIENT_ID);
-        configSet.add(ENABLE_AUTO_COMMIT);
-        configSet.add(AUTO_COMMIT_INTERVAL);
-        configSet.add(AUTO_OFFSET_RESET);
-        configSet.add(MSG_WITH_TABLE_NAME);
-        configSet.add(CONNECT_IP);
-        configSet.add(CONNECT_USER);
-        configSet.add(CONNECT_PASS);
-        configSet.add(CONNECT_PORT);
+        knownKeys.add(CONNECT_TYPE);
+        knownKeys.add(CONNECT_URL);
+        knownKeys.add(BOOTSTRAP_SERVERS);
+        knownKeys.add(VALUE_DESERIALIZER);
+        knownKeys.add(VALUE_DESERIALIZER_ENCODING);
     }
 }
