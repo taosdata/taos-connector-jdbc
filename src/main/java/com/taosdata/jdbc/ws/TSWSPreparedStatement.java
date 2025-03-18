@@ -3,7 +3,6 @@ package com.taosdata.jdbc.ws;
 import com.taosdata.jdbc.*;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.ws.stmt2.entity.*;
-
 import java.sql.*;
 
 public class TSWSPreparedStatement extends AbsWSPreparedStatement {

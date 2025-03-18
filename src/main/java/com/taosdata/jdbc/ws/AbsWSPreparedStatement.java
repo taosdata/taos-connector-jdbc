@@ -15,11 +15,13 @@ import com.taosdata.jdbc.ws.entity.Code;
 import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.stmt2.entity.*;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URL;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.sql.Date;
 import java.sql.*;
@@ -48,7 +50,7 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
     protected final Map<Integer, Column> colOrderedMap = new HashMap<>();
     private final PriorityQueue<ColumnInfo> tag = new PriorityQueue<>();
     private final PriorityQueue<ColumnInfo> colListQueue = new PriorityQueue<>();
-    private List<TableInfo> tableInfoList = new ArrayList<>();
+    private final HashMap<ByteBuffer, TableInfo> tableInfoMap = new HashMap<>();
     private TableInfo tableInfo;
 
 
@@ -111,11 +113,6 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
     }
 
     @Override
-    public boolean execute(String sql, Long reqId) throws SQLException {
-        return super.execute(sql, reqId);
-    }
-
-    @Override
     public boolean execute() throws SQLException {
         if (isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
@@ -145,7 +142,7 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
 
         onlyBindCol();
         if (!isTableInfoEmpty()){
-            tableInfoList.add(tableInfo);
+            tableInfoMap.put(tableInfo.getTableName(), tableInfo);
         }
 
         this.executeBatchImpl();
@@ -184,7 +181,7 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_WITH_EXECUTEUPDATE, "no data to be bind");
         }
 
-        tableInfoList.add(tableInfo);
+        tableInfoMap.put(tableInfo.getTableName(), tableInfo);
         return executeBatchImpl();
     }
 
@@ -529,7 +526,7 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
         colListQueue.clear();
 
         tableInfo = TableInfo.getEmptyTableInfo();
-        tableInfoList.clear();
+        tableInfoMap.clear();
     }
 
     @Override
@@ -640,10 +637,10 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
         for (int index = 0; index < fields.size(); index++) {
             if (fields.get(index).getBindType() == FeildBindType.TAOS_FIELD_TBNAME.getValue()) {
                 if (colOrderedMap.get(index + 1).getData() instanceof byte[]){
-                    tableInfo.setTableName(new String((byte[])colOrderedMap.get(index + 1).getData(), StandardCharsets.UTF_8));
+                    tableInfo.setTableName(ByteBuffer.wrap((byte[]) colOrderedMap.get(index + 1).getData()));
                 }
                 if (colOrderedMap.get(index + 1).getData() instanceof String){
-                    tableInfo.setTableName((String) colOrderedMap.get(index + 1).getData());
+                    tableInfo.setTableName(ByteBuffer.wrap(((String) colOrderedMap.get(index + 1).getData()).getBytes()));
                 }
             } else if (fields.get(index).getBindType() == FeildBindType.TAOS_FIELD_TAG.getValue()) {
                 LinkedList<Object> list = new LinkedList<>();
@@ -658,32 +655,44 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
     }
 
 
-    private void bindColToTableInfo(){
+    private void bindColToTableInfo(TableInfo tableInfo){
         for (ColumnInfo columnInfo: tableInfo.getDataList()){
             columnInfo.add(colOrderedMap.get(columnInfo.getIndex()).getData());
         }
     }
 
-    private void bindAllColWithStdApi() {
+    private void bindAllColWithStdApi() throws SQLException {
         if (isTableInfoEmpty()) {
             // first time, bind all
             bindAllToTableInfo(fields, colOrderedMap, tableInfo);
         } else {
             if (toBeBindTableNameIndex >= 0) {
                 Object tbname = colOrderedMap.get(toBeBindTableNameIndex + 1).getData();
-                if ((tbname instanceof String && tableInfo.getTableName().equals(tbname))
-                        || (tbname instanceof byte[] && tableInfo.getTableName().equals(new String((byte[]) tbname, StandardCharsets.UTF_8)))) {
+                ByteBuffer tempTableName;
+                if (tbname instanceof String){
+                    tempTableName = ByteBuffer.wrap(((String)tbname).getBytes());
+                } else if (tbname instanceof byte[]){
+                    tempTableName = ByteBuffer.wrap((byte[]) tbname);
+                } else {
+                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table name must be string or binary");
+                }
+
+                if (tableInfo.getTableName().equals(tempTableName)){
                     // same table, only bind col
-                    bindColToTableInfo();
+                    bindColToTableInfo(tableInfo);
+                } else if (tableInfoMap.containsKey(tempTableName)){
+                    // same table, only bind col
+                    TableInfo tbInfo = tableInfoMap.get(tempTableName);
+                    bindColToTableInfo(tbInfo);
                 } else {
                     // different table, flush tableInfo and create a new one
-                    tableInfoList.add(tableInfo);
+                    tableInfoMap.put(tableInfo.getTableName(), tableInfo);
                     tableInfo = TableInfo.getEmptyTableInfo();
                     bindAllToTableInfo(fields, colOrderedMap, tableInfo);
                 }
             } else {
                 // must same table
-                bindColToTableInfo();
+                bindColToTableInfo(tableInfo);
             }
         }
     }
@@ -741,7 +750,7 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
     }
 
     private boolean isTableInfoEmpty(){
-        return StringUtils.isEmpty(tableInfo.getTableName())
+        return tableInfo.getTableName().capacity() == 0
                 && tableInfo.getTagInfo().isEmpty()
                 && tableInfo.getDataList().isEmpty();
     }
@@ -749,7 +758,7 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
     public int[] executeBatch() throws SQLException {
 
         if (!isTableInfoEmpty()){
-            tableInfoList.add(tableInfo);
+            tableInfoMap.put(tableInfo.getTableName(), tableInfo);
         }
 
         int affected = executeBatchImpl();
@@ -1050,19 +1059,28 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
                 tableInfo.getDataList().add(columnInfo);
             }
         }
-        tableInfoList.add(tableInfo);
+
+        if (tableInfoMap.containsKey(tableInfo.getTableName())){
+            TableInfo tbInfo = tableInfoMap.get(tableInfo.getTableName());
+            tbInfo.getDataList().addAll(tableInfo.getDataList());
+            tbInfo.getTagInfo().addAll(tableInfo.getTagInfo());
+        } else {
+            tableInfoMap.put(tableInfo.getTableName(), tableInfo);
+        }
+
+
         tableInfo = TableInfo.getEmptyTableInfo();
     }
 
 
     private int executeBatchImpl() throws SQLException {
-        if (tableInfoList.isEmpty()) {
+        if (tableInfoMap.isEmpty()) {
             throw new SQLException("batch data is empty");
         }
 
         byte[] rawBlock;
         try {
-            rawBlock = SerializeBlock.getStmt2BindBlock(reqId, stmtId, tableInfoList, toBeBindTableNameIndex, toBeBindTagCount, toBeBindColCount, precision);
+            rawBlock = SerializeBlock.getStmt2BindBlock(reqId, stmtId, tableInfoMap, toBeBindTableNameIndex, toBeBindTagCount, toBeBindColCount, precision);
         } finally {
             this.clearParameters();
         }
@@ -1087,22 +1105,6 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
     @Override
     public void columnDataExecuteBatch() throws SQLException {
         executeBatchImpl();
-    }
-
-
-    public byte[] genData() throws SQLException {
-        if (tableInfoList.isEmpty()) {
-            throw new SQLException("batch data is empty");
-        }
-
-        byte[] rawBlock;
-        try {
-            rawBlock = SerializeBlock.getStmt2BindBlock(reqId, stmtId, tableInfoList, toBeBindTableNameIndex, toBeBindTagCount, toBeBindColCount, precision);
-        } finally {
-            this.clearParameters();
-        }
-
-        return rawBlock;
     }
 
     public int columnDataExecuteBatch(byte[] data) throws SQLException {
@@ -1130,14 +1132,6 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
 
     @Override
     public void setTableName(String name) throws SQLException {
-        this.tableInfo.setTableName(name);
+        this.tableInfo.setTableName(ByteBuffer.wrap(name.getBytes()));
     }
-
-    private void ensureTagCapacity(int index) {
-        if (this.tableInfo.getTagInfo().size() < index + 1) {
-            int delta = index + 1 - this.tableInfo.getTagInfo().size();
-            this.tableInfo.getTagInfo().addAll(Collections.nCopies(delta, null));
-        }
-    }
-
 }

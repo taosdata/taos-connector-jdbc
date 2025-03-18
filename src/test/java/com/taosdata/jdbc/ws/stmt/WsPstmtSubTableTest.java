@@ -25,10 +25,11 @@ public class WsPstmtSubTableTest {
         String sql = "insert into ? using " + db_name + "." + superTable + " tags (?) values(?, ?)";
         TSWSPreparedStatement statement = (TSWSPreparedStatement) connection.prepareStatement(sql);
         for (int i = 0; i < 10; i++) {
+            long current = System.currentTimeMillis();
             statement.setTableName(db_name + ".t" + i);
             statement.setTagInt(0, i);
             for (int j = 0; j < 10; j++) {
-                statement.setTimestamp(1, new Timestamp(System.currentTimeMillis() + j));
+                statement.setTimestamp(1, new Timestamp(current + j));
                 statement.setInt(2, j * 10);
                 statement.addBatch();
             }

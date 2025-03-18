@@ -3,15 +3,16 @@ package com.taosdata.jdbc.common;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.utils.DateTimeUtils;
-import com.taosdata.jdbc.utils.StringUtils;
 
 import java.io.ByteArrayOutputStream;
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
@@ -393,16 +394,16 @@ public class SerializeBlock {
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "unsupported data type : " + dataType);
         }
     }
-    public static int getTagTotalLengthByTableIndex(List<TableInfo> tableInfoList, int index, int toBebindTagCount) throws SQLException{
+    public static int getTagTotalLength(TableInfo tableInfo, int toBebindTagCount) throws SQLException{
         int totalLength = 0;
         if (toBebindTagCount > 0){
-            if (tableInfoList.get(index).getTagInfo().size() != toBebindTagCount){
+            if (tableInfo.getTagInfo().size() != toBebindTagCount){
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table tag size is not match");
             }
 
-            for (ColumnInfo tag : tableInfoList.get(index).getTagInfo()){
+            for (ColumnInfo tag : tableInfo.getTagInfo()){
                 if (tag.getDataList().isEmpty()){
-                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "tag value is null, index: " + index);
+                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "tag value is null, tbname: " + tableInfo.getTableName().toString());
                 }
                 int columnSize = getColumnSize(tag);
                 tag.setSerializeSize(columnSize);
@@ -412,14 +413,14 @@ public class SerializeBlock {
         return totalLength;
     }
 
-    public static int getColTotalLengthByTableIndex(List<TableInfo> tableInfoList, int index, int toBebindColCount) throws SQLException{
+    public static int getColTotalLength(TableInfo tableInfo, int toBebindColCount) throws SQLException{
         int totalLength = 0;
         if (toBebindColCount > 0){
-            if (tableInfoList.get(index).getDataList().size() != toBebindColCount){
+            if (tableInfo.getDataList().size() != toBebindColCount){
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table column size is not match");
             }
 
-            for (ColumnInfo columnInfo : tableInfoList.get(index).getDataList()){
+            for (ColumnInfo columnInfo : tableInfo.getDataList()){
                 int columnSize = getColumnSize(columnInfo);
                 columnInfo.setSerializeSize(columnSize);
                 totalLength += columnSize;
@@ -469,7 +470,7 @@ public class SerializeBlock {
 
     public static byte[] getStmt2BindBlock(long reqId,
                                            long stmtId,
-                                            List<TableInfo> tableInfoList,
+                                           HashMap<ByteBuffer, TableInfo> tableInfoMap,
                                            int toBeBindTableNameIndex,
                                            int toBebindTagCount,
                                            int toBebindColCount,
@@ -479,11 +480,11 @@ public class SerializeBlock {
         int totalTableNameSize  = 0;
         List<Short> tableNameSizeList = new ArrayList<>();
         if (toBeBindTableNameIndex >= 0) {
-            for (TableInfo tableInfo: tableInfoList) {
-                if (StringUtils.isEmpty(tableInfo.getTableName())){
+            for (TableInfo tableInfo: tableInfoMap.values()) {
+                if (tableInfo.getTableName().capacity() == 0){
                     throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table name is empty");
                 }
-                int tableNameSize = tableInfo.getTableName().length() + 1;
+                int tableNameSize = tableInfo.getTableName().capacity() + 1;
                 totalTableNameSize += tableNameSize;
                 tableNameSizeList.add((short) tableNameSize);
             }
@@ -492,8 +493,8 @@ public class SerializeBlock {
         int totalTagSize = 0;
         List<Integer> tagSizeList = new ArrayList<>();
         if (toBebindTagCount > 0){
-            for (int i = 0; i < tableInfoList.size(); i++) {
-                int tagSize = getTagTotalLengthByTableIndex(tableInfoList, i, toBebindTagCount);
+            for (TableInfo tableInfo : tableInfoMap.values()) {
+                int tagSize = getTagTotalLength(tableInfo, toBebindTagCount);
                 totalTagSize += tagSize;
                 tagSizeList.add(tagSize);
             }
@@ -503,8 +504,8 @@ public class SerializeBlock {
         int totalColSize = 0;
         List<Integer> colSizeList = new ArrayList<>();
         if (toBebindColCount > 0) {
-            for (int i = 0; i < tableInfoList.size(); i++) {
-                int colSize = getColTotalLengthByTableIndex(tableInfoList, i, toBebindColCount);
+            for (TableInfo tableInfo : tableInfoMap.values()) {
+                int colSize = getColTotalLength(tableInfo, toBebindColCount);
                 totalColSize += colSize;
                 colSizeList.add(colSize);
             }
@@ -513,7 +514,7 @@ public class SerializeBlock {
         int totalSize = totalTableNameSize + totalTagSize + totalColSize;
         int toBebindTableNameCount = toBeBindTableNameIndex >= 0 ? 1 : 0;
 
-        totalSize += tableInfoList.size() * (
+        totalSize += tableInfoMap.size() * (
                 toBebindTableNameCount * Short.BYTES
                 + (toBebindTagCount > 0 ? 1 : 0) * Integer.BYTES
                 + (toBebindColCount > 0 ? 1 : 0) * Integer.BYTES);
@@ -546,7 +547,7 @@ public class SerializeBlock {
         offset += Integer.BYTES;
 
         // tableCount
-        SerializeInt(buf, offset, tableInfoList.size());
+        SerializeInt(buf, offset, tableInfoMap.size());
         offset += Integer.BYTES;
 
         // TagCount
@@ -569,7 +570,7 @@ public class SerializeBlock {
         // tagOffset
         if (toBebindTagCount > 0){
             if (toBebindTableNameCount > 0){
-                SerializeInt(buf, offset, 28 + totalTableNameSize + Short.BYTES * tableInfoList.size());
+                SerializeInt(buf, offset, 28 + totalTableNameSize + Short.BYTES * tableInfoMap.size());
                 offset += Integer.BYTES;
             } else {
                 SerializeInt(buf, offset, 28);
@@ -584,11 +585,11 @@ public class SerializeBlock {
         if (toBebindColCount > 0){
             int skipSize = 0;
             if (toBebindTableNameCount > 0){
-                skipSize += totalTableNameSize + Short.BYTES * tableInfoList.size();
+                skipSize += totalTableNameSize + Short.BYTES * tableInfoMap.size();
             }
 
             if (toBebindTagCount > 0){
-                skipSize += totalTagSize + Integer.BYTES * tableInfoList.size();
+                skipSize += totalTagSize + Integer.BYTES * tableInfoMap.size();
             }
             SerializeInt(buf, offset, 28 + skipSize);
             offset += Integer.BYTES;
@@ -608,13 +609,13 @@ public class SerializeBlock {
                 offset += Short.BYTES;
             }
 
-            for (TableInfo tableInfo: tableInfoList){
-                if (StringUtils.isEmpty(tableInfo.getTableName())) {
+            for (TableInfo tableInfo: tableInfoMap.values()){
+                if (tableInfo.getTableName().capacity() == 0) {
                     throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table name is empty");
                 }
 
-                serializeByteArray(buf, offset, tableInfo.getTableName().getBytes());
-                offset += tableInfo.getTableName().length();
+                serializeByteArray(buf, offset, tableInfo.getTableName().array());
+                offset += tableInfo.getTableName().capacity();
                 buf[offset++] = 0;
             }
         }
@@ -626,10 +627,10 @@ public class SerializeBlock {
                    offset += Integer.BYTES;
             }
 
-            for (int i = 0; i < tableInfoList.size(); i++) {
-                for (ColumnInfo tag : tableInfoList.get(i).getTagInfo()){
+            for (TableInfo tableInfo : tableInfoMap.values()) {
+                for (ColumnInfo tag : tableInfo.getTagInfo()){
                     if (tag.getDataList().isEmpty()){
-                        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "tag value is null, index: " + i);
+                        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "tag value is null, tbname: " + tableInfo.getTableName().toString());
                     }
                     serializeColumn(tag, buf, offset, precision);
                     offset += tag.getSerializeSize();
@@ -644,8 +645,8 @@ public class SerializeBlock {
                 offset += Integer.BYTES;
             }
 
-            for (int i = 0; i < tableInfoList.size(); i++) {
-                for (ColumnInfo col : tableInfoList.get(i).getDataList()){
+            for (TableInfo tableInfo : tableInfoMap.values()) {
+                for (ColumnInfo col : tableInfo.getDataList()){
                     serializeColumn(col, buf, offset, precision);
                     offset += col.getSerializeSize();
                 }

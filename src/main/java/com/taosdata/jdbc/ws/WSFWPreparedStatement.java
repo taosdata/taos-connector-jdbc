@@ -10,8 +10,10 @@ import com.taosdata.jdbc.utils.SyncObj;
 import com.taosdata.jdbc.ws.entity.*;
 import com.taosdata.jdbc.ws.stmt2.entity.*;
 import com.taosdata.jdbc.ws.stmt2.entity.RequestFactory;
+import org.java_websocket.exceptions.WebsocketNotConnectedException;
 import org.slf4j.LoggerFactory;
 
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.util.*;
@@ -29,7 +31,6 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
     private final AtomicInteger remainingUnprocessedRows = new AtomicInteger(0);
     private final AtomicInteger batchInsertedRows = new AtomicInteger(0);
     private final AtomicInteger flushIn = new AtomicInteger(0);
-    private volatile SQLException lastException;
     private List<WorkerThread> workerThreadList;
     private final SyncObj syncObj = new SyncObj();
     private int addBatchCounts = 0;
@@ -121,7 +122,19 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
 
         waitWriteCompleted();
 
-        return batchInsertedRows.getAndSet(0);
+        Exception lastError = null;
+        for (WorkerThread workerThread : workerThreadList) {
+            Exception tempEx = workerThread.getAndClearLastError();
+            if (tempEx != null && lastError == null) {
+                lastError = tempEx;
+            }
+        }
+
+        int totalRowsInserted = batchInsertedRows.getAndSet(0);
+        if (lastError != null) {
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_FW_WRITE_ERROR, "InsertedRows: " + totalRowsInserted + ", ErrorInfo: " + lastError.getMessage());
+        }
+        return totalRowsInserted;
     }
 
     private void waitWriteCompleted() {
@@ -265,7 +278,7 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
         private int toBeBindColCount;
         private int precision;
         private int reconnectCount = 0;
-        private final List<TableInfo> tableInfoList = new ArrayList<>();
+        private final HashMap<ByteBuffer, TableInfo> tableInfoMap = new HashMap<>();
         private TableInfo tableInfo = TableInfo.getEmptyTableInfo();
         private final Transport transport;
         private final ConnectionParam connectionParam;
@@ -274,6 +287,7 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
         private final AtomicInteger batchInsertedRows;
         private final AtomicInteger flushIn;
         private final SyncObj syncObj;
+        private Exception lastError;
 
         public WorkerThread(ArrayBlockingQueue<Map<Integer, Column>> taskQueue,
                             String sql,
@@ -368,15 +382,16 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
                     }
 
                     if (!isTableInfoEmpty()) {
-                        tableInfoList.add(tableInfo);
+                        tableInfoMap.put(tableInfo.getTableName(), tableInfo);
                     }
 
                     writeBlockWithRetry();
                     tableInfo = TableInfo.getEmptyTableInfo();
-                    tableInfoList.clear();
+                    tableInfoMap.clear();
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 } catch (SQLException e) {
+                    lastError = e;
                     log.error("Error in write data to server, stmt id: {}, req id: {}" +
                                     "rows: {}, code: {}, msg: {}",
                             stmtId,
@@ -395,12 +410,12 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
 
         private void writeBlockWithRetry() throws SQLException, InterruptedException {
             for (int i = 0; i < connectionParam.getRetryTimes(); i++) {
-                byte[] rawBlock = null;
+                byte[] rawBlock;
                 try {
                     rawBlock = SerializeBlock.getStmt2BindBlock(
                             reqId,
                             stmtId,
-                            tableInfoList,
+                            tableInfoMap,
                             toBeBindTableNameIndex,
                             toBeBindTagCount,
                             toBeBindColCount,
@@ -440,49 +455,78 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
                             e.getErrorCode(), e.getMessage());
 
                     // check if connection is reestablished, if so, need to reinit stmt obj and retry
-                    int trueReconnectCoount = transport.getReconnectCount();
-                    if (reconnectCount != trueReconnectCoount) {
+                    int realReconnectCount = transport.getReconnectCount();
+                    if (reconnectCount != realReconnectCount) {
                         log.error("connection reestablished, need to init stmt obj");
 
-                        reconnectCount = trueReconnectCoount;
+                        reconnectCount = realReconnectCount;
                         initStmt();
                         continue;
                     }
 
-                    // only retry timeout
-                    if (e.getErrorCode() != TSDBErrorNumbers.ERROR_QUERY_TIMEOUT) {
-                        Thread.sleep(connectionParam.getReconnectIntervalMs());
-                        break;
+                    // retry timeout without waiting
+                    if (e.getErrorCode() == TSDBErrorNumbers.ERROR_QUERY_TIMEOUT){
+                        continue;
                     }
+
+                    // network issue, retry with waiting
+                    if (e.getErrorCode() == TSDBErrorNumbers.ERROR_CONNECTION_CLOSED
+                    || e.getErrorCode() == TSDBErrorNumbers.ERROR_RESTFul_Client_IOException) {
+                        Thread.sleep(connectionParam.getReconnectIntervalMs());
+                        continue;
+                    }
+                    break;
                 }
             }
         }
 
         private boolean isTableInfoEmpty(){
-            return StringUtils.isEmpty(tableInfo.getTableName())
+            return tableInfo.getTableName().capacity() == 0
                     && tableInfo.getTagInfo().isEmpty()
                     && tableInfo.getDataList().isEmpty();
         }
 
-        public void processOneRow(Map<Integer, Column> colOrderedMap) {
+        private void bindColToTableInfo(TableInfo tableInfo, Map<Integer, Column> colOrderedMap){
+            for (ColumnInfo columnInfo : tableInfo.getDataList()) {
+                columnInfo.add(colOrderedMap.get(columnInfo.getIndex()).getData());
+            }
+        }
+
+        public void processOneRow(Map<Integer, Column> colOrderedMap) throws SQLException {
             if (isTableInfoEmpty()) {
                 // first time, bind all
                 bindAllToTableInfo(fields, colOrderedMap, tableInfo);
             } else {
                 Object tbname = colOrderedMap.get(toBeBindTableNameIndex + 1).getData();
-                if ((tbname instanceof String && tableInfo.getTableName().equals(tbname))
-                        || (tbname instanceof byte[] && tableInfo.getTableName().equals(new String((byte[]) tbname, StandardCharsets.UTF_8)))) {
+                ByteBuffer tempTableName;
+                if (tbname instanceof String){
+                    tempTableName = ByteBuffer.wrap(((String)tbname).getBytes());
+                } else if (tbname instanceof byte[]){
+                    tempTableName = ByteBuffer.wrap((byte[]) tbname);
+                } else {
+                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table name must be string or binary");
+                }
+
+                if (tableInfo.getTableName().equals(tempTableName)){
                     // same table, only bind col
-                    for (ColumnInfo columnInfo : tableInfo.getDataList()) {
-                        columnInfo.add(colOrderedMap.get(columnInfo.getIndex()).getData());
-                    }
+                    bindColToTableInfo(tableInfo, colOrderedMap);
+                } else if (tableInfoMap.containsKey(tempTableName)){
+                    // same table, only bind col
+                    TableInfo tbInfo = tableInfoMap.get(tempTableName);
+                    bindColToTableInfo(tbInfo, colOrderedMap);
                 } else {
                     // different table, flush tableInfo and create a new one
-                    tableInfoList.add(tableInfo);
+                    tableInfoMap.put(tableInfo.getTableName(), tableInfo);
                     tableInfo = TableInfo.getEmptyTableInfo();
                     bindAllToTableInfo(fields, colOrderedMap, tableInfo);
                 }
             }
+        }
+
+        public Exception getAndClearLastError() {
+            Exception tmp = lastError;
+            lastError = null;
+            return tmp;
         }
     }
 }
