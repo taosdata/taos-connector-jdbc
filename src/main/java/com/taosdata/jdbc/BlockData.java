@@ -1,9 +1,10 @@
 package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.rs.RestfulResultSet;
-import com.taosdata.jdbc.utils.DataTypeConverUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
+import com.taosdata.jdbc.utils.DecimalUtil;
 
+import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.sql.SQLException;
 import java.time.Instant;
@@ -68,6 +69,7 @@ public class BlockData {
                 for (int i = 0; i < columns; i++) {
                     List<Object> col = new ArrayList<>(numOfRows);
                     int type = fields.get(i).getTaosType();
+                    int scale = fields.get(i).getScale();
                     switch (type) {
                         case TSDB_DATA_TYPE_BOOL:
                         case TSDB_DATA_TYPE_TINYINT:
@@ -218,6 +220,24 @@ public class BlockData {
                             }
                             break;
                         }
+                        case TSDB_DATA_TYPE_DECIMAL128:
+                        case TSDB_DATA_TYPE_DECIMAL64:
+                            int dataLen = type == TSDB_DATA_TYPE_DECIMAL128 ? 16 : 8;
+                            length = bitMapOffset;
+                            byte[] tmp = new byte[bitMapOffset];
+                            buffer.get(tmp);
+                            for (int j = 0; j < numOfRows; j++) {
+                                byte[] tb = new byte[dataLen];
+                                buffer.get(tb);
+
+                                if (isNull(tmp, j)) {
+                                    col.add(null);
+                                } else {
+                                    BigDecimal t = DecimalUtil.getBigDecimal(tb, scale);
+                                    col.add(t);
+                                }
+                            }
+                            break;
                         default:
                             // unknown type, do nothing
                             col.add(null);

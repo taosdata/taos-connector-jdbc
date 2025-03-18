@@ -13,13 +13,11 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.*;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
 import static com.taosdata.jdbc.utils.UnsignedDataUtils.*;
-import static com.taosdata.jdbc.utils.UnsignedDataUtils.parseUBigInt;
 
 public class DataTypeConverUtil {
     public static boolean getBoolean(int taosType, Object value) throws SQLDataException {
@@ -564,6 +562,8 @@ public class DataTypeConverUtil {
             case TSDB_DATA_TYPE_BINARY:
             case TSDB_DATA_TYPE_JSON:
             case TSDB_DATA_TYPE_VARBINARY:
+            case TSDB_DATA_TYPE_DECIMAL128:
+            case TSDB_DATA_TYPE_DECIMAL64:
             case TSDB_DATA_TYPE_GEOMETRY:
             case TSDB_DATA_TYPE_TIMESTAMP:{
                 return source;
