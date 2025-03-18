@@ -21,6 +21,7 @@ import java.io.Reader;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URL;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.sql.Date;
 import java.sql.*;
@@ -50,7 +51,7 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
     private final Map<Integer, Column> colOrderedMap = new TreeMap<>();
     private final PriorityQueue<ColumnInfo> tag = new PriorityQueue<>();
     private final PriorityQueue<ColumnInfo> colListQueue = new PriorityQueue<>();
-    private HashMap<String, TableInfo> tableInfoMap = new HashMap<>();
+    private HashMap<ByteBuffer, TableInfo> tableInfoMap = new HashMap<>();
     private TableInfo tableInfo;
 
 
@@ -115,11 +116,6 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
 
         this.queryTimeout = seconds;
         transport.setTimeout(seconds * 1000L);
-    }
-
-    @Override
-    public boolean execute(String sql, Long reqId) throws SQLException {
-        return super.execute(sql, reqId);
     }
 
     @Override
@@ -647,10 +643,10 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
         for (int index = 0; index < fields.size(); index++) {
             if (fields.get(index).getBindType() == FeildBindType.TAOS_FIELD_TBNAME.getValue()) {
                 if (colOrderedMap.get(index + 1).data instanceof byte[]){
-                    tableInfo.setTableName((byte[]) colOrderedMap.get(index + 1).data);
+                    tableInfo.setTableName(ByteBuffer.wrap((byte[]) colOrderedMap.get(index + 1).data));
                 }
                 if (colOrderedMap.get(index + 1).data instanceof String){
-                    tableInfo.setTableName(((String) colOrderedMap.get(index + 1).data).getBytes());
+                    tableInfo.setTableName(ByteBuffer.wrap(((String) colOrderedMap.get(index + 1).data).getBytes()));
                 }
             } else if (fields.get(index).getBindType() == FeildBindType.TAOS_FIELD_TAG.getValue()) {
                 LinkedList<Object> list = new LinkedList<>();
@@ -678,11 +674,11 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
         } else {
             if (toBeBindTableNameIndex >= 0) {
                 Object tbname = colOrderedMap.get(toBeBindTableNameIndex + 1).data;
-                String tempTableName;
+                ByteBuffer tempTableName;
                 if (tbname instanceof String){
-                    tempTableName = (String) tbname;
+                    tempTableName = ByteBuffer.wrap(((String)tbname).getBytes());
                 } else if (tbname instanceof byte[]){
-                    tempTableName = new String((byte[]) tbname, StandardCharsets.UTF_8);
+                    tempTableName = ByteBuffer.wrap((byte[]) tbname);
                 } else {
                     throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table name must be string or binary");
                 }
@@ -748,7 +744,7 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
     @Override
     // Only support batch insert
     public void addBatch() throws SQLException {
-        if (colOrderedMap.size() == fields.size()){
+            if (colOrderedMap.size() == fields.size()){
             // jdbc standard bind api
             bindAllColWithStdApi();
             return;
@@ -760,7 +756,7 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
     }
 
     private boolean isTableInfoEmpty(){
-        return tableInfo.getTableName().length == 0
+        return tableInfo.getTableName().capacity() == 0
                 && tableInfo.getTagInfo().isEmpty()
                 && tableInfo.getDataList().isEmpty();
     }
@@ -1101,8 +1097,7 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
 
         byte[] rawBlock;
         try {
-            ArrayList<TableInfo> tableInfoList = new ArrayList<>(tableInfoMap.values());
-            rawBlock = SerializeBlock.getStmt2BindBlock(reqId, stmtId, tableInfoList, toBeBindTableNameIndex, toBeBindTagCount, toBeBindColCount, precision);
+            rawBlock = SerializeBlock.getStmt2BindBlock(reqId, stmtId, tableInfoMap, toBeBindTableNameIndex, toBeBindTagCount, toBeBindColCount, precision);
         } catch (IOException e) {
             throw new SQLException("data serialize error!", e);
         } finally {
@@ -1137,6 +1132,6 @@ public class TSWSPreparedStatement extends WSStatement implements TaosPrepareSta
 
     @Override
     public void setTableName(String name) throws SQLException {
-        this.tableInfo.setTableName(name.getBytes());
+        this.tableInfo.setTableName(ByteBuffer.wrap(name.getBytes()));
     }
 }

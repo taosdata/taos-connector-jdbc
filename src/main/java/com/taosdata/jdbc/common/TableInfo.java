@@ -1,27 +1,28 @@
 package com.taosdata.jdbc.common;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
 public class TableInfo {
     private  List<ColumnInfo> dataList;
-    private  byte[] tableName;
+    private  ByteBuffer tableName;
     private  List<ColumnInfo> tagInfo;
 
-    public TableInfo(List<ColumnInfo> dataList, byte[] tableName, List<ColumnInfo> tagInfo) {
+    public TableInfo(List<ColumnInfo> dataList, ByteBuffer tableName, List<ColumnInfo> tagInfo) {
         this.dataList = dataList;
         this.tableName = tableName;
         this.tagInfo = tagInfo;
     }
 
     public static TableInfo getEmptyTableInfo() {
-        return new TableInfo(new ArrayList<>(), new byte[0], new ArrayList<>());
+        return new TableInfo(new ArrayList<>(), ByteBuffer.wrap(new byte[]{}), new ArrayList<>());
     }
     public List<ColumnInfo> getDataList() {
         return dataList;
     }
 
-    public byte[] getTableName() {
+    public ByteBuffer getTableName() {
         return tableName;
     }
 
@@ -33,7 +34,7 @@ public class TableInfo {
         this.dataList = dataList;
     }
 
-    public void setTableName(byte[] tableName) {
+    public void setTableName(ByteBuffer tableName) {
         this.tableName = tableName;
     }
 
