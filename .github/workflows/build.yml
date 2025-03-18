@@ -28,22 +28,12 @@ jobs:
         maven: [ '3.6.3' ]
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Get current branch name
-        id: branch
-        run: |
-          if [ "${{ github.ref_type }}" == "branch" ]; then
-            echo "::set-output name=branch_name::${{ github.ref_name }}"
-          else
-            echo "Not a branch push. Skipping."
-            exit 1
-          fi
-
       - name: checkout TDengine
         uses: actions/checkout@v3
         with:
           repository: 'taosdata/TDengine'
           path: 'TDengine'
-          ref: ${{ steps.branch.outputs.branch_name }}
+          ref: ${{ github.base_ref }}
 
       - name: prepare install
         run: | 
