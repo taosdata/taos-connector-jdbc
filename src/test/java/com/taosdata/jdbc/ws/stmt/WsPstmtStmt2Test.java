@@ -78,6 +78,7 @@ public class WsPstmtStmt2Test {
 
     @Test
     public void testStmt2InsertExtend() throws SQLException {
+        createSubTables();
         String sql = "INSERT INTO " + db_name + "." + tableName + " (tbname, ts, current, voltage, phase) VALUES (?,?,?,?,?)";
 
         try (TSWSPreparedStatement pstmt = connection.prepareStatement(sql).unwrap(TSWSPreparedStatement.class)) {
@@ -338,9 +339,7 @@ public class WsPstmtStmt2Test {
         }
     }
 
-    @Test
-    public void testStmt2InsertStdApiNoTag() throws SQLException {
-        // create sub table first
+    private void createSubTables() throws SQLException {
         String createSql = "create table";
         for (int i = 1; i <= numOfSubTable; i++) {
             createSql += " if not exists d_bind_" + i + " using " + db_name + "." + tableName + " tags(" + i + ", \"location_" + i + "\")";
@@ -354,6 +353,12 @@ public class WsPstmtStmt2Test {
             ex.printStackTrace();
             throw ex;
         }
+    }
+
+    @Test
+    public void testStmt2InsertStdApiNoTag() throws SQLException {
+        // create sub table first
+        createSubTables();
 
         String sql = "INSERT INTO " + db_name + "." + tableName + "(tbname, ts, current, voltage, phase) VALUES (?,?,?,?,?)";
 
