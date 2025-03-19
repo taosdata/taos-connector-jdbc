@@ -3,7 +3,7 @@ package com.taosdata.jdbc.ws.stmt;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.TaosAdapterMock;
-import com.taosdata.jdbc.ws.WSFWPreparedStatement;
+import com.taosdata.jdbc.ws.WSEWPreparedStatement;
 import org.junit.*;
 
 import java.sql.*;
@@ -11,7 +11,7 @@ import java.util.Properties;
 import java.util.Random;
 
 @FixMethodOrder
-public class WsFastWriterTest {
+public class WsEfficientWritingTest {
     private final String host = "localhost";
     private final String db_name = "ws_fw";
     private final String tableName = "wpt";
@@ -324,7 +324,7 @@ public class WsFastWriterTest {
     public void testColumnDataAddBatchThrowsSQLException() throws SQLException {
         String sql = "INSERT INTO " + db_name + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
         try (Connection con = getConnection(false);
-             WSFWPreparedStatement pstmt = (WSFWPreparedStatement)con.prepareStatement(sql)) {
+             WSEWPreparedStatement pstmt = (WSEWPreparedStatement)con.prepareStatement(sql)) {
             pstmt.columnDataAddBatch();
         }
     }
@@ -333,7 +333,7 @@ public class WsFastWriterTest {
     public void testColumnDataExecuteBatchThrowsSQLException() throws SQLException {
         String sql = "INSERT INTO " + db_name + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
         try (Connection con = getConnection(false);
-             WSFWPreparedStatement pstmt = (WSFWPreparedStatement)con.prepareStatement(sql)) {
+             WSEWPreparedStatement pstmt = (WSEWPreparedStatement)con.prepareStatement(sql)) {
             pstmt.columnDataExecuteBatch();
         }
     }
@@ -342,7 +342,7 @@ public class WsFastWriterTest {
     public void testColumnDataCloseBatchThrowsSQLException() throws SQLException {
         String sql = "INSERT INTO " + db_name + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
         try (Connection con = getConnection(false);
-             WSFWPreparedStatement pstmt = (WSFWPreparedStatement)con.prepareStatement(sql)) {
+             WSEWPreparedStatement pstmt = (WSEWPreparedStatement)con.prepareStatement(sql)) {
             pstmt.columnDataCloseBatch();
         }
     }

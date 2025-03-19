@@ -5,23 +5,21 @@ import com.taosdata.jdbc.common.*;
 import com.taosdata.jdbc.enums.FeildBindType;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.ReqId;
-import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.SyncObj;
 import com.taosdata.jdbc.ws.entity.*;
 import com.taosdata.jdbc.ws.stmt2.entity.*;
 import com.taosdata.jdbc.ws.stmt2.entity.RequestFactory;
-import org.java_websocket.exceptions.WebsocketNotConnectedException;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class WSFWPreparedStatement extends AbsWSPreparedStatement {
+// Efficient Writing Mode PreparedStatement
+public class WSEWPreparedStatement extends AbsWSPreparedStatement {
     private final org.slf4j.Logger log = LoggerFactory.getLogger(AbstractDriver.class);
 
     private final boolean copyData;
@@ -35,7 +33,7 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
     private final SyncObj syncObj = new SyncObj();
     private int addBatchCounts = 0;
 
-    public WSFWPreparedStatement(Transport transport, ConnectionParam param, String database, AbstractConnection connection, String sql, Long instanceId, Stmt2PrepareResp prepareResp) throws SQLException {
+    public WSEWPreparedStatement(Transport transport, ConnectionParam param, String database, AbstractConnection connection, String sql, Long instanceId, Stmt2PrepareResp prepareResp) throws SQLException {
         super(transport, param, database, connection, sql, instanceId, prepareResp);
 
         copyData = param.isCopyData();
@@ -408,7 +406,7 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
         }
 
 
-        private void writeBlockWithRetry() throws SQLException, InterruptedException {
+        private void writeBlockWithRetry() throws SQLException {
             for (int i = 0; i < connectionParam.getRetryTimes(); i++) {
                 byte[] rawBlock;
                 try {

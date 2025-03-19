@@ -9,10 +9,8 @@ import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.SpecifyAddress;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import com.taosdata.jdbc.utils.Utils;
+import org.junit.*;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -137,6 +135,45 @@ public class SchemalessNewTest {
     }
 
     @Test
+    @Description("telnet insert with raw data")
+    @Ignore
+    public void testWriteRawTelnet() throws SQLException {
+
+        String[] lines = new String[]{
+                "stb1 1742374817157 false t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817158 true t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817159 true t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817160 false t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817161 false t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817162 true t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817163 true t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817164 false t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817165 false t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817166 false t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" "
+        };
+
+
+        // given
+        String line = String.join("\n", lines);
+
+        ((AbstractConnection)connection).writeRaw(line, SchemalessProtocolType.TELNET, SchemalessTimestampType.MILLI_SECONDS);
+
+        // then
+        Statement statement = connection.createStatement();
+        ResultSet rs = statement.executeQuery("show tables");
+        Assert.assertNotNull(rs);
+        ResultSetMetaData metaData = rs.getMetaData();
+        Assert.assertTrue(metaData.getColumnCount() > 0);
+        int rowCnt = 0;
+        while (rs.next()) {
+            rowCnt++;
+        }
+        Assert.assertEquals(lines.length, Utils.getSqlRows(connection, dbName + ".stb1"));
+        rs.close();
+        statement.close();
+    }
+
+    @Test
     public void testLineTtl() throws SQLException {
         // given
         String[] lines = new String[]{
@@ -152,9 +189,16 @@ public class SchemalessNewTest {
     public void telnetInsert() throws SQLException {
         // given
         String[] lines = new String[]{
-                "stb0_0 1626006833 4 host=host0 interface=eth0",
-                "stb0_1 1626006833 4 host=host0 interface=eth0",
-                "stb0_2 1626006833 4 host=host0 interface=eth0 id=\"special_name\"",
+                "stb1 1742374817157 false t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817158 true t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817159 true t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817160 false t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817161 false t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817162 true t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817163 true t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817164 false t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817165 false t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817166 false t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" "
         };
 
         // when
@@ -172,7 +216,7 @@ public class SchemalessNewTest {
         while (rs.next()) {
             rowCnt++;
         }
-        Assert.assertEquals(lines.length, rowCnt);
+        Assert.assertEquals(lines.length, Utils.getSqlRows(connection,dbName + ".stb1"));
         rs.close();
         statement.close();
     }

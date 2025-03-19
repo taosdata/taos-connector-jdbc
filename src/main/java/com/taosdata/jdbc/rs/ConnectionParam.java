@@ -400,12 +400,12 @@ public class ConnectionParam {
 
         boolean copyData = Boolean.parseBoolean(properties.getProperty(TSDBDriver.PROPERTY_KEY_COPY_DATA, "false"));
 
-        int batchSizeByRow = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_BATCH_SIZE_BY_ROW, "10000"));
+        int batchSizeByRow = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_BATCH_SIZE_BY_ROW, "1000"));
         if (batchSizeByRow < 0){
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_BATCH_SIZE_BY_ROW");
         }
 
-        int cacheSizeByRow = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_CACHE_SIZE_BY_ROW, "100000"));
+        int cacheSizeByRow = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_CACHE_SIZE_BY_ROW, "10000"));
         if (cacheSizeByRow < 0){
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_CACHE_SIZE_BY_ROW");
         }

@@ -9,6 +9,7 @@ import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.Utils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -120,6 +121,43 @@ public class SchemalessInsertNewTest {
             rowCnt++;
         }
         Assert.assertEquals(1, rowCnt);
+        rs.close();
+        statement.close();
+    }
+
+    @Test
+    public void telnetInsertRaw() throws SQLException {
+        // given
+        String[] lines = new String[]{
+                "stb1 1742374817157 false t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817158 true t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817159 true t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817160 false t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817161 false t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817162 true t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817163 true t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817164 false t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817165 false t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817166 false t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" "
+        };
+
+        // when
+
+        ((AbstractConnection)conn).write(lines, SchemalessProtocolType.TELNET, SchemalessTimestampType.MILLI_SECONDS);
+
+        // then
+        Statement statement = conn.createStatement();
+        statement.executeUpdate("use " + dbname);
+        ResultSet rs = statement.executeQuery("show tables");
+        Assert.assertNotNull(rs);
+        ResultSetMetaData metaData = rs.getMetaData();
+        Assert.assertTrue(metaData.getColumnCount() > 0);
+        int rowCnt = 0;
+        while (rs.next()) {
+            rowCnt++;
+        }
+
+        Assert.assertEquals(lines.length, Utils.getSqlRows(conn, dbname + ".stb1"));
         rs.close();
         statement.close();
     }

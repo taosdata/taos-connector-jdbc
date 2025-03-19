@@ -97,7 +97,7 @@ public class WSConnection extends AbstractConnection {
             }
 
             if ((fastWriteSql || "STMT".equalsIgnoreCase(param.getAsyncWrite())) && isInsert && isSuperTable) {
-                return new WSFWPreparedStatement(transport,
+                return new WSEWPreparedStatement(transport,
                         param,
                         database,
                         this,
