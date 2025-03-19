@@ -132,7 +132,7 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
 
         int totalRowsInserted = batchInsertedRows.getAndSet(0);
         if (lastError != null) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_FW_WRITE_ERROR, "InsertedRows: " + totalRowsInserted + ", ErrorInfo: " + lastError.getMessage());
+            throw new SQLException("InsertedRows: " + totalRowsInserted + ", ErrorInfo: " + lastError.getMessage(), "", TSDBErrorNumbers.ERROR_FW_WRITE_ERROR);
         }
         return totalRowsInserted;
     }
@@ -348,7 +348,7 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
         }
 
         public void releaseStmt() throws SQLException {
-            if (stmtId != 0){
+            if (stmtId != 0 && transport.isConnected()){
                 Request close = RequestFactory.generateClose(stmtId, reqId);
                 transport.send(close);
             }
@@ -421,6 +421,7 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
                             toBeBindColCount,
                             precision);
                 } catch (SQLException e) {
+                    lastError = e;
                     log.error("Error in serialize data to block, stmt id: {}, req id: {}" +
                                     "code: {}, msg: {}",
                             stmtId, reqId,
@@ -447,6 +448,9 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
                     batchInsertedRows.addAndGet(affectedRows);
                     return;
                 } catch (SQLException e) {
+                    if (i == connectionParam.getRetryTimes() - 1) {
+                        lastError = e;
+                    }
                     log.error("Error in writeBlockWithRetry, stmt id: {}, req id: {}" +
                                     "retry times: {}, code: {}, msg: {}",
                             stmtId,
@@ -472,7 +476,6 @@ public class WSFWPreparedStatement extends AbsWSPreparedStatement {
                     // network issue, retry with waiting
                     if (e.getErrorCode() == TSDBErrorNumbers.ERROR_CONNECTION_CLOSED
                     || e.getErrorCode() == TSDBErrorNumbers.ERROR_RESTFul_Client_IOException) {
-                        Thread.sleep(connectionParam.getReconnectIntervalMs());
                         continue;
                     }
                     break;

@@ -60,7 +60,7 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
                                   AbstractConnection connection,
                                   String sql,
                                   Long instanceId,
-                                  Stmt2PrepareResp prepareResp) throws SQLException {
+                                  Stmt2PrepareResp prepareResp) {
         super(transport, database, connection, instanceId, param.getZoneId());
         this.rawSql = sql;
         this.param = param;

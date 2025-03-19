@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.TaosAdapterMock;
 import com.taosdata.jdbc.ws.WSFWPreparedStatement;
 import org.junit.*;
@@ -68,7 +69,7 @@ public class WsFastWriterTest {
             }
         }
 
-        Assert.assertEquals(numOfSubTable * numOfRow, getSqlRows("select count(*) from " + db_name + "." + tableName));
+        Assert.assertEquals(numOfSubTable * numOfRow, Utils.getSqlRows(connection, db_name + "." + tableName));
 }
 
     @Test
@@ -103,8 +104,8 @@ public class WsFastWriterTest {
             }
         }
 
-        Assert.assertEquals(numOfSubTable * numOfRow, getSqlRows("select count(*) from " + db_name + "." + tableNameCopyData));
-        Assert.assertEquals(numOfSubTable, getSqlRows("select count(*) from " + db_name + "." + tableNameCopyData + " where b = '\\x63000000000000000000'"));
+        Assert.assertEquals(numOfSubTable * numOfRow, Utils.getSqlRows(connection, db_name + "." + tableNameCopyData));
+        Assert.assertEquals(numOfSubTable, Utils.getSqlRows(connection, db_name + "." + tableNameCopyData + " where b = '\\x63000000000000000000'"));
     }
 
 
@@ -151,10 +152,57 @@ public class WsFastWriterTest {
             }
         }
 
-        Assert.assertEquals(numOfSubTable * numOfRow, getSqlRows("select count(*) from " + db_name + "." + tableReconnect));
+        Assert.assertEquals(numOfSubTable * numOfRow, Utils.getSqlRows(connection, db_name + "." + tableReconnect));
 
         if (taosAdapterMock != null) {
             taosAdapterMock.stopServer();
+        }
+    }
+
+    @Test
+    public void testWriteException() throws SQLException, InterruptedException {
+        taosAdapterMock = new TaosAdapterMock(proxyPort);
+        taosAdapterMock.start();
+
+        while (!taosAdapterMock.isReady()){
+            Thread.sleep(10);
+        }
+
+        String sql = "INSERT INTO " + db_name + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
+
+        long current = System.currentTimeMillis();
+        try (Connection con = getConnection(false, false, proxyPort);
+             PreparedStatement pstmt = con.prepareStatement(sql)) {
+            for (int j = 0; j < numOfRow; j++) {
+                current = current + 1000;
+                for (int i = 1; i <= numOfSubTable; i++) {
+                    // set columns
+                    pstmt.setString(1, "rc_bind_" + i);
+                    pstmt.setTimestamp(2, new Timestamp(current));
+                    pstmt.setInt(3, random.nextInt(300));
+                    pstmt.setInt(4, i);
+                    pstmt.addBatch();
+                }
+                int[] exeResult = pstmt.executeBatch();
+                Assert.assertEquals(exeResult.length, numOfSubTable);
+
+                for (int ele : exeResult){
+                    Assert.assertEquals(ele, Statement.SUCCESS_NO_INFO);
+                }
+
+                if (j == 0){
+                    taosAdapterMock.stopServer();
+                    Thread.sleep(1000);
+                }
+
+                try {
+                    pstmt.executeUpdate();
+                    Assert.fail("Should throw exception");
+                } catch (SQLException e) {
+                    Assert.assertTrue(e.getMessage().startsWith("InsertedRows: "));
+                    break;
+                }
+            }
         }
     }
 
@@ -190,12 +238,12 @@ public class WsFastWriterTest {
             }
         }
 
-        Assert.assertEquals(numOfSubTable * numOfRow, getSqlRows("select count(*) from " + db_name + "." + tableReconnect));
+        Assert.assertEquals(numOfSubTable * numOfRow, Utils.getSqlRows(connection,db_name + "." + tableReconnect));
     }
 
 
     @Test
-    public void testAsyncSql() throws SQLException, InterruptedException {
+    public void testAsyncSql() throws SQLException {
         String sql = "ASYNC_INSERT INTO " + db_name + "." + asyncSqlTable + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
 
         long current = System.currentTimeMillis();
@@ -215,7 +263,7 @@ public class WsFastWriterTest {
                 Assert.assertEquals(exeResult.length, numOfSubTable);
 
                 for (int ele : exeResult){
-                    Assert.assertEquals(ele, Statement.SUCCESS_NO_INFO);
+                    Assert.assertEquals(Statement.SUCCESS_NO_INFO, ele);
                 }
 
                 int affectedRows = pstmt.executeUpdate();
@@ -223,7 +271,7 @@ public class WsFastWriterTest {
             }
         }
 
-        Assert.assertEquals(numOfSubTable * numOfRow, getSqlRows("select count(*) from " + db_name + "." + asyncSqlTable));
+        Assert.assertEquals(numOfSubTable * numOfRow, Utils.getSqlRows(connection, db_name + "." + asyncSqlTable));
     }
 
     @Test(expected = SQLException.class)
@@ -258,8 +306,8 @@ public class WsFastWriterTest {
             }
         }
 
-        Assert.assertEquals(numOfSubTable * numOfRow, getSqlRows("select count(*) from " + db_name + "." + tableNameCopyData));
-        Assert.assertEquals(numOfSubTable, getSqlRows("select count(*) from " + db_name + "." + tableNameCopyData + " where b = '\\x63000000000000000000'"));
+        Assert.assertEquals(numOfSubTable * numOfRow, Utils.getSqlRows(connection,db_name + "." + tableNameCopyData));
+        Assert.assertEquals(numOfSubTable, Utils.getSqlRows(connection, db_name + "." + tableNameCopyData + " where b = '\\x63000000000000000000'"));
 
     }
 
@@ -298,18 +346,6 @@ public class WsFastWriterTest {
             pstmt.columnDataCloseBatch();
         }
     }
-
-    private int getSqlRows(String sql) throws SQLException {
-        Statement statement = connection.createStatement();
-        statement.execute(sql);
-        ResultSet rs = statement.getResultSet();
-        rs.next();
-        int count = rs.getInt(1);
-        rs.close();
-        statement.close();
-        return count;
-    }
-
 
     @Before
     public void before() throws SQLException {

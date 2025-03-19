@@ -10,7 +10,7 @@ import org.junit.Test;
 import java.sql.*;
 import java.util.Properties;
 
-public class RawBlockBinaryLength {
+public class RawBlockBinaryLengthTest {
 
     static String host = "127.0.0.1";
     static String dbName = "binary_length_test";

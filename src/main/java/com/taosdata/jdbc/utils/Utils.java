@@ -10,9 +10,7 @@ import java.lang.reflect.Constructor;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
-import java.sql.Date;
-import java.sql.Time;
-import java.sql.Timestamp;
+import java.sql.*;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -198,5 +196,14 @@ public class Utils {
     public static ForkJoinPool getForkJoinPool() {
         return forkJoinPool;
     }
-
+    public static int getSqlRows(Connection connection, String sql) throws SQLException {
+        sql = "select count(*) from " + sql;
+        try(Statement statement = connection.createStatement()){
+            statement.execute(sql);
+            try (ResultSet rs = statement.getResultSet()){
+                rs.next();
+                return rs.getInt(1);
+            }
+        }
+    }
 }
