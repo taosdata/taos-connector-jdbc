@@ -3,6 +3,7 @@ package com.taosdata.jdbc.rs;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
@@ -14,7 +15,6 @@ import com.taosdata.jdbc.enums.DataType;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.JsonUtil;
-import com.taosdata.jdbc.utils.Utils;
 
 import java.math.BigDecimal;
 import java.sql.*;
@@ -88,7 +88,7 @@ public class RestfulResultSet extends AbstractResultSet {
             return;
         // parse row data
         for (JsonNode jsonRow : data) {
-            List<Object> row = new ArrayList<>();
+            List<Object> row = Lists.newArrayListWithExpectedSize(this.metaData.getColumnCount());
             for (int colIndex = 0; colIndex < this.metaData.getColumnCount(); colIndex++) {
                 row.add(parseColumnData(jsonRow, colIndex, columns.get(colIndex)));
             }
@@ -117,7 +117,7 @@ public class RestfulResultSet extends AbstractResultSet {
 
     private Object parseColumnData(JsonNode row, int colIndex, Field field) throws SQLException {
         int taosType = field.taos_type;
-        if (row.get(colIndex).isNull()){
+        if (row.get(colIndex).isNull()) {
             return null;
         }
 
@@ -155,7 +155,7 @@ public class RestfulResultSet extends AbstractResultSet {
                 ObjectWriter objectWriter = JsonUtil.getObjectWriter(JsonNode.class);
                 JsonNode jsonNode = row.get(colIndex);
                 if (jsonNode != null && !jsonNode.isNull() && (jsonNode.isTextual() || jsonNode.isObject())) {
-                    try{
+                    try {
                         return objectWriter.writeValueAsString(jsonNode);
                     } catch (JsonProcessingException e) {
                         throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, e.getMessage());
@@ -214,7 +214,10 @@ public class RestfulResultSet extends AbstractResultSet {
         public int getTaosType() {
             return taos_type;
         }
-        public String getName() {return name;}
+
+        public String getName() {
+            return name;
+        }
     }
 
     @Override
