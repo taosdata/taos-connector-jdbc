@@ -62,66 +62,66 @@ public class TSDBErrorNumbers {
     public static final int ERROR_TMQ_SEEK_OFFSET = 0x2379; // consumer create error
     public static final int ERROR_TMQ_VGROUP_NOT_FOUND = 0x237a; // consumer create error
 
-    private static final Set<Integer> errorNumbers = new HashSet<>();
+    private static final Set<Integer> ERROR_NUMBERS = new HashSet<>();
 
     static {
-        errorNumbers.add(ERROR_CONNECTION_CLOSED);
-        errorNumbers.add(ERROR_UNSUPPORTED_METHOD);
-        errorNumbers.add(ERROR_INVALID_VARIABLE);
-        errorNumbers.add(ERROR_STATEMENT_CLOSED);
-        errorNumbers.add(ERROR_RESULTSET_CLOSED);
-        errorNumbers.add(ERROR_INVALID_WITH_EXECUTEQUERY);
-        errorNumbers.add(ERROR_INVALID_WITH_EXECUTEUPDATE);
-        errorNumbers.add(ERROR_INVALID_FOR_EXECUTE_QUERY);
-        errorNumbers.add(ERROR_DATABASE_NOT_SPECIFIED_OR_AVAILABLE);
-        errorNumbers.add(ERROR_INVALID_FOR_EXECUTE_UPDATE);
-        errorNumbers.add(ERROR_INVALID_FOR_EXECUTE);
-        errorNumbers.add(ERROR_PARAMETER_INDEX_OUT_RANGE);
-        errorNumbers.add(ERROR_SQLCLIENT_EXCEPTION_ON_CONNECTION_CLOSED);
-        errorNumbers.add(ERROR_UNKNOWN_SQL_TYPE_IN_TDENGINE);
-        errorNumbers.add(ERROR_CANNOT_REGISTER_JNI_DRIVER);
-        errorNumbers.add(ERROR_CANNOT_REGISTER_RESTFUL_DRIVER);
-        errorNumbers.add(ERROR_URL_NOT_SET);
-        errorNumbers.add(ERROR_INVALID_SQL);
-        errorNumbers.add(ERROR_NUMERIC_VALUE_OUT_OF_RANGE);
-        errorNumbers.add(ERROR_UNKNOWN_TAOS_TYPE);
-        errorNumbers.add(ERROR_UNKNOWN_TIMESTAMP_PRECISION);
-        errorNumbers.add(ERROR_RESTFul_Client_IOException);
-        errorNumbers.add(ERROR_USER_IS_REQUIRED);
-        errorNumbers.add(ERROR_PASSWORD_IS_REQUIRED);
-        errorNumbers.add(ERROR_INVALID_JSON_FORMAT);
-        errorNumbers.add(ERROR_HTTP_ENTITY_IS_NULL);
-        errorNumbers.add(ERROR_CONNECTION_TIMEOUT);
-        errorNumbers.add(ERROR_QUERY_TIMEOUT);
-        errorNumbers.add(ERROR_RESTFUL_CLIENT_QUERY_EXCEPTION);
+        ERROR_NUMBERS.add(ERROR_CONNECTION_CLOSED);
+        ERROR_NUMBERS.add(ERROR_UNSUPPORTED_METHOD);
+        ERROR_NUMBERS.add(ERROR_INVALID_VARIABLE);
+        ERROR_NUMBERS.add(ERROR_STATEMENT_CLOSED);
+        ERROR_NUMBERS.add(ERROR_RESULTSET_CLOSED);
+        ERROR_NUMBERS.add(ERROR_INVALID_WITH_EXECUTEQUERY);
+        ERROR_NUMBERS.add(ERROR_INVALID_WITH_EXECUTEUPDATE);
+        ERROR_NUMBERS.add(ERROR_INVALID_FOR_EXECUTE_QUERY);
+        ERROR_NUMBERS.add(ERROR_DATABASE_NOT_SPECIFIED_OR_AVAILABLE);
+        ERROR_NUMBERS.add(ERROR_INVALID_FOR_EXECUTE_UPDATE);
+        ERROR_NUMBERS.add(ERROR_INVALID_FOR_EXECUTE);
+        ERROR_NUMBERS.add(ERROR_PARAMETER_INDEX_OUT_RANGE);
+        ERROR_NUMBERS.add(ERROR_SQLCLIENT_EXCEPTION_ON_CONNECTION_CLOSED);
+        ERROR_NUMBERS.add(ERROR_UNKNOWN_SQL_TYPE_IN_TDENGINE);
+        ERROR_NUMBERS.add(ERROR_CANNOT_REGISTER_JNI_DRIVER);
+        ERROR_NUMBERS.add(ERROR_CANNOT_REGISTER_RESTFUL_DRIVER);
+        ERROR_NUMBERS.add(ERROR_URL_NOT_SET);
+        ERROR_NUMBERS.add(ERROR_INVALID_SQL);
+        ERROR_NUMBERS.add(ERROR_NUMERIC_VALUE_OUT_OF_RANGE);
+        ERROR_NUMBERS.add(ERROR_UNKNOWN_TAOS_TYPE);
+        ERROR_NUMBERS.add(ERROR_UNKNOWN_TIMESTAMP_PRECISION);
+        ERROR_NUMBERS.add(ERROR_RESTFul_Client_IOException);
+        ERROR_NUMBERS.add(ERROR_USER_IS_REQUIRED);
+        ERROR_NUMBERS.add(ERROR_PASSWORD_IS_REQUIRED);
+        ERROR_NUMBERS.add(ERROR_INVALID_JSON_FORMAT);
+        ERROR_NUMBERS.add(ERROR_HTTP_ENTITY_IS_NULL);
+        ERROR_NUMBERS.add(ERROR_CONNECTION_TIMEOUT);
+        ERROR_NUMBERS.add(ERROR_QUERY_TIMEOUT);
+        ERROR_NUMBERS.add(ERROR_RESTFUL_CLIENT_QUERY_EXCEPTION);
 
-        errorNumbers.add(ERROR_RESTFul_Client_Protocol_Exception);
+        ERROR_NUMBERS.add(ERROR_RESTFul_Client_Protocol_Exception);
 
-        errorNumbers.add(ERROR_SUBSCRIBE_FAILED);
-        errorNumbers.add(ERROR_UNSUPPORTED_ENCODING);
-        errorNumbers.add(ERROR_JNI_TDENGINE_ERROR);
-        errorNumbers.add(ERROR_JNI_CONNECTION_NULL);
-        errorNumbers.add(ERROR_JNI_RESULT_SET_NULL);
-        errorNumbers.add(ERROR_JNI_NUM_OF_FIELDS_0);
-        errorNumbers.add(ERROR_JNI_SQL_NULL);
-        errorNumbers.add(ERROR_JNI_FETCH_END);
-        errorNumbers.add(ERROR_JNI_OUT_OF_MEMORY);
-        errorNumbers.add(ERROR_TMQ_CONF_NULL);
-        errorNumbers.add(ERROR_TMQ_CONF_KEY_NULL);
-        errorNumbers.add(ERROR_TMQ_CONF_VALUE_NULL);
-        errorNumbers.add(ERROR_TMQ_CONF_ERROR);
-        errorNumbers.add(ERROR_TMQ_TOPIC_NULL);
-        errorNumbers.add(ERROR_TMQ_TOPIC_NAME_NULL);
-        errorNumbers.add(ERROR_TMQ_CONSUMER_NULL);
-        errorNumbers.add(ERROR_TMQ_CONSUMER_CREATE_ERROR);
-        errorNumbers.add(ERROR_TMQ_SEEK_OFFSET);
-        errorNumbers.add(ERROR_TMQ_VGROUP_NOT_FOUND);
+        ERROR_NUMBERS.add(ERROR_SUBSCRIBE_FAILED);
+        ERROR_NUMBERS.add(ERROR_UNSUPPORTED_ENCODING);
+        ERROR_NUMBERS.add(ERROR_JNI_TDENGINE_ERROR);
+        ERROR_NUMBERS.add(ERROR_JNI_CONNECTION_NULL);
+        ERROR_NUMBERS.add(ERROR_JNI_RESULT_SET_NULL);
+        ERROR_NUMBERS.add(ERROR_JNI_NUM_OF_FIELDS_0);
+        ERROR_NUMBERS.add(ERROR_JNI_SQL_NULL);
+        ERROR_NUMBERS.add(ERROR_JNI_FETCH_END);
+        ERROR_NUMBERS.add(ERROR_JNI_OUT_OF_MEMORY);
+        ERROR_NUMBERS.add(ERROR_TMQ_CONF_NULL);
+        ERROR_NUMBERS.add(ERROR_TMQ_CONF_KEY_NULL);
+        ERROR_NUMBERS.add(ERROR_TMQ_CONF_VALUE_NULL);
+        ERROR_NUMBERS.add(ERROR_TMQ_CONF_ERROR);
+        ERROR_NUMBERS.add(ERROR_TMQ_TOPIC_NULL);
+        ERROR_NUMBERS.add(ERROR_TMQ_TOPIC_NAME_NULL);
+        ERROR_NUMBERS.add(ERROR_TMQ_CONSUMER_NULL);
+        ERROR_NUMBERS.add(ERROR_TMQ_CONSUMER_CREATE_ERROR);
+        ERROR_NUMBERS.add(ERROR_TMQ_SEEK_OFFSET);
+        ERROR_NUMBERS.add(ERROR_TMQ_VGROUP_NOT_FOUND);
     }
 
     private TSDBErrorNumbers() {
     }
 
     public static boolean contains(int errorNumber) {
-        return errorNumbers.contains(errorNumber);
+        return ERROR_NUMBERS.contains(errorNumber);
     }
 }

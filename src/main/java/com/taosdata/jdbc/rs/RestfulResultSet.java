@@ -11,6 +11,7 @@ import com.taosdata.jdbc.AbstractResultSet;
 import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
+import com.taosdata.jdbc.common.ThrowingFunction;
 import com.taosdata.jdbc.enums.DataType;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.utils.DateTimeUtils;
@@ -29,6 +30,7 @@ import java.time.temporal.ChronoField;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -237,28 +239,20 @@ public class RestfulResultSet extends AbstractResultSet {
 
     @Override
     public String getString(int columnIndex) throws SQLException {
-        checkAvailability(columnIndex, resultSet.get(pos).size());
-
-        Object value = resultSet.get(pos).get(columnIndex - 1);
-        wasNull = value == null;
-        if (value == null)
-            return null;
-        if (value instanceof byte[])
-            return new String((byte[]) value);
-        return value.toString();
+        return getValue(columnIndex, (value) -> {
+            if (value instanceof byte[])
+                return new String((byte[]) value);
+            return value.toString();
+        });
     }
 
     @Override
     public boolean getBoolean(int columnIndex) throws SQLException {
-        checkAvailability(columnIndex, resultSet.get(pos).size());
-
-        Object value = resultSet.get(pos).get(columnIndex - 1);
-        wasNull = value == null;
-        if (value == null)
-            return false;
-        if (value instanceof Boolean)
-            return (boolean) value;
-        return Boolean.parseBoolean(value.toString());
+        return getValue(columnIndex, (value) -> {
+            if (value instanceof Boolean)
+                return (boolean) value;
+            return Boolean.parseBoolean(value.toString());
+        }, false);
     }
 
     @Override
@@ -302,18 +296,14 @@ public class RestfulResultSet extends AbstractResultSet {
 
     @Override
     public int getInt(int columnIndex) throws SQLException {
-        checkAvailability(columnIndex, resultSet.get(pos).size());
-
-        Object value = resultSet.get(pos).get(columnIndex - 1);
-        wasNull = value == null;
-        if (value == null)
-            return 0;
-        long valueAsLong = Long.parseLong(value.toString());
-        if (valueAsLong == Integer.MIN_VALUE)
-            return 0;
-        if (valueAsLong < Integer.MIN_VALUE || valueAsLong > Integer.MAX_VALUE)
-            throwRangeException(value.toString(), columnIndex, Types.INTEGER);
-        return (int) valueAsLong;
+        return getValue(columnIndex, (value) -> {
+            long valueAsLong = Long.parseLong(value.toString());
+            if (valueAsLong == Integer.MIN_VALUE)
+                return 0;
+            if (valueAsLong < Integer.MIN_VALUE || valueAsLong > Integer.MAX_VALUE)
+                throwRangeException(value.toString(), columnIndex, Types.INTEGER);
+            return (int) valueAsLong;
+        }, 0);
     }
 
     @Override
@@ -350,19 +340,15 @@ public class RestfulResultSet extends AbstractResultSet {
 
     @Override
     public float getFloat(int columnIndex) throws SQLException {
-        checkAvailability(columnIndex, resultSet.get(pos).size());
-
-        Object value = resultSet.get(pos).get(columnIndex - 1);
-        wasNull = value == null;
-        if (value == null)
-            return 0;
-        if (value instanceof Float)
-            return (float) value;
-        if (value instanceof Double)
-            return new Float((Double) value);
-        if (value instanceof JsonNode)
-            return ((JsonNode) value).floatValue();
-        return Float.parseFloat(value.toString());
+        return getValue(columnIndex, (value) -> {
+            if (value instanceof Float)
+                return (float) value;
+            if (value instanceof Double)
+                return new Float((Double) value);
+            if (value instanceof JsonNode)
+                return ((JsonNode) value).floatValue();
+            return Float.parseFloat(value.toString());
+        }, 0f);
     }
 
     @Override
@@ -385,84 +371,82 @@ public class RestfulResultSet extends AbstractResultSet {
 
     @Override
     public byte[] getBytes(int columnIndex) throws SQLException {
-        checkAvailability(columnIndex, resultSet.get(pos).size());
-
-        Object value = resultSet.get(pos).get(columnIndex - 1);
-        wasNull = value == null;
-        if (value == null)
-            return null;
-        if (value instanceof byte[])
-            return (byte[]) value;
-        if (value instanceof String)
-            return ((String) value).getBytes();
-        if (value instanceof Long)
-            return Longs.toByteArray((long) value);
-        if (value instanceof Integer)
-            return Ints.toByteArray((int) value);
-        if (value instanceof Short)
-            return Shorts.toByteArray((short) value);
-        if (value instanceof Byte)
-            return new byte[]{(byte) value};
-
-        return value.toString().getBytes();
+        return getValue(columnIndex, (value) -> {
+            if (value instanceof byte[])
+                return (byte[]) value;
+            if (value instanceof String)
+                return ((String) value).getBytes();
+            if (value instanceof Long)
+                return Longs.toByteArray((long) value);
+            if (value instanceof Integer)
+                return Ints.toByteArray((int) value);
+            if (value instanceof Short)
+                return Shorts.toByteArray((short) value);
+            if (value instanceof Byte)
+                return new byte[]{(byte) value};
+            return value.toString().getBytes();
+        });
     }
 
     @Override
     public Date getDate(int columnIndex) throws SQLException {
-        checkAvailability(columnIndex, resultSet.get(pos).size());
-
-        Object value = resultSet.get(pos).get(columnIndex - 1);
-        wasNull = value == null;
-        if (value == null)
-            return null;
-        if (value instanceof Timestamp)
-            return new Date(((Timestamp) value).getTime());
-        return DateTimeUtils.parseDate(value.toString(), null);
+        return getValue(columnIndex, (value) -> {
+            if (value instanceof Timestamp)
+                return new Date(((Timestamp) value).getTime());
+            return DateTimeUtils.parseDate(value.toString(), null);
+        });
     }
 
     @Override
     public Time getTime(int columnIndex) throws SQLException {
-        checkAvailability(columnIndex, resultSet.get(pos).size());
-
-        Object value = resultSet.get(pos).get(columnIndex - 1);
-        wasNull = value == null;
-        if (value == null)
-            return null;
-        if (value instanceof Timestamp)
-            return new Time(((Timestamp) value).getTime());
-        Time time = null;
-        try {
-            time = DateTimeUtils.parseTime(value.toString(), null);
-        } catch (DateTimeParseException ignored) {
-        }
-        return time;
+        return getValue(columnIndex, (value) -> {
+            if (value instanceof Timestamp) {
+                return new Time(((Timestamp) value).getTime());
+            }
+            Time time = null;
+            try {
+                time = DateTimeUtils.parseTime(value.toString(), null);
+            } catch (DateTimeParseException ignored) {
+            }
+            return time;
+        });
     }
 
     @Override
     public Timestamp getTimestamp(int columnIndex) throws SQLException {
-        checkAvailability(columnIndex, resultSet.get(pos).size());
+        return getValue(columnIndex, (value) -> {
+            if (value instanceof Timestamp)
+                return (Timestamp) value;
+            if (value instanceof Long) {
+                if (1_0000_0000_0000_0L > (long) value)
+                    return Timestamp.from(Instant.ofEpochMilli((long) value));
+                long epochSec = (long) value / 1000_000L;
+                long nanoAdjustment = (long) value % 1000_000L * 1000;
+                return Timestamp.from(Instant.ofEpochSecond(epochSec, nanoAdjustment));
+            }
+            Timestamp ret;
+            try {
+                ret = DateTimeUtils.parseTimestamp(value.toString(), null);
+            } catch (Exception e) {
+                ret = null;
+                wasNull = true;
+            }
+            return ret;
+        });
+    }
 
+    public <R> R getValue(int columnIndex, ThrowingFunction<Object, R, SQLException> function, R defaultValue) throws SQLException {
+        checkAvailability(columnIndex, resultSet.get(pos).size());
         Object value = resultSet.get(pos).get(columnIndex - 1);
         wasNull = value == null;
-        if (value == null)
-            return null;
-        if (value instanceof Timestamp)
-            return (Timestamp) value;
-        if (value instanceof Long) {
-            if (1_0000_0000_0000_0L > (long) value)
-                return Timestamp.from(Instant.ofEpochMilli((long) value));
-            long epochSec = (long) value / 1000_000L;
-            long nanoAdjustment = (long) value % 1000_000L * 1000;
-            return Timestamp.from(Instant.ofEpochSecond(epochSec, nanoAdjustment));
+        if (Objects.isNull(value)) {
+            return defaultValue;
         }
-        Timestamp ret;
-        try {
-            ret = DateTimeUtils.parseTimestamp(value.toString(), null);
-        } catch (Exception e) {
-            ret = null;
-            wasNull = true;
-        }
-        return ret;
+        return function.apply(value);
+    }
+
+    public <R> R getValue(int columnIndex, ThrowingFunction<Object, R, SQLException> function) throws SQLException {
+        return getValue(columnIndex, function, null);
     }
 
     @Override
@@ -474,11 +458,7 @@ public class RestfulResultSet extends AbstractResultSet {
 
     @Override
     public Object getObject(int columnIndex) throws SQLException {
-        checkAvailability(columnIndex, resultSet.get(pos).size());
-
-        Object value = resultSet.get(pos).get(columnIndex - 1);
-        wasNull = value == null;
-        return value;
+        return getValue(columnIndex, (value) -> value);
     }
 
     @Override
@@ -494,25 +474,21 @@ public class RestfulResultSet extends AbstractResultSet {
 
     @Override
     public BigDecimal getBigDecimal(int columnIndex) throws SQLException {
-        checkAvailability(columnIndex, resultSet.get(pos).size());
-
-        Object value = resultSet.get(pos).get(columnIndex - 1);
-        wasNull = value == null;
-        if (value == null)
-            return null;
-        if (value instanceof Long || value instanceof Integer || value instanceof Short || value instanceof Byte)
-            return new BigDecimal(Long.parseLong(value.toString()));
-        if (value instanceof Double || value instanceof Float)
-            return BigDecimal.valueOf(Double.parseDouble(value.toString()));
-        if (value instanceof Timestamp)
-            return new BigDecimal(((Timestamp) value).getTime());
-        BigDecimal ret;
-        try {
-            ret = new BigDecimal(value.toString());
-        } catch (Exception e) {
-            ret = null;
-        }
-        return ret;
+        return getValue(columnIndex, (value) -> {
+            if (value instanceof Long || value instanceof Integer || value instanceof Short || value instanceof Byte)
+                return new BigDecimal(Long.parseLong(value.toString()));
+            if (value instanceof Double || value instanceof Float)
+                return BigDecimal.valueOf(Double.parseDouble(value.toString()));
+            if (value instanceof Timestamp)
+                return new BigDecimal(((Timestamp) value).getTime());
+            BigDecimal ret;
+            try {
+                ret = new BigDecimal(value.toString());
+            } catch (Exception e) {
+                ret = null;
+            }
+            return ret;
+        });
     }
 
     @Override

@@ -1,5 +1,6 @@
 package com.taosdata.jdbc;
 
+import com.google.common.collect.Lists;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.utils.DataTypeConverUtil;
 
@@ -27,7 +28,7 @@ public class TSDBResultSetRowData {
         if (this.colSize == 0) {
             return;
         }
-        this.data = new ArrayList<>(colSize);
+        this.data = Lists.newArrayListWithExpectedSize(colSize);
         this.data.addAll(Collections.nCopies(this.colSize, null));
     }
 

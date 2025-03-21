@@ -1,35 +1,31 @@
 package com.taosdata.jdbc.ws.tmq;
 
-import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
-import com.google.common.primitives.Shorts;
 import com.taosdata.jdbc.AbstractResultSet;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
-import com.taosdata.jdbc.TaosGlobalConfig;
-import com.taosdata.jdbc.enums.TimestampPrecision;
+import com.taosdata.jdbc.common.ThrowingFunction;
 import com.taosdata.jdbc.rs.RestfulResultSet;
 import com.taosdata.jdbc.rs.RestfulResultSetMetaData;
 import com.taosdata.jdbc.utils.DataTypeConverUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
-import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.Transport;
 import com.taosdata.jdbc.ws.entity.Code;
 import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.tmq.entity.FetchRawBlockResp;
 import com.taosdata.jdbc.ws.tmq.entity.TMQRequestFactory;
 
-import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
-import java.sql.*;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Timestamp;
 import java.time.Instant;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
-import static com.taosdata.jdbc.TSDBConstants.*;
-import static com.taosdata.jdbc.utils.UnsignedDataUtils.*;
+import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP;
+import static com.taosdata.jdbc.TSDBConstants.jdbcType2TaosTypeName;
 
 public class WSConsumerResultSet extends AbstractResultSet {
     private final Transport transport;
@@ -74,7 +70,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
 
         if (this.forward())
             return true;
-        if (this.numOfRows > 0){
+        if (this.numOfRows > 0) {
             return false;
         }
 
@@ -111,49 +107,29 @@ public class WSConsumerResultSet extends AbstractResultSet {
 
     @Override
     public String getString(int columnIndex) throws SQLException {
-        checkAvailability(columnIndex, fields.size());
-
-        Object value = parseValue(columnIndex);
-        if (value == null) {
-            wasNull = true;
-            return null;
-        }
-        wasNull = false;
-        return DataTypeConverUtil.getString(value);
+        return getValue(columnIndex, (value) -> DataTypeConverUtil.getString(value));
     }
 
     @Override
     public boolean getBoolean(int columnIndex) throws SQLException {
-        checkAvailability(columnIndex, fields.size());
+        return getValue(columnIndex, (value) -> {
+            if (value instanceof Boolean)
+                return (boolean) value;
 
-        Object value = parseValue(columnIndex);
-        if (value == null) {
-            wasNull = true;
-            return false;
-        }
-        wasNull = false;
-        if (value instanceof Boolean)
-            return (boolean) value;
-
-        int taosType = fields.get(columnIndex - 1).getTaosType();
-        return DataTypeConverUtil.getBoolean(taosType, value);
+            int taosType = fields.get(columnIndex - 1).getTaosType();
+            return DataTypeConverUtil.getBoolean(taosType, value);
+        }, false);
     }
 
     @Override
     public byte getByte(int columnIndex) throws SQLException {
-        checkAvailability(columnIndex, fields.size());
+        return getValue(columnIndex, (value) -> {
+            if (value instanceof Byte)
+                return (byte) value;
 
-        Object value = parseValue(columnIndex);
-        if (value == null) {
-            wasNull = true;
-            return 0;
-        }
-        wasNull = false;
-        if (value instanceof Byte)
-            return (byte) value;
-
-        int taosType = fields.get(columnIndex - 1).getTaosType();
-        return DataTypeConverUtil.getByte(taosType, value, columnIndex);
+            int taosType = fields.get(columnIndex - 1).getTaosType();
+            return DataTypeConverUtil.getByte(taosType, value, columnIndex);
+        }, (byte) 0);
     }
 
     private void throwRangeException(String valueAsString, int columnIndex, int jdbcType) throws SQLException {
@@ -163,124 +139,93 @@ public class WSConsumerResultSet extends AbstractResultSet {
 
     @Override
     public short getShort(int columnIndex) throws SQLException {
-        checkAvailability(columnIndex, fields.size());
-
-        Object value = parseValue(columnIndex);
-        if (value == null) {
-            wasNull = true;
-            return 0;
-        }
-        wasNull = false;
-        if (value instanceof Short)
-            return (short) value;
-
-        int taosType = fields.get(columnIndex - 1).getTaosType();
-        return DataTypeConverUtil.getShort(taosType, value, columnIndex);
+        return getValue(columnIndex, (value) -> {
+            if (value instanceof Short)
+                return (short) value;
+            int taosType = fields.get(columnIndex - 1).getTaosType();
+            return DataTypeConverUtil.getShort(taosType, value, columnIndex);
+        }, (short) 0);
     }
 
     @Override
     public int getInt(int columnIndex) throws SQLException {
-        checkAvailability(columnIndex, fields.size());
+        return getValue(columnIndex, (value) -> {
+            if (value instanceof Integer)
+                return (int) value;
 
-        Object value = parseValue(columnIndex);
-        if (value == null) {
-            wasNull = true;
-            return 0;
-        }
-        wasNull = false;
-        if (value instanceof Integer)
-            return (int) value;
-
-        int taosType = fields.get(columnIndex - 1).getTaosType();
-        return DataTypeConverUtil.getInt(taosType, value, columnIndex);
+            int taosType = fields.get(columnIndex - 1).getTaosType();
+            return DataTypeConverUtil.getInt(taosType, value, columnIndex);
+        }, 0);
     }
 
     @Override
     public long getLong(int columnIndex) throws SQLException {
-        checkAvailability(columnIndex, fields.size());
+        return getValue(columnIndex, (value) -> {
+            if (value instanceof Long)
+                return (long) value;
+            int taosType = fields.get(columnIndex - 1).getTaosType();
 
-        Object value = parseValue(columnIndex);
-        if (value == null) {
-            wasNull = true;
-            return 0;
-        }
-        wasNull = false;
-        if (value instanceof Long)
-            return (long) value;
-        int taosType = fields.get(columnIndex - 1).getTaosType();
-
-        return DataTypeConverUtil.getLong(taosType, value, columnIndex, this.timestampPrecision);
+            return DataTypeConverUtil.getLong(taosType, value, columnIndex, this.timestampPrecision);
+        }, 0l);
     }
 
     @Override
     public float getFloat(int columnIndex) throws SQLException {
-        checkAvailability(columnIndex, fields.size());
+        return getValue(columnIndex, (value) -> {
+            if (value instanceof Float)
+                return (float) value;
 
-        Object value = parseValue(columnIndex);
-        if (value == null) {
-            wasNull = true;
-            return 0;
-        }
-        wasNull = false;
-        if (value instanceof Float)
-            return (float) value;
-
-        int taosType = fields.get(columnIndex - 1).getTaosType();
-        return DataTypeConverUtil.getFloat(taosType, value, columnIndex);
+            int taosType = fields.get(columnIndex - 1).getTaosType();
+            return DataTypeConverUtil.getFloat(taosType, value, columnIndex);
+        }, 0f);
     }
 
     @Override
     public double getDouble(int columnIndex) throws SQLException {
-        checkAvailability(columnIndex, fields.size());
-
-        Object value = parseValue(columnIndex);
-        if (value == null) {
-            wasNull = true;
-            return 0;
-        }
-        wasNull = false;
-
-        int taosType = fields.get(columnIndex - 1).getTaosType();
-        return DataTypeConverUtil.getDouble(taosType, value, columnIndex, this.timestampPrecision);
+        return getValue(columnIndex, (value) -> {
+            int taosType = fields.get(columnIndex - 1).getTaosType();
+            return DataTypeConverUtil.getDouble(taosType, value, columnIndex, this.timestampPrecision);
+        }, 0d);
     }
 
     @Override
     public byte[] getBytes(int columnIndex) throws SQLException {
-        checkAvailability(columnIndex, fields.size());
-
-        Object value = parseValue(columnIndex);
-        if (value == null) {
-            wasNull = true;
-            return null;
-        }
-        wasNull = false;
-        return DataTypeConverUtil.getBytes(value);
+        return getValue(columnIndex, (value) -> DataTypeConverUtil.getBytes(value));
     }
 
     @Override
     public Timestamp getTimestamp(int columnIndex) throws SQLException {
-        checkAvailability(columnIndex, fields.size());
+        return getValue(columnIndex, (value) -> {
+            if (value instanceof Timestamp)
+                return (Timestamp) value;
+            if (value instanceof Long) {
+                Instant instant = DateTimeUtils.parseTimestampColumnData((long) value, this.timestampPrecision);
+                return DateTimeUtils.getTimestamp(instant, null);
+            }
+            Timestamp ret;
+            try {
+                ret = DateTimeUtils.parseTimestamp(value.toString(), null);
+            } catch (Exception e) {
+                ret = null;
+                wasNull = true;
+            }
+            return ret;
+        });
+    }
 
+    public <R> R getValue(int columnIndex, ThrowingFunction<Object, R, SQLException> function) throws SQLException {
+        return getValue(columnIndex, function, null);
+    }
+
+    public <R> R getValue(int columnIndex, ThrowingFunction<Object, R, SQLException> function, R defaultValue) throws SQLException {
+        checkAvailability(columnIndex, fields.size());
         Object value = parseValue(columnIndex);
         if (value == null) {
             wasNull = true;
-            return null;
+            return defaultValue;
         }
         wasNull = false;
-        if (value instanceof Timestamp)
-            return (Timestamp) value;
-        if (value instanceof Long) {
-            Instant instant = DateTimeUtils.parseTimestampColumnData((long) value, this.timestampPrecision);
-            return DateTimeUtils.getTimestamp(instant, null);
-        }
-        Timestamp ret;
-        try {
-            ret = DateTimeUtils.parseTimestamp(value.toString(), null);
-        } catch (Exception e) {
-            ret = null;
-            wasNull = true;
-        }
-        return ret;
+        return function.apply(value);
     }
 
     @Override
@@ -292,11 +237,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
 
     @Override
     public Object getObject(int columnIndex) throws SQLException {
-        checkAvailability(columnIndex, fields.size());
-
-        Object value = parseValue(columnIndex);
-        wasNull = value == null;
-        return value;
+        return getValue(columnIndex, (value) -> value);
     }
 
     @Override
@@ -473,8 +414,8 @@ public class WSConsumerResultSet extends AbstractResultSet {
 
         int type = fields.get(columnIndex - 1).getTaosType();
 
-        if (type == TSDB_DATA_TYPE_TIMESTAMP){
-            Long o = (Long)DataTypeConverUtil.parseValue(type, source);
+        if (type == TSDB_DATA_TYPE_TIMESTAMP) {
+            Long o = (Long) DataTypeConverUtil.parseValue(type, source);
             Instant instant = DateTimeUtils.parseTimestampColumnData(o, this.timestampPrecision);
             return DateTimeUtils.getTimestamp(instant, null);
         }

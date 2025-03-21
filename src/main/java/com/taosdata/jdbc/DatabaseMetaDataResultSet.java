@@ -1,5 +1,7 @@
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.common.ThrowingFunction;
+
 import java.math.BigDecimal;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -53,62 +55,57 @@ public class DatabaseMetaDataResultSet extends AbstractResultSet {
 
     @Override
     public String getString(int columnIndex) throws SQLException {
-        int colType = columnMetaDataList.get(columnIndex - 1).getColType();
-        return rowCursor.getString(columnIndex, colType);
+        return getValue(columnIndex, (colType) -> rowCursor.getString(columnIndex, colType));
     }
 
     @Override
     public boolean getBoolean(int columnIndex) throws SQLException {
-        int colType = columnMetaDataList.get(columnIndex - 1).getColType();
-        return rowCursor.getBoolean(columnIndex, colType);
+        return getValue(columnIndex, (colType) -> rowCursor.getBoolean(columnIndex, colType));
     }
 
     @Override
     public byte getByte(int columnIndex) throws SQLException {
-        int colType = columnMetaDataList.get(columnIndex - 1).getColType();
-        return (byte) rowCursor.getInt(columnIndex, colType);
+        return getValue(columnIndex, (colType) -> (byte) rowCursor.getInt(columnIndex, colType));
     }
 
     @Override
     public short getShort(int columnIndex) throws SQLException {
-        int colType = columnMetaDataList.get(columnIndex - 1).getColType();
-        return (short) rowCursor.getInt(columnIndex, colType);
+        return getValue(columnIndex, (colType) -> (short) rowCursor.getInt(columnIndex, colType));
     }
 
     @Override
     public int getInt(int columnIndex) throws SQLException {
-        int colType = columnMetaDataList.get(columnIndex - 1).getColType();
-        return rowCursor.getInt(columnIndex, colType);
+        return getValue(columnIndex, (colType) -> rowCursor.getInt(columnIndex, colType));
     }
 
     @Override
     public long getLong(int columnIndex) throws SQLException {
-        int colType = columnMetaDataList.get(columnIndex - 1).getColType();
-        return rowCursor.getLong(columnIndex, colType);
+        return getValue(columnIndex, (colType) -> rowCursor.getLong(columnIndex, colType));
     }
 
     @Override
     public float getFloat(int columnIndex) throws SQLException {
-        int colType = columnMetaDataList.get(columnIndex - 1).getColType();
-        return rowCursor.getFloat(columnIndex, colType);
+        return getValue(columnIndex, (colType) -> rowCursor.getFloat(columnIndex, colType));
     }
 
     @Override
     public double getDouble(int columnIndex) throws SQLException {
-        int colType = columnMetaDataList.get(columnIndex - 1).getColType();
-        return rowCursor.getDouble(columnIndex, colType);
+        return getValue(columnIndex, (colType) -> rowCursor.getDouble(columnIndex, colType));
     }
 
     @Override
     public byte[] getBytes(int columnIndex) throws SQLException {
-        int colType = columnMetaDataList.get(columnIndex - 1).getColType();
-        return (rowCursor.getString(columnIndex, colType)).getBytes();
+        return getValue(columnIndex, (colType) -> (rowCursor.getString(columnIndex, colType)).getBytes());
     }
 
     @Override
     public Timestamp getTimestamp(int columnIndex) throws SQLException {
+        return getValue(columnIndex, (colType) -> rowCursor.getTimestamp(columnIndex, colType));
+    }
+
+    public <R> R getValue(int columnIndex, ThrowingFunction<Integer, R, SQLException> function) throws SQLException {
         int colType = columnMetaDataList.get(columnIndex - 1).getColType();
-        return rowCursor.getTimestamp(columnIndex, colType);
+        return function.apply(colType);
     }
 
     @Override

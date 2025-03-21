@@ -1,5 +1,7 @@
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.common.ThrowingSupplier;
+
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
@@ -30,7 +32,7 @@ public abstract class AbstractResultSet extends WrapperImpl implements ResultSet
     }
 
 
-    protected ForkJoinPool getForkJoinPool(){
+    protected ForkJoinPool getForkJoinPool() {
         return forkJoinPool;
     }
 
@@ -68,6 +70,11 @@ public abstract class AbstractResultSet extends WrapperImpl implements ResultSet
 
     @Override
     public abstract double getDouble(int columnIndex) throws SQLException;
+
+    public <R> R getValue(int columnIndex, int bounds, ThrowingSupplier<R, SQLException> supplier) throws SQLException {
+        checkAvailability(columnIndex, bounds);
+        return supplier.get();
+    }
 
     @Deprecated
     @Override
@@ -108,7 +115,7 @@ public abstract class AbstractResultSet extends WrapperImpl implements ResultSet
         if (isClosed()) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);
         }
-        
+
         throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
     }
 
