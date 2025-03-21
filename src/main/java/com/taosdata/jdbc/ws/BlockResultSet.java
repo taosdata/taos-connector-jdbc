@@ -144,7 +144,7 @@ public class BlockResultSet extends AbstractWSResultSet {
         return getValue(columnIndex, (value) -> {
             int taosType = fields.get(columnIndex - 1).getTaosType();
             return DataTypeConverUtil.getDouble(taosType, value, columnIndex, this.timestampPrecision);
-        });
+        }, 0d);
     }
 
     @Override
