@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.tmq;
 
 import com.taosdata.jdbc.*;
+import com.taosdata.jdbc.common.ThrowingSupplier;
 
 import java.math.BigDecimal;
 import java.sql.ResultSetMetaData;
@@ -81,43 +82,47 @@ public class TMQResultSet extends AbstractResultSet {
     }
 
     public String getString(int columnIndex) throws SQLException {
-        return getValue(columnIndex, this.columnMetaDataList.size(), () -> this.blockData.getString(columnIndex - 1));
+        return getValue(columnIndex, () -> this.blockData.getString(columnIndex - 1));
     }
 
     public boolean getBoolean(int columnIndex) throws SQLException {
-        return getValue(columnIndex, this.columnMetaDataList.size(), () -> this.blockData.getBoolean(columnIndex - 1));
+        return getValue(columnIndex, () -> this.blockData.getBoolean(columnIndex - 1));
     }
 
     public byte getByte(int columnIndex) throws SQLException {
-        return getValue(columnIndex, this.columnMetaDataList.size(), () -> (byte) this.blockData.getInt(columnIndex - 1));
+        return getValue(columnIndex, () -> (byte) this.blockData.getInt(columnIndex - 1));
     }
 
     public short getShort(int columnIndex) throws SQLException {
-        return getValue(columnIndex, this.columnMetaDataList.size(), () -> (short) this.blockData.getInt(columnIndex - 1));
+        return getValue(columnIndex, () -> (short) this.blockData.getInt(columnIndex - 1));
     }
 
     public int getInt(int columnIndex) throws SQLException {
-        return getValue(columnIndex, this.columnMetaDataList.size(), () -> this.blockData.getInt(columnIndex - 1));
+        return getValue(columnIndex, () -> this.blockData.getInt(columnIndex - 1));
     }
 
     public long getLong(int columnIndex) throws SQLException {
-        return getValue(columnIndex, this.columnMetaDataList.size(), () -> this.blockData.getLong(columnIndex - 1));
+        return getValue(columnIndex, () -> this.blockData.getLong(columnIndex - 1));
     }
 
     public float getFloat(int columnIndex) throws SQLException {
-        return getValue(columnIndex, this.columnMetaDataList.size(), () -> (float) this.blockData.getDouble(columnIndex - 1));
+        return getValue(columnIndex, () -> (float) this.blockData.getDouble(columnIndex - 1));
     }
 
     public double getDouble(int columnIndex) throws SQLException {
-        return getValue(columnIndex, this.columnMetaDataList.size(), () -> this.blockData.getDouble(columnIndex - 1));
+        return getValue(columnIndex, () -> this.blockData.getDouble(columnIndex - 1));
     }
 
     public byte[] getBytes(int columnIndex) throws SQLException {
-        return getValue(columnIndex, this.columnMetaDataList.size(), () -> this.blockData.getBytes(columnIndex - 1));
+        return getValue(columnIndex, () -> this.blockData.getBytes(columnIndex - 1));
     }
 
     public Timestamp getTimestamp(int columnIndex) throws SQLException {
-        return getValue(columnIndex, this.columnMetaDataList.size(), () -> this.blockData.getTimestamp(columnIndex - 1));
+        return getValue(columnIndex, () -> this.blockData.getTimestamp(columnIndex - 1));
+    }
+
+    public <R> R getValue(int columnIndex, ThrowingSupplier<R, SQLException> supplier) throws SQLException {
+        return super.getValue(columnIndex, this.columnMetaDataList.size(), supplier);
     }
 
     public ResultSetMetaData getMetaData() throws SQLException {
