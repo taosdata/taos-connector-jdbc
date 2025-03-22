@@ -5,7 +5,6 @@ import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.utils.DateTimeUtils;
 
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.sql.SQLException;
@@ -72,7 +71,7 @@ public class SerializeBlock {
         System.arraycopy(data, 0, buf, offset, data.length);
     }
 
-    private static int serializeColumn(ColumnInfo columnInfo, byte[] buf, int offset, int precision) throws IOException, SQLException {
+    private static int serializeColumn(ColumnInfo columnInfo, byte[] buf, int offset, int precision) throws SQLException {
         Integer dataLen = DataLengthCfg.getDataLength(columnInfo.getType());
 
         // TotalLength
@@ -147,7 +146,7 @@ public class SerializeBlock {
         return offset;
     }
 
-    private static void SerializeNormalDataType(int dataType , byte[] buf, int offset, List<Object> objectList, int precision) throws IOException, SQLException {
+    private static void SerializeNormalDataType(int dataType , byte[] buf, int offset, List<Object> objectList, int precision) throws SQLException {
         switch (dataType) {
             case TSDB_DATA_TYPE_BOOL: {
                 SerializeInt(buf, offset, objectList.size());
@@ -475,7 +474,7 @@ public class SerializeBlock {
                                            int toBeBindTableNameIndex,
                                            int toBebindTagCount,
                                            int toBebindColCount,
-                                           int precision) throws IOException, SQLException {
+                                           int precision) throws SQLException {
 
         // cloc totol size
         int totalTableNameSize  = 0;
