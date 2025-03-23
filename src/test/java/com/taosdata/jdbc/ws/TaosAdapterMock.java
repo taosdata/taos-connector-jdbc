@@ -17,6 +17,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class TaosAdapterMock extends WebSocketServer {
 
+    volatile boolean isReady = false;
+
     // Target WebSocket server URI
 
     // Mapping between client connections and their corresponding target connections
@@ -45,11 +47,12 @@ public class TaosAdapterMock extends WebSocketServer {
         TargetWebSocketClient targetClient = null;
         try {
             targetClient = new TargetWebSocketClient(conn, new URI("ws://localhost:6041/ws"));
+            targetClient.connectBlocking();
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
-        targetClient.connect();
-
         // Map the client connection to the target connection
         clientMap.put(conn, targetClient);
     }
@@ -89,7 +92,9 @@ public class TaosAdapterMock extends WebSocketServer {
 
         // Forward the message to the target server
         TargetWebSocketClient targetClient = clientMap.get(conn);
-        targetClient.send(message);
+        if (targetClient != null){
+            targetClient.send(message);
+        }
     }
 
     @Override
@@ -98,7 +103,9 @@ public class TaosAdapterMock extends WebSocketServer {
 
         // Forward the message to the target server
         TargetWebSocketClient targetClient = clientMap.get(conn);
-        targetClient.send(message);
+        if (targetClient != null){
+            targetClient.send(message);
+        }
     }
 
     /**
@@ -125,6 +132,7 @@ public class TaosAdapterMock extends WebSocketServer {
     @Override
     public void onStart() {
         System.out.println("WebSocket Proxy Server started successfully!");
+        isReady = true;
     }
 
     /**
@@ -135,13 +143,13 @@ public class TaosAdapterMock extends WebSocketServer {
     public void stopServer() throws InterruptedException {
         System.out.println("Shutting down WebSocket Proxy Server...");
         // Close all target connections
-        for (TargetWebSocketClient targetClient : clientMap.values()) {
-            targetClient.closeConnection();
-        }
-        clientMap.clear();
+//        for (TargetWebSocketClient targetClient : clientMap.values()) {
+//            targetClient.closeConnection();
+//        }
+//        clientMap.clear();
 
         // Stop the server with a 1-second timeout
-        this.stop();
+        this.stop(10000, "Server stopped");
         System.out.println("WebSocket Proxy Server stopped.");
     }
 
@@ -227,5 +235,9 @@ public class TaosAdapterMock extends WebSocketServer {
                 closeBlocking();
             }
         }
+    }
+
+    public boolean isReady() {
+        return isReady;
     }
 }
