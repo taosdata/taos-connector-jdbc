@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.tmq;
 
+import com.google.common.collect.Lists;
 import com.taosdata.jdbc.TaosGlobalConfig;
 import com.taosdata.jdbc.utils.Utils;
 
@@ -16,7 +17,6 @@ import java.math.BigInteger;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -38,8 +38,8 @@ public class ReferenceDeserializer<V> implements Deserializer<V> {
         try {
             t = Utils.newInstance(clazz);
             if (params == null) {
-                List<Param> lists = new ArrayList<>();
                 BeanInfo beanInfo = Introspector.getBeanInfo(clazz);
+                List<Param> lists = Lists.newArrayListWithExpectedSize(beanInfo.getPropertyDescriptors().length);
                 for (PropertyDescriptor property : beanInfo.getPropertyDescriptors()) {
                     String name = property.getName();
                     if ("class".equals(name))
@@ -134,17 +134,17 @@ public class ReferenceDeserializer<V> implements Deserializer<V> {
                         || param.clazz.isAssignableFrom(byte[].class)) {
                     byte[] bytes = data.getBytes(param.name);
                     param.method.invoke(t, data.wasNull() ? null : bytes);
-                } else if (param.clazz.isAssignableFrom(BigDecimal.class)){
+                } else if (param.clazz.isAssignableFrom(BigDecimal.class)) {
                     BigDecimal bigDecimal = data.getBigDecimal(param.name);
                     param.method.invoke(t, data.wasNull() ? null : bigDecimal);
-                } else if (param.clazz.isAssignableFrom(BigInteger.class)){
+                } else if (param.clazz.isAssignableFrom(BigInteger.class)) {
                     BigInteger bigInteger = (BigInteger) data.getObject(param.name);
                     param.method.invoke(t, data.wasNull() ? null : bigInteger);
                 }
 
             } catch (IllegalAccessException | InvocationTargetException e) {
                 throw new SQLException(this.getClass().getSimpleName() + ": " + param.name
-                        + " through method:" + param.method.getName() +" get Data error: ", e);
+                        + " through method:" + param.method.getName() + " get Data error: ", e);
             }
         }
         return t;
