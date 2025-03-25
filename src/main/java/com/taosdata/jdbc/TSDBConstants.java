@@ -57,7 +57,11 @@ public abstract class TSDBConstants {
     public static final int TSDB_DATA_TYPE_UBIGINT = 14;        //unsigned bigint
     public static final int TSDB_DATA_TYPE_JSON = 15;           //json
     public static final int TSDB_DATA_TYPE_VARBINARY = 16;     //varbinary
+    public static final int TSDB_DATA_TYPE_DECIMAL128 = 17;     //decimal128
+    public static final int TSDB_DATA_TYPE_BLOB = 18;     //blob
+    public static final int TSDB_DATA_TYPE_MEDIUMBLOB = 19;     //
     public static final int TSDB_DATA_TYPE_GEOMETRY = 20;     //geometry
+    public static final int TSDB_DATA_TYPE_DECIMAL64 = 21;     //decimal64
 
     // nchar column max length
     public static final int maxFieldSize = 16 * 1024;
@@ -77,6 +81,10 @@ public abstract class TSDBConstants {
     public static final int DOUBLE_PRECISION = 22;
     public static final int TIMESTAMP_MS_PRECISION = 23;
     public static final int TIMESTAMP_US_PRECISION = 26;
+
+    public static final int DECIMAL128_PRECISION = 38;
+    public static final int DECIMAL64_PRECISION = 18;
+
     // scale for data types, this is used for metadata
     public static final int FLOAT_SCALE = 31;
     public static final int DOUBLE_SCALE = 31;

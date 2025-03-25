@@ -62,6 +62,9 @@ public class TSDBErrorNumbers {
     public static final int ERROR_TMQ_SEEK_OFFSET = 0x2379; // consumer create error
     public static final int ERROR_TMQ_VGROUP_NOT_FOUND = 0x237a; // consumer create error
 
+
+    public static final int ERROR_FW_WRITE_ERROR = 0x2390; // fast writer write error
+
     private static final Set<Integer> errorNumbers = new HashSet<>();
 
     static {

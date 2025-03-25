@@ -10,7 +10,7 @@ import org.junit.Test;
 import java.sql.*;
 import java.util.Properties;
 
-public class RawBlockBinaryLength {
+public class RawBlockBinaryLengthTest {
 
     static String host = "127.0.0.1";
     static String dbName = "binary_length_test";
@@ -25,7 +25,7 @@ public class RawBlockBinaryLength {
         ResultSet resultSet = statement.executeQuery("select body from `stb_sba_tem_bdr`");
         resultSet.next();
         String body = resultSet.getString("body");
-        System.out.println(body);
+        //System.out.println(body);
         Assert.assertTrue(body.length() > 0);
     }
 
@@ -37,7 +37,7 @@ public class RawBlockBinaryLength {
         ) {
             resultSet.next();
             String body = resultSet.getString("body");
-            System.out.println(body);
+            //System.out.println(body);
             Assert.assertTrue(body.length() > 0);
         }
 

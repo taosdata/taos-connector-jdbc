@@ -601,6 +601,8 @@ public class DataTypeConverUtilTest {
         assertEquals("jsonData", DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_JSON, "jsonData"));
         assertEquals("varbinaryData", DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_VARBINARY, "varbinaryData"));
         assertEquals("geometryData", DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_GEOMETRY, "geometryData"));
+        assertEquals(new BigDecimal("1.2"), DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_DECIMAL128, new BigDecimal("1.2")));
+        assertEquals(new BigDecimal("1.2"), DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_DECIMAL64, new BigDecimal("1.2")));
 
         // USMALLINT
         assertEquals(65535, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_USMALLINT, (short) -1));
