@@ -5,12 +5,12 @@
 
   <groupId>com.taosdata.jdbc</groupId>
   <artifactId>taos-jdbcdriver</artifactId>
-  <version>3.5.3</version>
+  <version>3.6.0</version>
   <packaging>jar</packaging>
 
   <name>JDBCDriver</name>
   <url>https://github.com/taosdata/taos-connector-jdbc</url>
-  <description>TDengine JDBC Driver</description>
+  <description>The official TDengine JDBC connector</description>
 
   <licenses>
     <license>
