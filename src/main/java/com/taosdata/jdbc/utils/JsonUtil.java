@@ -9,10 +9,10 @@ import com.taosdata.jdbc.ws.tmq.meta.*;
 import java.text.SimpleDateFormat;
 
 public class JsonUtil {
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     static {
-        configureObjectMapper(objectMapper);
+        configureObjectMapper(OBJECT_MAPPER);
     }
 
     private JsonUtil() {
@@ -20,21 +20,21 @@ public class JsonUtil {
     }
 
     public static ObjectMapper getObjectMapper() {
-        return objectMapper;
+        return OBJECT_MAPPER;
     }
     public static ObjectReader getObjectReader(Class<?> clazz) {
-        return objectMapper.readerFor(clazz);
+        return OBJECT_MAPPER.readerFor(clazz);
     }
 
     public static ObjectReader getObjectReader() {
-        return objectMapper.reader();
+        return OBJECT_MAPPER.reader();
     }
     public static ObjectWriter getObjectWriter(Class<?> clazz) {
-        return objectMapper.writerFor(clazz);
+        return OBJECT_MAPPER.writerFor(clazz);
     }
 
     public static ObjectWriter getObjectWriter() {
-        return objectMapper.writer();
+        return OBJECT_MAPPER.writer();
     }
 
     private static void configureObjectMapper(ObjectMapper objectMapper) {
