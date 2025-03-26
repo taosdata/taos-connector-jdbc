@@ -26,17 +26,17 @@ public class WSConsumerWithDiffTypeTest {
     private static Statement statement;
     private static String[] topics = {"topic_ws_bean_diff_type"};
 
+    private void insertOneRow() throws SQLException {
+        statement.executeUpdate("insert into " + dbName + ".ct0 values(now, 1, 100, 2.2, 2.3, '1', 12, 2, true, '一', 'POINT(1 1)', '\\x0101', 1.2234, now, 255, 65535, 4294967295, 18446744073709551615, -12345678901234567890123.4567890000, 12345678.901234)");
+    }
     @Test
     public void testWSBeanObject() throws Exception {
-        try {
-            statement.executeUpdate("insert into " + dbName + ".ct0 values(now, 1, 100, 2.2, 2.3, '1', 12, 2, true, '一', 'POINT(1 1)', '\\x0101', 1.2234, now, 255, 65535, 4294967295, 18446744073709551615)");
-        } catch (SQLException e) {
-            // ignore
-        }
+        insertOneRow();
+
         String topic = topics[0];
         // create topic
         statement.executeUpdate("create topic if not exists " + topic +
-                " as select ts, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, t1 from " + dbName + ".ct0");
+                " as select ts, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, c18, c19, t1 from " + dbName + ".ct0");
 
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.CONNECT_USER, "root");
@@ -71,6 +71,9 @@ public class WSConsumerWithDiffTypeTest {
                     Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_INT, bean.getC16());
                     Assert.assertEquals(new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG), bean.getC17());
 
+                    Assert.assertEquals(new BigDecimal("-12345678901234567890123.4567890000"), bean.getC18());
+                    Assert.assertEquals(new BigDecimal("12345678.901234"), bean.getC19());
+
                     Assert.assertEquals(1000.0, bean.getT1(), 0.000001);
                 }
             }
@@ -80,15 +83,13 @@ public class WSConsumerWithDiffTypeTest {
 
     @Test
     public void testWSBeanMap() throws Exception {
-        try {
-            statement.executeUpdate("insert into " + dbName + ".ct0 values(now, 1, 100, 2.2, 2.3, '1', 12, 2, true, '一', 'POINT(1 1)', '\\x0101', 1.2234, now, 255, 65535, 4294967295, 18446744073709551615)");
-        } catch (SQLException e) {
-            // ignore
-        }
+        //statement.executeUpdate("insert into " + dbName + ".ct0 values(now, 1, 100, 2.2, 2.3, '1', 12, 2, true, '一', 'POINT(1 1)', '\\x0101', 1.2234, now, 255, 65535, 4294967295, 18446744073709551615)");
+        insertOneRow();
+
         String topic = topics[0];
         // create topic
         statement.executeUpdate("create topic if not exists " + topic +
-                " as select ts, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, t1 from " + dbName + ".ct0");
+                " as select ts, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, c18, c19, t1 from " + dbName + ".ct0");
 
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.CONNECT_USER, "root");
@@ -106,9 +107,8 @@ public class WSConsumerWithDiffTypeTest {
                 ConsumerRecords<Map<String, Object>> consumerRecords = consumer.poll(Duration.ofMillis(100));
                 for (ConsumerRecord<Map<String, Object>> r : consumerRecords) {
                     Map<String, Object> map = r.value();
-                    Assert.assertEquals(19 , map.size());
+                    Assert.assertEquals(21 , map.size());
                     Assert.assertTrue(map.get("ts") instanceof Timestamp);
-
 
                     Assert.assertEquals(1, (int) map.get("c1"));
                     Assert.assertEquals(100L, map.get("c2"));
@@ -125,6 +125,9 @@ public class WSConsumerWithDiffTypeTest {
                     Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_SHORT, (int)map.get("c15"));
                     Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_INT, (long)map.get("c16"));
                     Assert.assertEquals(new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG), map.get("c17"));
+
+                    Assert.assertEquals(new BigDecimal("-12345678901234567890123.4567890000"), map.get("c18"));
+                    Assert.assertEquals(new BigDecimal("12345678.901234"), map.get("c19"));
 
                     Assert.assertEquals(1000.0, (int)map.get("t1"), 0.000001);
 
@@ -154,7 +157,7 @@ public class WSConsumerWithDiffTypeTest {
         statement.execute("create stable if not exists " + superTable
                 + " (ts timestamp, c1 int, c2 bigint, c3 float, c4 double, c5 binary(10), c6 SMALLINT, c7 TINYINT, " +
                 "c8 BOOL, c9 nchar(100), c10 GEOMETRY(100), c11 VARBINARY(100), c12 double, c13 timestamp, " +
-                "c14 tinyint unsigned, c15 smallint unsigned, c16 int unsigned, c17 bigint unsigned) tags(t1 int)");
+                "c14 tinyint unsigned, c15 smallint unsigned, c16 int unsigned, c17 bigint unsigned, c18 decimal(38, 10), c19 decimal(18, 6)) tags(t1 int)");
         statement.execute("create table if not exists ct0 using " + superTable + " tags(1000)");
     }
 
@@ -198,17 +201,14 @@ class Bean {
     private String c9;
     private byte[] c10;
     private byte[] c11;
-
-
-
     private BigDecimal c12;
     private Timestamp c13;
-
     private short c14;
     private int c15;
     private long c16;
     private BigInteger c17;
-
+    private BigDecimal c18;
+    private BigDecimal c19;
     @Override
     public String toString() {
         final StringBuffer sb = new StringBuffer("Bean{");
@@ -231,6 +231,8 @@ class Bean {
         sb.append(", c15=").append(c15);
         sb.append(", c16=").append(c16);
         sb.append(", c17=").append(c17);
+        sb.append(", c18=").append(c18);
+        sb.append(", c19=").append(c19);
 
         sb.append('}');
         return sb.toString();
@@ -389,5 +391,19 @@ class Bean {
     }
 
 
+    public BigDecimal getC18() {
+        return c18;
+    }
 
+    public void setC18(BigDecimal c18) {
+        this.c18 = c18;
+    }
+
+    public BigDecimal getC19() {
+        return c19;
+    }
+
+    public void setC19(BigDecimal c19) {
+        this.c19 = c19;
+    }
 }

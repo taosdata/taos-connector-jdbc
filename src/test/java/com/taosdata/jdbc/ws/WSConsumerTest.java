@@ -56,6 +56,8 @@ public class WSConsumerTest {
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
         properties.setProperty(TMQConstants.GROUP_ID, "ws_map");
         properties.setProperty(TMQConstants.CONNECT_TYPE, "ws");
+        properties.setProperty("fetch.max.wait.ms", "5000");
+        properties.setProperty("min.poll.rows", "1000");
 
         try (TaosConsumer<Map<String, Object>> consumer = new TaosConsumer<>(properties)) {
             consumer.subscribe(Collections.singletonList(topic));

@@ -113,7 +113,7 @@ public class RestfulResultSet extends AbstractResultSet {
             int col_type = type.getJdbcTypeValue();
             int col_length = col.get(2).asInt();
             columnNames.add(col_name);
-            columns.add(new Field(col_name, col_type, col_length, "", type.getTaosTypeValue()));
+            columns.add(new Field(col_name, col_type, col_length, "", type.getTaosTypeValue(), 0));
         }
     }
 
@@ -204,21 +204,24 @@ public class RestfulResultSet extends AbstractResultSet {
         int length;
         String note;
         int taos_type;
+        int scale;
 
-        public Field(String name, int type, int length, String note, int taos_type) {
+        public Field(String name, int type, int length, String note, int taos_type, int scale) {
             this.name = name;
             this.type = type;
             this.length = length;
             this.note = note;
             this.taos_type = taos_type;
+            this.scale = scale;
         }
 
         public int getTaosType() {
             return taos_type;
         }
+        public String getName() {return name;}
 
-        public String getName() {
-            return name;
+        public int getScale() {
+            return scale;
         }
     }
 

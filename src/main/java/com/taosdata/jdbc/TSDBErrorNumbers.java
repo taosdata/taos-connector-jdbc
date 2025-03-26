@@ -64,6 +64,8 @@ public class TSDBErrorNumbers {
 
     private static final Set<Integer> ERROR_NUMBERS = new HashSet<>();
 
+    public static final int ERROR_FW_WRITE_ERROR = 0x2390; // fast writer write error
+
     static {
         ERROR_NUMBERS.add(ERROR_CONNECTION_CLOSED);
         ERROR_NUMBERS.add(ERROR_UNSUPPORTED_METHOD);

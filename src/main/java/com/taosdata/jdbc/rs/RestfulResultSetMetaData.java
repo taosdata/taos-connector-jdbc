@@ -2,7 +2,6 @@ package com.taosdata.jdbc.rs;
 
 import com.taosdata.jdbc.WrapperImpl;
 import com.taosdata.jdbc.enums.DataType;
-import com.taosdata.jdbc.utils.DataTypeUtil;
 
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -159,8 +158,8 @@ public class RestfulResultSetMetaData extends WrapperImpl implements ResultSetMe
 
     @Override
     public String getColumnClassName(int column) throws SQLException {
-        int type = this.fields.get(column - 1).type;
-        return DataTypeUtil.getColumnClassName(type);
+        int type = this.fields.get(column - 1).taos_type;
+        return DataType.convertTaosType2DataType(type).getClassName();
     }
 
 }

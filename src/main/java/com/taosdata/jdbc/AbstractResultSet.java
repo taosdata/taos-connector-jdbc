@@ -1,6 +1,7 @@
 package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.common.ThrowingSupplier;
+import com.taosdata.jdbc.utils.Utils;
 
 import java.io.InputStream;
 import java.io.Reader;
@@ -15,9 +16,6 @@ public abstract class AbstractResultSet extends WrapperImpl implements ResultSet
     private int fetchSize;
     protected boolean wasNull;
     protected int timestampPrecision;
-
-    private static final ForkJoinPool forkJoinPool = new ForkJoinPool();
-
     public void setTimestampPrecision(int timestampPrecision) {
         this.timestampPrecision = timestampPrecision;
     }
@@ -33,7 +31,7 @@ public abstract class AbstractResultSet extends WrapperImpl implements ResultSet
 
 
     protected ForkJoinPool getForkJoinPool() {
-        return forkJoinPool;
+        return Utils.getForkJoinPool();
     }
 
     @Override

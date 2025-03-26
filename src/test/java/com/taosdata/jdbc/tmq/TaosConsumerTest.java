@@ -103,6 +103,8 @@ public class TaosConsumerTest {
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
         properties.setProperty(TMQConstants.GROUP_ID, "withBean");
         properties.setProperty(TMQConstants.VALUE_DESERIALIZER, "com.taosdata.jdbc.tmq.ResultDeserializer");
+        properties.setProperty("fetch.max.wait.ms", "5000");
+        properties.setProperty("min.poll.rows", "1000");
 
         try (TaosConsumer<ResultBean> consumer = new TaosConsumer<>(properties)) {
             consumer.subscribe(Collections.singletonList(topic));
@@ -133,6 +135,8 @@ public class TaosConsumerTest {
         // properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
         connection = DriverManager.getConnection(url, properties);
         statement = connection.createStatement();
+        statement.executeUpdate("drop topic if exists topic_ctb_column");
+        statement.executeUpdate("drop topic if exists topic_ctb_column_with_bean");
         statement.execute("drop database if exists " + dbName);
         statement.execute("create database if not exists " + dbName + " WAL_RETENTION_PERIOD 3650");
         statement.execute("use " + dbName);
@@ -147,8 +151,8 @@ public class TaosConsumerTest {
         try {
             if (connection != null) {
                 if (statement != null) {
-                    statement.executeUpdate("drop topic topic_ctb_column");
-                    statement.executeUpdate("drop topic topic_ctb_column_with_bean");
+                    statement.executeUpdate("drop topic if exists topic_ctb_column");
+                    statement.executeUpdate("drop topic if exists topic_ctb_column_with_bean");
                     statement.executeUpdate("drop database if exists " + dbName);
                     statement.close();
                 }
