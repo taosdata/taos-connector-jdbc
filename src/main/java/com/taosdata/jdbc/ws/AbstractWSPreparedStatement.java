@@ -1093,6 +1093,10 @@ public class AbstractWSPreparedStatement extends WSStatement implements TaosPrep
 
 
     public byte[] genData() throws SQLException {
+        if (!isTableInfoEmpty()){
+            tableInfoList.add(tableInfo);
+        }
+
         if (tableInfoList.isEmpty()) {
             throw new SQLException("batch data is empty");
         }

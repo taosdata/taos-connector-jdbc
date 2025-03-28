@@ -11,7 +11,7 @@ public class PrepareReq extends Payload {
     private long stmtId;
     private String sql;
     @JsonProperty("get_fields")
-    private boolean getFields = false;
+    private boolean getFields = true;
     public long getStmtId() {
         return stmtId;
     }
