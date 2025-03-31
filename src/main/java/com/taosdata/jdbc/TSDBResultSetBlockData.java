@@ -1,8 +1,8 @@
 package com.taosdata.jdbc;
 
+import com.google.common.collect.Lists;
 import com.taosdata.jdbc.utils.DataTypeConverUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
-import com.taosdata.jdbc.utils.Utils;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
@@ -33,7 +33,7 @@ public class TSDBResultSetBlockData {
 
     public TSDBResultSetBlockData(List<ColumnMetaData> colMeta, int numOfCols, int timestampPrecision) {
         this.columnMetaDataList = colMeta;
-        this.colData = new ArrayList<>(numOfCols);
+        this.colData = Lists.newArrayListWithCapacity(numOfCols);
         this.timestampPrecision = timestampPrecision;
     }
 
@@ -84,11 +84,13 @@ public class TSDBResultSetBlockData {
     public void reset() {
         this.rowIndex = 0;
     }
+
     public void setByteArray(byte[] value) {
         byte[] copy = new byte[value.length];
         System.arraycopy(value, 0, copy, 0, value.length);
         buffer = ByteBuffer.wrap(copy);
     }
+
     public void doSetByteArray() {
         buffer.order(ByteOrder.LITTLE_ENDIAN);
         int bitMapOffset = BitmapLen(numOfRows);
@@ -151,7 +153,7 @@ public class TSDBResultSetBlockData {
                     break;
                 }
                 case TSDB_DATA_TYPE_BIGINT:
-                case TSDB_DATA_TYPE_UBIGINT:{
+                case TSDB_DATA_TYPE_UBIGINT: {
                     length = bitMapOffset;
                     byte[] tmp = new byte[bitMapOffset];
                     buffer.get(tmp);
@@ -210,7 +212,7 @@ public class TSDBResultSetBlockData {
                 case TSDB_DATA_TYPE_BINARY:
                 case TSDB_DATA_TYPE_JSON:
                 case TSDB_DATA_TYPE_VARBINARY:
-                case TSDB_DATA_TYPE_GEOMETRY:{
+                case TSDB_DATA_TYPE_GEOMETRY: {
                     length = numOfRows * 4;
                     List<Integer> offset = new ArrayList<>(numOfRows);
                     for (int m = 0; m < numOfRows; m++) {
@@ -264,15 +266,14 @@ public class TSDBResultSetBlockData {
         semaphore.release();
     }
 
-    public void doneWithNoData(){
+    public void doneWithNoData() {
         semaphore.release();
     }
 
     public void waitTillOK() throws SQLException {
         try {
             // must be ok When the CPU has idle time
-            if (!semaphore.tryAcquire(5, TimeUnit.SECONDS))
-            {
+            if (!semaphore.tryAcquire(5, TimeUnit.SECONDS)) {
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "FETCH DATA TIME OUT");
             }
         } catch (InterruptedException e) {
@@ -323,7 +324,7 @@ public class TSDBResultSetBlockData {
             return Boolean.FALSE;
         }
 
-        if (obj instanceof  Boolean) {
+        if (obj instanceof Boolean) {
             return (Boolean) obj;
         }
 
@@ -415,7 +416,7 @@ public class TSDBResultSetBlockData {
             case TSDB_DATA_TYPE_TIMESTAMP:
             case TSDB_DATA_TYPE_JSON:
             case TSDB_DATA_TYPE_VARBINARY:
-            case TSDB_DATA_TYPE_GEOMETRY:{
+            case TSDB_DATA_TYPE_GEOMETRY: {
                 return source;
             }
             case TSDB_DATA_TYPE_UTINYINT: {
