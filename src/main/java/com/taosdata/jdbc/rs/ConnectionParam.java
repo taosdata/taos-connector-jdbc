@@ -7,14 +7,17 @@ import com.taosdata.jdbc.utils.HttpClientPoolUtil;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.Transport;
+import io.netty.buffer.ByteBuf;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.time.DateTimeException;
 import java.time.ZoneId;
 import java.util.Properties;
+import java.util.function.Consumer;
 
 public class ConnectionParam {
     private String host;
@@ -47,6 +50,9 @@ public class ConnectionParam {
     private boolean strictCheck;
     private int retryTimes;
     private String asyncWrite;
+
+    private Consumer<String> textMessageHandler;
+    private Consumer<ByteBuf> binaryMessageHandler;
     static public final int CONNECT_MODE_BI = 1;
 
     private ConnectionParam(Builder builder) {
@@ -78,6 +84,8 @@ public class ConnectionParam {
         this.strictCheck = builder.strictCheck;
         this.retryTimes = builder.retryTimes;
         this.asyncWrite = builder.asyncWrite;
+        this.textMessageHandler = builder.textMessageHandler;
+        this.binaryMessageHandler = builder.binaryMessageHandler;
     }
 
     public void setHost(String host) {
@@ -291,6 +299,23 @@ public class ConnectionParam {
     public String getAsyncWrite() {
         return asyncWrite;
     }
+
+    public Consumer<String> getTextMessageHandler() {
+        return textMessageHandler;
+    }
+
+    public void setTextMessageHandler(Consumer<String> textMessageHandler) {
+        this.textMessageHandler = textMessageHandler;
+    }
+
+    public Consumer<ByteBuf> getBinaryMessageHandler() {
+        return binaryMessageHandler;
+    }
+
+    public void setBinaryMessageHandler(Consumer<ByteBuf> binaryMessageHandler) {
+        this.binaryMessageHandler = binaryMessageHandler;
+    }
+
     public static ConnectionParam getParamWs(Properties perperties) throws SQLException {
         ConnectionParam connectionParam = getParam(perperties);
         if (connectionParam.getTz() == null
@@ -491,6 +516,9 @@ public class ConnectionParam {
         private int retryTimes;
         private String asyncWrite;
 
+        private Consumer<String> textMessageHandler;
+        private Consumer<ByteBuf> binaryMessageHandler;
+
         public Builder(String host, String port) {
             this.host = host;
             this.port = port;
@@ -616,6 +644,15 @@ public class ConnectionParam {
 
         public Builder setAsyncWrite(String asyncWrite) {
             this.asyncWrite = asyncWrite;
+            return this;
+        }
+        public Builder setTextMessageHandler(Consumer<String> textMessageHandler) {
+            this.textMessageHandler = textMessageHandler;
+            return this;
+        }
+
+        public Builder setBinaryMessageHandler(Consumer<ByteBuf> binaryMessageHandler) {
+            this.binaryMessageHandler = binaryMessageHandler;
             return this;
         }
         public ConnectionParam build() {

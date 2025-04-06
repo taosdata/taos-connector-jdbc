@@ -59,15 +59,14 @@ public class WSConsumer<V> implements Consumer<V> {
                 log.error("Error processing message", e);
             }
         });
-        transport.setBinaryMessageHandler(byteBuffer -> {
-            byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
-            byteBuffer.position(26);
-            // request_id
-            long id = byteBuffer.getLong();
-            byteBuffer.position(8);
+        transport.setBinaryMessageHandler(byteBuf -> {
+            byteBuf.order(ByteOrder.LITTLE_ENDIAN);
+            byteBuf.readerIndex(26);
+            long id = byteBuf.readLongLE();
+            byteBuf.readerIndex(8);
             FutureResponse remove = inFlightRequest.remove(ConsumerAction.FETCH_RAW_DATA.getAction(), id);
             if (null != remove) {
-                FetchRawBlockResp fetchBlockResp = new FetchRawBlockResp(byteBuffer);
+                FetchRawBlockResp fetchBlockResp = new FetchRawBlockResp(byteBuf.nioBuffer());
                 remove.getFuture().complete(fetchBlockResp);
             }
         });

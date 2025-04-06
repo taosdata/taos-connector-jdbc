@@ -71,11 +71,8 @@ public abstract class AbstractDriver implements Driver {
                 log.error("Error serializing ConnectionParam", e);
             }
         }
-
         InFlightRequest inFlightRequest = new InFlightRequest(param.getRequestTimeout(), param.getMaxRequest());
-        Transport transport = new Transport(WSFunction.WS, param, inFlightRequest);
-
-        transport.setTextMessageHandler(message -> {
+        param.setTextMessageHandler(message -> {
             try {
                 log.trace("received message: {}", message);
                 JsonNode jsonObject = JsonUtil.getObjectReader().readTree(message);
@@ -90,17 +87,21 @@ public abstract class AbstractDriver implements Driver {
                 log.error("Error processing message", e);
             }
         });
-        transport.setBinaryMessageHandler(byteBuffer -> {
-            byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
-            byteBuffer.position(26);
-            long id = byteBuffer.getLong();
-            byteBuffer.position(8);
+
+        param.setBinaryMessageHandler(byteBuf -> {
+            byteBuf.order(ByteOrder.LITTLE_ENDIAN);
+            byteBuf.readerIndex(26);
+            long id = byteBuf.readLongLE();
+            byteBuf.readerIndex(8);
+
             FutureResponse remove = inFlightRequest.remove(Action.FETCH_BLOCK_NEW.getAction(), id);
             if (null != remove) {
-                FetchBlockNewResp fetchBlockResp = new FetchBlockNewResp(byteBuffer);
+                FetchBlockNewResp fetchBlockResp = new FetchBlockNewResp(byteBuf.nioBuffer());
                 remove.getFuture().complete(fetchBlockResp);
             }
         });
+
+        Transport transport = new Transport(WSFunction.WS, param, inFlightRequest);
 
         transport.checkConnection(param.getConnectTimeout());
 

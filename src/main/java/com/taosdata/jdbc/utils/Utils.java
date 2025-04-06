@@ -3,8 +3,12 @@ package com.taosdata.jdbc.utils;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
+import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.ws.entity.ConnectReq;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
 
 import java.lang.reflect.Constructor;
 import java.net.InetAddress;
@@ -29,6 +33,8 @@ public class Utils {
 
     private static final ForkJoinPool forkJoinPool = new ForkJoinPool();
     private static final Pattern ptn = Pattern.compile(".*?'");
+
+    private static EventLoopGroup eventLoopGroup = null;
     public static String escapeSingleQuota(String origin) {
         Matcher m = ptn.matcher(origin);
         StringBuilder sb = new StringBuilder();
@@ -204,6 +210,26 @@ public class Utils {
                 rs.next();
                 return rs.getInt(1);
             }
+        }
+    }
+
+    public static void initEventLoopGroup() {
+        // Initialize the EventLoopGroup
+        // This is just a placeholder, you need to implement the actual initialization logic
+        // For example, you might want to use NioEventLoopGroup or another implementation
+        // based on your requirements.
+        // Example:
+        //
+        EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
+    }
+    public static EventLoopGroup getEventLoopGroup() {
+        return eventLoopGroup;
+    }
+
+    public static void finalizeEventLoopGroup() {
+        if (eventLoopGroup != null) {
+            eventLoopGroup.shutdownGracefully();
+            eventLoopGroup = null;
         }
     }
 }

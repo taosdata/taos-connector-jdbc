@@ -7,8 +7,10 @@ import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.CompletableFutureTimeout;
 import com.taosdata.jdbc.utils.StringUtils;
-import com.taosdata.jdbc.ws.entity.*;
-import org.java_websocket.exceptions.WebsocketNotConnectedException;
+import com.taosdata.jdbc.ws.entity.CommonResp;
+import com.taosdata.jdbc.ws.entity.Request;
+import com.taosdata.jdbc.ws.entity.Response;
+import io.netty.buffer.ByteBuf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,7 +20,6 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.security.cert.X509Certificate;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -28,8 +29,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
-
-import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT;
 
 /**
  * send message
@@ -54,7 +53,9 @@ public class Transport implements AutoCloseable {
     public static final byte[] EMPTY_BYTE_ARRAY = new byte[0];
 
     private int currentNodeIndex = 0;
-    public Transport(WSFunction function, ConnectionParam param, InFlightRequest inFlightRequest) throws SQLException {
+    public Transport(WSFunction function,
+                     ConnectionParam param,
+                     InFlightRequest inFlightRequest) throws SQLException {
         WSClient master = WSClient.getInstance(param, function, this);
         WSClient slave = WSClient.getSlaveInstance(param, function, this);
 
@@ -82,11 +83,11 @@ public class Transport implements AutoCloseable {
                 sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
                 // get SSLContext SocketFactory
                 final SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
-                master.setSocketFactory(sslSocketFactory);
-
-                if (slave != null){
-                    slave.setSocketFactory(sslSocketFactory);
-                }
+//                master.setSocketFactory(sslSocketFactory);
+//
+//                if (slave != null){
+//                    slave.setSocketFactory(sslSocketFactory);
+//                }
             } catch (Exception e){
                 throw new SQLException("setSocketFactory failed ", e);
             }
@@ -105,15 +106,9 @@ public class Transport implements AutoCloseable {
     }
 
     public void setTextMessageHandler(Consumer<String> textMessageHandler) {
-        for (WSClient wsClient : clientArr){
-            wsClient.setTextMessageHandler(textMessageHandler);
-        }
     }
 
-    public void setBinaryMessageHandler(Consumer<ByteBuffer> binaryMessageHandler) {
-        for (WSClient wsClient : clientArr) {
-            wsClient.setBinaryMessageHandler(binaryMessageHandler);
-        }
+    public void setBinaryMessageHandler(Consumer<ByteBuf> binaryMessageHandler) {
     }
 
     public void setTimeout(long timeout) {
@@ -368,43 +363,43 @@ public class Transport implements AutoCloseable {
         closed = true;
         inFlightRequest.close();
         for (WSClient wsClient : clientArr){
-            wsClient.shutdown();
+            wsClient.close();
         }
     }
 
     public void checkConnection(int connectTimeout) throws SQLException {
-        try {
-            if (WSConnection.g_FirstConnection && clientArr.size() > 1) {
-                // 测试所有节点，如果连接失败，直接异常
-                for (WSClient wsClient : clientArr){
-                    if (!wsClient.connectBlocking(connectTimeout, TimeUnit.MILLISECONDS)) {
-                        close();
-                        throw TSDBError.createSQLException(ERROR_CONNECTION_TIMEOUT,
-                                "can't create connection with server " + wsClient.serverUri.toString() + " within: " + connectTimeout + " milliseconds");
-                    }
-                    log.debug("connect success to {}", StringUtils.getBasicUrl(wsClient.serverUri));
-                }
-
-                // 断开其他节点
-                for (int i = 0; i < clientArr.size(); i++){
-                    if (i != currentNodeIndex) {
-                        clientArr.get(i).closeBlocking();
-                        log.debug("disconnect success to {}", StringUtils.getBasicUrl(clientArr.get(i).serverUri));
-                    }
-                }
-            } else {
-                if (!clientArr.get(currentNodeIndex).connectBlocking(connectTimeout, TimeUnit.MILLISECONDS)) {
-                    close();
-                    throw TSDBError.createSQLException(ERROR_CONNECTION_TIMEOUT,
-                            "can't create connection with server within: " + connectTimeout + " milliseconds");
-                }
-                log.debug("connect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri));
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            close();
-            throw new SQLException("create websocket connection has been Interrupted ", e);
-        }
+//        try {
+//            if (WSConnection.g_FirstConnection && clientArr.size() > 1) {
+//                // 测试所有节点，如果连接失败，直接异常
+//                for (WSClient wsClient : clientArr){
+//                    if (!wsClient.connectBlocking(connectTimeout, TimeUnit.MILLISECONDS)) {
+//                        close();
+//                        throw TSDBError.createSQLException(ERROR_CONNECTION_TIMEOUT,
+//                                "can't create connection with server " + wsClient.serverUri.toString() + " within: " + connectTimeout + " milliseconds");
+//                    }
+//                    log.debug("connect success to {}", StringUtils.getBasicUrl(wsClient.serverUri));
+//                }
+//
+//                // 断开其他节点
+//                for (int i = 0; i < clientArr.size(); i++){
+//                    if (i != currentNodeIndex) {
+//                        clientArr.get(i).closeBlocking();
+//                        log.debug("disconnect success to {}", StringUtils.getBasicUrl(clientArr.get(i).serverUri));
+//                    }
+//                }
+//            } else {
+//                if (!clientArr.get(currentNodeIndex).connectBlocking(connectTimeout, TimeUnit.MILLISECONDS)) {
+//                    close();
+//                    throw TSDBError.createSQLException(ERROR_CONNECTION_TIMEOUT,
+//                            "can't create connection with server within: " + connectTimeout + " milliseconds");
+//                }
+//                log.debug("connect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri));
+//            }
+//        } catch (InterruptedException e) {
+//            Thread.currentThread().interrupt();
+//            close();
+//            throw new SQLException("create websocket connection has been Interrupted ", e);
+//        }
     }
 
     public void shutdown() {
@@ -425,43 +420,43 @@ public class Transport implements AutoCloseable {
 
     public boolean doReconnectCurNode() throws SQLException {
         boolean reconnected = false;
-        for (int retryTimes = 0; retryTimes < connectionParam.getReconnectRetryCount(); retryTimes++) {
-            try {
-                reconnected = clientArr.get(currentNodeIndex).reconnectBlocking();
-                if (reconnected) {
-                    break;
-                }
-                Thread.sleep(connectionParam.getReconnectIntervalMs());
-            } catch (Exception e) {
-                log.error("try connect remote server failed!", e);
-            }
-        }
+//        for (int retryTimes = 0; retryTimes < connectionParam.getReconnectRetryCount(); retryTimes++) {
+//            try {
+//                reconnected = clientArr.get(currentNodeIndex).reconnectBlocking();
+//                if (reconnected) {
+//                    break;
+//                }
+//                Thread.sleep(connectionParam.getReconnectIntervalMs());
+//            } catch (Exception e) {
+//                log.error("try connect remote server failed!", e);
+//            }
+//        }
         return reconnected;
     }
 
     public boolean reconnectCurNode() throws SQLException {
-        for (int retryTimes = 0; retryTimes < connectionParam.getReconnectRetryCount(); retryTimes++) {
-            try {
-                boolean reconnected = clientArr.get(currentNodeIndex).reconnectBlocking();
-                if (reconnected) {
-                    // send con msgs
-                    ConnectReq connectReq = new ConnectReq(connectionParam);
-
-                    ConnectResp auth;
-                    auth = (ConnectResp) sendWithoutRetry(new Request(Action.CONN.getAction(), connectReq));
-
-                    if (Code.SUCCESS.getCode() == auth.getCode()) {
-                        return true;
-                    } else {
-                        clientArr.get(currentNodeIndex).closeBlocking();
-                        log.error("reconnect failed, code: {}, msg: {}", auth.getCode(), auth.getMessage());
-                    }
-                }
-                Thread.sleep(connectionParam.getReconnectIntervalMs());
-            } catch (Exception e) {
-                log.error("try connect remote server failed!", e);
-            }
-        }
+//        for (int retryTimes = 0; retryTimes < connectionParam.getReconnectRetryCount(); retryTimes++) {
+//            try {
+//                boolean reconnected = clientArr.get(currentNodeIndex).reconnectBlocking();
+//                if (reconnected) {
+//                    // send con msgs
+//                    ConnectReq connectReq = new ConnectReq(connectionParam);
+//
+//                    ConnectResp auth;
+//                    auth = (ConnectResp) sendWithoutRetry(new Request(Action.CONN.getAction(), connectReq));
+//
+//                    if (Code.SUCCESS.getCode() == auth.getCode()) {
+//                        return true;
+//                    } else {
+//                        clientArr.get(currentNodeIndex).closeBlocking();
+//                        log.error("reconnect failed, code: {}, msg: {}", auth.getCode(), auth.getMessage());
+//                    }
+//                }
+//                Thread.sleep(connectionParam.getReconnectIntervalMs());
+//            } catch (Exception e) {
+//                log.error("try connect remote server failed!", e);
+//            }
+//        }
         return false;
     }
 
