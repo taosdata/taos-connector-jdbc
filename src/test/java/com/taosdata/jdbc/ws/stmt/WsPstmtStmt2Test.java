@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.TSWSPreparedStatement;
 import org.junit.*;
 
@@ -10,7 +11,7 @@ import java.util.Random;
 
 @FixMethodOrder
 public class WsPstmtStmt2Test {
-    String host = "127.0.0.1";
+    String host = "localhost";
     String db_name = "ws_prepare";
     String tableName = "wpt";
     String superTable = "wpt_st";
@@ -64,20 +65,13 @@ public class WsPstmtStmt2Test {
             // execute column
             pstmt.columnDataExecuteBatch();
             // you can check exeResult here
-            System.out.println("Successfully inserted " + (numOfSubTable * numOfRow) + " rows to power.meters.");
-        } catch (Exception ex) {
-            // please refer to the JDBC specifications for detailed exceptions info
-            System.out.printf("Failed to insert to table meters using stmt, %sErrMessage: %s%n",
-                    ex instanceof SQLException ? "ErrCode: " + ((SQLException) ex).getErrorCode() + ", " : "",
-                    ex.getMessage());
-            // Print stack trace for context in examples. Use logging in production.
-            ex.printStackTrace();
-            throw ex;
+            Assert.assertEquals((numOfSubTable * numOfRow), Utils.getSqlRows(connection, db_name + "." + tableName));
         }
     }
 
     @Test
     public void testStmt2InsertExtend() throws SQLException {
+        createSubTables();
         String sql = "INSERT INTO " + db_name + "." + tableName + " (tbname, ts, current, voltage, phase) VALUES (?,?,?,?,?)";
 
         try (TSWSPreparedStatement pstmt = connection.prepareStatement(sql).unwrap(TSWSPreparedStatement.class)) {
@@ -116,15 +110,7 @@ public class WsPstmtStmt2Test {
             // execute column
             pstmt.columnDataExecuteBatch();
             // you can check exeResult here
-            System.out.println("Successfully inserted " + (numOfSubTable * numOfRow) + " rows to power.meters.");
-        } catch (Exception ex) {
-            // please refer to the JDBC specifications for detailed exceptions info
-            System.out.printf("Failed to insert to table meters using stmt, %sErrMessage: %s%n",
-                    ex instanceof SQLException ? "ErrCode: " + ((SQLException) ex).getErrorCode() + ", " : "",
-                    ex.getMessage());
-            // Print stack trace for context in examples. Use logging in production.
-            ex.printStackTrace();
-            throw ex;
+            Assert.assertEquals((numOfSubTable * numOfRow), Utils.getSqlRows(connection, db_name + "." + tableName));
         }
     }
 
@@ -159,14 +145,7 @@ public class WsPstmtStmt2Test {
             }
             // you can check exeResult here
             System.out.println("Successfully inserted " + (numOfSubTable * numOfRow) + " rows to power.meters.");
-        } catch (Exception ex) {
-            // please refer to the JDBC specifications for detailed exceptions info
-            System.out.printf("Failed to insert to table meters using stmt, %sErrMessage: %s%n",
-                    ex instanceof SQLException ? "ErrCode: " + ((SQLException) ex).getErrorCode() + ", " : "",
-                    ex.getMessage());
-            // Print stack trace for context in examples. Use logging in production.
-            ex.printStackTrace();
-            throw ex;
+            Assert.assertEquals((numOfSubTable * numOfRow), Utils.getSqlRows(connection, db_name + "." + tableName));
         }
     }
 
@@ -176,15 +155,14 @@ public class WsPstmtStmt2Test {
 
         try (TSWSPreparedStatement pstmt = connection.prepareStatement(sql).unwrap(TSWSPreparedStatement.class)) {
 
+            long current = System.currentTimeMillis();
             for (int i = 1; i <= 10; i++) {
                 // set tags
                 pstmt.setTagInt(0, 1);
                 pstmt.setTagString(1, "location_" + 1);
 
-                // set columns
-                long current = System.currentTimeMillis();
                 for (int j = 0; j < numOfRow; j++) {
-                    pstmt.setTimestamp(1, new Timestamp(current + j));
+                    pstmt.setTimestamp(1, new Timestamp(current++));
                     pstmt.setFloat(2, random.nextFloat() * 30);
                     pstmt.setInt(3, random.nextInt(300));
                     pstmt.setFloat(4, random.nextFloat());
@@ -197,15 +175,7 @@ public class WsPstmtStmt2Test {
                 }
             }
             // you can check exeResult here
-            System.out.println("Successfully inserted " + (numOfSubTable * numOfRow) + " rows to power.meters.");
-        } catch (Exception ex) {
-            // please refer to the JDBC specifications for detailed exceptions info
-            System.out.printf("Failed to insert to table meters using stmt, %sErrMessage: %s%n",
-                    ex instanceof SQLException ? "ErrCode: " + ((SQLException) ex).getErrorCode() + ", " : "",
-                    ex.getMessage());
-            // Print stack trace for context in examples. Use logging in production.
-            ex.printStackTrace();
-            throw ex;
+            Assert.assertEquals((numOfSubTable * numOfRow), Utils.getSqlRows(connection, db_name + "." + tableName));
         }
     }
 
@@ -219,7 +189,7 @@ public class WsPstmtStmt2Test {
                 // set columns
                 long current = System.currentTimeMillis();
                 for (int j = 0; j < numOfRow; j++) {
-                    pstmt.setString(1, "d_bind_" + i);
+                    pstmt.setString(1, "d_bind_中国人" + i);
                     pstmt.setInt(2, i);
                     pstmt.setString(3, "location_" + i);
 
@@ -235,18 +205,54 @@ public class WsPstmtStmt2Test {
                     Assert.assertEquals(ele, Statement.SUCCESS_NO_INFO);
                 }
             }
-            // you can check exeResult here
-            System.out.println("Successfully inserted " + (numOfSubTable * numOfRow) + " rows to power.meters.");
+            Assert.assertEquals((numOfSubTable * numOfRow), Utils.getSqlRows(connection, db_name + "." + tableName));
+            Assert.assertEquals((numOfRow), Utils.getSqlRows(connection, db_name + "." + "`d_bind_中国人1`"));
+        }
+    }
+
+
+    @Test
+    public void testStmt2InsertStdApiTableExist() throws SQLException {
+        // make sure sub table exists
+        try (Statement stmt = connection.createStatement()) {
+            for (int i = 1; i <= numOfSubTable; i++) {
+                stmt.execute("create table if not exists d_bind_" + i + " using " + db_name + "." + tableName + " tags(" + i + ", \"location_" + i + "\")");
+            }
         } catch (Exception ex) {
-            // please refer to the JDBC specifications for detailed exceptions info
-            System.out.printf("Failed to insert to table meters using stmt, %sErrMessage: %s%n",
+            System.out.printf("Failed to create sub table, %sErrMessage: %s%n",
                     ex instanceof SQLException ? "ErrCode: " + ((SQLException) ex).getErrorCode() + ", " : "",
                     ex.getMessage());
-            // Print stack trace for context in examples. Use logging in production.
             ex.printStackTrace();
             throw ex;
         }
+
+        String sql = "INSERT INTO " + db_name + "." + tableName + "(tbname, ts, current, voltage, phase) VALUES (?,?,?,?,?)";
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+
+            for (int i = 1; i <= numOfSubTable; i++) {
+                // set columns
+                long current = System.currentTimeMillis();
+                for (int j = 0; j < numOfRow; j++) {
+                    pstmt.setString(1, "d_bind_" + i);
+
+                    pstmt.setTimestamp(2, new Timestamp(current + j));
+                    pstmt.setFloat(3, random.nextFloat() * 30);
+                    pstmt.setInt(4, random.nextInt(300));
+                    pstmt.setFloat(5, random.nextFloat());
+                    pstmt.addBatch();
+                }
+                int[] exeResult = pstmt.executeBatch();
+
+                for (int ele : exeResult){
+                    Assert.assertEquals(ele, Statement.SUCCESS_NO_INFO);
+                }
+            }
+            // you can check exeResult here
+            Assert.assertEquals((numOfSubTable * numOfRow), Utils.getSqlRows(connection, db_name + "." + tableName));
+        }
     }
+
     @Test
     public void testStmt2InsertStdApiWithEscapeChar() throws SQLException {
         String sql = "INSERT INTO `" + db_name + "`.`" + tableName + "` (tbname, groupId, location, ts, current, voltage, phase) VALUES (?,?,?,?,?,?,?)";
@@ -273,35 +279,24 @@ public class WsPstmtStmt2Test {
                     Assert.assertEquals(ele, Statement.SUCCESS_NO_INFO);
                 }
             }
-            // you can check exeResult here
-            System.out.println("Successfully inserted " + (numOfSubTable * numOfRow) + " rows to power.meters.");
-        } catch (Exception ex) {
-            // please refer to the JDBC specifications for detailed exceptions info
-            System.out.printf("Failed to insert to table meters using stmt, %sErrMessage: %s%n",
-                    ex instanceof SQLException ? "ErrCode: " + ((SQLException) ex).getErrorCode() + ", " : "",
-                    ex.getMessage());
-            // Print stack trace for context in examples. Use logging in production.
-            ex.printStackTrace();
-            throw ex;
+            Assert.assertEquals((numOfSubTable * numOfRow), Utils.getSqlRows(connection, db_name + "." + tableName));
         }
     }
 
-    @Test
-    public void testStmt2InsertStdApiNoTag() throws SQLException {
-        // create sub table first
+    private void createSubTables() throws SQLException {
         String createSql = "create table";
         for (int i = 1; i <= numOfSubTable; i++) {
             createSql += " if not exists d_bind_" + i + " using " + db_name + "." + tableName + " tags(" + i + ", \"location_" + i + "\")";
         }
         try (Statement stmt = connection.createStatement()) {
             stmt.execute(createSql);
-        } catch (Exception ex) {
-            System.out.printf("Failed to create sub table, %sErrMessage: %s%n",
-                    ex instanceof SQLException ? "ErrCode: " + ((SQLException) ex).getErrorCode() + ", " : "",
-                    ex.getMessage());
-            ex.printStackTrace();
-            throw ex;
         }
+    }
+
+    @Test
+    public void testStmt2InsertStdApiNoTag() throws SQLException {
+        // create sub table first
+        createSubTables();
 
         String sql = "INSERT INTO " + db_name + "." + tableName + "(tbname, ts, current, voltage, phase) VALUES (?,?,?,?,?)";
 
@@ -325,16 +320,24 @@ public class WsPstmtStmt2Test {
                     Assert.assertEquals(ele, Statement.SUCCESS_NO_INFO);
                 }
             }
-            // you can check exeResult here
-            System.out.println("Successfully inserted " + (numOfSubTable * numOfRow) + " rows to power.meters.");
-        } catch (Exception ex) {
-            // please refer to the JDBC specifications for detailed exceptions info
-            System.out.printf("Failed to insert to table meters using stmt, %sErrMessage: %s%n",
-                    ex instanceof SQLException ? "ErrCode: " + ((SQLException) ex).getErrorCode() + ", " : "",
-                    ex.getMessage());
-            // Print stack trace for context in examples. Use logging in production.
-            ex.printStackTrace();
-            throw ex;
+            Assert.assertEquals((numOfSubTable * numOfRow), Utils.getSqlRows(connection, db_name + "." + tableName));
+        }
+
+        String sql2 = "select * from " + db_name + "." + tableName + " where ts > ? and ts < ? order by ts desc limit ?, ?";
+
+        try (TSWSPreparedStatement pstmt = connection.prepareStatement(sql2).unwrap(TSWSPreparedStatement.class)) {
+            pstmt.setTimestamp(0, new Timestamp(System.currentTimeMillis() - 1000));
+            pstmt.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
+            pstmt.setInt(2, 5);
+            pstmt.setInt(3, 6);
+            ResultSet rs = pstmt.executeQuery();
+
+            int rows = 0;
+            while (rs.next()) {
+                rows++;
+                System.out.println("ts-1: " + rs.getTimestamp(1) + ", current: " + rs.getFloat(2) + ", voltage: " + rs.getInt(3) + ", phase: " + rs.getFloat(4));
+            }
+            Assert.assertEquals(6, rows);
         }
     }
 

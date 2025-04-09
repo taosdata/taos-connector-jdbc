@@ -1,7 +1,6 @@
 package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.enums.DataType;
-import com.taosdata.jdbc.utils.DataTypeUtil;
 
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -156,7 +155,7 @@ public class TSDBResultSetMetaData extends WrapperImpl implements ResultSetMetaD
     }
 
     public String getColumnClassName(int column) throws SQLException {
-        int columnType = getColumnType(column);
-        return DataTypeUtil.getColumnClassName(columnType);
+        int type = this.colMetaDataList.get(column - 1).getColType();
+        return DataType.convertTaosType2DataType(type).getClassName();
     }
 }

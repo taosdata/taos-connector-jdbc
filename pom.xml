@@ -3,13 +3,13 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.taosdata.jdbc</groupId>
     <artifactId>taos-jdbcdriver</artifactId>
-    <version>3.5.1</version>
+    <version>3.6.0</version>
 
     <packaging>jar</packaging>
     <name>JDBCDriver</name>
     <url>https://github.com/taosdata/taos-connector-jdbc</url>
 
-    <description>TDengine JDBC Driver</description>
+    <description>The official TDengine JDBC connector</description>
     <licenses>
         <license>
             <name>MIT License</name>
@@ -38,12 +38,16 @@
         <java.version>1.8</java.version>
         <maven-compiler-plugin.version>3.6.0</maven-compiler-plugin.version>
         <jackson.version>2.18.0</jackson.version>
+        <httpclient.version>4.5.13</httpclient.version>
+        <guava.version>32.1.3-jre</guava.version>
+        <Java-WebSocket.version>1.5.4</Java-WebSocket.version>
+        <junit.version>4.13.2</junit.version>
     </properties>
     <dependencies>
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
-            <version>4.5.13</version>
+            <version>${httpclient.version}</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
@@ -58,17 +62,17 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>32.1.3-jre</version>
+            <version>${guava.version}</version>
         </dependency>
         <dependency>
             <groupId>org.java-websocket</groupId>
             <artifactId>Java-WebSocket</artifactId>
-            <version>1.5.4</version>
+            <version>${Java-WebSocket.version}</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.13.2</version>
+            <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

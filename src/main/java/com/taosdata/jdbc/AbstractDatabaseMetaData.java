@@ -1,5 +1,6 @@
 package com.taosdata.jdbc;
 
+import com.google.common.collect.Lists;
 import com.taosdata.jdbc.enums.DataType;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.StringUtils;
@@ -616,13 +617,13 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
         if (connection instanceof WSConnection) {
             WSConnection wsConnection = (WSConnection) connection;
             //BI模式，只查询用户表，只查表，不查询子表
-            if (wsConnection.getParam().getConnectMode() == ConnectionParam.CONNECT_MODE_BI){
+            if (wsConnection.getParam().getConnectMode() == ConnectionParam.CONNECT_MODE_BI) {
                 dbHelperStr = "user";
                 tableHelperStr = "normal ";
             }
         }
 
-        if (!StringUtils.isEmpty(catalog) && !isAvailableCatalog(connection, catalog)){
+        if (!StringUtils.isEmpty(catalog) && !isAvailableCatalog(connection, catalog)) {
             return new EmptyResultSet();
         }
 
@@ -733,8 +734,8 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
         resultSet.setColumnMetaDataList(buildTableTypesColumnMetadataList());
 
         // set up rowDataList
-        List<TSDBResultSetRowData> rowDataList = new ArrayList<>();
-        for (String tableType : tableTypeSet){
+        List<TSDBResultSetRowData> rowDataList = Lists.newArrayListWithExpectedSize(tableTypeSet.size());
+        for (String tableType : tableTypeSet) {
             TSDBResultSetRowData rowData = new TSDBResultSetRowData(1);
             rowData.setStringValue(1, tableType);
             rowDataList.add(rowData);
@@ -777,13 +778,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
             while (databases.next()) {
                 String name = databases.getString("stable_name");
                 String dbName = databases.getString("db_name");
-                Set<String> stables;
-                if (result.containsKey(dbName)) {
-                    stables = result.get(dbName);
-                } else {
-                    stables = new HashSet<>();
-                    result.put(dbName, stables);
-                }
+                Set<String> stables = result.computeIfAbsent(dbName, k -> new HashSet<>());
                 stables.add(name);
             }
         }
@@ -802,14 +797,8 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
             while (tables.next()) {
                 String name = tables.getString("table_name");
                 String dbName = tables.getString("db_name");
-                if (result.containsKey(dbName)) {
-                    Set<String> set = result.get(dbName);
-                    set.add(name);
-                } else {
-                    Set<String> set = new HashSet<>();
-                    set.add(name);
-                    result.put(dbName, set);
-                }
+                Set<String> set = result.computeIfAbsent(dbName, k -> new HashSet<>());
+                set.add(name);
             }
         }
         return result;
@@ -827,13 +816,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
             while (databases.next()) {
                 String name = databases.getString("view_name");
                 String dbName = databases.getString("db_name");
-                Set<String> views;
-                if (result.containsKey(dbName)) {
-                    views = result.get(dbName);
-                } else {
-                    views = new HashSet<>();
-                    result.put(dbName, views);
-                }
+                Set<String> views = result.computeIfAbsent(dbName, k -> new HashSet<>());
                 views.add(name);
             }
         }
@@ -894,6 +877,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
     }
 
     Pattern pattern = Pattern.compile("\\((\\d+)\\)");
+
     // normal table or child table
     private void colResultSet2RowData(ResultSet rs, List<TSDBResultSetRowData> rowDataList, Map<String, String> precision) throws SQLException {
         int rowIndex = 0;
@@ -989,7 +973,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                     length = Integer.parseInt(matcher.group(1));
                 }
                 typeName = "NCHAR";
-            }else {
+            } else {
                 rowData.setIntValue(5, DataType.getDataType(typeName).getJdbcTypeValue());
                 length = 0;
             }
@@ -1146,7 +1130,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
 
                 List<Map<String, Set<String>>> mapList = new ArrayList<>(Arrays.asList(sTableMate, tableMate, viewMate));
 
-                for (Map<String, Set<String>> tmpMap : mapList){
+                for (Map<String, Set<String>> tmpMap : mapList) {
                     for (Map.Entry<String, Set<String>> dbs : tmpMap.entrySet()) {
                         for (String table : dbs.getValue()) {
                             try (Statement stmt = conn.createStatement();
@@ -1591,7 +1575,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
         if (conn instanceof WSConnection) {
             WSConnection wsConnection = (WSConnection) conn;
             //BI模式，只查询用户表，只查表，不查询子表
-            if (wsConnection.getParam().getConnectMode() == 1){
+            if (wsConnection.getParam().getConnectMode() == 1) {
                 dbHelperStr = "user";
             }
         }
@@ -1725,7 +1709,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
         return col4;
     }
 
-    private String generateDescribeSql(String dbName, String tableName) throws SQLException{
+    private String generateDescribeSql(String dbName, String tableName) throws SQLException {
         return "describe " + dbName + "." + getIdentifierQuoteString() + tableName + getIdentifierQuoteString();
     }
 }

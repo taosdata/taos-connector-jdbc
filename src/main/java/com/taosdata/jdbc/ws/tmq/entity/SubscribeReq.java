@@ -3,6 +3,8 @@ package com.taosdata.jdbc.ws.tmq.entity;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.taosdata.jdbc.ws.entity.Payload;
 
+import java.util.HashMap;
+
 public class SubscribeReq extends Payload {
     private String user;
     private String password;
@@ -21,10 +23,12 @@ public class SubscribeReq extends Payload {
     private String autoCommitIntervalMs;
     @JsonProperty("with_table_name")
     private String withTableName;
-
+    @JsonProperty("enable_batch_meta")
+    private String enableBatchMeta;
     private String tz;
     private String app;
     private String ip;
+    private HashMap<String, String> config = new HashMap<>();
 
     public String getUser() {
         return user;
@@ -130,4 +134,20 @@ public class SubscribeReq extends Payload {
         this.ip = ip;
     }
 
+    public String getEnableBatchMeta() {
+        return enableBatchMeta;
+    }
+
+    public void setEnableBatchMeta(String enableBatchMeta) {
+        this.enableBatchMeta = enableBatchMeta;
+    }
+
+
+    public HashMap<String, String> getConfig() {
+        return config;
+    }
+
+    public void setConfig(HashMap<String, String> config) {
+        this.config = config;
+    }
 }

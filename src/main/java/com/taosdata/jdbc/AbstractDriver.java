@@ -7,10 +7,11 @@ import com.fasterxml.jackson.databind.ObjectReader;
 import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.JsonUtil;
-import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.utils.StringUtils;
-import com.taosdata.jdbc.utils.Utils;
-import com.taosdata.jdbc.ws.*;
+import com.taosdata.jdbc.ws.FutureResponse;
+import com.taosdata.jdbc.ws.InFlightRequest;
+import com.taosdata.jdbc.ws.Transport;
+import com.taosdata.jdbc.ws.WSConnection;
 import com.taosdata.jdbc.ws.entity.*;
 import org.slf4j.LoggerFactory;
 

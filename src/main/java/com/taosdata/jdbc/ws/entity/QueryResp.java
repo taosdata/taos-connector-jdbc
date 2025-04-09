@@ -30,6 +30,11 @@ public class QueryResp extends CommonResp {
     @JsonProperty("fields_lengths")
     private int[] fieldsLengths;
 
+    @JsonProperty("fields_precisions")
+    private int[] fieldsPrecisions;
+    @JsonProperty("fields_scales")
+    private int[] fieldsScales;
+
     private int precision;
 
     public long getId() {
@@ -94,5 +99,21 @@ public class QueryResp extends CommonResp {
 
     public void setPrecision(int precision) {
         this.precision = precision;
+    }
+
+    public int[] getFieldsPrecisions() {
+        return fieldsPrecisions;
+    }
+
+    public void setFieldsPrecisions(int[] fieldsPrecisions) {
+        this.fieldsPrecisions = fieldsPrecisions;
+    }
+
+    public int[] getFieldsScales() {
+        return fieldsScales;
+    }
+
+    public void setFieldsScales(int[] fieldsScales) {
+        this.fieldsScales = fieldsScales;
     }
 }

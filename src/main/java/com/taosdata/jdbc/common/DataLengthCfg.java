@@ -11,8 +11,13 @@ public class DataLengthCfg {
             4,//TSDB_DATA_TYPE_FLOAT
             8,//TSDB_DATA_TYPE_DOUBLE
             null,
-            8//TSDB_DATA_TYPE_TIMESTAMP
-    };
+            8, //TSDB_DATA_TYPE_TIMESTAMP
+            null,
+            1, //TSDB_DATA_TYPE_UTINYINT
+            2, //TSDB_DATA_TYPE_USMALLINT
+            4, //TSDB_DATA_TYPE_UINT
+            8  //TSDB_DATA_TYPE_UBIGINT
+};
 
     public static Integer getDataLength(int dataType){
         if (dataType < dataLenArr.length){

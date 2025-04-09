@@ -6,32 +6,28 @@ import com.taosdata.jdbc.common.SerializeBlock;
 import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.CompletableFutureTimeout;
-import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.utils.StringUtils;
-import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.entity.*;
 import org.java_websocket.exceptions.WebsocketNotConnectedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.Socket;
-import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.security.cert.X509Certificate;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
-
-import javax.net.SocketFactory;
-import javax.net.ssl.*;
-import java.net.URI;
-import java.security.cert.X509Certificate;
 
 import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT;
 
@@ -46,9 +42,9 @@ public class Transport implements AutoCloseable {
     public static final int TSDB_CODE_RPC_NETWORK_UNAVAIL = 0x0B;
     public static final int TSDB_CODE_RPC_SOMENODE_NOT_CONNECTED = 0x20;
 
+    private AtomicInteger reconnectCount = new AtomicInteger(0);
 
-
-    private final ArrayList<WSClient> clientArr = new ArrayList<>();;
+    private final ArrayList<WSClient> clientArr = new ArrayList<>();
     private final InFlightRequest inFlightRequest;
     private long timeout;
     private volatile boolean  closed = false;
@@ -125,20 +121,27 @@ public class Transport implements AutoCloseable {
     }
 
     private void reconnect() throws SQLException {
-        for (int i = 0; i < clientArr.size() && this.connectionParam.isEnableAutoConnect(); i++){
-            boolean reconnected = reconnectCurNode();
-            if (reconnected){
-                log.debug("reconnect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri));
+        synchronized (this) {
+            if (isConnected()){
                 return;
             }
 
-            log.debug("reconnect failed to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri));
+            for (int i = 0; i < clientArr.size() && this.connectionParam.isEnableAutoConnect(); i++) {
+                boolean reconnected = reconnectCurNode();
+                if (reconnected) {
+                    reconnectCount.incrementAndGet();
+                    log.debug("reconnect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri));
+                    return;
+                }
 
-            currentNodeIndex =  (currentNodeIndex + 1) % clientArr.size();
+                log.debug("reconnect failed to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri));
+
+                currentNodeIndex = (currentNodeIndex + 1) % clientArr.size();
+            }
+
+            close();
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
         }
-
-        close();
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
     }
 
     private void tmqRethrowConnectionCloseException() throws SQLException {
@@ -307,7 +310,7 @@ public class Transport implements AutoCloseable {
             clientArr.get(currentNodeIndex).send(reqString);
         } catch (Exception e) {
             inFlightRequest.remove(request.getAction(), request.id());
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage() == null ? "" : e.getMessage());
         }
 
         CompletableFuture<Response> responseFuture = CompletableFutureTimeout.orTimeout(
@@ -460,5 +463,13 @@ public class Transport implements AutoCloseable {
             }
         }
         return false;
+    }
+
+    public int getReconnectCount() {
+        return reconnectCount.get();
+    }
+
+    public boolean isConnected() {
+        return clientArr.get(currentNodeIndex).isOpen();
     }
 }

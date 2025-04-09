@@ -56,6 +56,8 @@ public class WSConsumerTest {
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
         properties.setProperty(TMQConstants.GROUP_ID, "ws_map");
         properties.setProperty(TMQConstants.CONNECT_TYPE, "ws");
+        properties.setProperty("fetch.max.wait.ms", "5000");
+        properties.setProperty("min.poll.rows", "1000");
 
         try (TaosConsumer<Map<String, Object>> consumer = new TaosConsumer<>(properties)) {
             consumer.subscribe(Collections.singletonList(topic));
@@ -145,6 +147,8 @@ public class WSConsumerTest {
         statement.execute("use " + dbName);
         statement.execute("create stable if not exists " + superTable
                 + " (ts timestamp, c1 int, c2 float, c3 nchar(10), c4 binary(10), c5 bool) tags(t1 int)");
+
+
         statement.execute("create table if not exists ct0 using " + superTable + " tags(1000)");
         statement.execute("create table if not exists ct1 using " + superTable + " tags(2000)");
     }

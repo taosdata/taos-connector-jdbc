@@ -1,19 +1,20 @@
 package com.taosdata.jdbc.ws;
 
-import com.taosdata.jdbc.AbstractConnection;
-import com.taosdata.jdbc.TSDBDriver;
-import com.taosdata.jdbc.TSDBError;
-import com.taosdata.jdbc.TSDBErrorNumbers;
+import com.taosdata.jdbc.*;
+import com.taosdata.jdbc.enums.FeildBindType;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.rs.RestfulDatabaseMetaData;
 import com.taosdata.jdbc.utils.ReqId;
-import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.entity.*;
 import com.taosdata.jdbc.ws.entity.CommonResp;
 import com.taosdata.jdbc.ws.schemaless.InsertReq;
 import com.taosdata.jdbc.ws.schemaless.SchemalessAction;
+import com.taosdata.jdbc.ws.stmt2.entity.Field;
+import com.taosdata.jdbc.ws.stmt2.entity.RequestFactory;
+import com.taosdata.jdbc.ws.stmt2.entity.Stmt2PrepareResp;
+import com.taosdata.jdbc.ws.stmt2.entity.Stmt2Resp;
 
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
@@ -21,7 +22,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class WSConnection extends AbstractConnection {
@@ -59,17 +59,60 @@ public class WSConnection extends AbstractConnection {
         if (isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
 
-        if (this.getClientInfo(TSDBDriver.PROPERTY_KEY_DBNAME) != null)
+        if (this.getClientInfo(TSDBDriver.PROPERTY_KEY_DBNAME) != null) {
             database = this.getClientInfo(TSDBDriver.PROPERTY_KEY_DBNAME);
+        }
+
+        boolean fastWriteSql = false;
+        if (sql.startsWith("ASYNC_INSERT")){
+            sql = sql.substring("ASYNC_".length());
+            fastWriteSql = true;
+        }
 
         if (transport != null && !transport.isClosed()) {
-            return new TSWSPreparedStatement(transport,
-                    param,
-                    database,
-                    this,
-                    sql,
-                    idGenerator.getAndIncrement(),
-                    param.getZoneId());
+            long reqId = ReqId.getReqID();
+            Request request = com.taosdata.jdbc.ws.stmt2.entity.RequestFactory.generateInit(reqId, true, true);
+            Stmt2Resp resp = (Stmt2Resp) transport.send(request);
+            if (Code.SUCCESS.getCode() != resp.getCode()) {
+                throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
+            }
+            long stmtId = resp.getStmtId();
+            Request prepare = RequestFactory.generatePrepare(stmtId, reqId, sql);
+            Stmt2PrepareResp prepareResp = (Stmt2PrepareResp) transport.send(prepare);
+            if (Code.SUCCESS.getCode() != prepareResp.getCode()) {
+                Request close = RequestFactory.generateClose(stmtId, reqId);
+                transport.sendWithoutResponse(close);
+                throw new SQLException("(0x" + Integer.toHexString(prepareResp.getCode()) + "):" + prepareResp.getMessage());
+            }
+
+            boolean isInsert = prepareResp.isInsert();
+            boolean isSuperTable = false;
+            if (isInsert){
+                for (Field field : prepareResp.getFields()){
+                    if (field.getBindType() == FeildBindType.TAOS_FIELD_TBNAME.getValue()){
+                        isSuperTable = true;
+                        break;
+                    }
+                }
+            }
+
+            if ((fastWriteSql || "STMT".equalsIgnoreCase(param.getAsyncWrite())) && isInsert && isSuperTable) {
+                return new WSEWPreparedStatement(transport,
+                        param,
+                        database,
+                        this,
+                        sql,
+                        idGenerator.getAndIncrement(),
+                        prepareResp);
+            } else {
+                return new TSWSPreparedStatement(transport,
+                        param,
+                        database,
+                        this,
+                        sql,
+                        idGenerator.getAndIncrement(),
+                        prepareResp);
+            }
         } else {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
         }

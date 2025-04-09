@@ -56,7 +56,7 @@ public class WSVarbinaryTest {
 
         ArrayList<byte[]> list1 = new ArrayList<>();
         list1.add(expectedArray);
-        preparedStatement.setVarbinary(2, list1, 20);
+        preparedStatement.setVarbinary(1, list1, 20);
 
         preparedStatement.columnDataAddBatch();
         preparedStatement.columnDataExecuteBatch();

@@ -4,6 +4,7 @@ import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.*;
 
+import java.math.BigInteger;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -156,7 +157,7 @@ public class TSWSPreparedStatementTest {
             for (int i = 0; i < numOfRows; i++) {
                 ts.add(System.currentTimeMillis() + i);
             }
-            s.setTimestamp(1, ts);
+            s.setTimestamp(0, ts);
 
             int random = 10 + r.nextInt(5);
             ArrayList<String> s2 = new ArrayList<>();
@@ -167,7 +168,7 @@ public class TSWSPreparedStatementTest {
                     s2.add("分支" + i % 4);
                 }
             }
-            s.setNString(2, s2, 4);
+            s.setNString(1, s2, 4);
 
             random = 10 + r.nextInt(5);
             ArrayList<Float> s3 = new ArrayList<>();
@@ -178,7 +179,7 @@ public class TSWSPreparedStatementTest {
                     s3.add(r.nextFloat());
                 }
             }
-            s.setFloat(3, s3);
+            s.setFloat(2, s3);
 
             random = 10 + r.nextInt(5);
             ArrayList<Double> s4 = new ArrayList<>();
@@ -189,7 +190,7 @@ public class TSWSPreparedStatementTest {
                     s4.add(r.nextDouble());
                 }
             }
-            s.setDouble(4, s4);
+            s.setDouble(3, s4);
 
             random = 10 + r.nextInt(5);
             ArrayList<Long> ts2 = new ArrayList<>();
@@ -200,7 +201,7 @@ public class TSWSPreparedStatementTest {
                     ts2.add(System.currentTimeMillis() + i);
                 }
             }
-            s.setTimestamp(5, ts2);
+            s.setTimestamp(4, ts2);
 
             random = 10 + r.nextInt(5);
             ArrayList<Integer> vals = new ArrayList<>();
@@ -211,7 +212,7 @@ public class TSWSPreparedStatementTest {
                     vals.add(r.nextInt());
                 }
             }
-            s.setInt(6, vals);
+            s.setInt(5, vals);
 
             random = 10 + r.nextInt(5);
             ArrayList<Boolean> sb = new ArrayList<>();
@@ -222,7 +223,7 @@ public class TSWSPreparedStatementTest {
                     sb.add(i % 2 == 0);
                 }
             }
-            s.setBoolean(7, sb);
+            s.setBoolean(6, sb);
 
             random = 10 + r.nextInt(5);
             ArrayList<String> s5 = new ArrayList<>();
@@ -233,7 +234,7 @@ public class TSWSPreparedStatementTest {
                     s5.add("test" + i % 10);
                 }
             }
-            s.setString(8, s5, 10);
+            s.setString(7, s5, 10);
 
             s.columnDataAddBatch();
             s.columnDataExecuteBatch();
@@ -325,10 +326,16 @@ public class TSWSPreparedStatementTest {
 
             switch (type) {
                 case "tinyint":
+                    s.setTagByte(0, (byte) 1);
+                    break;
                 case "smallint":
+                    s.setTagShort(0, (short) 1);
+                    break;
                 case "int":
-                case "bigint":
                     s.setTagInt(0, 1);
+                    break;
+                case "bigint":
+                    s.setTagLong(0, 1L);
                     break;
                 case "float":
                     s.setTagFloat(0, 1.23f);
@@ -494,8 +501,8 @@ public class TSWSPreparedStatementTest {
 
         long startTime = System.currentTimeMillis();
         for (int i = 0; i < numOfRows; i++) {
-            s.setTimestamp(0, new Timestamp(startTime + i));
-            s.setInt(1, i);
+            s.setTimestamp(1, new Timestamp(startTime + i));
+            s.setInt(2, i);
             s.addBatch();
         }
         s.executeBatch();

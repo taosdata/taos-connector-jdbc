@@ -22,7 +22,7 @@ public class TMQConnector extends TSDBJNIConnector {
             return conf;
         for (Map.Entry<?, ?> entry : properties.entrySet()) {
             String key = String.valueOf(entry.getKey());
-            if (!StringUtils.isEmpty(key) && TMQConstants.configSet.contains(key)) {
+            if (!StringUtils.isEmpty(key) && !TMQConstants.knownKeys.contains(key)) {
                 int code = tmqConfSetImp(conf, key, String.valueOf(entry.getValue()));
                 if (code == TMQ_CONF_KEY_NULL) {
                     tmqConfDestroyImp(conf);

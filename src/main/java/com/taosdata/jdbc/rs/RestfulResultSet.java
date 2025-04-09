@@ -3,6 +3,7 @@ package com.taosdata.jdbc.rs;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
@@ -87,7 +88,7 @@ public class RestfulResultSet extends AbstractResultSet {
             return;
         // parse row data
         for (JsonNode jsonRow : data) {
-            List<Object> row = new ArrayList<>();
+            List<Object> row = Lists.newArrayListWithExpectedSize(this.metaData.getColumnCount());
             for (int colIndex = 0; colIndex < this.metaData.getColumnCount(); colIndex++) {
                 row.add(parseColumnData(jsonRow, colIndex, columns.get(colIndex)));
             }
@@ -110,13 +111,13 @@ public class RestfulResultSet extends AbstractResultSet {
             int col_type = type.getJdbcTypeValue();
             int col_length = col.get(2).asInt();
             columnNames.add(col_name);
-            columns.add(new Field(col_name, col_type, col_length, "", type.getTaosTypeValue()));
+            columns.add(new Field(col_name, col_type, col_length, "", type.getTaosTypeValue(), 0));
         }
     }
 
     private Object parseColumnData(JsonNode row, int colIndex, Field field) throws SQLException {
         int taosType = field.taos_type;
-        if (row.get(colIndex).isNull()){
+        if (row.get(colIndex).isNull()) {
             return null;
         }
 
@@ -154,7 +155,7 @@ public class RestfulResultSet extends AbstractResultSet {
                 ObjectWriter objectWriter = JsonUtil.getObjectWriter(JsonNode.class);
                 JsonNode jsonNode = row.get(colIndex);
                 if (jsonNode != null && !jsonNode.isNull() && (jsonNode.isTextual() || jsonNode.isObject())) {
-                    try{
+                    try {
                         return objectWriter.writeValueAsString(jsonNode);
                     } catch (JsonProcessingException e) {
                         throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, e.getMessage());
@@ -201,19 +202,25 @@ public class RestfulResultSet extends AbstractResultSet {
         int length;
         String note;
         int taos_type;
+        int scale;
 
-        public Field(String name, int type, int length, String note, int taos_type) {
+        public Field(String name, int type, int length, String note, int taos_type, int scale) {
             this.name = name;
             this.type = type;
             this.length = length;
             this.note = note;
             this.taos_type = taos_type;
+            this.scale = scale;
         }
 
         public int getTaosType() {
             return taos_type;
         }
         public String getName() {return name;}
+
+        public int getScale() {
+            return scale;
+        }
     }
 
     @Override
