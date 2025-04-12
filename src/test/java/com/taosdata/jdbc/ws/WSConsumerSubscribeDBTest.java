@@ -4,17 +4,18 @@ import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.SpecifyAddress;
-import com.taosdata.jdbc.utils.Utils;
-import org.junit.AfterClass;
+import org.junit.After;
 import org.junit.Assert;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.Test;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.time.Duration;
-import java.util.*;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.Collections;
+import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -126,7 +127,6 @@ public class WSConsumerSubscribeDBTest {
                     continue;
                 }
                 for (ConsumerRecord<TMQEnhMap> r : consumerRecords) {
-                    System.out.println(JsonUtil.getObjectMapper().writeValueAsString(r.value()));
                     if (r.value().getTableName().equalsIgnoreCase("subtb1") && r.value().getMap().size() == 6){
                         beforeCol++;
                     }
@@ -141,8 +141,8 @@ public class WSConsumerSubscribeDBTest {
         }
     }
 
-    @BeforeClass
-    public static void before() throws SQLException {
+    @Before
+    public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
             url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
@@ -166,8 +166,8 @@ public class WSConsumerSubscribeDBTest {
                 + " (ts timestamp, cc1 int) tags(t1 int, t2 int)");
     }
 
-    @AfterClass
-    public static void after() throws InterruptedException {
+    @After
+    public void after() throws InterruptedException {
         try {
             if (connection != null) {
                 if (statement != null) {
