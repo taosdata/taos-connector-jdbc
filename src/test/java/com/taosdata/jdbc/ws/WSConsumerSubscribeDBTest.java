@@ -126,7 +126,7 @@ public class WSConsumerSubscribeDBTest {
                     continue;
                 }
                 for (ConsumerRecord<TMQEnhMap> r : consumerRecords) {
-                    //System.out.println(JsonUtil.getObjectMapper().writeValueAsString(r.value()));
+                    System.out.println(JsonUtil.getObjectMapper().writeValueAsString(r.value()));
                     if (r.value().getTableName().equalsIgnoreCase("subtb1") && r.value().getMap().size() == 6){
                         beforeCol++;
                     }
