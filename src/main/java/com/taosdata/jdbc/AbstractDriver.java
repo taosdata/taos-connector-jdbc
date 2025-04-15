@@ -65,7 +65,7 @@ public abstract class AbstractDriver implements Driver {
         if (log.isDebugEnabled()){
             log.debug("getWSConnection, url = {}", StringUtils.getBasicUrl(url));
             try {
-                ObjectMapper objectMapper = new ObjectMapper();
+                ObjectMapper objectMapper = JsonUtil.getObjectMapper();
                 log.debug("getWSConnection, ConnectionParam = {}", objectMapper.writeValueAsString(param));
             } catch (JsonProcessingException e) {
                 log.error("Error serializing ConnectionParam", e);
