@@ -8,6 +8,7 @@ import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.utils.HttpClientPoolUtil;
+import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.SqlSyntaxValidator;
 
 import java.sql.Connection;
@@ -86,7 +87,7 @@ public class RestfulStatement extends AbstractStatement {
         boolean result = true;
 
         String response = HttpClientPoolUtil.execute(getUrl(), sql, this.conn.getAuth(), reqId);
-        ObjectMapper objectMapper = new ObjectMapper();
+        ObjectMapper objectMapper = JsonUtil.getObjectMapper();
         JsonNode jsonObject = null;
         try {
             jsonObject = objectMapper.readTree(response);
