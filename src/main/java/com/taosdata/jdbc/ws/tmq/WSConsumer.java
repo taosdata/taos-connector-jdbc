@@ -139,13 +139,19 @@ public class WSConsumer<V> implements Consumer<V> {
             return ConsumerRecords.emptyRecord();
         }
 
+        messageId = pollResp.getMessageId();
+
         if (pollResp.getMessageType() == TmqMessageType.TMQ_RES_TABLE_META.getCode() || pollResp.getMessageType() == TmqMessageType.TMQ_RES_METADATA.getCode()) {
             Request fetchJsonMetaReq = factory.generateFetchJsonMeata(pollResp.getMessageId());
             FetchJsonMetaResp fetchJsonMetaResp = (FetchJsonMetaResp) transport.send(fetchJsonMetaReq);
             if (Code.SUCCESS.getCode() != fetchJsonMetaResp.getCode()) {
                 throw new SQLException("consumer fetch json meta error, code: (0x" + Integer.toHexString(fetchJsonMetaResp.getCode()) + "), message: " + fetchJsonMetaResp.getMessage());
             }
-            messageId = pollResp.getMessageId();
+
+            if (fetchJsonMetaResp.getData() == null || fetchJsonMetaResp.getData().getMetas() == null) {
+                return ConsumerRecords.emptyRecord();
+            }
+
             ConsumerRecords<V> records = new ConsumerRecords<>();
 
             for (Meta meta : fetchJsonMetaResp.getData().getMetas()){
@@ -168,9 +174,6 @@ public class WSConsumer<V> implements Consumer<V> {
         if (pollResp.getMessageType() != TmqMessageType.TMQ_RES_DATA.getCode()) {
             return ConsumerRecords.emptyRecord();
         }
-
-        messageId = pollResp.getMessageId();
-
 
         ConsumerRecords<V> records = new ConsumerRecords<>();
         try (WSConsumerResultSet rs = new WSConsumerResultSet(transport, factory, pollResp.getMessageId(), pollResp.getDatabase())) {
