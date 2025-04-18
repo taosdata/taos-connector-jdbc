@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
+import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.TaosInfo;
 
 import java.io.UnsupportedEncodingException;
@@ -86,7 +87,7 @@ public class TSDBJNIConnector {
         synchronized (LOCK) {
             if (!isInitialized) {
 
-                ObjectMapper objectMapper = new ObjectMapper();
+                ObjectMapper objectMapper = JsonUtil.getObjectMapper();
                 ObjectNode configJSON = objectMapper.createObjectNode();
 
                 for (String key : props.stringPropertyNames()) {

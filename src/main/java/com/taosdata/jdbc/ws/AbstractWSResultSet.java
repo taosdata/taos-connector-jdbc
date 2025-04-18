@@ -177,6 +177,7 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
 
             if (resp.isCompleted() || isClosed) {
                 blockData.setCompleted(true);
+                isCompleted = true;
                 return false;
             }
 
