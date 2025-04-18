@@ -220,7 +220,7 @@ public class Utils {
         // based on your requirements.
         // Example:
         //
-        EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
+        eventLoopGroup = new NioEventLoopGroup();
     }
     public static EventLoopGroup getEventLoopGroup() {
         return eventLoopGroup;

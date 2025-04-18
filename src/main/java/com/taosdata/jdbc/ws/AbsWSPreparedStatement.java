@@ -14,6 +14,7 @@ import com.taosdata.jdbc.ws.entity.Action;
 import com.taosdata.jdbc.ws.entity.Code;
 import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.stmt2.entity.*;
+import io.netty.buffer.ByteBuf;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -1078,7 +1079,7 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
             throw new SQLException("batch data is empty");
         }
 
-        byte[] rawBlock;
+        ByteBuf rawBlock;
         try {
             rawBlock = SerializeBlock.getStmt2BindBlock(reqId, stmtId, tableInfoMap, toBeBindTableNameIndex, toBeBindTagCount, toBeBindColCount, precision);
         } finally {
@@ -1105,25 +1106,6 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
     @Override
     public void columnDataExecuteBatch() throws SQLException {
         executeBatchImpl();
-    }
-
-    public int columnDataExecuteBatch(byte[] data) throws SQLException {
-        // bind
-        Stmt2Resp bindResp = (Stmt2Resp) transport.send(Action.STMT2_BIND.getAction(),
-                reqId, data);
-        if (Code.SUCCESS.getCode() != bindResp.getCode()) {
-            throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
-        }
-
-        // execute
-        Request request = RequestFactory.generateExec(stmtId, reqId);
-        Stmt2ExecResp resp = (Stmt2ExecResp) transport.send(request);
-        if (Code.SUCCESS.getCode() != resp.getCode()) {
-            throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
-        }
-
-        this.affectedRows = resp.getAffected();
-        return this.affectedRows;
     }
 
     public void columnDataCloseBatch() throws SQLException {

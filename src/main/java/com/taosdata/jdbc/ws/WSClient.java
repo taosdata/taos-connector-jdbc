@@ -23,6 +23,7 @@ import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketCl
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -142,17 +143,11 @@ public class WSClient implements AutoCloseable {
 
     public void send(ByteBuf binData) {
         if (!channel.isActive()) {
+            ReferenceCountUtil.release(binData);
             throw new WebsocketNotConnectedException();
         }
         channel.writeAndFlush(new BinaryWebSocketFrame(binData));
     }
-    public void send(byte[] binData) {
-        if (!channel.isActive()) {
-            throw new WebsocketNotConnectedException();
-        }
-        channel.writeAndFlush(new BinaryWebSocketFrame(Unpooled.copiedBuffer(binData)));
-    }
-
     public void closeBlocking() {
         this.close();
     }

@@ -11,6 +11,8 @@ import com.taosdata.jdbc.ws.entity.CommonResp;
 import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.entity.Response;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -194,16 +196,14 @@ public class Transport implements AutoCloseable {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
         }
 
-        ByteArrayOutputStream buffer = new ByteArrayOutputStream(24 + rawData.length + rawData2.length);
-        try {
-            buffer.write(SerializeBlock.longToBytes(reqId));
-            buffer.write(SerializeBlock.longToBytes(resultId));
-            buffer.write(SerializeBlock.longToBytes(type));
-            buffer.write(rawData);
-            buffer.write(rawData2);
-        } catch (IOException e) {
-            throw new SQLException("data serialize error!", e);
-        }
+        int totalLength = 24 + rawData.length + rawData2.length;
+        ByteBuf buffer = PooledByteBufAllocator.DEFAULT.directBuffer(totalLength);
+
+        buffer.writeLongLE(reqId);
+        buffer.writeLongLE(resultId);
+        buffer.writeLongLE(type);
+        buffer.writeBytes(rawData);
+        buffer.writeBytes(rawData2);
 
         Response response;
         CompletableFuture<Response> completableFuture = new CompletableFuture<>();
@@ -214,12 +214,12 @@ public class Transport implements AutoCloseable {
         }
 
         try {
-            clientArr.get(currentNodeIndex).send(buffer.toByteArray());
+            clientArr.get(currentNodeIndex).send(buffer);
         } catch (WebsocketNotConnectedException e) {
             tmqRethrowConnectionCloseException();
             reconnect();
             try {
-                clientArr.get(currentNodeIndex).send(buffer.toByteArray());
+                clientArr.get(currentNodeIndex).send(buffer);
             }catch (Exception ex){
                 inFlightRequest.remove(action, reqId);
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());
@@ -238,7 +238,7 @@ public class Transport implements AutoCloseable {
         return response;
     }
 
-    public Response send(String action, long reqId, byte[] buffer) throws SQLException {
+    public Response send(String action, long reqId, ByteBuf buffer) throws SQLException {
         if (isClosed()){
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
         }

@@ -9,6 +9,7 @@ import com.taosdata.jdbc.utils.SyncObj;
 import com.taosdata.jdbc.ws.entity.*;
 import com.taosdata.jdbc.ws.stmt2.entity.*;
 import com.taosdata.jdbc.ws.stmt2.entity.RequestFactory;
+import io.netty.buffer.ByteBuf;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
@@ -408,7 +409,7 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
 
         private void writeBlockWithRetry() throws SQLException {
             for (int i = 0; i < connectionParam.getRetryTimes(); i++) {
-                byte[] rawBlock;
+                ByteBuf rawBlock;
                 try {
                     rawBlock = SerializeBlock.getStmt2BindBlock(
                             reqId,
