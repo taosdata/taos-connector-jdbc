@@ -8,8 +8,10 @@ import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.TaosGlobalConfig;
 import com.taosdata.jdbc.enums.TimestampPrecision;
+import com.taosdata.jdbc.enums.TmqMessageType;
 import com.taosdata.jdbc.rs.RestfulResultSet;
 import com.taosdata.jdbc.rs.RestfulResultSetMetaData;
+import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.DataTypeConverUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.Utils;
@@ -17,6 +19,7 @@ import com.taosdata.jdbc.ws.Transport;
 import com.taosdata.jdbc.ws.entity.Code;
 import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.tmq.entity.FetchRawBlockResp;
+import com.taosdata.jdbc.ws.tmq.entity.PollResp;
 import com.taosdata.jdbc.ws.tmq.entity.TMQRequestFactory;
 
 import java.io.UnsupportedEncodingException;
@@ -27,6 +30,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Map;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
 import static com.taosdata.jdbc.utils.UnsignedDataUtils.*;
@@ -40,7 +44,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
     protected volatile boolean isClosed;
     // meta
     protected RestfulResultSetMetaData metaData;
-    protected final List<RestfulResultSet.Field> fields = new ArrayList<>();
+    protected List<RestfulResultSet.Field> fields = new ArrayList<>();
     protected List<String> columnNames;
     // data
     protected List<List<Object>> result = new ArrayList<>();
@@ -92,14 +96,25 @@ public class WSConsumerResultSet extends AbstractResultSet {
             return false;
 
         columnNames = fetchResp.getColumnNames();
-        fields.clear();
-        fields.addAll(fetchResp.getFields());
+        fields = fetchResp.getFields();
 
         this.metaData = new RestfulResultSetMetaData(database, fields, fetchResp.getTableName());
         this.numOfRows = fetchResp.getRows();
         this.result = fetchResp.getResultData();
         this.timestampPrecision = fetchResp.getPrecision();
         return true;
+    }
+
+    public ConsumerRecords<TMQEnhMap> handleSubscribeDB(PollResp pollResp) throws SQLException {
+
+        Request request = factory.generateFetchRaw(messageId);
+        FetchRawBlockResp fetchResp = (FetchRawBlockResp) transport.send(request);
+        fetchResp.init();
+
+        if (Code.SUCCESS.getCode() != fetchResp.getCode())
+            throw TSDBError.createSQLException(fetchResp.getCode(), fetchResp.getMessage());
+
+        return fetchResp.getEhnMapList(pollResp);
     }
 
     @Override

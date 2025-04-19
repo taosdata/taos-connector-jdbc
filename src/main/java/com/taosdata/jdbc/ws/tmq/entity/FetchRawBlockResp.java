@@ -2,8 +2,10 @@ package com.taosdata.jdbc.ws.tmq.entity;
 
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.enums.DataType;
+import com.taosdata.jdbc.enums.TmqMessageType;
 import com.taosdata.jdbc.rs.RestfulResultSet;
 import com.taosdata.jdbc.rs.RestfulResultSetMetaData;
+import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.DecimalUtil;
 import com.taosdata.jdbc.ws.tmq.ConsumerAction;
 import com.taosdata.jdbc.ws.entity.Response;
@@ -13,6 +15,8 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 
 import com.taosdata.jdbc.TSDBErrorNumbers;
@@ -149,11 +153,91 @@ public class FetchRawBlockResp extends Response {
             for (int j = 0; j < cols; j++) {
                 skipSchema(withTableName);
             }
+            if (withTableName){
+                int tableNameLen = parseVariableByteInteger();
+                buffer.position(buffer.position() + tableNameLen);
+            }
         }
         if (!resultData.isEmpty()){
             // rows is the number of rows of the first column
             rows = resultData.get(0).size();
         }
+    }
+    public ConsumerRecords<TMQEnhMap> getEhnMapList(PollResp pollResp) throws SQLException {
+        skipHead();
+        int blockNum = buffer.getInt();
+        int cols = 0;
+
+        ConsumerRecords<TMQEnhMap> records = new ConsumerRecords<>();
+        boolean withTableName = buffer.get() != 0;// skip withTableName
+        buffer.get();// skip withSchema
+
+        for (int i = 0; i < blockNum; i++) {
+            int blockTotalLen = parseVariableByteInteger();
+            buffer.position(buffer.position() + 17);
+            precision = buffer.get();
+
+            fields.clear();
+            columnNames.clear();
+
+            // parse the block's schema
+            int backupBlockPos = buffer.position();
+            buffer.position(buffer.position() + blockTotalLen - 18);
+            cols = parseZigzagVariableByteInteger();
+            resultData = new ArrayList<>(cols);
+            for (int j = 0; j < cols; j++) {
+                resultData.add(new ArrayList<>());
+            }
+            //version
+            parseZigzagVariableByteInteger();
+            for (int j = 0; j < cols; j++) {
+                RestfulResultSet.Field field = parseSchema();
+                fields.add(field);
+                columnNames.add(field.getName());
+            }
+            if(withTableName){
+                tableName = parseName();
+            }
+            buffer.position(backupBlockPos);
+
+            fetchBlockData();
+            buffer.get(); // skip useless byte
+
+            parseZigzagVariableByteInteger(); // skip ncols
+            parseZigzagVariableByteInteger(); // skip version
+            for (int j = 0; j < cols; j++) {
+                skipSchema(withTableName);
+            }
+
+            if (withTableName){
+                int tableNameLen = parseVariableByteInteger();
+                buffer.position(buffer.position() + tableNameLen);
+            }
+
+            // handle the data in this block
+            int lineNum = resultData.get(0).size();
+            for (int j = 0; j < lineNum; j++) {
+                HashMap<String, Object> lineDataMap = new HashMap<>();
+                for (int k = 0; k < cols; k++) {
+                    lineDataMap.put(columnNames.get(k), resultData.get(k).get(j));
+                }
+                TMQEnhMap map = new TMQEnhMap(tableName, lineDataMap);
+                ConsumerRecord<TMQEnhMap> r = new ConsumerRecord.Builder<TMQEnhMap>()
+                        .topic(pollResp.getTopic())
+                        .dbName(pollResp.getDatabase())
+                        .vGroupId(pollResp.getVgroupId())
+                        .offset(pollResp.getOffset())
+                        .messageType(TmqMessageType.TMQ_RES_DATA)
+                        .meta(null)
+                        .value(map)
+                        .build();
+                TopicPartition tp = new TopicPartition(pollResp.getTopic(), pollResp.getVgroupId());
+                records.put(tp, r);
+            }
+            resultData.clear();
+        }
+
+        return records;
     }
 
     private int parseVariableByteInteger() {
@@ -201,10 +285,6 @@ public class FetchRawBlockResp extends Response {
         parseZigzagVariableByteInteger(); // skip colld
         int nameLen = parseVariableByteInteger();
         buffer.position(buffer.position() + nameLen);
-        if (withTableName){
-            int tableNameLen = parseVariableByteInteger();
-            buffer.position(buffer.position() + tableNameLen);
-        }
     }
 
     private int getScaleFromRowBlock(ByteBuffer buffer, int pHeader, int colIndex) {
