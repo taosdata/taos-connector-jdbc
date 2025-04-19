@@ -78,12 +78,12 @@ public class WSConFailOverTest {
         while (true) {
             try {
                 taosAdapterMock = new TaosAdapterMock(8041);
+                taosAdapterMock.start();
                 break;
             } catch (Exception e){
                 Thread.sleep(200);
             }
         }
-        taosAdapterMock.start();
 
         String url;
         url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
