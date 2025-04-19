@@ -75,7 +75,14 @@ public class WSConFailOverTest {
 
     @Before
     public void before() throws SQLException, InterruptedException, IOException, URISyntaxException {
-        taosAdapterMock = new TaosAdapterMock(8041);
+        while (true) {
+            try {
+                taosAdapterMock = new TaosAdapterMock(8041);
+                break;
+            } catch (Exception e){
+                Thread.sleep(200);
+            }
+        }
         taosAdapterMock.start();
 
         String url;
