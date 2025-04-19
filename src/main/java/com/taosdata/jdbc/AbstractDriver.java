@@ -15,6 +15,7 @@ import com.taosdata.jdbc.ws.WSConnection;
 import com.taosdata.jdbc.ws.entity.*;
 import org.slf4j.LoggerFactory;
 
+import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.sql.Connection;
 import java.sql.Driver;
@@ -96,7 +97,9 @@ public abstract class AbstractDriver implements Driver {
 
             FutureResponse remove = inFlightRequest.remove(Action.FETCH_BLOCK_NEW.getAction(), id);
             if (null != remove) {
-                FetchBlockNewResp fetchBlockResp = new FetchBlockNewResp(byteBuf.nioBuffer());
+                ByteBuffer nioBuf = byteBuf.nioBuffer();
+                nioBuf.order(ByteOrder.LITTLE_ENDIAN);
+                FetchBlockNewResp fetchBlockResp = new FetchBlockNewResp(nioBuf);
                 remove.getFuture().complete(fetchBlockResp);
             }
         });

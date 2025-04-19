@@ -70,10 +70,14 @@ public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> 
         }
 
         WebSocketFrame frame = (WebSocketFrame) msg;
-        if (frame instanceof TextWebSocketFrame) {
+        if (frame instanceof PingWebSocketFrame) {
+            // Handle ping frames
+            PongWebSocketFrame pongFrame = new PongWebSocketFrame(frame.content().retain());
+            ctx.writeAndFlush(pongFrame);
+        } else if (frame instanceof TextWebSocketFrame) {
             TextWebSocketFrame textFrame = (TextWebSocketFrame) frame;
             textMessageHandler.accept(textFrame.text());
-        } if (frame instanceof BinaryWebSocketFrame) {
+        } else if (frame instanceof BinaryWebSocketFrame) {
             BinaryWebSocketFrame binaryFrame = (BinaryWebSocketFrame) frame;
             binaryMessageHandler.accept(binaryFrame.content());
         } else if (frame instanceof PongWebSocketFrame) {
@@ -88,7 +92,9 @@ public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> 
             ch.close();
         }
     }
-
+    public ChannelFuture getHandshakeFuture() {
+        return handshakeFuture; // 暴露给外部监听
+    }
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         log.error("exception caught: {}", cause.getMessage());
