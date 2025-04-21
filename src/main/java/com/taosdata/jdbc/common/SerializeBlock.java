@@ -532,7 +532,6 @@ public class SerializeBlock {
             if (toBebindTagCount > 0){
                 skipSize += totalTagSize + Integer.BYTES * tableInfoMap.size();
             }
-            //SerializeInt(buf, offset, 28 + skipSize);
             buf.writeIntLE(28 + skipSize);
         } else {
             buf.writeIntLE(0);
@@ -545,7 +544,7 @@ public class SerializeBlock {
                     throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table name is empty");
                 }
 
-                buf.writeIntLE(tableNameLen);
+                buf.writeShortLE(tableNameLen);
             }
 
             for (TableInfo tableInfo: tableInfoMap.values()){
@@ -588,8 +587,8 @@ public class SerializeBlock {
         }
 
 
-//        for (int i = 30; i < buf.length; i++) {
-//            int bb = buf[i] & 0xff;
+//        for (int i = 30; i < buf.capacity(); i++) {
+//            int bb = buf.getByte(i) & 0xff;
 //            System.out.print(bb);
 //            System.out.print(",");
 //        }

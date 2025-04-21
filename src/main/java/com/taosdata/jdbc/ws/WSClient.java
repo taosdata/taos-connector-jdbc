@@ -42,7 +42,6 @@ import java.util.concurrent.TimeUnit;
 public class WSClient implements AutoCloseable {
 
     private final Logger log = LoggerFactory.getLogger(WSClient.class);
-    ThreadPoolExecutor executor;
     Transport transport;
 
     public final String serverUri;
@@ -63,16 +62,6 @@ public class WSClient implements AutoCloseable {
     public WSClient(URI serverUri, Transport transport, ConnectionParam connectionParam) throws SQLException {
         this.transport = transport;
         this.serverUri = serverUri.toString();
-        executor = new ThreadPoolExecutor(1, 1,
-                0L, TimeUnit.MILLISECONDS,
-                new LinkedBlockingQueue<>(),
-                r -> {
-                    Thread t = new Thread(r);
-                    t.setName("parse-message-" + t.getId());
-                    return t;
-                },
-                new ThreadPoolExecutor.CallerRunsPolicy());
-
 
         DefaultHttpHeaders headers = new DefaultHttpHeaders();
         if (connectionParam.isEnableCompression()) {

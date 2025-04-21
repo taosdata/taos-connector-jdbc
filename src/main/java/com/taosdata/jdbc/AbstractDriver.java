@@ -90,16 +90,25 @@ public abstract class AbstractDriver implements Driver {
         });
 
         param.setBinaryMessageHandler(byteBuf -> {
-            byteBuf.order(ByteOrder.LITTLE_ENDIAN);
-            byteBuf.readerIndex(26);
-            long id = byteBuf.readLongLE();
-            byteBuf.readerIndex(8);
+            // 获取可读数据的字节数组（强制内存拷贝）
+            byte[] data = new byte[byteBuf.readableBytes()];
+            byteBuf.getBytes(byteBuf.readerIndex(), data); // 读取数据到新数组（不改变原缓冲区读写指针）
+
+            // 使用数组创建独立的 ByteBuffer（堆内存）
+            ByteBuffer byteBuffer = ByteBuffer.wrap(data);
+
+            byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+            byteBuffer.position(26);
+            long id = byteBuffer.getLong();
+            byteBuffer.position(8);
+
+//            byteBuf.readerIndex(26);
+//            long id = byteBuf.readLongLE();
+//            byteBuf.readerIndex(8);
 
             FutureResponse remove = inFlightRequest.remove(Action.FETCH_BLOCK_NEW.getAction(), id);
             if (null != remove) {
-                ByteBuffer nioBuf = byteBuf.nioBuffer();
-                nioBuf.order(ByteOrder.LITTLE_ENDIAN);
-                FetchBlockNewResp fetchBlockResp = new FetchBlockNewResp(nioBuf);
+                FetchBlockNewResp fetchBlockResp = new FetchBlockNewResp(byteBuffer);
                 remove.getFuture().complete(fetchBlockResp);
             }
         });
