@@ -69,6 +69,15 @@ public class WSConnection extends AbstractConnection {
             fastWriteSql = true;
         }
 
+        if (!sql.contains("?")){
+            return new TSWSPreparedStatement(transport,
+                    param,
+                    database,
+                    this,
+                    sql,
+                    idGenerator.getAndIncrement());
+        }
+
         if (transport != null && !transport.isClosed()) {
             long reqId = ReqId.getReqID();
             Request request = com.taosdata.jdbc.ws.stmt2.entity.RequestFactory.generateInit(reqId, true, true);

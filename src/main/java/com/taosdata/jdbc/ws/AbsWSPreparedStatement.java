@@ -53,6 +53,16 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
     private final HashMap<ByteBuffer, TableInfo> tableInfoMap = new HashMap<>();
     private TableInfo tableInfo;
 
+    public AbsWSPreparedStatement(Transport transport,
+                                  ConnectionParam param,
+                                  String database,
+                                  AbstractConnection connection,
+                                  String sql,
+                                  Long instanceId) {
+        super(transport, database, connection, instanceId, param.getZoneId());
+        this.rawSql = sql;
+        this.param = param;
+    }
 
     public AbsWSPreparedStatement(Transport transport,
                                   ConnectionParam param,
@@ -64,8 +74,6 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
         super(transport, database, connection, instanceId, param.getZoneId());
         this.rawSql = sql;
         this.param = param;
-        if (!sql.contains("?"))
-            return;
 
         reqId = prepareResp.getReqId();
         stmtId = prepareResp.getStmtId();
