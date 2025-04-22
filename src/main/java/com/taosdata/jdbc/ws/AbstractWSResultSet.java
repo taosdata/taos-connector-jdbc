@@ -44,9 +44,11 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
     ForkJoinPool dataHandleExecutor = getForkJoinPool();
 
     private int fetchBlockNum = 0;
+
+    private FetchBlockNewResp fetchBlockNewResp;
     private final int START_BACKEND_FETCH_BLOCK_NUM = 3;
     protected AbstractWSResultSet(Statement statement, Transport transport,
-                               QueryResp response, String database) throws SQLException {
+                               QueryResp response, String database, FetchBlockNewResp fetchBlockNewResp) throws SQLException {
         this.statement = statement;
         this.transport = transport;
         this.queryId = response.getId();
@@ -67,6 +69,8 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
         }
         this.metaData = new RestfulResultSetMetaData(database, fields);
         this.timestampPrecision = response.getPrecision();
+
+        this.fetchBlockNewResp = fetchBlockNewResp;
     }
 
     private void startBackendFetch(){
@@ -164,10 +168,14 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
             this.numOfRows = blockData.getNumOfRows();
         } else {
 
-            byte[] version = {1, 0};
-            FetchBlockNewResp resp = (FetchBlockNewResp) transport.send(Action.FETCH_BLOCK_NEW.getAction(),
-                    reqId, queryId, 7, version);
-            resp.init();
+//            byte[] version = {1, 0};
+//            FetchBlockNewResp resp = (FetchBlockNewResp) transport.send(Action.FETCH_BLOCK_NEW.getAction(),
+//                    reqId, queryId, 7, version);
+//            resp.init();
+
+            this.fetchBlockNewResp.init();
+            FetchBlockNewResp resp = this.fetchBlockNewResp;
+
 
             if (Code.SUCCESS.getCode() != resp.getCode()) {
                 throw TSDBError.createSQLException(resp.getCode(), "FETCH DATA ERROR");

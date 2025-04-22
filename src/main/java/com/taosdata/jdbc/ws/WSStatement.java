@@ -87,9 +87,10 @@ public class WSStatement extends AbstractStatement {
         // write version and sqlLen in little endian byte sequence
         byte[] result = ByteBuffer.allocate(6).order(ByteOrder.LITTLE_ENDIAN).putShort((short)1).putInt(sqlBytes.length).array();
         Response response = transport.send(Action.BINARY_QUERY.getAction(),
-                reqId, 0, 6, result, sqlBytes);
+                reqId, 0, 11, result, sqlBytes);
 
-        QueryResp queryResp = (QueryResp) response;
+        BinQueryNewResp binQueryNewResp = (BinQueryNewResp) response;
+        QueryResp queryResp = binQueryNewResp.getQueryResp();
         if (Code.SUCCESS.getCode() != queryResp.getCode()) {
             throw TSDBError.createSQLException(queryResp.getCode(), queryResp.getMessage());
         }
@@ -103,7 +104,7 @@ public class WSStatement extends AbstractStatement {
             this.affectedRows = queryResp.getAffectedRows();
             return false;
         } else {
-            this.resultSet = new BlockResultSet(this, this.transport, queryResp, this.database, this.zoneId);
+            this.resultSet = new BlockResultSet(this, this.transport, queryResp, this.database, this.zoneId, binQueryNewResp.getFetchBlockNewResp());
             this.affectedRows = -1;
             return true;
         }

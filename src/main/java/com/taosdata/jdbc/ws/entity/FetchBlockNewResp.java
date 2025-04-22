@@ -5,6 +5,11 @@ import java.nio.charset.StandardCharsets;
 
 public class FetchBlockNewResp extends Response {
     private ByteBuffer buffer;
+
+    public void setCompleted(boolean completed) {
+        isCompleted = completed;
+    }
+
     private boolean isCompleted;
     private long time;
     private int code;

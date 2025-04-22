@@ -15,7 +15,7 @@ import java.util.Map;
 public enum Action {
     CONN("conn", ConnectResp.class),
     QUERY("query", QueryResp.class),
-    BINARY_QUERY("binary_query", QueryResp.class),
+    BINARY_QUERY("binary_query_with_result", QueryResp.class),
     FETCH("fetch", FetchResp.class),
     FETCH_BLOCK("fetch_raw_block", FetchRawBlockResp.class),
     FETCH_BLOCK_NEW("fetch_block_new", FetchBlockNewResp.class),
