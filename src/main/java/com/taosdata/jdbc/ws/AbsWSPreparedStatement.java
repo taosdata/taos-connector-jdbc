@@ -779,7 +779,7 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
     @Override
     public void close() throws SQLException {
         if (!isClosed()) {
-            if (transport.isConnected()) {
+            if (transport.isConnected() && stmtId != 0) {
                 Request close = RequestFactory.generateClose(stmtId, reqId);
                 transport.send(close);
             }
