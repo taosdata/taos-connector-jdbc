@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.taosdata.jdbc</groupId>
     <artifactId>taos-jdbcdriver</artifactId>
-    <version>3.6.2-SNAPSHOT</version>
+    <version>3.6.3-SNAPSHOT</version>
 
     <packaging>jar</packaging>
     <name>JDBCDriver</name>
@@ -82,12 +82,12 @@
             <version>1.7.36</version>
         </dependency>
 
-<!--        &lt;!&ndash; logback依赖 &ndash;&gt;-->
-<!--        <dependency>-->
-<!--            <groupId>ch.qos.logback</groupId>-->
-<!--            <artifactId>logback-classic</artifactId>-->
-<!--            <version>1.2.3</version>-->
-<!--        </dependency>-->
+        <!-- logback依赖 -->
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.2.3</version>
+        </dependency>
     </dependencies>
 
     <build>

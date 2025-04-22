@@ -28,8 +28,8 @@ public class BlockResultSet extends AbstractWSResultSet {
     private final ZoneId zoneId;
 
     public BlockResultSet(Statement statement, Transport transport,
-                          QueryResp response, String database, ZoneId zoneId, FetchBlockNewResp fetchBlockNewResp) throws SQLException {
-        super(statement, transport, response, database, fetchBlockNewResp);
+                          QueryResp response, String database, ZoneId zoneId) throws SQLException {
+        super(statement, transport, response, database);
         this.zoneId = zoneId;
     }
 

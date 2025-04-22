@@ -17,7 +17,6 @@ import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.Driver;
@@ -91,78 +90,60 @@ public abstract class AbstractDriver implements Driver {
             }
         });
 
+        param.setBinaryMessageHandler(byteBuf -> {
+            byteBuf.readerIndex(26);
+            long id = byteBuf.readLongLE();
+            byteBuf.readerIndex(8);
+
+            FutureResponse remove = inFlightRequest.remove(Action.FETCH_BLOCK_NEW.getAction(), id);
+            if (null != remove) {
+                FetchBlockNewResp fetchBlockResp = new FetchBlockNewResp(byteBuf);
+                remove.getFuture().complete(fetchBlockResp);
+            }
+        });
+
 //        param.setBinaryMessageHandler(byteBuf -> {
-//            // 获取可读数据的字节数组（强制内存拷贝）
-//            byte[] data = new byte[byteBuf.readableBytes()];
-//            byteBuf.getBytes(byteBuf.readerIndex(), data); // 读取数据到新数组（不改变原缓冲区读写指针）
+//            try {
+//                int queryResLen = byteBuf.getIntLE(0);
+//                byte[] jsonBin = new byte[queryResLen];
+//                byteBuf.getBytes(4, jsonBin, 0, queryResLen);
 //
-//            // 使用数组创建独立的 ByteBuffer（堆内存）
-//            ByteBuffer byteBuffer = ByteBuffer.wrap(data);
 //
-//            byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
-//            byteBuffer.position(26);
-//            long id = byteBuffer.getLong();
-//            byteBuffer.position(8);
+//                boolean isComplete = byteBuf.getByte(4 + queryResLen) > 0;
 //
-////            byteBuf.readerIndex(26);
-////            long id = byteBuf.readLongLE();
-////            byteBuf.readerIndex(8);
+//                String message = new String(jsonBin, StandardCharsets.UTF_8);
+//                JsonNode jsonObject = null;
 //
-//            FutureResponse remove = inFlightRequest.remove(Action.FETCH_BLOCK_NEW.getAction(), id);
-//            if (null != remove) {
-//                FetchBlockNewResp fetchBlockResp = new FetchBlockNewResp(byteBuffer);
-//                remove.getFuture().complete(fetchBlockResp);
+//                jsonObject = JsonUtil.getObjectReader().readTree(message);
+//                Action action = Action.of(jsonObject.get("action").asText());
+//                ObjectReader actionReader = JsonUtil.getObjectReader(action.getResponseClazz());
+//                Response queryRes = actionReader.treeToValue(jsonObject, action.getResponseClazz());
+//
+//                int fetchResLen = byteBuf.getIntLE(5 + queryResLen);
+//
+//                // 获取可读数据的字节数组（强制内存拷贝）
+//                byte[] data = new byte[fetchResLen];
+//                byteBuf.getBytes(9 + queryResLen, data, 0, fetchResLen);
+//
+//                ByteBuffer byteBuffer = ByteBuffer.wrap(data);
+//                byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+//                byteBuffer.position(26);
+//                long id = byteBuffer.getLong();
+//                byteBuffer.position(8);
+//
+//                FutureResponse remove = inFlightRequest.remove(Action.BINARY_QUERY.getAction(), id);
+//                if (null != remove) {
+//                    FetchBlockNewResp fetchBlockResp = new FetchBlockNewResp(byteBuffer);
+//                    fetchBlockResp.setCompleted(isComplete);
+//                    BinQueryNewResp binQueryNewResp = new BinQueryNewResp((QueryResp) queryRes, fetchBlockResp);
+//                    remove.getFuture().complete(binQueryNewResp);
+//                }
+//
+//            } catch (JsonProcessingException e) {
+//                log.error("decode json error", e);
+//                throw new RuntimeException(e);
 //            }
 //        });
-
-
-        param.setBinaryMessageHandler(byteBuf -> {
-            try {
-                int queryResLen = byteBuf.getIntLE(0);
-                byte[] jsonBin = new byte[queryResLen];
-                byteBuf.getBytes(4, jsonBin, 0, queryResLen);
-
-
-                boolean isComplete = byteBuf.getByte(4 + queryResLen) > 0;
-
-                String message = new String(jsonBin, StandardCharsets.UTF_8);
-                JsonNode jsonObject = null;
-
-                jsonObject = JsonUtil.getObjectReader().readTree(message);
-                Action action = Action.of(jsonObject.get("action").asText());
-                ObjectReader actionReader = JsonUtil.getObjectReader(action.getResponseClazz());
-                Response queryRes = actionReader.treeToValue(jsonObject, action.getResponseClazz());
-
-                int fetchResLen = byteBuf.getIntLE(5 + queryResLen);
-
-                // 获取可读数据的字节数组（强制内存拷贝）
-                byte[] data = new byte[fetchResLen];
-                byteBuf.getBytes(9 + queryResLen, data, 0, fetchResLen);
-
-                ByteBuffer byteBuffer = ByteBuffer.wrap(data);
-                byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
-                byteBuffer.position(26);
-                long id = byteBuffer.getLong();
-                byteBuffer.position(8);
-
-                FutureResponse remove = inFlightRequest.remove(Action.BINARY_QUERY.getAction(), id);
-                if (null != remove) {
-                    FetchBlockNewResp fetchBlockResp = new FetchBlockNewResp(byteBuffer);
-                    fetchBlockResp.setCompleted(isComplete);
-                    BinQueryNewResp binQueryNewResp = new BinQueryNewResp((QueryResp) queryRes, fetchBlockResp);
-                    remove.getFuture().complete(binQueryNewResp);
-                }
-
-            } catch (JsonProcessingException e) {
-                log.error("decode json error", e);
-                throw new RuntimeException(e);
-            }
-
-
-
-
-
-        });
 
         Transport transport = new Transport(WSFunction.WS, param, inFlightRequest);
 

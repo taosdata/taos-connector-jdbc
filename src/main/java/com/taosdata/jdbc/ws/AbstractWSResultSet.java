@@ -44,11 +44,9 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
     ForkJoinPool dataHandleExecutor = getForkJoinPool();
 
     private int fetchBlockNum = 0;
-
-    private FetchBlockNewResp fetchBlockNewResp;
     private final int START_BACKEND_FETCH_BLOCK_NUM = 3;
     protected AbstractWSResultSet(Statement statement, Transport transport,
-                               QueryResp response, String database, FetchBlockNewResp fetchBlockNewResp) throws SQLException {
+                               QueryResp response, String database) throws SQLException {
         this.statement = statement;
         this.transport = transport;
         this.queryId = response.getId();
@@ -69,8 +67,6 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
         }
         this.metaData = new RestfulResultSetMetaData(database, fields);
         this.timestampPrecision = response.getPrecision();
-
-        this.fetchBlockNewResp = fetchBlockNewResp;
     }
 
     private void startBackendFetch(){
@@ -167,15 +163,33 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
             this.result = blockData.getData();
             this.numOfRows = blockData.getNumOfRows();
         } else {
+//            this.fetchBlockNewResp.init();
+//            FetchBlockNewResp resp = this.fetchBlockNewResp;
+//
+//
+//            if (Code.SUCCESS.getCode() != resp.getCode()) {
+//                throw TSDBError.createSQLException(resp.getCode(), "FETCH DATA ERROR");
+//            }
+//            this.reset();
+//            BlockData blockData = BlockData.getEmptyBlockData(fields, timestampPrecision);
+//
+//            if (resp.isCompleted() || isClosed) {
+//                blockData.setCompleted(true);
+//                isCompleted = true;
+//                return false;
+//            }
+//
+//            blockData.setBuffer(resp.getBuffer());
+//            blockData.handleData();
+//
+//            this.result = blockData.getData();
+//            this.numOfRows = blockData.getNumOfRows();
 
-//            byte[] version = {1, 0};
-//            FetchBlockNewResp resp = (FetchBlockNewResp) transport.send(Action.FETCH_BLOCK_NEW.getAction(),
-//                    reqId, queryId, 7, version);
-//            resp.init();
 
-            this.fetchBlockNewResp.init();
-            FetchBlockNewResp resp = this.fetchBlockNewResp;
-
+            byte[] version = {1, 0};
+            FetchBlockNewResp resp = (FetchBlockNewResp) transport.send(Action.FETCH_BLOCK_NEW.getAction(),
+                    reqId, queryId, 7, version);
+            resp.init();
 
             if (Code.SUCCESS.getCode() != resp.getCode()) {
                 throw TSDBError.createSQLException(resp.getCode(), "FETCH DATA ERROR");

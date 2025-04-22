@@ -1,6 +1,5 @@
 package com.taosdata.jdbc.ws;
 
-import com.fasterxml.jackson.annotation.JsonEnumDefaultValue;
 import com.google.common.base.Strings;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
@@ -11,7 +10,6 @@ import com.taosdata.jdbc.utils.Utils;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -35,8 +33,6 @@ import javax.net.ssl.SSLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 public class WSClient implements AutoCloseable {
@@ -193,6 +189,14 @@ public class WSClient implements AutoCloseable {
 //        return super.reconnectBlocking();
 
        return false;
+    }
+
+    public boolean connectBlocking(int connectTimeout, TimeUnit unit){
+        return false;
+    }
+
+    public boolean reconnectBlocking(){
+        return false;
     }
 
     public void send(String strData) {

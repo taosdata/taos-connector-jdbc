@@ -154,7 +154,7 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
             throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
         }
 
-        this.resultSet = new BlockResultSet(this, this.transport, resp, this.database, this.zoneId, null);
+        this.resultSet = new BlockResultSet(this, this.transport, resp, this.database, this.zoneId);
         this.affectedRows = -1;
         return this.resultSet;
     }

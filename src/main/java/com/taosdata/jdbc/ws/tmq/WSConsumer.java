@@ -43,9 +43,8 @@ public class WSConsumer<V> implements Consumer<V> {
         param = new ConsumerParam(properties);
         InFlightRequest inFlightRequest = new InFlightRequest(param.getConnectionParam().getRequestTimeout()
                 , param.getConnectionParam().getMaxRequest());
-        transport = new Transport(WSFunction.TMQ, param.getConnectionParam(), inFlightRequest);
 
-        transport.setTextMessageHandler(message -> {
+        param.getConnectionParam().setTextMessageHandler(message -> {
             try {
                 JsonNode jsonObject = JsonUtil.getObjectReader().readTree(message);
                 ConsumerAction action = ConsumerAction.of(jsonObject.get("action").asText());
@@ -59,18 +58,20 @@ public class WSConsumer<V> implements Consumer<V> {
                 log.error("Error processing message", e);
             }
         });
-        transport.setBinaryMessageHandler(byteBuf -> {
+
+        param.getConnectionParam().setBinaryMessageHandler(byteBuf -> {
             byteBuf.order(ByteOrder.LITTLE_ENDIAN);
             byteBuf.readerIndex(26);
             long id = byteBuf.readLongLE();
             byteBuf.readerIndex(8);
             FutureResponse remove = inFlightRequest.remove(ConsumerAction.FETCH_RAW_DATA.getAction(), id);
             if (null != remove) {
-                FetchRawBlockResp fetchBlockResp = new FetchRawBlockResp(byteBuf.nioBuffer());
+                FetchRawBlockResp fetchBlockResp = new FetchRawBlockResp(byteBuf);
                 remove.getFuture().complete(fetchBlockResp);
             }
         });
 
+        transport = new Transport(WSFunction.TMQ, param.getConnectionParam(), inFlightRequest);
         transport.checkConnection(param.getConnectionParam().getConnectTimeout());
     }
 
