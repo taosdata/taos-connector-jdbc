@@ -29,7 +29,7 @@ public class WSConFailOverTest {
     private static final int portA = 6041;
 
     private static final String hostB = "127.0.0.1";
-    private static final int portB = 8041;
+    private static final int portB = 9041;
     private static final String db_name = "test";
     private static final String tableName = "meters";
     private Connection connection;
@@ -75,7 +75,7 @@ public class WSConFailOverTest {
 
     @Before
     public void before() throws SQLException, InterruptedException, IOException, URISyntaxException {
-        taosAdapterMock = new TaosAdapterMock(8041);
+        taosAdapterMock = new TaosAdapterMock(9041);
         taosAdapterMock.start();
 
         String url;

@@ -178,6 +178,10 @@ public class WSConsumer<V> implements Consumer<V> {
 
         ConsumerRecords<V> records = new ConsumerRecords<>();
         try (WSConsumerResultSet rs = new WSConsumerResultSet(transport, factory, pollResp.getMessageId(), pollResp.getDatabase())) {
+            if (deserializer instanceof MapEnhanceDeserializer){
+                ConsumerRecords<TMQEnhMap> resultRecords = rs.handleSubscribeDB(pollResp);
+                return (ConsumerRecords<V>) resultRecords;
+            }
             while (rs.next()) {
                 String topic = pollResp.getTopic();
                 String dbName = pollResp.getDatabase();
