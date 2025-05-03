@@ -17,7 +17,9 @@ import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.websocketx.*;
+import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensionHandler;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensionHandshaker;
+import io.netty.handler.codec.http.websocketx.extensions.compression.DeflateFrameClientExtensionHandshaker;
 import io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateClientExtensionHandshaker;
 import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketClientCompressionHandler;
 import io.netty.handler.logging.LogLevel;
@@ -25,7 +27,9 @@ import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.handler.timeout.TimeoutException;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ResourceLeakDetector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +37,7 @@ import javax.net.ssl.SSLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
+import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
 public class WSClient implements AutoCloseable {
@@ -40,54 +45,31 @@ public class WSClient implements AutoCloseable {
     private final Logger log = LoggerFactory.getLogger(WSClient.class);
     Transport transport;
 
-    public final String serverUri;
-    private final Channel channel;
+    public final URI serverUri;
+    private Channel channel;
+    private final ConnectionParam connectionParam;
 
 
     static {
         Utils.initEventLoopGroup();
+
+        // ToDo
         //ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
         Runtime.getRuntime().addShutdownHook(new Thread(Utils::finalizeEventLoopGroup));
     }
-
     /**
      * create websocket connection client
      *
      * @param serverUri connection url
      */
-    public WSClient(URI serverUri, Transport transport, ConnectionParam connectionParam) throws SQLException {
+    public WSClient(URI serverUri, Transport transport, ConnectionParam connectionParam) {
         this.transport = transport;
-        this.serverUri = serverUri.toString();
+        this.serverUri = serverUri;
+        this.connectionParam = connectionParam;
+        this.channel = null;
+    }
 
-        DefaultHttpHeaders headers = new DefaultHttpHeaders();
-        if (connectionParam.isEnableCompression()) {
-            headers.add(
-                    "Sec-WebSocket-Extensions",
-                    "permessage-deflate; server_no_context_takeover; client_no_context_takeover"
-            );
-        }
-
-        // 自定义压缩参数
-        WebSocketClientExtensionHandshaker deflateHandshaker = new PerMessageDeflateClientExtensionHandshaker(
-                6, false,
-                15,       // clientMaxWindowSize (2^15 = 32KB)
-                true,     // clientNoContextTakeover
-                true    // serverNoContextTakeover
-
-        );
-
-        deflateHandshaker.newRequestData();
-
-        // Connect with V13 (RFC 6455 aka HyBi-17). You can change it to V08 or V00.
-        // If you change it to V00, ping is not supported and remember to change
-        // HttpResponseDecoder to WebSocketHttpResponseDecoder in the pipeline.
-        final WebSocketClientHandler handler =
-                new WebSocketClientHandler(
-                        WebSocketClientHandshakerFactory.newHandshaker(
-                                serverUri, WebSocketVersion.V13, null, true, headers),
-                        connectionParam.getTextMessageHandler(),
-                        connectionParam.getBinaryMessageHandler());
-
+    private Channel getChannel() throws SQLException {
         Bootstrap b = new Bootstrap();
         b.group(Utils.getEventLoopGroup())
                 .channel(NioSocketChannel.class)
@@ -97,67 +79,105 @@ public class WSClient implements AutoCloseable {
                     @Override
                     protected void initChannel(SocketChannel ch) throws SSLException {
                         ChannelPipeline p = ch.pipeline();
-                        p.addLast(new LoggingHandler(LogLevel.DEBUG));  // 关键点
+
                         if (connectionParam.isUseSsl()) {
                             SslContext sslCtx = SslContextBuilder.forClient()
-                                    .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
+                                    .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                                    .build();
                             p.addLast(sslCtx.newHandler(ch.alloc(), serverUri.getHost(), serverUri.getPort()));
                         }
 
-                        if (connectionParam.isEnableCompression()){
-                            p.addLast(
-                                    new HttpClientCodec(),
-                                    new HttpObjectAggregator(8192),
-                                    WebSocketClientCompressionHandler.INSTANCE,
-                                    handler);
-                        } else {
-                            p.addLast(
-                                    new HttpClientCodec(),
-                                    new HttpObjectAggregator(8192),
-                                    handler);
+                        // 2. 日志记录（记录解密后的明文）
+                        // toDo
+                        //p.addLast(new LoggingHandler(LogLevel.DEBUG));
+
+                        // 3. HTTP编解码器
+                        p.addLast(new HttpClientCodec());
+
+                        // 4. HTTP消息聚合器
+                        p.addLast(new HttpObjectAggregator(8192));
+
+                        // 5. WebSocket协议处理器（握手、帧处理）
+                        // 3. WebSocket握手处理器
+                        // 1. 创建自定义压缩扩展配置（禁用上下文接管）
+                        // 1. 自定义压缩扩展处理器（禁用上下文接管）
+
+                        WebSocketClientHandshaker handshaker = WebSocketClientHandshakerFactory.newHandshaker(
+                                serverUri, WebSocketVersion.V13, null, true, new DefaultHttpHeaders(), 100 * 1024 * 1024);
+                        p.addLast(new WebSocketHandshakeHandler(handshaker));
+
+                        if (connectionParam.isEnableCompression()) {
+                            // 自定义压缩参数
+                            WebSocketClientExtensionHandshaker deflateHandshaker = new PerMessageDeflateClientExtensionHandshaker(
+                                    6, false,
+                                    15,       // clientMaxWindowSize (2^15 = 32KB)
+                                    true,     // clientNoContextTakeover
+                                    true    // serverNoContextTakeover
+
+                            );
+
+                            WebSocketClientExtensionHandler extensionHandler = new WebSocketClientExtensionHandler(deflateHandshaker,  new DeflateFrameClientExtensionHandshaker(false),
+                                    new DeflateFrameClientExtensionHandshaker(true));
+
+                            // 3. 添加到 ChannelPipeline（必须在握手处理器之后）
+                            p.addLast(extensionHandler);
                         }
 
 
-//                        // 自定义压缩参数
-//                        WebSocketClientExtensionHandshaker handshaker = new PerMessageDeflateClientExtensionHandshaker(6, false,
-//                                15,  // clientWindowSize
-//                                true, // clientNoContext
-//                                true  // serverNoContext
-//                        );
-//
-//                        // 创建压缩处理器
-//                        WebSocketClientCompressionHandler compressionHandler = new WebSocketClientCompressionHandler(handshaker);
-//                        p.addLast(compressionHandler);
 
+                        // 7. WebSocket帧聚合器
+                        p.addLast(new WebSocketFrameAggregator(100 * 1024 * 1024));
 
-                        p.addLast(new WebSocketFrameAggregator(100 * 1024 * 1024)); // 100MB
+                        // Connect with V13 (RFC 6455 aka HyBi-17). You can change it to V08 or V00.
+                        // If you change it to V00, ping is not supported and remember to change
+                        // HttpResponseDecoder to WebSocketHttpResponseDecoder in the pipeline.
+                        final WebSocketClientHandler handler =
+                                new WebSocketClientHandler(connectionParam.getTextMessageHandler(),
+                                        connectionParam.getBinaryMessageHandler());
+                        p.addLast(handler);
                     }
                 });
 
         ChannelFuture connectFuture = b.connect(serverUri.getHost(), serverUri.getPort());
-        connectFuture.syncUninterruptibly();
 
-
-        if (!connectFuture.isSuccess()) {
-            Throwable cause = connectFuture.cause();
-            if (cause instanceof ConnectTimeoutException) {
+        // 添加统一超时控制
+        Channel tmpChn = null;
+        try {
+            // 等待连接完成（带超时）
+            if (!connectFuture.awaitUninterruptibly(connectionParam.getConnectTimeout())) {
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT);
-            } else {
+           }
+
+            if (!connectFuture.isSuccess()) {
+                Throwable cause = connectFuture.cause();
+                if (cause instanceof ConnectTimeoutException) {
+                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT);
+                }
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, cause.getMessage());
             }
+
+            tmpChn = connectFuture.channel();
+
+            // 等待握手完成（复用同一超时）
+            WebSocketHandshakeHandler wsHandler = tmpChn.pipeline().get(WebSocketHandshakeHandler.class);
+            ChannelFuture handshakeFuture = wsHandler.handshakeFuture();
+
+            if (!handshakeFuture.awaitUninterruptibly(connectionParam.getConnectTimeout())) {
+                tmpChn.close().syncUninterruptibly();
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT, "Handshake timed out");
+            }
+
+            if (!handshakeFuture.isSuccess()) {
+                tmpChn.close().syncUninterruptibly();
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "Handshake failed: " + handshakeFuture.cause().getMessage());
+            }
+            return tmpChn;
+        } catch (TimeoutException e) {
+            if (tmpChn != null) {
+                tmpChn.close().syncUninterruptibly();
+            }
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT, e.getMessage());
         }
-
-        // 关键：等待 WebSocket 握手完成
-        ChannelFuture handshakeFuture = handler.getHandshakeFuture();
-        handshakeFuture.syncUninterruptibly(); // 阻塞等待握手结果
-
-        if (!handshakeFuture.isSuccess()) {
-            // 握手失败（如服务器返回 404、协议版本不匹配）
-            Throwable cause = handshakeFuture.cause();
-            throw new IllegalStateException("WebSocket handshake failed: " + cause.getMessage());
-        }
-
-        channel = connectFuture.channel();
     }
 
     public boolean isOpen() {
@@ -181,22 +201,32 @@ public class WSClient implements AutoCloseable {
             if (closeFuture.isSuccess()) {
                 log.debug("WebSocket 连接已成功关闭");
             } else {
-                log.error("关闭 WebSocket 连接时出错: " + closeFuture.cause());
+                log.error("关闭 WebSocket 连接时出错", closeFuture.cause());
             }
         }
     }
-   public boolean reconnectBlockingWithoutRetry() throws InterruptedException {
-//        return super.reconnectBlocking();
-
-       return false;
+   public boolean reconnectBlockingWithoutRetry() {
+       return connectBlocking();
     }
 
-    public boolean connectBlocking(int connectTimeout, TimeUnit unit){
-        return false;
+    public boolean connectBlocking(){
+        if (channel != null && channel.isActive()){
+            return true;
+        }
+        if (channel != null){
+            channel.close().syncUninterruptibly();
+        }
+
+        try {
+            channel = getChannel();
+            return true;
+        } catch (SQLException e){
+            return false;
+        }
     }
 
     public boolean reconnectBlocking(){
-        return false;
+        return connectBlocking();
     }
 
     public void send(String strData) {

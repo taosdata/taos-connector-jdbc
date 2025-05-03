@@ -54,6 +54,16 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
     private final HashMap<ByteBuffer, TableInfo> tableInfoMap = new HashMap<>();
     private TableInfo tableInfo;
 
+    public AbsWSPreparedStatement(Transport transport,
+                                  ConnectionParam param,
+                                  String database,
+                                  AbstractConnection connection,
+                                  String sql,
+                                  Long instanceId) {
+        super(transport, database, connection, instanceId, param.getZoneId());
+        this.rawSql = sql;
+        this.param = param;
+    }
 
     public AbsWSPreparedStatement(Transport transport,
                                   ConnectionParam param,
@@ -65,8 +75,6 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
         super(transport, database, connection, instanceId, param.getZoneId());
         this.rawSql = sql;
         this.param = param;
-        if (!sql.contains("?"))
-            return;
 
         reqId = prepareResp.getReqId();
         stmtId = prepareResp.getStmtId();
@@ -772,7 +780,7 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
     @Override
     public void close() throws SQLException {
         if (!isClosed()) {
-            if (transport.isConnected()) {
+            if (transport.isConnected() && stmtId != 0) {
                 Request close = RequestFactory.generateClose(stmtId, reqId);
                 transport.send(close);
             }
@@ -1097,7 +1105,7 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
         Request request = RequestFactory.generateExec(stmtId, reqId);
         Stmt2ExecResp resp = (Stmt2ExecResp) transport.send(request);
         if (Code.SUCCESS.getCode() != resp.getCode()) {
-            throw TSDBError.createSQLException(bindResp.getCode(), "(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
+            throw TSDBError.createSQLException(resp.getCode(), "(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
         }
 
         this.affectedRows = resp.getAffected();

@@ -4,6 +4,7 @@ import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.ws.TSWSPreparedStatement;
 import io.netty.util.ResourceLeakDetector;
 import org.junit.*;
+import org.junit.runners.MethodSorters;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -15,7 +16,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Properties;
 
-@FixMethodOrder
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class WsPstmtTest {
     String host = "127.0.0.1";
     String db_name = "ws_prepare";
@@ -26,7 +27,7 @@ public class WsPstmtTest {
     PreparedStatement pstmt;
 
     @Test
-    public void testExecuteUpdate() throws SQLException {
+    public void test001_ExecuteUpdate() throws SQLException {
         String sql = "insert into " + db_name + "." + tableName + " values(?, ?)";
         PreparedStatement statement = connection.prepareStatement(sql);
         statement.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
@@ -38,7 +39,7 @@ public class WsPstmtTest {
     }
 
     @Test
-    public void testReuseStmtExecuteUpdate() throws SQLException {
+    public void test002_ReuseStmtExecuteUpdate() throws SQLException {
         String sql = "insert into " + db_name + "." + tableName + " values(?, ?)";
         PreparedStatement statement = connection.prepareStatement(sql);
         statement.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
@@ -56,7 +57,7 @@ public class WsPstmtTest {
     }
 
     @Test
-    public void testExecuteBatchInsert() throws SQLException {
+    public void test003_ExecuteBatchInsert() throws SQLException {
         String sql = "insert into " + db_name + "." + tableName + " (ts, c1) values(?, ?)";
         PreparedStatement statement = connection.prepareStatement(sql);
         for (int i = 0; i < 10; i++) {
@@ -80,7 +81,7 @@ public class WsPstmtTest {
     }
 
     @Test
-    public void testQuery() throws SQLException {
+    public void test004_Query() throws SQLException {
         String sql = "select * from " + db_name + "." + tableName + " where ts > ? and ts < ?";
         PreparedStatement statement = connection.prepareStatement(sql);
         statement.setTimestamp(1, new Timestamp(System.currentTimeMillis() - 1000));
@@ -91,17 +92,28 @@ public class WsPstmtTest {
         }
     }
 
+    @Test
+    public void test005_NormalQuery() throws SQLException {
+        pstmt.execute("insert into " + db_name + "." + tableName + " values  (now, 1)");
+
+        String sql = "select * from " + db_name + "." + tableName + " limit 1";
+        try (PreparedStatement statement = connection.prepareStatement(sql);
+        ResultSet resultSet = statement.executeQuery()){
+           Assert.assertTrue(resultSet.next());
+        }
+    }
+
     @Test (expected = SQLException.class)
-    public void testSetNCharacterStream() throws SQLException {
+    public void test100_SetNCharacterStream() throws SQLException {
         pstmt.setNCharacterStream(1, null);
     }
 
     @Test (expected = SQLException.class)
-    public void testSetNCharacterStream2() throws SQLException {
+    public void test101_SetNCharacterStream2() throws SQLException {
         pstmt.setNCharacterStream(1, null, 0);
     }
     @Test (expected = SQLException.class)
-    public void testSetNClob() throws SQLException {
+    public void test012_SetNClob() throws SQLException {
         pstmt.setNClob(1, new NClob() {
             @Override
             public long length() throws SQLException {
@@ -170,12 +182,12 @@ public class WsPstmtTest {
         });
     }
     @Test (expected = SQLException.class)
-    public void testSetNClob2() throws SQLException {
+    public void test103_SetNClob2() throws SQLException {
         pstmt.setNClob(1, null, 0);
     }
 
     @Test (expected = SQLException.class)
-    public void testSetBlob() throws SQLException {
+    public void test104_SetBlob() throws SQLException {
         pstmt.setBlob(1, new Blob() {
             @Override
             public long length() throws SQLException {
@@ -234,38 +246,38 @@ public class WsPstmtTest {
         });
     }
     @Test (expected = SQLException.class)
-    public void testSetBlob2() throws SQLException {
+    public void test105_SetBlob2() throws SQLException {
         pstmt.setBlob(1, null, 0);
     }
 
     @Test (expected = SQLException.class)
-    public void testSetSQLXML() throws SQLException {
+    public void test106_SetSQLXML() throws SQLException {
         pstmt.setSQLXML(1, null);
     }
 
     @Test (expected = SQLException.class)
-    public void testSetObject() throws SQLException {
+    public void test107_SetObject() throws SQLException {
         pstmt.setObject(1, null, 0, 0);
     }
 
     @Test (expected = SQLException.class)
-    public void testSetAsciiStream() throws SQLException {
+    public void test108_SetAsciiStream() throws SQLException {
         pstmt.setAsciiStream(1, null, 0);
     }
 
 
     @Test (expected = SQLException.class)
-    public void testSetBinaryStream() throws SQLException {
+    public void test109_SetBinaryStream() throws SQLException {
         pstmt.setBinaryStream(1, null, 0);
     }
 
     @Test (expected = SQLException.class)
-    public void testSetCharacterStream() throws SQLException {
+    public void test110_SetCharacterStream() throws SQLException {
         pstmt.setCharacterStream(1, null, 0);
     }
 
     @Test
-    public void testSetTagNull() throws SQLException {
+    public void test111_SetTagNull() throws SQLException {
         TSWSPreparedStatement wsPreparedStatement = pstmt.unwrap(TSWSPreparedStatement.class);
         wsPreparedStatement.setTagSqlTypeNull(1, Types.BOOLEAN);
         wsPreparedStatement.setTagSqlTypeNull(1, Types.TINYINT);
@@ -282,7 +294,7 @@ public class WsPstmtTest {
     }
 
     @Test
-    public void testSetObject2() throws SQLException {
+    public void test112_SetObject2() throws SQLException {
         TSWSPreparedStatement wsPreparedStatement = pstmt.unwrap(TSWSPreparedStatement.class);
         wsPreparedStatement.setObject(1, null, Types.BOOLEAN);
         wsPreparedStatement.setObject(1, null, Types.TINYINT);

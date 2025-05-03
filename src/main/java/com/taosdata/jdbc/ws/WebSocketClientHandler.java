@@ -14,36 +14,15 @@ import java.util.function.Consumer;
 
 public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> {
     private final Logger log = LoggerFactory.getLogger(WebSocketClientHandler.class);
-
-    private final WebSocketClientHandshaker handshaker;
-    private ChannelPromise handshakeFuture;
-
     private final Consumer<String> textMessageHandler;
     private final Consumer<ByteBuf> binaryMessageHandler;
 
 
-    public WebSocketClientHandler(WebSocketClientHandshaker handshaker,
-                                  Consumer<String> textMessageHandler,
+    public WebSocketClientHandler(Consumer<String> textMessageHandler,
                                   Consumer<ByteBuf> binaryMessageHandler) {
-        this.handshaker = handshaker;
         this.textMessageHandler = textMessageHandler;
         this.binaryMessageHandler = binaryMessageHandler;
     }
-
-    public ChannelFuture handshakeFuture() {
-        return handshakeFuture;
-    }
-
-    @Override
-    public void handlerAdded(ChannelHandlerContext ctx) {
-        handshakeFuture = ctx.newPromise();
-    }
-
-    @Override
-    public void channelActive(ChannelHandlerContext ctx) {
-        handshaker.handshake(ctx.channel());
-    }
-
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
         log.trace("WebSocket Client disconnected!");
@@ -52,21 +31,15 @@ public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
         Channel ch = ctx.channel();
-        if (!handshaker.isHandshakeComplete()) {
-            try {
-                handshaker.finishHandshake(ch, (FullHttpResponse) msg);
-                handshakeFuture.setSuccess();
-            } catch (WebSocketHandshakeException e) {
-                handshakeFuture.setFailure(e);
-            }
-            return;
-        }
-
         if (msg instanceof FullHttpResponse) {
-            FullHttpResponse response = (FullHttpResponse) msg;
-            throw new IllegalStateException(
-                    "Unexpected FullHttpResponse (getStatus=" + response.status() +
-                            ", content=" + response.content().toString(CharsetUtil.UTF_8) + ')');
+//            FullHttpResponse response = (FullHttpResponse) msg;
+//            String content = response.content().toString(CharsetUtil.UTF_8);
+//            System.err.println("收到意外 HTTP 响应: " + response.status() + " | Content: " + content);
+//            throw new IllegalStateException(
+//                    "Unexpected FullHttpResponse (getStatus=" + response.status() +
+//                            ", content=" + response.content().toString(CharsetUtil.UTF_8) + ')');
+//            super.channelRead(ctx, msg);
+            return;
         }
 
         WebSocketFrame frame = (WebSocketFrame) msg;
@@ -92,15 +65,9 @@ public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> 
             ch.close();
         }
     }
-    public ChannelFuture getHandshakeFuture() {
-        return handshakeFuture; // 暴露给外部监听
-    }
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         log.error("exception caught", cause);
-        if (!handshakeFuture.isDone()) {
-            handshakeFuture.setFailure(cause);
-        }
         ctx.close();
     }
 }

@@ -115,11 +115,11 @@ public class Transport implements AutoCloseable {
                 boolean reconnected = reconnectCurNode();
                 if (reconnected) {
                     reconnectCount.incrementAndGet();
-                    log.debug("reconnect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri));
+                    log.debug("reconnect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri.toString()));
                     return;
                 }
 
-                log.debug("reconnect failed to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri));
+                log.debug("reconnect failed to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri.toString()));
 
                 currentNodeIndex = (currentNodeIndex + 1) % clientArr.size();
             }
@@ -360,30 +360,30 @@ public class Transport implements AutoCloseable {
             if (WSConnection.g_FirstConnection && clientArr.size() > 1) {
                 // 测试所有节点，如果连接失败，直接异常
                 for (WSClient wsClient : clientArr){
-                    if (!wsClient.connectBlocking(connectTimeout, TimeUnit.MILLISECONDS)) {
+                    if (!wsClient.connectBlocking()) {
                         close();
                         throw TSDBError.createSQLException(ERROR_CONNECTION_TIMEOUT,
                                 "can't create connection with server " + wsClient.serverUri.toString() + " within: " + connectTimeout + " milliseconds");
                     }
-                    log.debug("connect success to {}", StringUtils.getBasicUrl(wsClient.serverUri));
+                    log.debug("connect success to {}", StringUtils.getBasicUrl(wsClient.serverUri.toString()));
                 }
 
                 // 断开其他节点
                 for (int i = 0; i < clientArr.size(); i++){
                     if (i != currentNodeIndex) {
                         clientArr.get(i).closeBlocking();
-                        log.debug("disconnect success to {}", StringUtils.getBasicUrl(clientArr.get(i).serverUri));
+                        log.debug("disconnect success to {}", StringUtils.getBasicUrl(clientArr.get(i).serverUri.toString()));
                     }
                 }
             } else {
-                if (!clientArr.get(currentNodeIndex).connectBlocking(connectTimeout, TimeUnit.MILLISECONDS)) {
+                if (!clientArr.get(currentNodeIndex).connectBlocking()) {
                     close();
                     throw TSDBError.createSQLException(ERROR_CONNECTION_TIMEOUT,
                             "can't create connection with server within: " + connectTimeout + " milliseconds");
                 }
-                log.debug("connect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri));
+                log.debug("connect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri.toString()));
             }
-        } catch (InterruptedException e) {
+        } catch (SQLException e) {
             Thread.currentThread().interrupt();
             close();
             throw new SQLException("create websocket connection has been Interrupted ", e);
