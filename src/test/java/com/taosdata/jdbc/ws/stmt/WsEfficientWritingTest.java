@@ -1,12 +1,17 @@
 package com.taosdata.jdbc.ws.stmt;
 
+import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.Utils;
+import com.taosdata.jdbc.ws.TSWSPreparedStatement;
 import com.taosdata.jdbc.ws.TaosAdapterMock;
 import com.taosdata.jdbc.ws.WSEWPreparedStatement;
 import org.junit.*;
 
+import java.math.BigInteger;
 import java.sql.*;
+import java.util.Collections;
 import java.util.Properties;
 import java.util.Random;
 
@@ -15,6 +20,7 @@ public class WsEfficientWritingTest {
     private final String host = "localhost";
     private final String db_name = "ws_fw";
     private final String tableName = "wpt";
+    private final String tableNameAlltype = "wpt_all_type";
     private final String tableNameCopyData = "wpt_cp";
     private final String tableReconnect = "wpt_rc";
     private final String asyncSqlTable = tableReconnect;
@@ -24,6 +30,10 @@ public class WsEfficientWritingTest {
     private final int numOfRow = 100;
     private final int proxyPort = 8041;
     private static final Random random = new Random(System.currentTimeMillis());
+    static String testStr = "20160601";
+    static byte[] expectedVarBinary = StringUtils.hexToBytes(testStr);
+    static byte[] expectedGeometry = StringUtils.hexToBytes("0101000000000000000000F03F0000000000000040");
+
 
     public void createSubTable() throws SQLException{
         // create sub table first
@@ -274,6 +284,38 @@ public class WsEfficientWritingTest {
         Assert.assertEquals(numOfSubTable * numOfRow, Utils.getSqlRows(connection, db_name + "." + asyncSqlTable));
     }
 
+    @Test
+    public void testAllType() throws SQLException {
+        String sql = "ASYNC_INSERT into " + db_name + "." + tableNameAlltype + "(tbname, ts, c1, t1) values (?, ?, ?, ?)";
+
+        long current = System.currentTimeMillis();
+        try (Connection con = getConnectionNormal();
+             PreparedStatement pstmt = con.prepareStatement(sql)) {
+            for (int j = 0; j < numOfRow; j++) {
+                current = current + 1000;
+                for (int i = 1; i <= numOfSubTable; i++) {
+                    // set columns
+                    pstmt.setString(1, "all_type_bind_" + i);
+                    pstmt.setTimestamp(2, new Timestamp(current));
+                    pstmt.setNString(3, "世界" + i + j);
+                    pstmt.setNString(4, "世界" + i);
+                    pstmt.addBatch();
+                }
+                int[] exeResult = pstmt.executeBatch();
+                Assert.assertEquals(exeResult.length, numOfSubTable);
+
+                for (int ele : exeResult){
+                    Assert.assertEquals(Statement.SUCCESS_NO_INFO, ele);
+                }
+
+                int affectedRows = pstmt.executeUpdate();
+                Assert.assertEquals(affectedRows, numOfSubTable);
+            }
+        }
+
+        Assert.assertEquals(numOfSubTable * numOfRow, Utils.getSqlRows(connection, db_name + "." + tableNameAlltype));
+    }
+
     @Test(expected = SQLException.class)
     public void testStrictCheck() throws SQLException, InterruptedException {
         String sql = "INSERT INTO " + db_name + "." + tableNameCopyData + "(tbname, ts, b, groupId) VALUES (?,?,?,?)";
@@ -357,6 +399,9 @@ public class WsEfficientWritingTest {
         statement.execute("create stable if not exists " + db_name + "." + tableName + " (ts TIMESTAMP, current FLOAT, voltage INT, phase FLOAT) TAGS (groupId INT, location BINARY(24))");
         statement.execute("create stable if not exists " + db_name + "." + tableNameCopyData + " (ts TIMESTAMP, b varbinary(10)) TAGS (groupId INT)");
         statement.execute("create stable if not exists " + db_name + "." + tableReconnect + " (ts TIMESTAMP, i INT) TAGS (groupId INT)");
+
+        statement.execute("create stable if not exists " + db_name + "." + tableNameAlltype +
+                "(ts timestamp, c1 nchar(20)) tags (t1 nchar(10))");
         statement.close();
 
         createSubTable();
