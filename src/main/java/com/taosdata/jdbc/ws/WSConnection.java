@@ -114,7 +114,15 @@ public class WSConnection extends AbstractConnection {
                         idGenerator.getAndIncrement(),
                         prepareResp);
             } else {
-                return new TSWSPreparedStatement(transport,
+//                return new TSWSPreparedStatement(transport,
+//                        param,
+//                        database,
+//                        this,
+//                        sql,
+//                        idGenerator.getAndIncrement(),
+//                        prepareResp);
+
+                return new WSRowPreparedStatement(transport,
                         param,
                         database,
                         this,

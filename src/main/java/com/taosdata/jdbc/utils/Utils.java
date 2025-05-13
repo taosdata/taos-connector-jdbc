@@ -9,6 +9,7 @@ import com.taosdata.jdbc.ws.entity.ConnectReq;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.util.concurrent.DefaultThreadFactory;
 
 import java.lang.reflect.Constructor;
 import java.net.InetAddress;
@@ -24,6 +25,7 @@ import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -220,16 +222,9 @@ public class Utils {
         // based on your requirements.
         // Example:
         //
-        eventLoopGroup = new NioEventLoopGroup();
+        eventLoopGroup = new NioEventLoopGroup(0, new DefaultThreadFactory("netty-eventloop", true));
     }
     public static EventLoopGroup getEventLoopGroup() {
         return eventLoopGroup;
-    }
-
-    public static void finalizeEventLoopGroup() {
-        if (eventLoopGroup != null) {
-            eventLoopGroup.shutdownGracefully();
-            eventLoopGroup = null;
-        }
     }
 }

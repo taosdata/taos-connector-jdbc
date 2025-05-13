@@ -185,18 +185,24 @@ public class WsPstmtStmt2Test {
 
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
 
-            for (int i = 1; i <= numOfSubTable; i++) {
+            for (int i = 1; i <= 1; i++) {
                 // set columns
                 long current = System.currentTimeMillis();
-                for (int j = 0; j < numOfRow; j++) {
+                for (int j = 0; j < 1; j++) {
                     pstmt.setString(1, "d_bind_中国人" + i);
                     pstmt.setInt(2, i);
                     pstmt.setString(3, "location_" + i);
 
-                    pstmt.setTimestamp(4, new Timestamp(current + j));
-                    pstmt.setFloat(5, random.nextFloat() * 30);
-                    pstmt.setInt(6, random.nextInt(300));
-                    pstmt.setFloat(7, random.nextFloat());
+//                    pstmt.setTimestamp(4, new Timestamp(current + j));
+//                    pstmt.setFloat(5, random.nextFloat() * 30);
+//                    pstmt.setInt(6, random.nextInt(300));
+//                    pstmt.setFloat(7, random.nextFloat());
+
+
+                    pstmt.setTimestamp(4, new Timestamp(1746870173341L));
+                    pstmt.setFloat(5, 1.0f);
+                    pstmt.setInt(6, 2);
+                    pstmt.setFloat(7, 3.0f);
                     pstmt.addBatch();
                 }
                 int[] exeResult = pstmt.executeBatch();

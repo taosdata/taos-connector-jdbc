@@ -9,6 +9,7 @@ import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.ws.entity.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -202,16 +203,22 @@ public class Transport implements AutoCloseable {
         }
 
         try {
+            buffer.retain();
             clientArr.get(currentNodeIndex).send(buffer);
         } catch (WebsocketNotConnectedException e) {
             tmqRethrowConnectionCloseException();
             reconnect();
             try {
+                buffer.retain();
                 clientArr.get(currentNodeIndex).send(buffer);
             }catch (Exception ex){
                 inFlightRequest.remove(action, reqId);
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());
+            } finally {
+                ReferenceCountUtil.safeRelease(buffer);
             }
+        } finally {
+            ReferenceCountUtil.safeRelease(buffer);
         }
 
         String reqString = "action:" + action + ", reqId:" + reqId + ", resultId:" + resultId + ", actionType" + type;
@@ -231,7 +238,6 @@ public class Transport implements AutoCloseable {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
         }
 
-
         Response response;
         CompletableFuture<Response> completableFuture = new CompletableFuture<>();
         try {
@@ -241,16 +247,22 @@ public class Transport implements AutoCloseable {
         }
 
         try {
+            buffer.retain();
             clientArr.get(currentNodeIndex).send(buffer);
         } catch (WebsocketNotConnectedException e) {
             tmqRethrowConnectionCloseException();
             reconnect();
             try {
+                buffer.retain();
                 clientArr.get(currentNodeIndex).send(buffer);
             }catch (Exception ex){
                 inFlightRequest.remove(action, reqId);
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());
+            } finally {
+                ReferenceCountUtil.safeRelease(buffer);
             }
+        } finally {
+            ReferenceCountUtil.safeRelease(buffer);
         }
 
         String reqString = "action:" + action + ", reqId:" + reqId;

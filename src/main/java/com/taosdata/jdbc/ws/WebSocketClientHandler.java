@@ -5,10 +5,12 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.websocketx.*;
+import io.netty.util.AttributeKey;
 import io.netty.util.CharsetUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.function.Consumer;
 
@@ -16,6 +18,13 @@ public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> 
     private final Logger log = LoggerFactory.getLogger(WebSocketClientHandler.class);
     private final Consumer<String> textMessageHandler;
     private final Consumer<ByteBuf> binaryMessageHandler;
+
+    public static final AttributeKey<Boolean> LOCAL_INITIATED_CLOSE =
+            AttributeKey.valueOf("localInitiatedClose");
+    public static final AttributeKey<Integer> CLOSE_CODE_KEY =
+            AttributeKey.valueOf("closeCodeKey");
+    public static final AttributeKey<String> REASON_KEY =
+            AttributeKey.valueOf("reasonKey");
 
 
     public WebSocketClientHandler(Consumer<String> textMessageHandler,
@@ -25,20 +34,32 @@ public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> 
     }
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
-        log.trace("WebSocket Client disconnected!");
+        // 获取关闭发起方标记
+        boolean isLocalInitiated = ctx.channel().attr(LOCAL_INITIATED_CLOSE).get();
+        Integer code = ctx.channel().attr(CLOSE_CODE_KEY).get();
+        String reason = ctx.channel().attr(REASON_KEY).get();
+        InetSocketAddress remoteAddress = (InetSocketAddress) ctx.channel().remoteAddress();
+        String remoteHost = remoteAddress.getHostString();
+        int remotePort = remoteAddress.getPort();
+        String uri = remoteHost + ":" + remotePort;
+
+        if (isLocalInitiated){
+            log.debug("disconnect uri: {},  code : {} , reason: {}, remote: {}", uri, code, reason, false);
+        } else {
+            log.error("disconnect uri: {},  code : {} , reason: {}, remote: {}", uri, code, reason, true);
+        }
     }
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
         Channel ch = ctx.channel();
         if (msg instanceof FullHttpResponse) {
-//            FullHttpResponse response = (FullHttpResponse) msg;
-//            String content = response.content().toString(CharsetUtil.UTF_8);
-//            System.err.println("收到意外 HTTP 响应: " + response.status() + " | Content: " + content);
-//            throw new IllegalStateException(
-//                    "Unexpected FullHttpResponse (getStatus=" + response.status() +
-//                            ", content=" + response.content().toString(CharsetUtil.UTF_8) + ')');
-//            super.channelRead(ctx, msg);
+            FullHttpResponse response = (FullHttpResponse) msg;
+            if (response.status().code() != 101) { // 101 是 WebSocket 握手成功状态码
+                String content = response.content().toString(CharsetUtil.UTF_8);
+                log.error("WebSocket handshake error，code: {}, msg: {}", response.status(), content);
+                ctx.close(); // 关闭连接
+            }
             return;
         }
 
@@ -53,16 +74,16 @@ public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> 
         } else if (frame instanceof BinaryWebSocketFrame) {
             BinaryWebSocketFrame binaryFrame = (BinaryWebSocketFrame) frame;
             binaryMessageHandler.accept(binaryFrame.content());
-        } else if (frame instanceof PongWebSocketFrame) {
-            System.out.println("WebSocket Client received pong");
         } else if (frame instanceof CloseWebSocketFrame) {
-            // do nothing, wait next send to retry.
-//            if (remote){
-//                log.error("disconnect uri: {},  code : {} , reason: {}, remote: {}", StringUtils.getBasicUrl(serverUri), code, reason, remote);
-//            }else{
-//                log.debug("disconnect uri: {},  code : {} , reason: {}, remote: {}", StringUtils.getBasicUrl(serverUri), code, reason, remote);
-//            }
+            int code = ((CloseWebSocketFrame) frame).statusCode();
+            String reason = ((CloseWebSocketFrame) frame).reasonText();
+
+            ctx.channel().attr(CLOSE_CODE_KEY).set(code);
+            ctx.channel().attr(REASON_KEY).set(reason);
             ch.close();
+        } else if (frame instanceof ContinuationWebSocketFrame) {
+            ContinuationWebSocketFrame continuationFrame = (ContinuationWebSocketFrame) frame;
+            log.error("received ContinuationWebSocketFrame, len: {}", continuationFrame.content().capacity());
         }
     }
     @Override

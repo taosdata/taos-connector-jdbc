@@ -2,6 +2,9 @@ package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.ws.TSWSPreparedStatement;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.util.ResourceLeakDetector;
 import org.junit.*;
 import org.junit.runners.MethodSorters;
@@ -30,7 +33,7 @@ public class WsPstmtTest {
     public void test001_ExecuteUpdate() throws SQLException {
         String sql = "insert into " + db_name + "." + tableName + " values(?, ?)";
         PreparedStatement statement = connection.prepareStatement(sql);
-        statement.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
+        statement.setTimestamp(1, new Timestamp(1746870173341L));
 //        statement.setTimestamp(1, new Timestamp(0));
         statement.setInt(2, 1);
         int i = statement.executeUpdate();

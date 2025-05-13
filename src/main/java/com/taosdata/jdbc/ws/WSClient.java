@@ -49,13 +49,11 @@ public class WSClient implements AutoCloseable {
     private Channel channel;
     private final ConnectionParam connectionParam;
 
-
     static {
         Utils.initEventLoopGroup();
 
         // ToDo
-        //ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
-        Runtime.getRuntime().addShutdownHook(new Thread(Utils::finalizeEventLoopGroup));
+//        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
     }
     /**
      * create websocket connection client
@@ -194,6 +192,8 @@ public class WSClient implements AutoCloseable {
             String reason = "Normal close";
             CloseWebSocketFrame closeFrame = new CloseWebSocketFrame(statusCode, reason);
             ChannelFuture writeFuture = channel.writeAndFlush(closeFrame);
+            channel.attr(WebSocketClientHandler.LOCAL_INITIATED_CLOSE).set(true);
+
             writeFuture.syncUninterruptibly();
 
             ChannelFuture closeFuture = channel.close();
@@ -241,9 +241,10 @@ public class WSClient implements AutoCloseable {
 
     public void send(ByteBuf binData) {
         if (!channel.isActive()) {
-            ReferenceCountUtil.release(binData);
+            ReferenceCountUtil.safeRelease(binData);
             throw new WebsocketNotConnectedException();
         }
+
         channel.writeAndFlush(new BinaryWebSocketFrame(binData));
     }
     public void closeBlocking() {
