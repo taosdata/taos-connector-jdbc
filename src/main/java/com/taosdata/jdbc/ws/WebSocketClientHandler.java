@@ -19,13 +19,9 @@ public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> 
     private final Consumer<String> textMessageHandler;
     private final Consumer<ByteBuf> binaryMessageHandler;
 
-    public static final AttributeKey<Boolean> LOCAL_INITIATED_CLOSE =
-            AttributeKey.valueOf("localInitiatedClose");
-    public static final AttributeKey<Integer> CLOSE_CODE_KEY =
-            AttributeKey.valueOf("closeCodeKey");
-    public static final AttributeKey<String> REASON_KEY =
-            AttributeKey.valueOf("reasonKey");
-
+    public static final AttributeKey<Boolean> LOCAL_INITIATED_CLOSE = AttributeKey.valueOf("localInitiatedClose");
+    public static final AttributeKey<Integer> CLOSE_CODE_KEY = AttributeKey.valueOf("closeCodeKey");
+    public static final AttributeKey<String> REASON_KEY = AttributeKey.valueOf("reasonKey");
 
     public WebSocketClientHandler(Consumer<String> textMessageHandler,
                                   Consumer<ByteBuf> binaryMessageHandler) {
@@ -34,20 +30,32 @@ public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> 
     }
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
-        // 获取关闭发起方标记
-        boolean isLocalInitiated = ctx.channel().attr(LOCAL_INITIATED_CLOSE).get();
+        if (ctx.channel() == null) {
+            log.warn("channelInactive: ctx.channel() is null");
+            return;
+        }
+
+        Boolean isLocalInitiated = ctx.channel().attr(LOCAL_INITIATED_CLOSE).get();
+        isLocalInitiated = isLocalInitiated != null && isLocalInitiated; // 默认非本地发起
+
         Integer code = ctx.channel().attr(CLOSE_CODE_KEY).get();
+        code = code != null ? code : 1000; // 默认正常关闭码
+
         String reason = ctx.channel().attr(REASON_KEY).get();
+        reason = reason != null ? reason : "unknown"; // 默认原因
+
         InetSocketAddress remoteAddress = (InetSocketAddress) ctx.channel().remoteAddress();
-        String remoteHost = remoteAddress.getHostString();
-        int remotePort = remoteAddress.getPort();
+        String remoteHost = remoteAddress != null ? remoteAddress.getHostString() : "unknown-host";
+        int remotePort = remoteAddress != null ? remoteAddress.getPort() : -1;
         String uri = remoteHost + ":" + remotePort;
 
-        if (isLocalInitiated){
-            log.debug("disconnect uri: {},  code : {} , reason: {}, remote: {}", uri, code, reason, false);
+        if (isLocalInitiated) {
+            log.debug("disconnect uri: {}, code: {}, reason: {}, remote: {}", uri, code, reason, false);
         } else {
-            log.error("disconnect uri: {},  code : {} , reason: {}, remote: {}", uri, code, reason, true);
+            log.error("disconnect uri: {}, code: {}, reason: {}, remote: {}", uri, code, reason, true);
         }
+
+        ctx.fireChannelInactive();
     }
 
     @Override
@@ -58,7 +66,7 @@ public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> 
             if (response.status().code() != 101) { // 101 是 WebSocket 握手成功状态码
                 String content = response.content().toString(CharsetUtil.UTF_8);
                 log.error("WebSocket handshake error，code: {}, msg: {}", response.status(), content);
-                ctx.close(); // 关闭连接
+                ctx.close();
             }
             return;
         }

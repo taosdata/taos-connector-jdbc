@@ -46,7 +46,6 @@ public class FetchRawBlockResp extends Response {
     public FetchRawBlockResp(ByteBuf buffer) {
         this.setAction(ConsumerAction.FETCH_RAW_DATA.getAction());
         this.buffer = buffer;
-        buffer.retain();
     }
 
     public void init() {

@@ -4,6 +4,7 @@ import com.taosdata.jdbc.rs.RestfulResultSet;
 import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.DecimalUtil;
 import io.netty.buffer.ByteBuf;
+import io.netty.util.ReferenceCountUtil;
 
 import java.math.BigDecimal;
 import java.sql.SQLException;
@@ -47,7 +48,6 @@ public class BlockData {
     }
 
     public void handleData() {
-
         try {
             int columns = fields.size();
             List<List<Object>> list = new ArrayList<>();
@@ -58,7 +58,7 @@ public class BlockData {
                 this.numOfRows = buffer.readIntLE();
 
                 buffer.readerIndex(pHeader);
-                int bitMapOffset = BitmapLen(numOfRows);
+                int bitMapOffset = bitmapLen(numOfRows);
 
                 List<Integer> lengths = new ArrayList<>(columns);
                 for (int i = 0; i < columns; i++) {
@@ -250,14 +250,14 @@ public class BlockData {
             }
             this.data = list;
             semaphore.release();
-            buffer.release();
-        }catch (Exception e){
+        } catch (Exception e){
             e.printStackTrace();
+        } finally {
+            ReferenceCountUtil.safeRelease(buffer);
         }
-
     }
 
-    private int BitmapLen(int n) {
+    private int bitmapLen(int n) {
         return (n + 0x7) >> 3;
     }
 
@@ -282,9 +282,6 @@ public class BlockData {
             Thread.currentThread().interrupt();
         }
     }
-
-
-
 
     public List<List<Object>> getData() {
         return data;

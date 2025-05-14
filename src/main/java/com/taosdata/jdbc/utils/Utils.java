@@ -6,9 +6,11 @@ import com.google.common.collect.TreeRangeSet;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.ws.entity.ConnectReq;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.DefaultThreadFactory;
 
 import java.lang.reflect.Constructor;
@@ -226,5 +228,11 @@ public class Utils {
     }
     public static EventLoopGroup getEventLoopGroup() {
         return eventLoopGroup;
+    }
+
+    public static void safeReleaseByteBuf(ByteBuf byteBuf){
+        while (byteBuf.refCnt() > 0){
+            ReferenceCountUtil.safeRelease(byteBuf);
+        }
     }
 }

@@ -97,6 +97,7 @@ public abstract class AbstractDriver implements Driver {
 
             FutureResponse remove = inFlightRequest.remove(Action.FETCH_BLOCK_NEW.getAction(), id);
             if (null != remove) {
+                byteBuf.retain();
                 FetchBlockNewResp fetchBlockResp = new FetchBlockNewResp(byteBuf);
                 remove.getFuture().complete(fetchBlockResp);
             }

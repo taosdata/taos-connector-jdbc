@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.common;
 import com.taosdata.jdbc.TSDBError;
 import io.netty.buffer.*;
+import io.netty.util.ReferenceCountUtil;
 
 import java.sql.SQLException;
 
@@ -14,8 +15,8 @@ public class AutoExpandingBuffer {
     public AutoExpandingBuffer(int initialBufferSize, int maxComponents) {
         this.allocator = PooledByteBufAllocator.DEFAULT;
         this.bufferSize = initialBufferSize;
-        // 初始化时调用重置逻辑
-        reset(maxComponents);
+        this.composite = allocator.compositeBuffer(maxComponents);
+        this.currentBuffer = allocator.buffer(bufferSize);
     }
 
     // 写入数据，自动处理缓冲区扩展
@@ -256,25 +257,12 @@ public class AutoExpandingBuffer {
         return composite;
     }
 
-    // 释放资源
+    // must call stopWrite before
     public void release() {
-        composite.release();
-    }
-
-    public void reset(int maxComponents) {
-        // 释放旧资源（避免内存泄漏）
-        if (composite != null) {
-            composite.release();
-            composite = null;
+        if (composite != null && composite.refCnt() > 0) {
+            ReferenceCountUtil.safeRelease(composite);
         }
-        if (currentBuffer != null) {
-            currentBuffer.release();
-            currentBuffer = null;
-        }
-
-        // 重新初始化
-        this.composite = allocator.compositeBuffer(maxComponents);
-        this.currentBuffer = allocator.buffer(bufferSize);
+        composite = null;
     }
 
     public void stopWrite(){

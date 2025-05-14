@@ -41,15 +41,12 @@ public class WebSocketHandshakeHandler extends ChannelInboundHandlerAdapter {
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
         if (!handshaker.isHandshakeComplete()) {
             try {
-                // 完成握手
                 handshaker.finishHandshake(ctx.channel(), (FullHttpResponse) msg);
-                // 标记握手完成
                 handshakeFuture.setSuccess(); // 关键代码
 
-                // 移除握手处理器（可选）
                 ctx.pipeline().remove(this);
             } catch (WebSocketHandshakeException e) {
-                log.error("握手失败: ", e);
+                log.error("handshake failed: ", e);
                 handshakeFuture.setFailure(e); // 标记失败
                 ctx.close();
             }

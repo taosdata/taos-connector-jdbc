@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.ws.entity;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.util.ReferenceCountUtil;
 
 import java.nio.charset.StandardCharsets;
 
@@ -20,7 +21,6 @@ public class FetchBlockNewResp extends Response {
     public FetchBlockNewResp(ByteBuf buffer) {
         this.setAction(Action.FETCH_BLOCK_NEW.getAction());
         this.buffer = buffer;
-        buffer.retain();
     }
 
     public void init() {
@@ -36,6 +36,10 @@ public class FetchBlockNewResp extends Response {
         message = new String(msgBytes, StandardCharsets.UTF_8);
         buffer.readLongLE(); // resultId
         isCompleted = buffer.readByte() != 0;
+
+        if (isCompleted){
+            ReferenceCountUtil.safeRelease(buffer);
+        }
     }
 
     public ByteBuf getBuffer() {
@@ -66,4 +70,5 @@ public class FetchBlockNewResp extends Response {
     public short getVersion() {
         return version;
     }
+
 }

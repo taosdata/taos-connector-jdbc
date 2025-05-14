@@ -63,17 +63,8 @@ public class WSRowPreparedStatement extends WSStatement implements TaosPrepareSt
     private int curTableColTotalLen = 0;
     private int totalTableCount = 0;
 
-    private void freeBuffers() {
-        bufferStopWrite();
-        ReferenceCountUtil.safeRelease(tableNameLensBuf);
-        ReferenceCountUtil.safeRelease(tableNamesBuf);
-        ReferenceCountUtil.safeRelease(tagLensBuf);
-        ReferenceCountUtil.safeRelease(tagsBuf);
-        ReferenceCountUtil.safeRelease(colLensBuf);
-        ReferenceCountUtil.safeRelease(colsBuf);
-    }
-
     private void initBuffers() {
+        buffersStopWrite();
         freeBuffers();
         tableNameLensBuf = new AutoExpandingBuffer(1024, 1000);
         tableNamesBuf = new AutoExpandingBuffer(10240, 1000);
@@ -863,7 +854,21 @@ public class WSRowPreparedStatement extends WSStatement implements TaosPrepareSt
     public void columnDataAddBatch() throws SQLException {
         throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
     }
-    private void bufferStopWrite(){
+
+    private void freeBuffer(AutoExpandingBuffer buf){
+        if (buf != null){
+            buf.release();
+        }
+    }
+    private void freeBuffers(){
+        freeBuffer(tableNameLensBuf);
+        freeBuffer(tableNamesBuf);
+        freeBuffer(tagLensBuf);
+        freeBuffer(tagsBuf);
+        freeBuffer(colLensBuf);
+        freeBuffer(colsBuf);
+    }
+    private void buffersStopWrite(){
         if (tableNameLensBuf != null){
             tableNameLensBuf.stopWrite();
         }
@@ -884,7 +889,7 @@ public class WSRowPreparedStatement extends WSStatement implements TaosPrepareSt
         }
     }
     private int executeBatchImpl() throws SQLException {
-        bufferStopWrite();
+        buffersStopWrite();
 
         int totalTableNameSize = tableNamesBuf.getBuffer().capacity();
         int totalTagSize = tagsBuf.getBuffer().capacity();
