@@ -100,8 +100,18 @@ public class WSClient implements AutoCloseable {
                         // 1. 创建自定义压缩扩展配置（禁用上下文接管）
                         // 1. 自定义压缩扩展处理器（禁用上下文接管）
 
-                        WebSocketClientHandshaker handshaker = WebSocketClientHandshakerFactory.newHandshaker(
-                                serverUri, WebSocketVersion.V13, null, true, new DefaultHttpHeaders(), 100 * 1024 * 1024);
+//                        WebSocketClientHandshaker handshaker = WebSocketClientHandshakerFactory.newHandshaker(
+//                                serverUri, WebSocketVersion.V13, null, true, new DefaultHttpHeaders(), 100 * 1024 * 1024);
+//
+                        WebSocketClientHandshaker handshaker = new CustomWebSocketClientHandshaker(serverUri,
+                                WebSocketVersion.V13,
+                                null,
+                                true,
+                                new DefaultHttpHeaders(),
+                                100 * 1024 * 1024,
+                                true,
+                                false,
+                                -1L);
                         p.addLast(new WebSocketHandshakeHandler(handshaker));
 
                         if (connectionParam.isEnableCompression()) {
