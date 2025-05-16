@@ -6,6 +6,8 @@ import com.taosdata.jdbc.enums.TmqMessageType;
 import com.taosdata.jdbc.rs.RestfulResultSet;
 import com.taosdata.jdbc.rs.RestfulResultSetMetaData;
 import com.taosdata.jdbc.tmq.*;
+import com.taosdata.jdbc.utils.DataTypeConverUtil;
+import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.DecimalUtil;
 import com.taosdata.jdbc.ws.tmq.ConsumerAction;
 import com.taosdata.jdbc.ws.entity.Response;
@@ -14,6 +16,9 @@ import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -163,7 +168,7 @@ public class FetchRawBlockResp extends Response {
             rows = resultData.get(0).size();
         }
     }
-    public ConsumerRecords<TMQEnhMap> getEhnMapList(PollResp pollResp) throws SQLException {
+    public ConsumerRecords<TMQEnhMap> getEhnMapList(PollResp pollResp, ZoneId zoneId) throws SQLException {
         skipHead();
         int blockNum = buffer.getInt();
         int cols = 0;
@@ -219,7 +224,15 @@ public class FetchRawBlockResp extends Response {
             for (int j = 0; j < lineNum; j++) {
                 HashMap<String, Object> lineDataMap = new HashMap<>();
                 for (int k = 0; k < cols; k++) {
-                    lineDataMap.put(columnNames.get(k), resultData.get(k).get(j));
+                    if (fields.get(k).getTaosType() == TSDB_DATA_TYPE_TIMESTAMP){
+                        Long o = (Long) DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_TIMESTAMP, resultData.get(k).get(j));
+                        Instant instant = DateTimeUtils.parseTimestampColumnData(o, precision);
+                        Timestamp t = DateTimeUtils.getTimestamp(instant, zoneId);
+                        lineDataMap.put(columnNames.get(k), t);
+                        continue;
+                    }
+                    Object o = DataTypeConverUtil.parseValue(fields.get(k).getTaosType(), resultData.get(k).get(j));
+                    lineDataMap.put(columnNames.get(k), o);
                 }
                 TMQEnhMap map = new TMQEnhMap(tableName, lineDataMap);
                 ConsumerRecord<TMQEnhMap> r = new ConsumerRecord.Builder<TMQEnhMap>()
