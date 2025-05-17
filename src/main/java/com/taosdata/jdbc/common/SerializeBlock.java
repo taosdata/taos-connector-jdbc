@@ -3,6 +3,7 @@ package com.taosdata.jdbc.common;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.utils.DateTimeUtils;
+import com.taosdata.jdbc.utils.Utils;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 
@@ -483,108 +484,109 @@ public class SerializeBlock {
 
         ByteBuf buf = PooledByteBufAllocator.DEFAULT.directBuffer(58 + totalSize);
 
-        //************ header *****************
-        // ReqId
-        buf.writeLongLE(reqId);
-        // stmtId
-        buf.writeLongLE(stmtId);
-        // actionId
-        buf.writeLongLE(9L);
-        // version
-        buf.writeShortLE(1);
-        // col_idx
-        buf.writeIntLE(-1);
+        try {
+            //************ header *****************
+            // ReqId
+            buf.writeLongLE(reqId);
+            // stmtId
+            buf.writeLongLE(stmtId);
+            // actionId
+            buf.writeLongLE(9L);
+            // version
+            buf.writeShortLE(1);
+            // col_idx
+            buf.writeIntLE(-1);
 
-        //************ data *****************
-        // TotalLength
-        buf.writeIntLE(totalSize + 28);
-        // tableCount
-        buf.writeIntLE(tableInfoMap.size());
-        // TagCount
-        buf.writeIntLE(toBebindTagCount);
-        // ColCount
-        buf.writeIntLE(toBebindColCount);
-        // tableNameOffset
-        if (toBebindTableNameCount > 0){
-            buf.writeIntLE(0x1C);
-        } else {
-            buf.writeIntLE(0);
-        }
-
-        // tagOffset
-        if (toBebindTagCount > 0){
-            if (toBebindTableNameCount > 0){
-                buf.writeIntLE(28 + totalTableNameSize + Short.BYTES * tableInfoMap.size());
-           } else {
-                buf.writeIntLE(28);
-            }
-        } else {
-            buf.writeIntLE(0);
-        }
-
-        // colOffset
-        if (toBebindColCount > 0){
-            int skipSize = 0;
-            if (toBebindTableNameCount > 0){
-                skipSize += totalTableNameSize + Short.BYTES * tableInfoMap.size();
+            //************ data *****************
+            // TotalLength
+            buf.writeIntLE(totalSize + 28);
+            // tableCount
+            buf.writeIntLE(tableInfoMap.size());
+            // TagCount
+            buf.writeIntLE(toBebindTagCount);
+            // ColCount
+            buf.writeIntLE(toBebindColCount);
+            // tableNameOffset
+            if (toBebindTableNameCount > 0) {
+                buf.writeIntLE(0x1C);
+            } else {
+                buf.writeIntLE(0);
             }
 
-            if (toBebindTagCount > 0){
-                skipSize += totalTagSize + Integer.BYTES * tableInfoMap.size();
+            // tagOffset
+            if (toBebindTagCount > 0) {
+                if (toBebindTableNameCount > 0) {
+                    buf.writeIntLE(28 + totalTableNameSize + Short.BYTES * tableInfoMap.size());
+                } else {
+                    buf.writeIntLE(28);
+                }
+            } else {
+                buf.writeIntLE(0);
             }
-            buf.writeIntLE(28 + skipSize);
-        } else {
-            buf.writeIntLE(0);
-        }
 
-        // TableNameLength
-        if (toBebindTableNameCount > 0){
-            for (Short tableNameLen: tableNameSizeList){
-                if (tableNameLen == 0) {
-                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table name is empty");
+            // colOffset
+            if (toBebindColCount > 0) {
+                int skipSize = 0;
+                if (toBebindTableNameCount > 0) {
+                    skipSize += totalTableNameSize + Short.BYTES * tableInfoMap.size();
                 }
 
-                buf.writeShortLE(tableNameLen);
-            }
-
-            for (TableInfo tableInfo: tableInfoMap.values()){
-                if (tableInfo.getTableName().capacity() == 0) {
-                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table name is empty");
+                if (toBebindTagCount > 0) {
+                    skipSize += totalTagSize + Integer.BYTES * tableInfoMap.size();
                 }
-
-                buf.writeBytes(tableInfo.getTableName().array());
-                buf.writeByte(0);
-            }
-        }
-
-        // TagsDataLength
-        if (toBebindTagCount > 0){
-            for (Integer tagsize: tagSizeList) {
-                buf.writeIntLE(tagsize);
+                buf.writeIntLE(28 + skipSize);
+            } else {
+                buf.writeIntLE(0);
             }
 
-            for (TableInfo tableInfo : tableInfoMap.values()) {
-                for (ColumnInfo tag : tableInfo.getTagInfo()){
-                    if (tag.getDataList().isEmpty()){
-                        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "tag value is null, tbname: " + tableInfo.getTableName().toString());
+            // TableNameLength
+            if (toBebindTableNameCount > 0) {
+                for (Short tableNameLen : tableNameSizeList) {
+                    if (tableNameLen == 0) {
+                        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table name is empty");
                     }
-                    serializeColumn(tag, buf, precision);
+
+                    buf.writeShortLE(tableNameLen);
+                }
+
+                for (TableInfo tableInfo : tableInfoMap.values()) {
+                    if (tableInfo.getTableName().capacity() == 0) {
+                        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table name is empty");
+                    }
+
+                    buf.writeBytes(tableInfo.getTableName().array());
+                    buf.writeByte(0);
                 }
             }
-        }
 
-        // ColsDataLength
-        if (toBebindColCount > 0){
-            for (Integer colSize: colSizeList) {
-                buf.writeIntLE(colSize);
-            }
+            // TagsDataLength
+            if (toBebindTagCount > 0) {
+                for (Integer tagsize : tagSizeList) {
+                    buf.writeIntLE(tagsize);
+                }
 
-            for (TableInfo tableInfo : tableInfoMap.values()) {
-                for (ColumnInfo col : tableInfo.getDataList()){
-                    serializeColumn(col, buf, precision);
+                for (TableInfo tableInfo : tableInfoMap.values()) {
+                    for (ColumnInfo tag : tableInfo.getTagInfo()) {
+                        if (tag.getDataList().isEmpty()) {
+                            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "tag value is null, tbname: " + tableInfo.getTableName().toString());
+                        }
+                        serializeColumn(tag, buf, precision);
+                    }
                 }
             }
-        }
+
+            // ColsDataLength
+            if (toBebindColCount > 0) {
+                for (Integer colSize : colSizeList) {
+                    buf.writeIntLE(colSize);
+                }
+
+                for (TableInfo tableInfo : tableInfoMap.values()) {
+                    for (ColumnInfo col : tableInfo.getDataList()) {
+                        serializeColumn(col, buf, precision);
+                    }
+                }
+            }
 
 
 //        for (int i = 30; i < buf.capacity(); i++) {
@@ -593,7 +595,11 @@ public class SerializeBlock {
 //            System.out.print(",");
 //        }
 //        System.out.println();
-        return buf;
+            return buf;
+        } catch (Exception e){
+            Utils.releaseByteBuf(buf);
+            throw e;
+        }
     }
 
     // little endian

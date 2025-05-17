@@ -9,6 +9,7 @@ import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.Utils;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
 import io.netty.channel.socket.SocketChannel;
@@ -51,9 +52,6 @@ public class WSClient implements AutoCloseable {
 
     static {
         Utils.initEventLoopGroup();
-
-        // ToDo
-//        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
     }
     /**
      * create websocket connection client
@@ -85,24 +83,13 @@ public class WSClient implements AutoCloseable {
                             p.addLast(sslCtx.newHandler(ch.alloc(), serverUri.getHost(), serverUri.getPort()));
                         }
 
-                        // 2. 日志记录（记录解密后的明文）
-                        // toDo
+                        // for debug
                         //p.addLast(new LoggingHandler(LogLevel.DEBUG));
 
-                        // 3. HTTP编解码器
                         p.addLast(new HttpClientCodec());
-
-                        // 4. HTTP消息聚合器
                         p.addLast(new HttpObjectAggregator(8192));
 
-                        // 5. WebSocket协议处理器（握手、帧处理）
-                        // 3. WebSocket握手处理器
-                        // 1. 创建自定义压缩扩展配置（禁用上下文接管）
-                        // 1. 自定义压缩扩展处理器（禁用上下文接管）
-
-//                        WebSocketClientHandshaker handshaker = WebSocketClientHandshakerFactory.newHandshaker(
-//                                serverUri, WebSocketVersion.V13, null, true, new DefaultHttpHeaders(), 100 * 1024 * 1024);
-//
+                        // use custom websocket client handshaker to avoid mask encode
                         WebSocketClientHandshaker handshaker = new CustomWebSocketClientHandshaker(serverUri,
                                 WebSocketVersion.V13,
                                 null,
@@ -115,7 +102,6 @@ public class WSClient implements AutoCloseable {
                         p.addLast(new WebSocketHandshakeHandler(handshaker));
 
                         if (connectionParam.isEnableCompression()) {
-                            // 自定义压缩参数
                             WebSocketClientExtensionHandshaker deflateHandshaker = new PerMessageDeflateClientExtensionHandshaker(
                                     6, false,
                                     15,       // clientMaxWindowSize (2^15 = 32KB)
@@ -126,15 +112,10 @@ public class WSClient implements AutoCloseable {
 
                             WebSocketClientExtensionHandler extensionHandler = new WebSocketClientExtensionHandler(deflateHandshaker,  new DeflateFrameClientExtensionHandshaker(false),
                                     new DeflateFrameClientExtensionHandshaker(true));
-
-                            // 3. 添加到 ChannelPipeline（必须在握手处理器之后）
                             p.addLast(extensionHandler);
                         }
 
-
-
-                        // 7. WebSocket帧聚合器
-                        p.addLast(new WebSocketFrameAggregator(100 * 1024 * 1024));
+                        p.addLast(new WebSocketFrameAggregator(100 * 1024 * 1024)); // max 100MB
 
                         // Connect with V13 (RFC 6455 aka HyBi-17). You can change it to V08 or V00.
                         // If you change it to V00, ping is not supported and remember to change
@@ -148,10 +129,8 @@ public class WSClient implements AutoCloseable {
 
         ChannelFuture connectFuture = b.connect(serverUri.getHost(), serverUri.getPort());
 
-        // 添加统一超时控制
         Channel tmpChn = null;
         try {
-            // 等待连接完成（带超时）
             if (!connectFuture.awaitUninterruptibly(connectionParam.getConnectTimeout())) {
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT);
            }
@@ -166,7 +145,6 @@ public class WSClient implements AutoCloseable {
 
             tmpChn = connectFuture.channel();
 
-            // 等待握手完成（复用同一超时）
             WebSocketHandshakeHandler wsHandler = tmpChn.pipeline().get(WebSocketHandshakeHandler.class);
             ChannelFuture handshakeFuture = wsHandler.handshakeFuture();
 
@@ -209,9 +187,9 @@ public class WSClient implements AutoCloseable {
             ChannelFuture closeFuture = channel.close();
             closeFuture.syncUninterruptibly();
             if (closeFuture.isSuccess()) {
-                log.debug("WebSocket 连接已成功关闭");
+                log.debug("WebSocket connection closed successfully");
             } else {
-                log.error("关闭 WebSocket 连接时出错", closeFuture.cause());
+                log.error("WebSocket connection closed error", closeFuture.cause());
             }
         }
     }
@@ -251,7 +229,7 @@ public class WSClient implements AutoCloseable {
 
     public void send(ByteBuf binData) {
         if (!channel.isActive()) {
-            ReferenceCountUtil.safeRelease(binData);
+            Utils.releaseByteBuf(binData);
             throw new WebsocketNotConnectedException();
         }
 

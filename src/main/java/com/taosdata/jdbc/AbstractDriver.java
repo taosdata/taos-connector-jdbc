@@ -8,6 +8,7 @@ import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.StringUtils;
+import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.FutureResponse;
 import com.taosdata.jdbc.ws.InFlightRequest;
 import com.taosdata.jdbc.ws.Transport;
@@ -97,7 +98,7 @@ public abstract class AbstractDriver implements Driver {
 
             FutureResponse remove = inFlightRequest.remove(Action.FETCH_BLOCK_NEW.getAction(), id);
             if (null != remove) {
-                byteBuf.retain();
+                Utils.retainByteBuf(byteBuf);
                 FetchBlockNewResp fetchBlockResp = new FetchBlockNewResp(byteBuf);
                 remove.getFuture().complete(fetchBlockResp);
             }

@@ -6,6 +6,7 @@ import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.CompletableFutureTimeout;
 import com.taosdata.jdbc.utils.StringUtils;
+import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.entity.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -203,22 +204,20 @@ public class Transport implements AutoCloseable {
         }
 
         try {
-            buffer.retain();
+            Utils.retainByteBuf(buffer);
             clientArr.get(currentNodeIndex).send(buffer);
         } catch (WebsocketNotConnectedException e) {
             tmqRethrowConnectionCloseException();
             reconnect();
             try {
-                buffer.retain();
+                Utils.retainByteBuf(buffer);
                 clientArr.get(currentNodeIndex).send(buffer);
             }catch (Exception ex){
                 inFlightRequest.remove(action, reqId);
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());
-            } finally {
-                ReferenceCountUtil.safeRelease(buffer);
             }
         } finally {
-            ReferenceCountUtil.safeRelease(buffer);
+            Utils.releaseByteBuf(buffer);
         }
 
         String reqString = "action:" + action + ", reqId:" + reqId + ", resultId:" + resultId + ", actionType" + type;
@@ -235,6 +234,7 @@ public class Transport implements AutoCloseable {
 
     public Response send(String action, long reqId, ByteBuf buffer) throws SQLException {
         if (isClosed()){
+            Utils.releaseByteBuf(buffer);
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
         }
 
@@ -247,22 +247,20 @@ public class Transport implements AutoCloseable {
         }
 
         try {
-            buffer.retain();
+            Utils.retainByteBuf(buffer);
             clientArr.get(currentNodeIndex).send(buffer);
         } catch (WebsocketNotConnectedException e) {
             tmqRethrowConnectionCloseException();
             reconnect();
             try {
-                buffer.retain();
+                Utils.retainByteBuf(buffer);
                 clientArr.get(currentNodeIndex).send(buffer);
             }catch (Exception ex){
                 inFlightRequest.remove(action, reqId);
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());
-            } finally {
-                ReferenceCountUtil.safeRelease(buffer);
             }
         } finally {
-            ReferenceCountUtil.safeRelease(buffer);
+            Utils.releaseByteBuf(buffer);
         }
 
         String reqString = "action:" + action + ", reqId:" + reqId;

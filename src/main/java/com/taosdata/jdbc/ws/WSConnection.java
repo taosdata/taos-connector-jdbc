@@ -114,21 +114,21 @@ public class WSConnection extends AbstractConnection {
                         idGenerator.getAndIncrement(),
                         prepareResp);
             } else {
-//                return new TSWSPreparedStatement(transport,
-//                        param,
-//                        database,
-//                        this,
-//                        sql,
-//                        idGenerator.getAndIncrement(),
-//                        prepareResp);
-
-                return new WSRowPreparedStatement(transport,
+                return new TSWSPreparedStatement(transport,
                         param,
                         database,
                         this,
                         sql,
                         idGenerator.getAndIncrement(),
                         prepareResp);
+
+//                return new WSRowPreparedStatement(transport,
+//                        param,
+//                        database,
+//                        this,
+//                        sql,
+//                        idGenerator.getAndIncrement(),
+//                        prepareResp);
             }
         } else {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);

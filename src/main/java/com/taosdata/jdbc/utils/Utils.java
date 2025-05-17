@@ -6,12 +6,16 @@ import com.google.common.collect.TreeRangeSet;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.ws.entity.ConnectReq;
+import com.taosdata.jdbc.ws.tmq.WSConsumer;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ResourceLeakDetector;
 import io.netty.util.concurrent.DefaultThreadFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Constructor;
 import java.net.InetAddress;
@@ -24,6 +28,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ForkJoinPool;
@@ -34,7 +39,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class Utils {
-
+    private static final Logger log = LoggerFactory.getLogger(Utils.class);
     private static final ForkJoinPool forkJoinPool = new ForkJoinPool();
     private static final Pattern ptn = Pattern.compile(".*?'");
 
@@ -225,14 +230,54 @@ public class Utils {
         // Example:
         //
         eventLoopGroup = new NioEventLoopGroup(0, new DefaultThreadFactory("netty-eventloop", true));
+        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
     }
     public static EventLoopGroup getEventLoopGroup() {
         return eventLoopGroup;
     }
 
-    public static void safeReleaseByteBuf(ByteBuf byteBuf){
-        while (byteBuf.refCnt() > 0){
+    public static void releaseByteBuf(ByteBuf byteBuf){
+        if (log.isTraceEnabled()){
+            String stackTrace = Arrays.stream(Thread.currentThread().getStackTrace())
+                    .limit(5) // 仅记录前 3 层有效调用堆栈
+                    .map(StackTraceElement::toString)
+                    .collect(Collectors.joining("\n\t"));
+
+            log.trace("ByteBuf release called, addr: {}, refCnt: {}, Caller Stack Trace:{}}",
+                    Integer.toHexString(System.identityHashCode(byteBuf)),
+                    byteBuf.refCnt(),
+                    stackTrace
+            );
+        }
+
+        if (byteBuf.refCnt() > 0){
             ReferenceCountUtil.safeRelease(byteBuf);
+        } else {
+            log.error("ByteBuf {} already released, refCnt: {}",
+                    Integer.toHexString(System.identityHashCode(byteBuf)),
+                    byteBuf.refCnt());
+        }
+    }
+
+    public static void retainByteBuf(ByteBuf byteBuf){
+        if (log.isTraceEnabled()){
+            String stackTrace = Arrays.stream(Thread.currentThread().getStackTrace())
+                    .limit(5) // 仅记录前 3 层有效调用堆栈
+                    .map(StackTraceElement::toString)
+                    .collect(Collectors.joining("\n\t"));
+
+            log.trace("ByteBuf retain called, addr: {}, refCnt: {}, Caller Stack Trace:{}}",
+                    Integer.toHexString(System.identityHashCode(byteBuf)),
+                    byteBuf.refCnt(),
+                    stackTrace
+            );
+        }
+        if (byteBuf.refCnt() > 0){
+            byteBuf.retain();
+        } else {
+            log.error("ByteBuf already released, addr: {}, refCnt: {}",
+                    Integer.toHexString(System.identityHashCode(byteBuf)),
+                    byteBuf.refCnt());
         }
     }
 }

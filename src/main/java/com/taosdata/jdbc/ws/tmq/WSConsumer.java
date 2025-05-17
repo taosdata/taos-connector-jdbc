@@ -10,6 +10,7 @@ import com.taosdata.jdbc.enums.TmqMessageType;
 import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.JsonUtil;
+import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.FutureResponse;
 import com.taosdata.jdbc.ws.InFlightRequest;
 import com.taosdata.jdbc.ws.Transport;
@@ -66,6 +67,7 @@ public class WSConsumer<V> implements Consumer<V> {
             byteBuf.readerIndex(8);
             FutureResponse remove = inFlightRequest.remove(ConsumerAction.FETCH_RAW_DATA.getAction(), id);
             if (null != remove) {
+                Utils.retainByteBuf(byteBuf);
                 FetchRawBlockResp fetchBlockResp = new FetchRawBlockResp(byteBuf);
                 remove.getFuture().complete(fetchBlockResp);
             }
