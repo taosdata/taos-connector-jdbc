@@ -9,10 +9,9 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.sql.*;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Properties;
@@ -24,6 +23,7 @@ public class WSConsumerSubscribeDBTest {
     private static final String dbName = "tmq_ws_enh_test";
     private static final String superTable1 = "st1";
     private static final String superTable2 = "st2";
+    private static final String superTableFullType = "st3";
     private static Connection connection;
     private static Statement statement;
     private static String[] topics = {"topic_ws_map"};
@@ -41,7 +41,7 @@ public class WSConsumerSubscribeDBTest {
         properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, "127.0.0.1:6041");
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
-        properties.setProperty(TMQConstants.GROUP_ID, "ws_map");
+        properties.setProperty(TMQConstants.GROUP_ID, "ws_map1");
         properties.setProperty(TMQConstants.VALUE_DESERIALIZER, "com.taosdata.jdbc.tmq.MapEnhanceDeserializer");
         properties.setProperty(TMQConstants.CONNECT_TYPE, "ws");
         properties.setProperty("fetch.max.wait.ms", "5000");
@@ -85,6 +85,90 @@ public class WSConsumerSubscribeDBTest {
     }
 
     @Test
+    public void testWSEhnMapDBAllType() throws Exception {
+        AtomicInteger a = new AtomicInteger(1);
+        String topic = topics[0];
+        // create topic
+        statement.executeUpdate("create topic if not exists " + topic + " as database " + dbName);
+
+        Properties properties = new Properties();
+        properties.setProperty(TMQConstants.CONNECT_USER, "root");
+        properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
+        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, "127.0.0.1:6041");
+        properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
+        properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
+        properties.setProperty(TMQConstants.GROUP_ID, "ws_map2");
+        properties.setProperty(TMQConstants.VALUE_DESERIALIZER, "com.taosdata.jdbc.tmq.MapEnhanceDeserializer");
+        properties.setProperty(TMQConstants.CONNECT_TYPE, "ws");
+        properties.setProperty("fetch.max.wait.ms", "5000");
+        properties.setProperty("min.poll.rows", "1000");
+
+        boolean pass = false;
+        try (TaosConsumer<TMQEnhMap> consumer = new TaosConsumer<>(properties)) {
+            consumer.subscribe(Collections.singletonList(topic));
+            for (int i = 0; i < 10; i++) {
+                ConsumerRecords<TMQEnhMap> consumerRecords = consumer.poll(Duration.ofMillis(100));
+                if (i == 0){
+                    statement.executeUpdate("insert into " + dbName + ".ct0 values(1747474225447, 1, 100, 2.2, 2.3, '1', 12, 2, true, '一', 'POINT(1 1)', '\\x0101', 1.2234, 1747474225448, 255, 65535, 4294967295, 18446744073709551615, -12345678901234567890123.4567890000, 12345678.901234)");
+                }
+                if (consumerRecords.isEmpty()){
+                    continue;
+                }
+                for (ConsumerRecord<TMQEnhMap> r : consumerRecords) {
+                    if (r.value().getTableName().equalsIgnoreCase("ct0")){
+                        Assert.assertEquals(20, r.value().getMap().size());
+
+                        Assert.assertTrue(r.value().getMap().get("ts") instanceof Timestamp);
+                        Assert.assertTrue(r.value().getMap().get("c1") instanceof Integer);
+                        Assert.assertTrue(r.value().getMap().get("c2") instanceof Long);
+                        Assert.assertTrue(r.value().getMap().get("c3") instanceof Float);
+                        Assert.assertTrue(r.value().getMap().get("c4") instanceof Double);
+                        Assert.assertTrue(r.value().getMap().get("c5") instanceof byte[]);
+                        Assert.assertTrue(r.value().getMap().get("c6") instanceof Short);
+                        Assert.assertTrue(r.value().getMap().get("c7") instanceof Byte);
+                        Assert.assertTrue(r.value().getMap().get("c8") instanceof Boolean);
+                        Assert.assertTrue(r.value().getMap().get("c9") instanceof String);
+                        Assert.assertTrue(r.value().getMap().get("c10") instanceof byte[]);
+                        Assert.assertTrue(r.value().getMap().get("c11") instanceof byte[]);
+                        Assert.assertTrue(r.value().getMap().get("c12") instanceof Double);
+                        Assert.assertTrue(r.value().getMap().get("c13") instanceof Timestamp);
+                        Assert.assertTrue(r.value().getMap().get("c14") instanceof Short);
+                        Assert.assertTrue(r.value().getMap().get("c15") instanceof Integer);
+                        Assert.assertTrue(r.value().getMap().get("c16") instanceof Long);
+                        Assert.assertTrue(r.value().getMap().get("c17") instanceof BigInteger);
+                        Assert.assertTrue(r.value().getMap().get("c18") instanceof BigDecimal);
+                        Assert.assertTrue(r.value().getMap().get("c19") instanceof BigDecimal);
+
+                        Assert.assertEquals(new Timestamp(1747474225447L), r.value().getMap().get("ts"));
+                        Assert.assertEquals(r.value().getMap().get("c1"), 1);
+                        Assert.assertEquals(100L, r.value().getMap().get("c2"));
+                        Assert.assertEquals(2.2F, r.value().getMap().get("c3"));
+                        Assert.assertEquals(2.3, r.value().getMap().get("c4"));
+                        Assert.assertArrayEquals("1".getBytes(), (byte[]) r.value().getMap().get("c5"));
+                        Assert.assertEquals((short) 12, r.value().getMap().get("c6"));
+                        Assert.assertEquals((byte) 2, r.value().getMap().get("c7"));
+                        Assert.assertEquals(true, r.value().getMap().get("c8"));
+                        Assert.assertEquals("一", r.value().getMap().get("c9"));
+                        Assert.assertArrayEquals(new byte[]{1, 1}, (byte[]) r.value().getMap().get("c11"));
+                        Assert.assertEquals(1.2234, r.value().getMap().get("c12"));
+                        Assert.assertEquals(new Timestamp(1747474225448L), r.value().getMap().get("c13"));
+                        Assert.assertEquals((short) 255, r.value().getMap().get("c14"));
+                        Assert.assertEquals(65535, r.value().getMap().get("c15"));
+                        Assert.assertEquals(4294967295L, r.value().getMap().get("c16"));
+                        Assert.assertEquals(new BigInteger("18446744073709551615"), r.value().getMap().get("c17"));
+                        Assert.assertEquals(new BigDecimal("-12345678901234567890123.4567890000"), r.value().getMap().get("c18"));
+                        Assert.assertEquals(new BigDecimal("12345678.901234"), r.value().getMap().get("c19"));
+                       pass = true;
+                    }
+                }
+            }
+
+            consumer.unsubscribe();
+            Assert.assertTrue(pass);
+        }
+    }
+
+    @Test
     public void testWSEhnMapStable() throws Exception {
         AtomicInteger a = new AtomicInteger(1);
         String topic = topics[0];
@@ -97,7 +181,7 @@ public class WSConsumerSubscribeDBTest {
         properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, "127.0.0.1:6041");
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
-        properties.setProperty(TMQConstants.GROUP_ID, "ws_map");
+        properties.setProperty(TMQConstants.GROUP_ID, "ws_map3");
         properties.setProperty(TMQConstants.VALUE_DESERIALIZER, "com.taosdata.jdbc.tmq.MapEnhanceDeserializer");
         properties.setProperty(TMQConstants.CONNECT_TYPE, "ws");
         properties.setProperty("fetch.max.wait.ms", "5000");
@@ -164,6 +248,12 @@ public class WSConsumerSubscribeDBTest {
 
         statement.execute("create stable if not exists " + superTable2
                 + " (ts timestamp, cc1 int) tags(t1 int, t2 int)");
+
+        statement.execute("create stable if not exists " + superTableFullType
+                + " (ts timestamp, c1 int, c2 bigint, c3 float, c4 double, c5 binary(10), c6 SMALLINT, c7 TINYINT, " +
+                "c8 BOOL, c9 nchar(100), c10 GEOMETRY(100), c11 VARBINARY(100), c12 double, c13 timestamp, " +
+                "c14 tinyint unsigned, c15 smallint unsigned, c16 int unsigned, c17 bigint unsigned, c18 decimal(38, 10), c19 decimal(18, 6)) tags(t1 int)");
+        statement.execute("create table if not exists ct0 using " + superTableFullType + " tags(1000)");
     }
 
     @After
