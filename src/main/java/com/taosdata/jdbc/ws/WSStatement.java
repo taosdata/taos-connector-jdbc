@@ -121,9 +121,6 @@ public class WSStatement extends AbstractStatement {
         if (seconds < 0)
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE);
 
-        if (seconds == 0){
-            seconds = Integer.MAX_VALUE;
-        }
         this.queryTimeout = seconds;
         transport.setTimeout(seconds * 1000L);
     }
