@@ -418,12 +418,9 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
                             toBeBindTagCount,
                             toBeBindColCount,
                             precision);
-                } catch (SQLException e) {
+                } catch (Exception e) {
                     lastError = e;
-                    log.error("Error in serialize data to block, stmt id: {}, req id: {}" +
-                                    "code: {}, msg: {}",
-                            stmtId, reqId,
-                            e.getErrorCode(), e.getMessage());
+                    log.error("Error in serialize data to block, stmt id: {}, req id: {}", stmtId, reqId, e);
                     break;
                 }
 
