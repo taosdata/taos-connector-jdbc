@@ -20,14 +20,12 @@ public class WebSocketHandshakeHandler extends ChannelInboundHandlerAdapter {
         this.handshakeFuture = null;
     }
 
-    // 新增方法：暴露握手 Future
     public ChannelFuture handshakeFuture() {
         return handshakeFuture;
     }
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) {
-        // 创建握手 Future
         handshakeFuture = ctx.newPromise();
     }
     @Override
@@ -42,12 +40,12 @@ public class WebSocketHandshakeHandler extends ChannelInboundHandlerAdapter {
         if (!handshaker.isHandshakeComplete()) {
             try {
                 handshaker.finishHandshake(ctx.channel(), (FullHttpResponse) msg);
-                handshakeFuture.setSuccess(); // 关键代码
+                handshakeFuture.setSuccess();
 
                 ctx.pipeline().remove(this);
             } catch (WebSocketHandshakeException e) {
                 log.error("handshake failed: ", e);
-                handshakeFuture.setFailure(e); // 标记失败
+                handshakeFuture.setFailure(e);
                 ctx.close();
             }
         }
@@ -57,7 +55,7 @@ public class WebSocketHandshakeHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         if (!handshakeFuture.isDone()) {
-            handshakeFuture.setFailure(cause); // 异常时标记失败
+            handshakeFuture.setFailure(cause);
         }
         ctx.close();
     }

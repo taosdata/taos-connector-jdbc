@@ -371,37 +371,31 @@ public class Transport implements AutoCloseable {
     }
 
     public void checkConnection(int connectTimeout) throws SQLException {
-        try {
-            if (WSConnection.g_FirstConnection && clientArr.size() > 1) {
-                // 测试所有节点，如果连接失败，直接异常
-                for (WSClient wsClient : clientArr){
-                    if (!wsClient.connectBlocking()) {
-                        close();
-                        throw TSDBError.createSQLException(ERROR_CONNECTION_TIMEOUT,
-                                "can't create connection with server " + wsClient.serverUri.toString() + " within: " + connectTimeout + " milliseconds");
-                    }
-                    log.debug("connect success to {}", StringUtils.getBasicUrl(wsClient.serverUri.toString()));
-                }
-
-                // 断开其他节点
-                for (int i = 0; i < clientArr.size(); i++){
-                    if (i != currentNodeIndex) {
-                        clientArr.get(i).closeBlocking();
-                        log.debug("disconnect success to {}", StringUtils.getBasicUrl(clientArr.get(i).serverUri.toString()));
-                    }
-                }
-            } else {
-                if (!clientArr.get(currentNodeIndex).connectBlocking()) {
+        if (WSConnection.g_FirstConnection && clientArr.size() > 1) {
+            // 测试所有节点，如果连接失败，直接异常
+            for (WSClient wsClient : clientArr){
+                if (!wsClient.connectBlocking()) {
                     close();
                     throw TSDBError.createSQLException(ERROR_CONNECTION_TIMEOUT,
-                            "can't create connection with server within: " + connectTimeout + " milliseconds");
+                            "can't create connection with server " + wsClient.serverUri.toString() + " within: " + connectTimeout + " milliseconds");
                 }
-                log.debug("connect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri.toString()));
+                log.debug("connect success to {}", StringUtils.getBasicUrl(wsClient.serverUri.toString()));
             }
-        } catch (SQLException e) {
-            Thread.currentThread().interrupt();
-            close();
-            throw new SQLException("create websocket connection has been Interrupted ", e);
+
+            // 断开其他节点
+            for (int i = 0; i < clientArr.size(); i++){
+                if (i != currentNodeIndex) {
+                    clientArr.get(i).closeBlocking();
+                    log.debug("disconnect success to {}", StringUtils.getBasicUrl(clientArr.get(i).serverUri.toString()));
+                }
+            }
+        } else {
+            if (!clientArr.get(currentNodeIndex).connectBlocking()) {
+                close();
+                throw TSDBError.createSQLException(ERROR_CONNECTION_TIMEOUT,
+                        "can't create connection with server within: " + connectTimeout + " milliseconds");
+            }
+            log.debug("connect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri.toString()));
         }
     }
 

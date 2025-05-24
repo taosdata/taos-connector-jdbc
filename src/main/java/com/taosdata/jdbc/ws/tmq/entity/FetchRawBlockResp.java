@@ -13,7 +13,6 @@ import com.taosdata.jdbc.ws.tmq.ConsumerAction;
 import com.taosdata.jdbc.ws.entity.Response;
 
 import java.math.BigDecimal;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -21,11 +20,11 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import io.netty.buffer.ByteBuf;
+import io.netty.util.ReferenceCountUtil;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
 
@@ -170,7 +169,7 @@ public class FetchRawBlockResp extends Response {
         }
         buffer.release();
     }
-    public ConsumerRecords<TMQEnhMap> getEhnMapList(PollResp pollResp, ZoneId zoneId) throws SQLException {
+    public ConsumerRecords<TMQEnhMap> getEhnMapListInner(PollResp pollResp, ZoneId zoneId) throws SQLException {
         skipHead();
         int blockNum = buffer.readIntLE();
         int cols = 0;
@@ -255,8 +254,16 @@ public class FetchRawBlockResp extends Response {
 
         return records;
     }
+    public ConsumerRecords<TMQEnhMap> getEhnMapList(PollResp pollResp, ZoneId zoneId) throws SQLException {
+        try {
+            return getEhnMapListInner(pollResp, zoneId);
+        } finally {
+            ReferenceCountUtil.safeRelease(buffer);
+        }
+    }
 
-    private int parseVariableByteInteger() {
+
+        private int parseVariableByteInteger() {
         int multiplier = 1;
         int value = 0;
         while (true) {

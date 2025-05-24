@@ -11,8 +11,6 @@ public class TaosAdapterMock {
     private volatile boolean isRunning = false;
     private ServerSocket serverSocket;
     private ExecutorService executor;
-
-    // 客户端连接记录
     private final ConcurrentHashMap<Socket, Boolean> activeConnections = new ConcurrentHashMap<>();
 
     public TaosAdapterMock(int listenPort) {
@@ -40,7 +38,7 @@ public class TaosAdapterMock {
                     activeConnections.put(clientSocket, true);
                     executor.execute(new ClientHandler(clientSocket));
                 } catch (SocketException e) {
-                    // 正常停止时产生的异常
+                    // exception in normal stop
                 } catch (IOException e) {
                     if (isRunning) {
                         System.err.println("Accept failed: " + e.getMessage());
@@ -55,7 +53,7 @@ public class TaosAdapterMock {
         isRunning = false;
 
         try {
-            // 关闭监听Socket
+            // close server socket
             if (serverSocket != null && !serverSocket.isClosed()) {
                 serverSocket.close();
             }
@@ -63,11 +61,11 @@ public class TaosAdapterMock {
             System.err.println("Error closing server socket: " + e.getMessage());
         }
 
-        // 关闭所有客户端连接
+        // close all active connections
         activeConnections.keySet().forEach(this::closeSocket);
         activeConnections.clear();
 
-        // 关闭线程池
+        // close executor service
         if (executor != null) {
             executor.shutdownNow();
         }
@@ -90,7 +88,7 @@ public class TaosAdapterMock {
                  InputStream targetInput = targetSocket.getInputStream();
                  OutputStream targetOutput = targetSocket.getOutputStream()) {
 
-                // 启动双向转发
+                // start two threads to forward data
                 Future<?> clientToTarget = executor.submit(
                         () -> forwardData(clientInput, targetOutput, "client->target")
                 );
@@ -99,7 +97,7 @@ public class TaosAdapterMock {
                         () -> forwardData(targetInput, clientOutput, "target->client")
                 );
 
-                // 等待任意一个转发完成
+                // wait for both threads to finish
                 clientToTarget.get();
                 targetToClient.get();
 
@@ -123,7 +121,7 @@ public class TaosAdapterMock {
                     output.flush();
                 }
             } catch (IOException e) {
-                if (!isRunning) return; // 正常停止时不打印错误
+                if (!isRunning) return; // ignore if service is stopped
                 System.err.printf("[%s] Forward error: %s%n", direction, e.getMessage());
             }
         }

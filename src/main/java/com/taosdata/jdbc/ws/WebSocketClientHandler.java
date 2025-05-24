@@ -39,10 +39,10 @@ public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> 
         isLocalInitiated = isLocalInitiated != null && isLocalInitiated; // 默认非本地发起
 
         Integer code = ctx.channel().attr(CLOSE_CODE_KEY).get();
-        code = code != null ? code : 1000; // 默认正常关闭码
+        code = code != null ? code : 1000; // default close code
 
         String reason = ctx.channel().attr(REASON_KEY).get();
-        reason = reason != null ? reason : "unknown"; // 默认原因
+        reason = reason != null ? reason : "unknown";
 
         InetSocketAddress remoteAddress = (InetSocketAddress) ctx.channel().remoteAddress();
         String remoteHost = remoteAddress != null ? remoteAddress.getHostString() : "unknown-host";

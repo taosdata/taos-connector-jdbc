@@ -16,9 +16,6 @@ import com.taosdata.jdbc.ws.WSConnection;
 import com.taosdata.jdbc.ws.entity.*;
 import org.slf4j.LoggerFactory;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.DriverPropertyInfo;
@@ -103,50 +100,6 @@ public abstract class AbstractDriver implements Driver {
                 remove.getFuture().complete(fetchBlockResp);
             }
         });
-
-//        param.setBinaryMessageHandler(byteBuf -> {
-//            try {
-//                int queryResLen = byteBuf.getIntLE(0);
-//                byte[] jsonBin = new byte[queryResLen];
-//                byteBuf.getBytes(4, jsonBin, 0, queryResLen);
-//
-//
-//                boolean isComplete = byteBuf.getByte(4 + queryResLen) > 0;
-//
-//                String message = new String(jsonBin, StandardCharsets.UTF_8);
-//                JsonNode jsonObject = null;
-//
-//                jsonObject = JsonUtil.getObjectReader().readTree(message);
-//                Action action = Action.of(jsonObject.get("action").asText());
-//                ObjectReader actionReader = JsonUtil.getObjectReader(action.getResponseClazz());
-//                Response queryRes = actionReader.treeToValue(jsonObject, action.getResponseClazz());
-//
-//                int fetchResLen = byteBuf.getIntLE(5 + queryResLen);
-//
-//                // 获取可读数据的字节数组（强制内存拷贝）
-//                byte[] data = new byte[fetchResLen];
-//                byteBuf.getBytes(9 + queryResLen, data, 0, fetchResLen);
-//
-//                ByteBuffer byteBuffer = ByteBuffer.wrap(data);
-//                byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
-//                byteBuffer.position(26);
-//                long id = byteBuffer.getLong();
-//                byteBuffer.position(8);
-//
-//                FutureResponse remove = inFlightRequest.remove(Action.BINARY_QUERY.getAction(), id);
-//                if (null != remove) {
-//                    FetchBlockNewResp fetchBlockResp = new FetchBlockNewResp(byteBuffer);
-//                    fetchBlockResp.setCompleted(isComplete);
-//                    BinQueryNewResp binQueryNewResp = new BinQueryNewResp((QueryResp) queryRes, fetchBlockResp);
-//                    remove.getFuture().complete(binQueryNewResp);
-//                }
-//
-//            } catch (JsonProcessingException e) {
-//                log.error("decode json error", e);
-//                throw new RuntimeException(e);
-//            }
-//        });
-
         Transport transport = new Transport(WSFunction.WS, param, inFlightRequest);
 
         transport.checkConnection(param.getConnectTimeout());
