@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.taosdata.jdbc</groupId>
     <artifactId>taos-jdbcdriver</artifactId>
-    <version>3.6.3-SNAPSHOT</version>
+    <version>3.7.0-SNAPSHOT</version>
 
     <packaging>jar</packaging>
     <name>JDBCDriver</name>

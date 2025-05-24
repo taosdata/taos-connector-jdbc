@@ -47,6 +47,10 @@ public class WSClient implements AutoCloseable {
     Transport transport;
 
     public final URI serverUri;
+
+    private final String host;
+    private final int port;
+
     private Channel channel;
     private final ConnectionParam connectionParam;
 
@@ -63,6 +67,18 @@ public class WSClient implements AutoCloseable {
         this.serverUri = serverUri;
         this.connectionParam = connectionParam;
         this.channel = null;
+
+        String scheme = serverUri.getScheme() == null ? "ws" : serverUri.getScheme();
+        host = serverUri.getHost() == null ? "127.0.0.1" : serverUri.getHost();
+        if (serverUri.getPort() == -1) {
+            if ("ws".equalsIgnoreCase(scheme)) {
+                port = 80;
+            } else {
+                port = 443;
+            }
+        } else {
+            port = serverUri.getPort();
+        }
     }
 
     private Channel getChannel() throws SQLException {
@@ -77,10 +93,15 @@ public class WSClient implements AutoCloseable {
                         ChannelPipeline p = ch.pipeline();
 
                         if (connectionParam.isUseSsl()) {
-                            SslContext sslCtx = SslContextBuilder.forClient()
-                                    .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                                    .build();
-                            p.addLast(sslCtx.newHandler(ch.alloc(), serverUri.getHost(), serverUri.getPort()));
+                            if (connectionParam.isDisableSslCertValidation()){
+                                SslContext sslCtx = SslContextBuilder.forClient()
+                                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                                        .build();
+                                p.addLast(sslCtx.newHandler(ch.alloc(), host, port));
+                            } else {
+                                SslContext sslCtx = SslContextBuilder.forClient().build();
+                                p.addLast(sslCtx.newHandler(ch.alloc(), host, port));
+                            }
                         }
 
                         // for debug
@@ -127,7 +148,7 @@ public class WSClient implements AutoCloseable {
                     }
                 });
 
-        ChannelFuture connectFuture = b.connect(serverUri.getHost(), serverUri.getPort());
+        ChannelFuture connectFuture = b.connect(host, port);
 
         Channel tmpChn = null;
         try {

@@ -63,10 +63,10 @@ public class WSConnection extends AbstractConnection {
             database = this.getClientInfo(TSDBDriver.PROPERTY_KEY_DBNAME);
         }
 
-        boolean fastWriteSql = false;
+        boolean efficientWritingSql = false;
         if (sql.startsWith("ASYNC_INSERT")){
             sql = sql.substring("ASYNC_".length());
-            fastWriteSql = true;
+            efficientWritingSql = true;
         }
 
         if (!sql.contains("?")){
@@ -105,7 +105,7 @@ public class WSConnection extends AbstractConnection {
                 }
             }
 
-            if ((fastWriteSql || "STMT".equalsIgnoreCase(param.getAsyncWrite())) && isInsert && isSuperTable) {
+            if ((efficientWritingSql || "STMT".equalsIgnoreCase(param.getAsyncWrite())) && isInsert && isSuperTable) {
                 return new WSEWPreparedStatement(transport,
                         param,
                         database,
@@ -114,6 +114,15 @@ public class WSConnection extends AbstractConnection {
                         idGenerator.getAndIncrement(),
                         prepareResp);
             } else {
+                if ("line".equalsIgnoreCase(param.getPbsMode())){
+                    return new WSRowPreparedStatement(transport,
+                        param,
+                        database,
+                        this,
+                        sql,
+                        idGenerator.getAndIncrement(),
+                        prepareResp);
+                }
                 return new TSWSPreparedStatement(transport,
                         param,
                         database,
@@ -121,14 +130,6 @@ public class WSConnection extends AbstractConnection {
                         sql,
                         idGenerator.getAndIncrement(),
                         prepareResp);
-
-//                return new WSRowPreparedStatement(transport,
-//                        param,
-//                        database,
-//                        this,
-//                        sql,
-//                        idGenerator.getAndIncrement(),
-//                        prepareResp);
             }
         } else {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);

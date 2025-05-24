@@ -101,9 +101,14 @@ public class Transport implements AutoCloseable {
         this.connectionParam = param;
         this.wsFunction = function;
 
-        this.timeout = param.getRequestTimeout();
+        setTimeout(param.getRequestTimeout());
     }
     public void setTimeout(long timeout) {
+        if (timeout < 0){
+            timeout = DEFAULT_MESSAGE_WAIT_TIMEOUT;
+        } else if (timeout == 0){
+            timeout = Integer.MAX_VALUE;
+        }
         this.timeout = timeout;
     }
 

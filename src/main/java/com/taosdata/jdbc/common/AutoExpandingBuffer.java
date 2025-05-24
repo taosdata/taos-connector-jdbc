@@ -3,6 +3,7 @@ import com.taosdata.jdbc.TSDBError;
 import io.netty.buffer.*;
 import io.netty.util.ReferenceCountUtil;
 
+import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 
 public class AutoExpandingBuffer {
@@ -19,14 +20,36 @@ public class AutoExpandingBuffer {
         this.currentBuffer = allocator.buffer(bufferSize);
     }
 
-    // 写入数据，自动处理缓冲区扩展
-    public void writeBytes(byte[] src) throws SQLException {
+     public void writeBytes(byte[] src) throws SQLException {
         int bytesWritten = 0;
         while (bytesWritten < src.length) {
             int writableBytes = currentBuffer.writableBytes();
             int bytesToWrite = Math.min(writableBytes, src.length - bytesWritten);
 
             currentBuffer.writeBytes(src, bytesWritten, bytesToWrite);
+
+            bytesWritten += bytesToWrite;
+
+            // if current buffer is full, allocate a new buffer
+            if (currentBuffer.writableBytes() == 0) {
+                if (composite.numComponents() >= composite.maxNumComponents()) {
+                    throw TSDBError.createSQLException(1, "Exceeded maximum components");
+                }
+
+                composite.addComponent(true, currentBuffer);
+                currentBuffer = allocator.buffer(bufferSize);
+            }
+        }
+    }
+
+    public int writeString(String src) throws SQLException {
+        int bytesWritten = 0;
+        int totalLen = ByteBufUtil.utf8Bytes(src);
+        while (bytesWritten < totalLen) {
+            int writableBytes = currentBuffer.writableBytes();
+            int bytesToWrite = Math.min(writableBytes, totalLen - bytesWritten);
+
+            currentBuffer.writeCharSequence(src.subSequence(bytesWritten, bytesWritten + bytesToWrite), StandardCharsets.UTF_8);
 
             bytesWritten += bytesToWrite;
 
@@ -40,6 +63,7 @@ public class AutoExpandingBuffer {
                 currentBuffer = allocator.buffer(bufferSize);
             }
         }
+        return totalLen;
     }
 
     public void writeInt(int src) throws SQLException {
@@ -70,29 +94,27 @@ public class AutoExpandingBuffer {
         heapBuf.release();
     }
 
-    public int serializeLong(long src, boolean isNull) throws SQLException {
+    private void serializeLong(ByteBuf buffer, int totalLen, long src, boolean isNull, byte type) {
+        buffer.writeIntLE(totalLen);
+        buffer.writeIntLE(type);
+        buffer.writeIntLE(1);
+        buffer.writeByte(isNull ? 1 : 0);
+        buffer.writeByte(0);
+        buffer.writeIntLE(8);
+        buffer.writeLongLE(isNull ? 0 : src);
+    }
+
+    public int serializeLong(long src, boolean isNull, byte type) throws SQLException {
         int writableBytes = currentBuffer.writableBytes();
         int totalLen = 26;
 
         if (writableBytes > totalLen){
-            currentBuffer.writeIntLE(totalLen);
-            currentBuffer.writeIntLE(5);
-            currentBuffer.writeIntLE(1);
-            currentBuffer.writeByte(isNull ? 1 : 0);
-            currentBuffer.writeByte(0);
-            currentBuffer.writeIntLE(8);
-            currentBuffer.writeLongLE(isNull ? 0 : src);
+            serializeLong(currentBuffer, totalLen, src, isNull, type);
             return totalLen;
         }
 
         ByteBuf heapBuf = Unpooled.buffer(totalLen);
-        heapBuf.writeIntLE(totalLen);
-        heapBuf.writeIntLE(5);
-        heapBuf.writeIntLE(1);
-        heapBuf.writeByte(isNull ? 1 : 0);
-        heapBuf.writeByte(0);
-        heapBuf.writeIntLE(8);
-        heapBuf.writeLongLE(isNull ? 0 : src);
+        serializeLong(heapBuf, totalLen, src, isNull, type);
 
         writeBytes(heapBuf.array());
         heapBuf.release();
@@ -100,33 +122,41 @@ public class AutoExpandingBuffer {
     }
 
 
+    private void serializeTimeStamp(ByteBuf buffer, int totalLen, long src, boolean isNull) {
+        buffer.writeIntLE(totalLen);
+        buffer.writeIntLE(9);
+        buffer.writeIntLE(1);
+        buffer.writeByte(isNull ? 1 : 0);
+        buffer.writeByte(0);
+        buffer.writeIntLE(8);
+        buffer.writeLongLE(isNull ? 0 : src);
+    }
+
     public int serializeTimeStamp(long src, boolean isNull) throws SQLException {
         int writableBytes = currentBuffer.writableBytes();
         int totalLen = 26;
 
         if (writableBytes > totalLen){
-            currentBuffer.writeIntLE(totalLen);
-            currentBuffer.writeIntLE(9);
-            currentBuffer.writeIntLE(1);
-            currentBuffer.writeByte(isNull ? 1 : 0);
-            currentBuffer.writeByte(0);
-            currentBuffer.writeIntLE(8);
-            currentBuffer.writeLongLE(isNull ? 0 : src);
+            serializeTimeStamp(currentBuffer, totalLen, src, isNull);
             return totalLen;
         }
 
         ByteBuf heapBuf = Unpooled.buffer(totalLen);
-        heapBuf.writeIntLE(totalLen);
-        heapBuf.writeIntLE(9);
-        heapBuf.writeIntLE(1);
-        heapBuf.writeByte(isNull ? 1 : 0);
-        heapBuf.writeByte(0);
-        heapBuf.writeIntLE(8);
-        heapBuf.writeLongLE(isNull ? 0 : src);
+        serializeTimeStamp(heapBuf, totalLen, src, isNull);
 
         writeBytes(heapBuf.array());
         heapBuf.release();
         return totalLen;
+    }
+
+    private void serializeDouble(ByteBuf buffer, int totalLen, double src, boolean isNull) {
+        buffer.writeIntLE(totalLen);
+        buffer.writeIntLE(7);
+        buffer.writeIntLE(1);
+        buffer.writeByte(isNull ? 1 : 0);
+        buffer.writeByte(0);
+        buffer.writeIntLE(8);
+        buffer.writeDoubleLE(isNull ? 0 : src);
     }
 
     public int serializeDouble(double src, boolean isNull) throws SQLException {
@@ -134,24 +164,12 @@ public class AutoExpandingBuffer {
         int totalLen = 26;
 
         if (writableBytes > totalLen){
-            currentBuffer.writeIntLE(totalLen);
-            currentBuffer.writeIntLE(7);
-            currentBuffer.writeIntLE(1);
-            currentBuffer.writeByte(isNull ? 1 : 0);
-            currentBuffer.writeByte(0);
-            currentBuffer.writeIntLE(8);
-            currentBuffer.writeDoubleLE(isNull ? 0 : src);
+            serializeDouble(currentBuffer, totalLen, src, isNull);
             return totalLen;
         }
 
         ByteBuf heapBuf = Unpooled.buffer(totalLen);
-        heapBuf.writeIntLE(totalLen);
-        heapBuf.writeIntLE(7);
-        heapBuf.writeIntLE(1);
-        heapBuf.writeByte(isNull ? 1 : 0);
-        heapBuf.writeByte(0);
-        heapBuf.writeIntLE(8);
-        heapBuf.writeDoubleLE(isNull ? 0 : src);
+        serializeDouble(heapBuf, totalLen, src, isNull);
 
         writeBytes(heapBuf.array());
         heapBuf.release();
@@ -159,57 +177,131 @@ public class AutoExpandingBuffer {
         return totalLen;
     }
 
-    public int serializeInt(int src, boolean isNull) throws SQLException {
+    private void serializeBool(ByteBuf buffer, int totalLen, boolean src, boolean isNull) {
+        buffer.writeIntLE(totalLen);
+        buffer.writeIntLE(1);
+        buffer.writeIntLE(1);
+        buffer.writeByte(isNull ? 1 : 0);
+        buffer.writeByte(0);
+        buffer.writeIntLE(1);
+        buffer.writeByte((!isNull && src) ? 1 : 0);
+    }
+    public int serializeBool(boolean src, boolean isNull) throws SQLException {
         int writableBytes = currentBuffer.writableBytes();
-        int totalLen = 22;
+        int totalLen = 19;
         if (writableBytes > totalLen){
-            currentBuffer.writeIntLE(totalLen);
-            currentBuffer.writeIntLE(4);
-            currentBuffer.writeIntLE(1);
-            currentBuffer.writeByte(isNull ? 1 : 0);
-            currentBuffer.writeByte(0);
-            currentBuffer.writeIntLE(4);
-            currentBuffer.writeIntLE(isNull ? 0 : src);
+            serializeBool(currentBuffer, totalLen, src, isNull);
             return totalLen;
         }
 
         ByteBuf heapBuf = Unpooled.buffer(totalLen);
-        heapBuf.writeIntLE(totalLen);
-        heapBuf.writeIntLE(4);
-        heapBuf.writeIntLE(1);
-        heapBuf.writeByte(isNull ? 1 : 0);
-        heapBuf.writeByte(0);
-        heapBuf.writeIntLE(4);
-        heapBuf.writeIntLE(isNull ? 0 : src);
+        serializeBool(heapBuf, totalLen, src, isNull);
 
         writeBytes(heapBuf.array());
         heapBuf.release();
 
         return totalLen;
+    }
+
+    private void serializeByte(ByteBuf buffer, int totalLen, byte src, boolean isNull, byte type) {
+        buffer.writeIntLE(totalLen);
+        buffer.writeIntLE(type);
+        buffer.writeIntLE(1);
+        buffer.writeByte(isNull ? 1 : 0);
+        buffer.writeByte(0);
+        buffer.writeIntLE(1);
+        buffer.writeByte(isNull ? 0 : src);
+    }
+    public int serializeByte(byte src, boolean isNull, byte type) throws SQLException {
+        int writableBytes = currentBuffer.writableBytes();
+        int totalLen = 19;
+        if (writableBytes > totalLen){
+            serializeByte(currentBuffer, totalLen, src, isNull, type);
+            return totalLen;
+        }
+
+        ByteBuf heapBuf = Unpooled.buffer(totalLen);
+        serializeByte(heapBuf, totalLen, src, isNull, type);
+
+        writeBytes(heapBuf.array());
+        heapBuf.release();
+
+        return totalLen;
+    }
+
+    private void serializeShort(ByteBuf buffer, int totalLen, short src, boolean isNull, byte type) {
+        buffer.writeIntLE(totalLen);
+        buffer.writeIntLE(type);
+        buffer.writeIntLE(1);
+        buffer.writeByte(isNull ? 1 : 0);
+        buffer.writeByte(0);
+        buffer.writeIntLE(2);
+        buffer.writeShortLE(isNull ? 0 : src);
+    }
+
+    public int serializeShort(short src, boolean isNull, byte type) throws SQLException {
+        int writableBytes = currentBuffer.writableBytes();
+        int totalLen = 20;
+        if (writableBytes > totalLen){
+            serializeShort(currentBuffer, totalLen, src, isNull, type);
+            return totalLen;
+        }
+
+        ByteBuf heapBuf = Unpooled.buffer(totalLen);
+        serializeShort(heapBuf, totalLen, src, isNull, type);
+
+        writeBytes(heapBuf.array());
+        heapBuf.release();
+
+        return totalLen;
+    }
+    private void serializeInt(ByteBuf buffer, int totalLen, int src, boolean isNull, byte type) {
+        buffer.writeIntLE(totalLen);
+        buffer.writeIntLE(type);
+        buffer.writeIntLE(1);
+        buffer.writeByte(isNull ? 1 : 0);
+        buffer.writeByte(0);
+        buffer.writeIntLE(4);
+        buffer.writeIntLE(isNull ? 0 : src);
+    }
+
+    public int serializeInt(int src, boolean isNull, byte type) throws SQLException {
+        int writableBytes = currentBuffer.writableBytes();
+        int totalLen = 22;
+        if (writableBytes > totalLen){
+            serializeInt(currentBuffer, totalLen, src, isNull, type);
+            return totalLen;
+        }
+
+        ByteBuf heapBuf = Unpooled.buffer(totalLen);
+        serializeInt(heapBuf, totalLen, src, isNull, type);
+
+        writeBytes(heapBuf.array());
+        heapBuf.release();
+
+        return totalLen;
+    }
+
+    private void serializeFloat(ByteBuf buffer, int totalLen, float src, boolean isNull) {
+        buffer.writeIntLE(totalLen);
+        buffer.writeIntLE(6);
+        buffer.writeIntLE(1);
+        buffer.writeByte(isNull ? 1 : 0);
+        buffer.writeByte(0);
+        buffer.writeIntLE(4);
+        buffer.writeFloatLE(isNull ? 0 : src);
     }
 
     public int serializeFloat(float src, boolean isNull) throws SQLException {
         int writableBytes = currentBuffer.writableBytes();
         int totalLen = 22;
         if (writableBytes > totalLen){
-            currentBuffer.writeIntLE(totalLen);
-            currentBuffer.writeIntLE(6);
-            currentBuffer.writeIntLE(1);
-            currentBuffer.writeByte(isNull ? 1 : 0);
-            currentBuffer.writeByte(0);
-            currentBuffer.writeIntLE(4);
-            currentBuffer.writeFloatLE(isNull ? 0 : src);
+            serializeFloat(currentBuffer, totalLen, src, isNull);
             return totalLen;
         }
 
         ByteBuf heapBuf = Unpooled.buffer(totalLen);
-        heapBuf.writeIntLE(totalLen);
-        heapBuf.writeIntLE(6);
-        heapBuf.writeIntLE(1);
-        heapBuf.writeByte(isNull ? 1 : 0);
-        heapBuf.writeByte(0);
-        heapBuf.writeIntLE(4);
-        heapBuf.writeFloatLE(isNull ? 0 : src);
+        serializeFloat(heapBuf, totalLen, src, isNull);
 
         writeBytes(heapBuf.array());
         heapBuf.release();
@@ -217,34 +309,60 @@ public class AutoExpandingBuffer {
         return totalLen;
     }
 
+    private void serializeBytes(ByteBuf buffer, int totalLen, byte[] src, boolean isNull, int type) {
+        buffer.writeIntLE(totalLen);
+        buffer.writeIntLE(type);
+        buffer.writeIntLE(1);
+        buffer.writeByte(isNull ? 1 : 0);
+        buffer.writeByte(1);
+        buffer.writeIntLE(isNull ? 0 : src.length);
+        buffer.writeIntLE(isNull ? 0 : src.length);
+        if (!isNull){
+            buffer.writeBytes(src);
+        }
+    }
+
     public int serializeBytes(byte[] src, boolean isNull, int type) throws SQLException {
         int writableBytes = currentBuffer.writableBytes();
         int totalLen = 22 + src.length;
         if (writableBytes > totalLen){
-            currentBuffer.writeIntLE(totalLen);
-            currentBuffer.writeIntLE(type);
-            currentBuffer.writeIntLE(1);
-            currentBuffer.writeByte(isNull ? 1 : 0);
-            currentBuffer.writeByte(1);
-            currentBuffer.writeIntLE(isNull ? 0 : src.length);
-            currentBuffer.writeIntLE(isNull ? 0 : src.length);
-            if (!isNull){
-                currentBuffer.writeBytes(src);
-            }
+            serializeBytes(currentBuffer, totalLen, src, isNull, type);
             return totalLen;
         }
 
         ByteBuf heapBuf = Unpooled.buffer(totalLen);
-        heapBuf.writeIntLE(totalLen);
-        heapBuf.writeIntLE(type);
-        heapBuf.writeIntLE(1);
-        heapBuf.writeByte(isNull ? 1 : 0);
-        heapBuf.writeByte(1);
-        heapBuf.writeIntLE(isNull ? 0 : src.length);
-        heapBuf.writeIntLE(isNull ? 0 : src.length);
+        serializeBytes(heapBuf, totalLen, src, isNull, type);
+
+        writeBytes(heapBuf.array());
+        heapBuf.release();
+
+        return totalLen;
+    }
+
+    private void serializeString(ByteBuf buffer, int totalLen, int strlen, String src, boolean isNull, int type) {
+        buffer.writeIntLE(totalLen);
+        buffer.writeIntLE(type);
+        buffer.writeIntLE(1);
+        buffer.writeByte(isNull ? 1 : 0);
+        buffer.writeByte(1);
+        buffer.writeIntLE(isNull ? 0 : strlen);
+        buffer.writeIntLE(isNull ? 0 : strlen);
         if (!isNull){
-            heapBuf.writeBytes(src);
+            buffer.writeCharSequence(src, StandardCharsets.UTF_8);
         }
+    }
+
+    public int serializeString(String src, boolean isNull, int type) throws SQLException {
+        int writableBytes = currentBuffer.writableBytes();
+        int requiredBytes = ByteBufUtil.utf8Bytes(src);
+        int totalLen = 22 + requiredBytes;
+        if (writableBytes > totalLen){
+            serializeString(currentBuffer, totalLen, requiredBytes, src, isNull, type);
+            return totalLen;
+        }
+
+        ByteBuf heapBuf = Unpooled.buffer(totalLen);
+        serializeString(heapBuf, totalLen, requiredBytes, src, isNull, type);
 
         writeBytes(heapBuf.array());
         heapBuf.release();

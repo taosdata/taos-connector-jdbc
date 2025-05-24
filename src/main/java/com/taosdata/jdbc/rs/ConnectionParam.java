@@ -50,6 +50,7 @@ public class ConnectionParam {
     private boolean strictCheck;
     private int retryTimes;
     private String asyncWrite;
+    private String pbsMode;
 
     private Consumer<String> textMessageHandler;
     private Consumer<ByteBuf> binaryMessageHandler;
@@ -86,6 +87,7 @@ public class ConnectionParam {
         this.asyncWrite = builder.asyncWrite;
         this.textMessageHandler = builder.textMessageHandler;
         this.binaryMessageHandler = builder.binaryMessageHandler;
+        this.pbsMode = builder.pbsMode;
     }
 
     public void setHost(String host) {
@@ -203,6 +205,10 @@ public class ConnectionParam {
     public void setAsyncWrite(String asyncWrite) {
         this.asyncWrite = asyncWrite;
     }
+
+    public void setPbsMode(String pbsMode) {
+        this.pbsMode = pbsMode;
+    }
     public String getHost() {
         return host;
     }
@@ -298,6 +304,10 @@ public class ConnectionParam {
 
     public String getAsyncWrite() {
         return asyncWrite;
+    }
+
+    public String getPbsMode() {
+        return pbsMode;
     }
 
     public Consumer<String> getTextMessageHandler() {
@@ -455,6 +465,11 @@ public class ConnectionParam {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "PROPERTY_KEY_ASYNC_WRITE only support STMT");
         }
 
+        String pbsMode = properties.getProperty(TSDBDriver.PROPERTY_KEY_PBS_MODE, "");
+        if (!pbsMode.equals("") && !pbsMode.equalsIgnoreCase("line")){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "PROPERTY_KEY_PBS_MODE only support line");
+        }
+
         return new Builder(host, port)
                 .setDatabase(database)
                 .setCloudToken(cloudToken)
@@ -481,6 +496,7 @@ public class ConnectionParam {
                 .setStrictCheck(strictCheck)
                 .setRetryTimes(retryTimes)
                 .setAsyncWrite(asyncWrite)
+                .setPbsMode(pbsMode)
                 .build();
     }
 
@@ -515,6 +531,7 @@ public class ConnectionParam {
         private boolean strictCheck;
         private int retryTimes;
         private String asyncWrite;
+        private String pbsMode;
 
         private Consumer<String> textMessageHandler;
         private Consumer<ByteBuf> binaryMessageHandler;
@@ -644,6 +661,11 @@ public class ConnectionParam {
 
         public Builder setAsyncWrite(String asyncWrite) {
             this.asyncWrite = asyncWrite;
+            return this;
+        }
+
+        public Builder setPbsMode(String pbsMode) {
+            this.pbsMode = pbsMode;
             return this;
         }
         public Builder setTextMessageHandler(Consumer<String> textMessageHandler) {

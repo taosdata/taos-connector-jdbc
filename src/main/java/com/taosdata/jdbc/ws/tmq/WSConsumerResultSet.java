@@ -51,12 +51,14 @@ public class WSConsumerResultSet extends AbstractResultSet {
 
     protected int numOfRows = 0;
     protected int rowIndex = 0;
+    protected final ZoneId zoneId;
 
-    public WSConsumerResultSet(Transport transport, TMQRequestFactory factory, long messageId, String database) {
+    public WSConsumerResultSet(Transport transport, TMQRequestFactory factory, long messageId, String database, ZoneId zoneId) {
         this.transport = transport;
         this.factory = factory;
         this.messageId = messageId;
         this.database = database;
+        this.zoneId = zoneId;
     }
 
     private boolean forward() {
@@ -114,7 +116,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
         if (Code.SUCCESS.getCode() != fetchResp.getCode())
             throw TSDBError.createSQLException(fetchResp.getCode(), fetchResp.getMessage());
 
-        return fetchResp.getEhnMapList(pollResp);
+        return fetchResp.getEhnMapList(pollResp, zoneId);
     }
 
     @Override
@@ -286,7 +288,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
             return (Timestamp) value;
         if (value instanceof Long) {
             Instant instant = DateTimeUtils.parseTimestampColumnData((long) value, this.timestampPrecision);
-            return DateTimeUtils.getTimestamp(instant, null);
+            return DateTimeUtils.getTimestamp(instant, zoneId);
         }
         Timestamp ret;
         try {
@@ -491,11 +493,8 @@ public class WSConsumerResultSet extends AbstractResultSet {
         if (type == TSDB_DATA_TYPE_TIMESTAMP){
             Long o = (Long)DataTypeConverUtil.parseValue(type, source);
             Instant instant = DateTimeUtils.parseTimestampColumnData(o, this.timestampPrecision);
-            return DateTimeUtils.getTimestamp(instant, null);
+            return DateTimeUtils.getTimestamp(instant, zoneId);
         }
         return DataTypeConverUtil.parseValue(type, source);
     }
-
-    //    ceil(numOfRows/8.0)
-
 }

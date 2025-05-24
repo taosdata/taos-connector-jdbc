@@ -43,15 +43,6 @@ public class BlockResultSet extends AbstractWSResultSet {
         return DataTypeConverUtil.parseValue(type, source);
     }
 
-    public Object parseValueWithZoneId(int columnIndex, ZoneId zoneId) {
-        Object source = result.get(columnIndex - 1).get(rowIndex);
-        if (null == source)
-            return null;
-
-        int type = fields.get(columnIndex - 1).getTaosType();
-        return DataTypeConverUtil.parseValue(type, source);
-    }
-
     @Override
     public String getString(int columnIndex) throws SQLException {
         checkAvailability(columnIndex, fields.size());
@@ -505,16 +496,5 @@ public class BlockResultSet extends AbstractWSResultSet {
     @Override
     public Timestamp getTimestamp(int columnIndex, Calendar cal) throws SQLException {
         return getTimestamp(columnIndex);
-    }
-
-    //    ceil(numOfRows/8.0)
-    private int BitmapLen(int n) {
-        return (n + 0x7) >> 3;
-    }
-
-    private boolean isNull(byte[] c, int n) {
-        int position = n >>> 3;
-        int index = n & 0x7;
-        return (c[position] & (1 << (7 - index))) == (1 << (7 - index));
     }
 }

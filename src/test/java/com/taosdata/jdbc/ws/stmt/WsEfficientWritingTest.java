@@ -18,6 +18,7 @@ public class WsEfficientWritingTest {
     private final String tableName = "wpt";
     private final String tableNameCopyData = "wpt_cp";
     private final String tableReconnect = "wpt_rc";
+    private final String tableNcharTag = "wpt_nchar";
     private final String asyncSqlTable = tableReconnect;
     private Connection connection;
     private TaosAdapterMock taosAdapterMock;
@@ -71,7 +72,7 @@ public class WsEfficientWritingTest {
         }
 
         Assert.assertEquals(numOfSubTable * numOfRow, Utils.getSqlRows(connection, db_name + "." + tableName));
-}
+    }
 
     @Test
     public void testCopyData() throws SQLException {
@@ -340,6 +341,24 @@ public class WsEfficientWritingTest {
         }
     }
 
+    @Test(expected = SQLException.class)
+    public void testNcharTagThrowsSQLException() throws SQLException {
+        String sql = "INSERT INTO " + db_name + "." + tableNcharTag + "(tbname, ts, i, tag_nchar) VALUES (?,?,?,?)";
+        try (Connection con = getConnection(false);
+             PreparedStatement pstmt = con.prepareStatement(sql)) {
+            long current = System.currentTimeMillis();
+            for (int i = 0; i < 1000; i++) {
+                pstmt.setString(1, "ncahr_bind_1");
+                pstmt.setTimestamp(2, new Timestamp(current + i));
+                pstmt.setInt(3, 100);
+                pstmt.setString(4, "中国人");
+                pstmt.addBatch();
+                pstmt.executeBatch();
+            }
+            pstmt.executeUpdate();
+        }
+    }
+
     @Before
     public void before() throws SQLException {
         connection = getConnection(false);
@@ -350,6 +369,8 @@ public class WsEfficientWritingTest {
         statement.execute("create stable if not exists " + db_name + "." + tableName + " (ts TIMESTAMP, current FLOAT, voltage INT, phase FLOAT) TAGS (groupId INT, location BINARY(24))");
         statement.execute("create stable if not exists " + db_name + "." + tableNameCopyData + " (ts TIMESTAMP, b varbinary(10)) TAGS (groupId INT)");
         statement.execute("create stable if not exists " + db_name + "." + tableReconnect + " (ts TIMESTAMP, i INT) TAGS (groupId INT)");
+        statement.execute("create stable if not exists " + db_name + "." + tableNcharTag + " (ts TIMESTAMP, i INT) TAGS (tag_nchar nchar(100))");
+
         statement.close();
 
         createSubTable();
