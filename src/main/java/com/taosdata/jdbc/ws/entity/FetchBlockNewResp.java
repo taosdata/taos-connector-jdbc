@@ -1,41 +1,52 @@
 package com.taosdata.jdbc.ws.entity;
 
-import java.nio.ByteBuffer;
+import io.netty.buffer.ByteBuf;
+import io.netty.util.ReferenceCountUtil;
+
 import java.nio.charset.StandardCharsets;
 
 public class FetchBlockNewResp extends Response {
-    private ByteBuffer buffer;
+    private ByteBuf buffer;
+
+    public void setCompleted(boolean completed) {
+        isCompleted = completed;
+    }
+
     private boolean isCompleted;
     private long time;
     private int code;
     private String message;
     private short version;
 
-    public FetchBlockNewResp(ByteBuffer buffer) {
+    public FetchBlockNewResp(ByteBuf buffer) {
         this.setAction(Action.FETCH_BLOCK_NEW.getAction());
         this.buffer = buffer;
     }
 
     public void init() {
-        buffer.getLong(); // action id
-        version = buffer.getShort();
-        time = buffer.getLong();
-        this.setReqId(buffer.getLong());
-        code = buffer.getInt();
-        int messageLen = buffer.getInt();
+        buffer.readLongLE(); // action id
+        version = buffer.readShortLE();
+        time = buffer.readLongLE();
+        this.setReqId(buffer.readLongLE());
+        code = buffer.readIntLE();
+        int messageLen = buffer.readIntLE();
         byte[] msgBytes = new byte[messageLen];
-        buffer.get(msgBytes);
+        buffer.readBytes(msgBytes);
 
         message = new String(msgBytes, StandardCharsets.UTF_8);
-        buffer.getLong(); // resultId
-        isCompleted = buffer.get() != 0;
+        buffer.readLongLE(); // resultId
+        isCompleted = buffer.readByte() != 0;
+
+        if (isCompleted){
+            ReferenceCountUtil.safeRelease(buffer);
+        }
     }
 
-    public ByteBuffer getBuffer() {
+    public ByteBuf getBuffer() {
         return buffer;
     }
 
-    public void setBuffer(ByteBuffer buffer) {
+    public void setBuffer(ByteBuf buffer) {
         this.buffer = buffer;
     }
 
@@ -59,4 +70,5 @@ public class FetchBlockNewResp extends Response {
     public short getVersion() {
         return version;
     }
+
 }

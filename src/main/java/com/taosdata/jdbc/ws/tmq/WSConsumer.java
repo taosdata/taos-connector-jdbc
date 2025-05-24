@@ -10,6 +10,7 @@ import com.taosdata.jdbc.enums.TmqMessageType;
 import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.JsonUtil;
+import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.FutureResponse;
 import com.taosdata.jdbc.ws.InFlightRequest;
 import com.taosdata.jdbc.ws.Transport;
@@ -43,9 +44,8 @@ public class WSConsumer<V> implements Consumer<V> {
         param = new ConsumerParam(properties);
         InFlightRequest inFlightRequest = new InFlightRequest(param.getConnectionParam().getRequestTimeout()
                 , param.getConnectionParam().getMaxRequest());
-        transport = new Transport(WSFunction.TMQ, param.getConnectionParam(), inFlightRequest);
 
-        transport.setTextMessageHandler(message -> {
+        param.getConnectionParam().setTextMessageHandler(message -> {
             try {
                 JsonNode jsonObject = JsonUtil.getObjectReader().readTree(message);
                 ConsumerAction action = ConsumerAction.of(jsonObject.get("action").asText());
@@ -59,19 +59,21 @@ public class WSConsumer<V> implements Consumer<V> {
                 log.error("Error processing message", e);
             }
         });
-        transport.setBinaryMessageHandler(byteBuffer -> {
-            byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
-            byteBuffer.position(26);
-            // request_id
-            long id = byteBuffer.getLong();
-            byteBuffer.position(8);
+
+        param.getConnectionParam().setBinaryMessageHandler(byteBuf -> {
+            byteBuf.order(ByteOrder.LITTLE_ENDIAN);
+            byteBuf.readerIndex(26);
+            long id = byteBuf.readLongLE();
+            byteBuf.readerIndex(8);
             FutureResponse remove = inFlightRequest.remove(ConsumerAction.FETCH_RAW_DATA.getAction(), id);
             if (null != remove) {
-                FetchRawBlockResp fetchBlockResp = new FetchRawBlockResp(byteBuffer);
+                Utils.retainByteBuf(byteBuf);
+                FetchRawBlockResp fetchBlockResp = new FetchRawBlockResp(byteBuf);
                 remove.getFuture().complete(fetchBlockResp);
             }
         });
 
+        transport = new Transport(WSFunction.TMQ, param.getConnectionParam(), inFlightRequest);
         transport.checkConnection(param.getConnectionParam().getConnectTimeout());
     }
 

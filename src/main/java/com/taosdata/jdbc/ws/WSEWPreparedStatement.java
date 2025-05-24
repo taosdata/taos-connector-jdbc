@@ -9,6 +9,8 @@ import com.taosdata.jdbc.utils.SyncObj;
 import com.taosdata.jdbc.ws.entity.*;
 import com.taosdata.jdbc.ws.stmt2.entity.*;
 import com.taosdata.jdbc.ws.stmt2.entity.RequestFactory;
+import io.netty.buffer.ByteBuf;
+import io.netty.util.ReferenceCountUtil;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
@@ -408,7 +410,7 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
 
         private void writeBlockWithRetry() throws SQLException {
             for (int i = 0; i < connectionParam.getRetryTimes(); i++) {
-                byte[] rawBlock;
+                ByteBuf rawBlock;
                 try {
                     rawBlock = SerializeBlock.getStmt2BindBlock(
                             reqId,
@@ -418,6 +420,7 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
                             toBeBindTagCount,
                             toBeBindColCount,
                             precision);
+                    log.trace("buffer allocated: {}", Integer.toHexString(System.identityHashCode(rawBlock)));
                 } catch (Exception e) {
                     lastError = e;
                     log.error("Error in serialize data to block, stmt id: {}, req id: {}", stmtId, reqId, e);
@@ -474,6 +477,8 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
                         continue;
                     }
                     break;
+                } finally {
+                    log.trace("buffer {}, refCnt: {}", Integer.toHexString(System.identityHashCode(rawBlock)), rawBlock.refCnt());
                 }
             }
         }

@@ -6,6 +6,7 @@ import com.taosdata.jdbc.ws.TaosAdapterMock;
 import com.taosdata.jdbc.ws.WSEWPreparedStatement;
 import org.junit.*;
 
+import java.io.IOException;
 import java.sql.*;
 import java.util.Properties;
 import java.util.Random;
@@ -111,13 +112,9 @@ public class WsEfficientWritingTest {
 
 
     @Test
-    public void testReconnect() throws SQLException, InterruptedException {
+    public void testReconnect() throws SQLException, InterruptedException, IOException {
         taosAdapterMock = new TaosAdapterMock(proxyPort);
         taosAdapterMock.start();
-
-        while (!taosAdapterMock.isReady()){
-            Thread.sleep(10);
-        }
 
         String sql = "INSERT INTO " + db_name + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
 
@@ -142,7 +139,7 @@ public class WsEfficientWritingTest {
                 }
 
                 if (j == 1){
-                    taosAdapterMock.stopServer();
+                    taosAdapterMock.stop();
                     Thread.sleep(1000);
                     taosAdapterMock = new TaosAdapterMock(proxyPort);
                     taosAdapterMock.start();
@@ -156,18 +153,14 @@ public class WsEfficientWritingTest {
         Assert.assertEquals(numOfSubTable * numOfRow, Utils.getSqlRows(connection, db_name + "." + tableReconnect));
 
         if (taosAdapterMock != null) {
-            taosAdapterMock.stopServer();
+            taosAdapterMock.stop();
         }
     }
 
     @Test
-    public void testWriteException() throws SQLException, InterruptedException {
+    public void testWriteException() throws SQLException, InterruptedException, IOException {
         taosAdapterMock = new TaosAdapterMock(proxyPort);
         taosAdapterMock.start();
-
-        while (!taosAdapterMock.isReady()){
-            Thread.sleep(10);
-        }
 
         String sql = "INSERT INTO " + db_name + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
 
@@ -192,7 +185,7 @@ public class WsEfficientWritingTest {
                 }
 
                 if (j == 0){
-                    taosAdapterMock.stopServer();
+                    taosAdapterMock.stop();
                     Thread.sleep(1000);
                 }
 

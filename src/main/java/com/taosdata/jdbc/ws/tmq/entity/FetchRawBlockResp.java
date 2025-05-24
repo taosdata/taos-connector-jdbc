@@ -13,7 +13,6 @@ import com.taosdata.jdbc.ws.tmq.ConsumerAction;
 import com.taosdata.jdbc.ws.entity.Response;
 
 import java.math.BigDecimal;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -21,15 +20,16 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 
 import com.taosdata.jdbc.TSDBErrorNumbers;
+import io.netty.buffer.ByteBuf;
+import io.netty.util.ReferenceCountUtil;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
 
 public class FetchRawBlockResp extends Response {
-    private ByteBuffer buffer;
+    private ByteBuf buffer;
     private long time;
     private int code;
     private String message;
@@ -47,32 +47,32 @@ public class FetchRawBlockResp extends Response {
     private int rows = 0;
     private String tableName = "";
 
-    public FetchRawBlockResp(ByteBuffer buffer) {
+    public FetchRawBlockResp(ByteBuf buffer) {
         this.setAction(ConsumerAction.FETCH_RAW_DATA.getAction());
         this.buffer = buffer;
     }
 
     public void init() {
-        buffer.getLong(); // action id
-        version = buffer.getShort();
-        time = buffer.getLong();
-        this.setReqId(buffer.getLong());
-        code = buffer.getInt();
-        int messageLen = buffer.getInt();
+        buffer.readLongLE(); // action id
+        version = buffer.readShortLE();
+        time = buffer.readLongLE();
+        this.setReqId(buffer.readLongLE());
+        code = buffer.readIntLE();
+        int messageLen = buffer.readIntLE();
         byte[] msgBytes = new byte[messageLen];
-        buffer.get(msgBytes);
+        buffer.readBytes(msgBytes);
 
         message = new String(msgBytes, StandardCharsets.UTF_8);
-        messageID = buffer.getLong(); // message id
-        metaType = buffer.getShort();
-        rawBlockLength = buffer.getInt();
+        messageID = buffer.readLongLE(); // message id
+        metaType = buffer.readShortLE();
+        rawBlockLength = buffer.readIntLE();
     }
 
-    public ByteBuffer getBuffer() {
+    public ByteBuf getBuffer() {
         return buffer;
     }
 
-    public void setBuffer(ByteBuffer buffer) {
+    public void setBuffer(ByteBuf buffer) {
         this.buffer = buffer;
     }
     public long getTime() {
@@ -90,17 +90,17 @@ public class FetchRawBlockResp extends Response {
 
 
     private void skipHead() throws SQLException {
-        byte version = buffer.get();
+        byte version = buffer.readByte();
         if (version >= 100) {
-            int skip = buffer.getInt();
-            buffer.position(buffer.position() + skip);
+            int skip = buffer.readIntLE();
+            buffer.skipBytes(skip);
         } else {
             int skip = getTypeSkip(version);
-            buffer.position(buffer.position() + skip);
+            buffer.skipBytes(skip);
 
-            version = buffer.get();
+            version = buffer.readByte();
             skip = getTypeSkip(version);
-            buffer.position(buffer.position() + skip);
+            buffer.skipBytes(skip);
         }
     }
 
@@ -118,21 +118,21 @@ public class FetchRawBlockResp extends Response {
 
     public void parseBlockInfos() throws SQLException {
         skipHead();
-        int blockNum = buffer.getInt();
+        int blockNum = buffer.readIntLE();
         int cols = 0;
 
-        boolean withTableName = buffer.get() != 0;// skip withTableName
-        buffer.get();// skip withSchema
+        boolean withTableName = buffer.readByte() != 0;// skip withTableName
+        buffer.readByte();// skip withSchema
 
         for (int i = 0; i < blockNum; i++) {
             int blockTotalLen = parseVariableByteInteger();
-            buffer.position(buffer.position() + 17);
-            precision = buffer.get();
+            buffer.skipBytes(17);
+            precision = buffer.readByte();
 
             // only parse the first block's schema
             if (i == 0){
-                int backupBlockPos = buffer.position();
-                buffer.position(buffer.position() + blockTotalLen - 18);
+                buffer.markReaderIndex();
+                buffer.skipBytes(blockTotalLen - 18);
                 cols = parseZigzagVariableByteInteger();
                 resultData = new ArrayList<>(cols);
                 for (int j = 0; j < cols; j++) {
@@ -148,10 +148,10 @@ public class FetchRawBlockResp extends Response {
                 if(withTableName){
                     tableName = parseName();
                 }
-                buffer.position(backupBlockPos);
+                buffer.resetReaderIndex();
             }
             fetchBlockData();
-            buffer.get(); // skip useless byte
+            buffer.readByte(); // skip useless byte
 
             parseZigzagVariableByteInteger(); // skip ncols
             parseZigzagVariableByteInteger(); // skip version
@@ -160,34 +160,36 @@ public class FetchRawBlockResp extends Response {
             }
             if (withTableName){
                 int tableNameLen = parseVariableByteInteger();
-                buffer.position(buffer.position() + tableNameLen);
+                buffer.skipBytes(tableNameLen);
             }
         }
         if (!resultData.isEmpty()){
             // rows is the number of rows of the first column
             rows = resultData.get(0).size();
         }
+        buffer.release();
     }
-    public ConsumerRecords<TMQEnhMap> getEhnMapList(PollResp pollResp, ZoneId zoneId) throws SQLException {
+    public ConsumerRecords<TMQEnhMap> getEhnMapListInner(PollResp pollResp, ZoneId zoneId) throws SQLException {
         skipHead();
-        int blockNum = buffer.getInt();
+        int blockNum = buffer.readIntLE();
         int cols = 0;
 
         ConsumerRecords<TMQEnhMap> records = new ConsumerRecords<>();
-        boolean withTableName = buffer.get() != 0;// skip withTableName
-        buffer.get();// skip withSchema
+        boolean withTableName = buffer.readByte() != 0;// skip withTableName
+        buffer.readByte();// skip withSchema
 
         for (int i = 0; i < blockNum; i++) {
             int blockTotalLen = parseVariableByteInteger();
-            buffer.position(buffer.position() + 17);
-            precision = buffer.get();
+            buffer.skipBytes(17);
+            precision = buffer.readByte();
 
             fields.clear();
             columnNames.clear();
 
             // parse the block's schema
-            int backupBlockPos = buffer.position();
-            buffer.position(buffer.position() + blockTotalLen - 18);
+            //int backupBlockPos = buffer.position();
+            buffer.markReaderIndex();
+            buffer.skipBytes(blockTotalLen - 18);
             cols = parseZigzagVariableByteInteger();
             resultData = new ArrayList<>(cols);
             for (int j = 0; j < cols; j++) {
@@ -203,10 +205,10 @@ public class FetchRawBlockResp extends Response {
             if(withTableName){
                 tableName = parseName();
             }
-            buffer.position(backupBlockPos);
+            buffer.resetReaderIndex();
 
             fetchBlockData();
-            buffer.get(); // skip useless byte
+            buffer.readByte(); // skip useless byte
 
             parseZigzagVariableByteInteger(); // skip ncols
             parseZigzagVariableByteInteger(); // skip version
@@ -216,7 +218,7 @@ public class FetchRawBlockResp extends Response {
 
             if (withTableName){
                 int tableNameLen = parseVariableByteInteger();
-                buffer.position(buffer.position() + tableNameLen);
+                buffer.skipBytes(tableNameLen);
             }
 
             // handle the data in this block
@@ -252,12 +254,20 @@ public class FetchRawBlockResp extends Response {
 
         return records;
     }
+    public ConsumerRecords<TMQEnhMap> getEhnMapList(PollResp pollResp, ZoneId zoneId) throws SQLException {
+        try {
+            return getEhnMapListInner(pollResp, zoneId);
+        } finally {
+            ReferenceCountUtil.safeRelease(buffer);
+        }
+    }
 
-    private int parseVariableByteInteger() {
+
+        private int parseVariableByteInteger() {
         int multiplier = 1;
         int value = 0;
         while (true) {
-            int encodedByte = buffer.get();
+            int encodedByte = buffer.readByte();
             value += (encodedByte & 127) * multiplier;
             if ((encodedByte & 128) == 0) {
                 break;
@@ -277,15 +287,15 @@ public class FetchRawBlockResp extends Response {
     private String parseName() {
         int nameLen = parseVariableByteInteger();
         byte[] name = new byte[nameLen - 1];
-        buffer.get(name);
-        buffer.position(buffer.position() + 1);
+        buffer.readBytes(name);
+        buffer.skipBytes(1);
         return new String(name, StandardCharsets.UTF_8);
     }
 
     private RestfulResultSet.Field parseSchema() throws SQLException{
-        int taosType = buffer.get();
+        int taosType = buffer.readByte();
         int jdbcType = DataType.convertTaosType2DataType(taosType).getJdbcTypeValue();
-        buffer.get(); // skip flag
+        buffer.readByte(); // skip flag
         int bytes = parseZigzagVariableByteInteger();
         parseZigzagVariableByteInteger(); // skip colid
         String name = parseName();
@@ -293,35 +303,36 @@ public class FetchRawBlockResp extends Response {
     }
 
     private void skipSchema(boolean withTableName){
-        buffer.position(buffer.position() + 2);
+        buffer.skipBytes(2);
         parseZigzagVariableByteInteger(); // skip bytes
         parseZigzagVariableByteInteger(); // skip colld
         int nameLen = parseVariableByteInteger();
-        buffer.position(buffer.position() + nameLen);
+        buffer.skipBytes(nameLen);
     }
 
-    private int getScaleFromRowBlock(ByteBuffer buffer, int pHeader, int colIndex) {
+    private int getScaleFromRowBlock(ByteBuf buffer, int pHeader, int colIndex) {
         // for decimal: |___bytes___|__empty__|___prec___|__scale___|
-        int backupPos = buffer.position();
-        buffer.position(pHeader);
-        buffer.position(buffer.position() + colIndex * 5 + 1);
-        int scale = buffer.getInt();
-        buffer.position(backupPos);
+        int backupPos = buffer.readerIndex();
+        buffer.readerIndex(pHeader);
+        buffer.skipBytes(colIndex * 5 + 1);
+        int scale = buffer.readIntLE();
+        buffer.readerIndex(backupPos);
         return scale & 0xFF;
     }
 
     private void fetchBlockData() throws SQLException {
-        buffer.position(buffer.position() + 8);
-        int numOfRows = buffer.getInt();
+        buffer.skipBytes(8);
+        int numOfRows = buffer.readIntLE();
         int bitMapOffset = bitmapLen(numOfRows);
-        int beforeColLenPos = buffer.position() + 16;
-        int pHeader = buffer.position() + 16 + fields.size() * 5;
-        buffer.position(pHeader);
+        int beforeColLenPos = buffer.readerIndex() + 16;
+
+        int pHeader = buffer.readerIndex() + 16 + fields.size() * 5;
+        buffer.readerIndex(pHeader);
         List<Integer> lengths = new ArrayList<>(fields.size());
         for (int i = 0; i < fields.size(); i++) {
-            lengths.add(buffer.getInt());
+            lengths.add(buffer.readIntLE());
         }
-        pHeader = buffer.position();
+        pHeader = buffer.readerIndex();
         int length = 0;
         for (int i = 0; i < fields.size(); i++) {
             List<Object> col = resultData.get(i);
@@ -336,9 +347,9 @@ public class FetchRawBlockResp extends Response {
                 case TSDB_DATA_TYPE_UTINYINT: {
                     length = bitMapOffset;
                     byte[] tmp = new byte[bitMapOffset];
-                    buffer.get(tmp);
+                    buffer.readBytes(tmp);
                     for (int j = 0; j < numOfRows; j++) {
-                        byte b = buffer.get();
+                        byte b = buffer.readByte();
                         if (isNull(tmp, j)) {
                             col.add(null);
                         } else {
@@ -351,9 +362,9 @@ public class FetchRawBlockResp extends Response {
                 case TSDB_DATA_TYPE_USMALLINT: {
                     length = bitMapOffset;
                     byte[] tmp = new byte[bitMapOffset];
-                    buffer.get(tmp);
+                    buffer.readBytes(tmp);
                     for (int j = 0; j < numOfRows; j++) {
-                        short s = buffer.getShort();
+                        short s = buffer.readShortLE();
                         if (isNull(tmp, j)) {
                             col.add(null);
                         } else {
@@ -366,9 +377,9 @@ public class FetchRawBlockResp extends Response {
                 case TSDB_DATA_TYPE_UINT: {
                     length = bitMapOffset;
                     byte[] tmp = new byte[bitMapOffset];
-                    buffer.get(tmp);
+                    buffer.readBytes(tmp);
                     for (int j = 0; j < numOfRows; j++) {
-                        int in = buffer.getInt();
+                        int in = buffer.readIntLE();
                         if (isNull(tmp, j)) {
                             col.add(null);
                         } else {
@@ -382,9 +393,9 @@ public class FetchRawBlockResp extends Response {
                 case TSDB_DATA_TYPE_TIMESTAMP: {
                     length = bitMapOffset;
                     byte[] tmp = new byte[bitMapOffset];
-                    buffer.get(tmp);
+                    buffer.readBytes(tmp);
                     for (int j = 0; j < numOfRows; j++) {
-                        long l = buffer.getLong();
+                        long l = buffer.readLongLE();
                         if (isNull(tmp, j)) {
                             col.add(null);
                         } else {
@@ -396,9 +407,9 @@ public class FetchRawBlockResp extends Response {
                 case TSDB_DATA_TYPE_FLOAT: {
                     length = bitMapOffset;
                     byte[] tmp = new byte[bitMapOffset];
-                    buffer.get(tmp);
+                    buffer.readBytes(tmp);
                     for (int j = 0; j < numOfRows; j++) {
-                        float f = buffer.getFloat();
+                        float f = buffer.readFloatLE();
                         if (isNull(tmp, j)) {
                             col.add(null);
                         } else {
@@ -410,9 +421,9 @@ public class FetchRawBlockResp extends Response {
                 case TSDB_DATA_TYPE_DOUBLE: {
                     length = bitMapOffset;
                     byte[] tmp = new byte[bitMapOffset];
-                    buffer.get(tmp);
+                    buffer.readBytes(tmp);
                     for (int j = 0; j < numOfRows; j++) {
-                        double d = buffer.getDouble();
+                        double d = buffer.readDoubleLE();
                         if (isNull(tmp, j)) {
                             col.add(null);
                         } else {
@@ -428,18 +439,18 @@ public class FetchRawBlockResp extends Response {
                     length = numOfRows * 4;
                     List<Integer> offset = new ArrayList<>(numOfRows);
                     for (int m = 0; m < numOfRows; m++) {
-                        offset.add(buffer.getInt());
+                        offset.add(buffer.readIntLE());
                     }
-                    int start = buffer.position();
+                    int start = buffer.readerIndex();
                     for (int m = 0; m < numOfRows; m++) {
                         if (-1 == offset.get(m)) {
                             col.add(null);
                             continue;
                         }
-                        buffer.position(start + offset.get(m));
-                        int len = buffer.getShort() & 0xFFFF;
+                        buffer.readerIndex(start + offset.get(m));
+                        int len = buffer.readShortLE() & 0xFFFF;
                         byte[] tmp = new byte[len];
-                        buffer.get(tmp);
+                        buffer.readBytes(tmp);
                         col.add(tmp);
                     }
                     break;
@@ -448,19 +459,19 @@ public class FetchRawBlockResp extends Response {
                     length = numOfRows * 4;
                     List<Integer> offset = new ArrayList<>(numOfRows);
                     for (int m = 0; m < numOfRows; m++) {
-                        offset.add(buffer.getInt());
+                        offset.add(buffer.readIntLE());
                     }
-                    int start = buffer.position();
+                    int start = buffer.readerIndex();
                     for (int m = 0; m < numOfRows; m++) {
                         if (-1 == offset.get(m)) {
                             col.add(null);
                             continue;
                         }
-                        buffer.position(start + offset.get(m));
-                        int len = (buffer.getShort() & 0xFFFF) / 4;
+                        buffer.readerIndex(start + offset.get(m));
+                        int len = (buffer.readShortLE() & 0xFFFF) / 4;
                         int[] tmp = new int[len];
                         for (int n = 0; n < len; n++) {
-                            tmp[n] = buffer.getInt();
+                            tmp[n] = buffer.readIntLE();
                         }
                         col.add(tmp);
                     }
@@ -471,10 +482,10 @@ public class FetchRawBlockResp extends Response {
                     int dataLen = type == TSDB_DATA_TYPE_DECIMAL128 ? 16 : 8;
                     length = bitMapOffset;
                     byte[] tmp = new byte[bitMapOffset];
-                    buffer.get(tmp);
+                    buffer.readBytes(tmp);
                     for (int j = 0; j < numOfRows; j++) {
                         byte[] tb = new byte[dataLen];
-                        buffer.get(tb);
+                        buffer.readBytes(tb);
 
                         if (isNull(tmp, j)) {
                             col.add(null);
@@ -490,7 +501,7 @@ public class FetchRawBlockResp extends Response {
                     break;
             }
             pHeader += length + lengths.get(i);
-            buffer.position(pHeader);
+            buffer.readerIndex(pHeader);
         }
     }
 

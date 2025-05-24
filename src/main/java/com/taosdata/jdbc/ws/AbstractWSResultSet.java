@@ -163,6 +163,28 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
             this.result = blockData.getData();
             this.numOfRows = blockData.getNumOfRows();
         } else {
+//            this.fetchBlockNewResp.init();
+//            FetchBlockNewResp resp = this.fetchBlockNewResp;
+//
+//
+//            if (Code.SUCCESS.getCode() != resp.getCode()) {
+//                throw TSDBError.createSQLException(resp.getCode(), "FETCH DATA ERROR");
+//            }
+//            this.reset();
+//            BlockData blockData = BlockData.getEmptyBlockData(fields, timestampPrecision);
+//
+//            if (resp.isCompleted() || isClosed) {
+//                blockData.setCompleted(true);
+//                isCompleted = true;
+//                return false;
+//            }
+//
+//            blockData.setBuffer(resp.getBuffer());
+//            blockData.handleData();
+//
+//            this.result = blockData.getData();
+//            this.numOfRows = blockData.getNumOfRows();
+
 
             byte[] version = {1, 0};
             FetchBlockNewResp resp = (FetchBlockNewResp) transport.send(Action.FETCH_BLOCK_NEW.getAction(),

@@ -150,9 +150,7 @@ public class SchemalessWriter implements AutoCloseable {
                     .setUseSsl(useSSL)
                     .build();
             InFlightRequest inFlightRequest = new InFlightRequest(timeout, 20);
-            this.transport = new Transport(WSFunction.SCHEMALESS, param, inFlightRequest);
-
-            this.transport.setTextMessageHandler(message -> {
+            param.setTextMessageHandler(message -> {
                 try {
                     JsonNode jsonObject = JsonUtil.getObjectReader().readTree(message);
                     ObjectReader actionReader = JsonUtil.getObjectReader(CommonResp.class);
@@ -165,6 +163,10 @@ public class SchemalessWriter implements AutoCloseable {
                     log.error("Error processing message", e);
                 }
             });
+
+            this.transport = new Transport(WSFunction.SCHEMALESS, param, inFlightRequest);
+
+
 
             transport.checkConnection(connectTime);
 
