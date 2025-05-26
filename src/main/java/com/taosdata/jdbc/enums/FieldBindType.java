@@ -1,6 +1,6 @@
 package com.taosdata.jdbc.enums;
 
-public enum FeildBindType {
+public enum FieldBindType {
     TAOS_FIELD_COL(1),
     TAOS_FIELD_TAG(2),
     TAOS_FIELD_QUERY(3),
@@ -8,7 +8,7 @@ public enum FeildBindType {
 
     private final int value;
 
-    FeildBindType(int value) {
+    FieldBindType(int value) {
         this.value = value;
     }
 
@@ -16,8 +16,8 @@ public enum FeildBindType {
         return value;
     }
 
-    public static FeildBindType fromValue(int value) {
-        for (FeildBindType field : FeildBindType.values()) {
+    public static FieldBindType fromValue(int value) {
+        for (FieldBindType field : FieldBindType.values()) {
             if (field.value == value) {
                 return field;
             }

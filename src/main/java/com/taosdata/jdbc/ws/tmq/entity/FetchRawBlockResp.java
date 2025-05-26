@@ -9,6 +9,7 @@ import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.DataTypeConverUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.DecimalUtil;
+import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.tmq.ConsumerAction;
 import com.taosdata.jdbc.ws.entity.Response;
 
@@ -258,7 +259,7 @@ public class FetchRawBlockResp extends Response {
         try {
             return getEhnMapListInner(pollResp, zoneId);
         } finally {
-            ReferenceCountUtil.safeRelease(buffer);
+            Utils.releaseByteBuf(buffer);
         }
     }
 

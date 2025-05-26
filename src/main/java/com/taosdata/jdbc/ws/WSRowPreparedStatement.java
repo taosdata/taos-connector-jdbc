@@ -5,7 +5,7 @@ import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.common.AutoExpandingBuffer;
 import com.taosdata.jdbc.common.TableInfo;
-import com.taosdata.jdbc.enums.FeildBindType;
+import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.DateTimeUtils;
@@ -80,18 +80,6 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
                                   String database,
                                   AbstractConnection connection,
                                   String sql,
-                                  Long instanceId) {
-        super(transport, database, connection, instanceId, param.getZoneId());
-        this.rawSql = sql;
-        this.param = param;
-        initBuffers();
-    }
-
-    public WSRowPreparedStatement(Transport transport,
-                                  ConnectionParam param,
-                                  String database,
-                                  AbstractConnection connection,
-                                  String sql,
                                   Long instanceId,
                                   Stmt2PrepareResp prepareResp) {
         super(transport, database, connection, instanceId, param.getZoneId());
@@ -108,21 +96,25 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
             }
             for (int i = 0; i < fields.size(); i++){
                 Field field = fields.get(i);
-                if (field.getBindType() == FeildBindType.TAOS_FIELD_TBNAME.getValue()){
+                if (field.getBindType() == FieldBindType.TAOS_FIELD_TBNAME.getValue()){
                     toBeBindTableNameIndex = i;
                 }
-                if (field.getBindType() == FeildBindType.TAOS_FIELD_TAG.getValue()){
+                if (field.getBindType() == FieldBindType.TAOS_FIELD_TAG.getValue()){
                     toBeBindTagCount++;
                 }
-                if (field.getBindType() == FeildBindType.TAOS_FIELD_COL.getValue()){
+                if (field.getBindType() == FieldBindType.TAOS_FIELD_COL.getValue()){
                     toBeBindColCount++;
                 }
                 colTypeList.add(field.getFieldType());
             }
         } else if (prepareResp.getFieldsCount() > 0){
             toBeBindColCount = prepareResp.getFieldsCount();
+            fields = new ArrayList<>();
             for (int i = 0; i < toBeBindColCount; i++){
                 colTypeList.add((byte)-1);
+                Field field = new Field();
+                field.setBindType((byte) FieldBindType.TAOS_FIELD_COL.getValue());
+                fields.add(field);
             }
         }
 
@@ -240,7 +232,7 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
 
     @Override
     public void setNull(int parameterIndex, int sqlType) throws SQLException {
-        byte bindType;
+        byte fieldType;
         switch (sqlType) {
             case Types.BOOLEAN:
                 setBooleanInner(parameterIndex, false, true);
@@ -269,26 +261,26 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
             case Types.BINARY:
             case Types.VARCHAR:
             case Types.VARBINARY:
-                bindType = fields.get(parameterIndex - 1).getBindType();
-                if (bindType > 0){
-                    seStringInner(parameterIndex, null, true, bindType);
+                fieldType = fields.get(parameterIndex - 1).getFieldType();
+                if (fieldType > 0){
+                    seStringInner(parameterIndex, null, true, fieldType);
                 } else {
                     seStringInner(parameterIndex, null, true, (byte)TSDB_DATA_TYPE_VARCHAR);
                 }
                 break;
             case Types.NCHAR:
-                bindType = fields.get(parameterIndex - 1).getBindType();
-                if (bindType > 0){
-                    seStringInner(parameterIndex, null, true, bindType);
+                fieldType = fields.get(parameterIndex - 1).getFieldType();
+                if (fieldType > 0){
+                    seStringInner(parameterIndex, null, true, fieldType);
                 } else {
                     seStringInner(parameterIndex, null, true, (byte)TSDB_DATA_TYPE_NCHAR);
                 }
                 break;
             // json
             case Types.OTHER:
-                bindType = fields.get(parameterIndex - 1).getBindType();
-                if (bindType > 0){
-                    seStringInner(parameterIndex, null, true, bindType);
+                fieldType = fields.get(parameterIndex - 1).getFieldType();
+                if (fieldType > 0){
+                    seStringInner(parameterIndex, null, true, fieldType);
                 } else {
                     seStringInner(parameterIndex, null, true, (byte)TSDB_DATA_TYPE_JSON);
                 }
@@ -300,9 +292,9 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
 
     private void setBooleanInner(int parameterIndex, boolean x, boolean isNull) throws SQLException {
         byte bindType = fields.get(parameterIndex - 1).getBindType();
-        if (bindType == FeildBindType.TAOS_FIELD_COL.getValue()) {
+        if (bindType == FieldBindType.TAOS_FIELD_COL.getValue()) {
             curTableColTotalLen += colsBuf.serializeBool(x, isNull);
-        } else if (bindType == FeildBindType.TAOS_FIELD_TAG.getValue()) {
+        } else if (bindType == FieldBindType.TAOS_FIELD_TAG.getValue()) {
             curTableTagTotalLen += tagsBuf.serializeBool(x, isNull);
         }
     }
@@ -315,9 +307,9 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
     // ---------------- 以下为统一风格的基础类型处理 ----------------
     private void setByteInner(int parameterIndex, byte x, boolean isNull, byte type) throws SQLException {
         byte bindType = fields.get(parameterIndex - 1).getBindType();
-        if (bindType == FeildBindType.TAOS_FIELD_COL.getValue()) {
+        if (bindType == FieldBindType.TAOS_FIELD_COL.getValue()) {
             curTableColTotalLen += colsBuf.serializeByte(x, isNull, type);
-        } else if (bindType == FeildBindType.TAOS_FIELD_TAG.getValue()) {
+        } else if (bindType == FieldBindType.TAOS_FIELD_TAG.getValue()) {
             curTableTagTotalLen += tagsBuf.serializeByte(x, isNull, type);
         }
     }
@@ -329,9 +321,9 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
 
     private void setShortInner(int parameterIndex, short x, boolean isNull, byte type) throws SQLException {
         byte bindType = fields.get(parameterIndex - 1).getBindType();
-        if (bindType == FeildBindType.TAOS_FIELD_COL.getValue()) {
+        if (bindType == FieldBindType.TAOS_FIELD_COL.getValue()) {
             curTableColTotalLen += colsBuf.serializeShort(x, isNull, type);
-        } else if (bindType == FeildBindType.TAOS_FIELD_TAG.getValue()) {
+        } else if (bindType == FieldBindType.TAOS_FIELD_TAG.getValue()) {
             curTableTagTotalLen += tagsBuf.serializeShort(x, isNull, type);
         }
     }
@@ -350,9 +342,9 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
 
     private void setIntInner(int parameterIndex, int x, boolean isNull, byte type) throws SQLException {
         byte bindType = fields.get(parameterIndex - 1).getBindType();
-        if (bindType == FeildBindType.TAOS_FIELD_COL.getValue()) {
+        if (bindType == FieldBindType.TAOS_FIELD_COL.getValue()) {
             curTableColTotalLen += colsBuf.serializeInt(x, isNull, type);
-        } else if (bindType == FeildBindType.TAOS_FIELD_TAG.getValue()) {
+        } else if (bindType == FieldBindType.TAOS_FIELD_TAG.getValue()) {
             curTableTagTotalLen += tagsBuf.serializeInt(x, isNull, type);
         }
     }
@@ -371,9 +363,9 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
 
     private void setLongInner(int parameterIndex, long x, boolean isNull, byte type) throws SQLException {
         byte bindType = fields.get(parameterIndex - 1).getBindType();
-        if (bindType == FeildBindType.TAOS_FIELD_COL.getValue()) {
+        if (bindType == FieldBindType.TAOS_FIELD_COL.getValue()) {
             curTableColTotalLen += colsBuf.serializeLong(x, isNull, type);
-        } else if (bindType == FeildBindType.TAOS_FIELD_TAG.getValue()) {
+        } else if (bindType == FieldBindType.TAOS_FIELD_TAG.getValue()) {
             curTableTagTotalLen += tagsBuf.serializeLong(x, isNull, type);
         }
     }
@@ -392,9 +384,9 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
 
     private void setFloatInner(int parameterIndex, float x, boolean isNull) throws SQLException {
         byte bindType = fields.get(parameterIndex - 1).getBindType();
-        if (bindType == FeildBindType.TAOS_FIELD_COL.getValue()) {
+        if (bindType == FieldBindType.TAOS_FIELD_COL.getValue()) {
             curTableColTotalLen += colsBuf.serializeFloat(x, isNull);
-        } else if (bindType == FeildBindType.TAOS_FIELD_TAG.getValue()) {
+        } else if (bindType == FieldBindType.TAOS_FIELD_TAG.getValue()) {
             curTableTagTotalLen += tagsBuf.serializeFloat(x, isNull);
         }
     }
@@ -406,9 +398,9 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
 
     private void setDoubleInner(int parameterIndex, double x, boolean isNull) throws SQLException {
         byte bindType = fields.get(parameterIndex - 1).getBindType();
-        if (bindType == FeildBindType.TAOS_FIELD_COL.getValue()) {
+        if (bindType == FieldBindType.TAOS_FIELD_COL.getValue()) {
             curTableColTotalLen += colsBuf.serializeDouble(x, isNull);
-        } else if (bindType == FeildBindType.TAOS_FIELD_TAG.getValue()) {
+        } else if (bindType == FieldBindType.TAOS_FIELD_TAG.getValue()) {
             curTableTagTotalLen += tagsBuf.serializeDouble(x, isNull);
         }
     }
@@ -424,11 +416,11 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
 
     private void seStringInner(int parameterIndex, String x, boolean isNull, byte type) throws SQLException {
         byte bindType = fields.get(parameterIndex - 1).getBindType();
-        if (bindType == FeildBindType.TAOS_FIELD_COL.getValue()) {
+        if (bindType == FieldBindType.TAOS_FIELD_COL.getValue()) {
             curTableColTotalLen += colsBuf.serializeString(x, isNull, type);
-        } else if (bindType == FeildBindType.TAOS_FIELD_TAG.getValue()) {
+        } else if (bindType == FieldBindType.TAOS_FIELD_TAG.getValue()) {
             curTableTagTotalLen += tagsBuf.serializeString(x, isNull, type);
-        } else if (bindType == FeildBindType.TAOS_FIELD_TBNAME.getValue()) {
+        } else if (bindType == FieldBindType.TAOS_FIELD_TBNAME.getValue()) {
             if (x == null){
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table name can't be null");
             }
@@ -440,11 +432,11 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
 
     private void setBytesInner(int parameterIndex, byte[] x, boolean isNull, byte type) throws SQLException {
         byte bindType = fields.get(parameterIndex - 1).getBindType();
-        if (bindType == FeildBindType.TAOS_FIELD_COL.getValue()) {
+        if (bindType == FieldBindType.TAOS_FIELD_COL.getValue()) {
             curTableColTotalLen += colsBuf.serializeBytes(x, isNull, type);
-        } else if (bindType == FeildBindType.TAOS_FIELD_TAG.getValue()) {
+        } else if (bindType == FieldBindType.TAOS_FIELD_TAG.getValue()) {
             curTableTagTotalLen += tagsBuf.serializeBytes(x, isNull, type);
-        } else if (bindType == FeildBindType.TAOS_FIELD_TBNAME.getValue()) {
+        } else if (bindType == FieldBindType.TAOS_FIELD_TBNAME.getValue()) {
             if (x == null){
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table name can't be null");
             }
@@ -496,10 +488,10 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
     }
 
     private void setTimestampInner(int parameterIndex, long x, boolean isNull) throws SQLException {
-        if (fields.get(parameterIndex - 1).getBindType() == FeildBindType.TAOS_FIELD_COL.getValue()){
+        if (fields.get(parameterIndex - 1).getBindType() == FieldBindType.TAOS_FIELD_COL.getValue()){
             int totalLen = colsBuf.serializeTimeStamp(x, isNull);
             curTableColTotalLen += totalLen;
-        } else if (fields.get(parameterIndex - 1).getBindType() == FeildBindType.TAOS_FIELD_TAG.getValue()){
+        } else if (fields.get(parameterIndex - 1).getBindType() == FieldBindType.TAOS_FIELD_TAG.getValue()){
             int totalLen = tagsBuf.serializeTimeStamp(x, isNull);
             curTableTagTotalLen += totalLen;
         }
@@ -606,7 +598,10 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
                 }
                 break;
             case Types.TIMESTAMP:
-                if (x instanceof Date) {
+                if (x instanceof Timestamp) {
+                    setTimestamp(parameterIndex, (Timestamp) x);
+                }
+                else if (x instanceof Date) {
                     setDate(parameterIndex, (Date) x);
                 } else if (x instanceof Time) {
                     setTime(parameterIndex, (Time) x);
@@ -653,9 +648,9 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
     @Override
     public void setObject(int parameterIndex, Object x) throws SQLException {
         if (x == null){
-            byte bindType = fields.get(parameterIndex - 1).getBindType();
-            if (bindType >= 0){
-                setNullByTSDBType(parameterIndex, bindType);
+            byte fieldType = fields.get(parameterIndex - 1).getFieldType();
+            if (fieldType >= 0){
+                setNullByTSDBType(parameterIndex, fieldType);
             } else {
                 // query
                 setNull(parameterIndex, Types.TINYINT);
@@ -771,10 +766,6 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
 
     @Override
     public void setRef(int parameterIndex, Ref x) throws SQLException {
-        if (isClosed()) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
-        }
-
         throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
     }
 

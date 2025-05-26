@@ -4,7 +4,6 @@ import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.StringUtils;
-import com.taosdata.jdbc.ws.TSWSPreparedStatement;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -12,10 +11,9 @@ import org.junit.Test;
 
 import java.math.BigInteger;
 import java.sql.*;
-import java.util.Collections;
 import java.util.Properties;
 
-public class WsPstmtAllTypeLineModeTest {
+public class WsPstmtLineModeAllTypeTest {
     String host = "127.0.0.1";
     String db_name = "ws_prepare_type_line";
     String tableName = "wpt";
@@ -49,6 +47,125 @@ public class WsPstmtAllTypeLineModeTest {
         statement.setShort(14, TSDBConstants.MAX_UNSIGNED_BYTE);
         statement.setInt(15, TSDBConstants.MAX_UNSIGNED_SHORT);
         statement.setLong(16, TSDBConstants.MAX_UNSIGNED_INT);
+        statement.setObject(17, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
+
+        statement.executeUpdate();
+
+        ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + tableName);
+        resultSet.next();
+        Assert.assertEquals(resultSet.getTimestamp(1), new Timestamp(current));
+        Assert.assertEquals(resultSet.getByte(2), (byte) 2);
+        Assert.assertEquals(resultSet.getShort(3), (short) 3);
+        Assert.assertEquals(resultSet.getInt(4), 4);
+        Assert.assertEquals(resultSet.getLong(5), 5L);
+        Assert.assertEquals(resultSet.getFloat(6), 6.6f, 0.0001);
+        Assert.assertEquals(resultSet.getDouble(7), 7.7, 0.0001);
+        Assert.assertTrue(resultSet.getBoolean(8));
+        Assert.assertEquals(resultSet.getString(9), "你好");
+        Assert.assertEquals(resultSet.getString(10), "世界");
+        Assert.assertEquals(resultSet.getString(11), "hello world");
+        Assert.assertArrayEquals(resultSet.getBytes(12), expectedVarBinary);
+        Assert.assertArrayEquals(resultSet.getBytes(13), expectedGeometry);
+
+        Assert.assertEquals(resultSet.getShort(14), TSDBConstants.MAX_UNSIGNED_BYTE);
+        Assert.assertEquals(resultSet.getInt(15), TSDBConstants.MAX_UNSIGNED_SHORT);
+        Assert.assertEquals(resultSet.getLong(16), TSDBConstants.MAX_UNSIGNED_INT);
+        Assert.assertEquals(resultSet.getObject(17), new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
+
+
+        Date date = new Date(current);
+        Date date1 = resultSet.getDate(1);
+        Assert.assertEquals(resultSet.getDate(1), new Date(current));
+        Assert.assertEquals(resultSet.getTime(1), new Time(current));
+        Assert.assertEquals(resultSet.getTimestamp(1), new Timestamp(current));
+        Assert.assertEquals(resultSet.getBigDecimal(7).doubleValue(), 7.7, 0.000001);
+
+        resultSet.close();
+        statement.close();
+    }
+
+
+    @Test
+    public void testSetObject() throws SQLException {
+        String sql = "insert into " + db_name + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        PreparedStatement statement = connection.prepareStatement(sql);
+        long current = System.currentTimeMillis();
+        statement.setObject(1, new Timestamp(current));
+        statement.setObject(2, (byte) 2);
+        statement.setObject(3, (short) 3);
+        statement.setObject(4, 4);
+        statement.setObject(5, 5L);
+        statement.setObject(6, 6.6f);
+        statement.setObject(7, 7.7);
+        statement.setObject(8, true);
+        statement.setObject(9, "你好");
+        statement.setObject(10, "世界");
+        statement.setObject(11, "hello world");
+        statement.setObject(12, expectedVarBinary);
+        statement.setObject(13, expectedGeometry);
+
+        statement.setObject(14, TSDBConstants.MAX_UNSIGNED_BYTE);
+        statement.setObject(15, TSDBConstants.MAX_UNSIGNED_SHORT);
+        statement.setObject(16, TSDBConstants.MAX_UNSIGNED_INT);
+        statement.setObject(17, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
+
+        statement.executeUpdate();
+
+        ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + tableName);
+        resultSet.next();
+        Assert.assertEquals(resultSet.getTimestamp(1), new Timestamp(current));
+        Assert.assertEquals(resultSet.getByte(2), (byte) 2);
+        Assert.assertEquals(resultSet.getShort(3), (short) 3);
+        Assert.assertEquals(resultSet.getInt(4), 4);
+        Assert.assertEquals(resultSet.getLong(5), 5L);
+        Assert.assertEquals(resultSet.getFloat(6), 6.6f, 0.0001);
+        Assert.assertEquals(resultSet.getDouble(7), 7.7, 0.0001);
+        Assert.assertTrue(resultSet.getBoolean(8));
+        Assert.assertEquals(resultSet.getString(9), "你好");
+        Assert.assertEquals(resultSet.getString(10), "世界");
+        Assert.assertEquals(resultSet.getString(11), "hello world");
+        Assert.assertArrayEquals(resultSet.getBytes(12), expectedVarBinary);
+        Assert.assertArrayEquals(resultSet.getBytes(13), expectedGeometry);
+
+        Assert.assertEquals(resultSet.getShort(14), TSDBConstants.MAX_UNSIGNED_BYTE);
+        Assert.assertEquals(resultSet.getInt(15), TSDBConstants.MAX_UNSIGNED_SHORT);
+        Assert.assertEquals(resultSet.getLong(16), TSDBConstants.MAX_UNSIGNED_INT);
+        Assert.assertEquals(resultSet.getObject(17), new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
+
+
+        Date date = new Date(current);
+        Date date1 = resultSet.getDate(1);
+        Assert.assertEquals(resultSet.getDate(1), new Date(current));
+        Assert.assertEquals(resultSet.getTime(1), new Time(current));
+        Assert.assertEquals(resultSet.getTimestamp(1), new Timestamp(current));
+        Assert.assertEquals(resultSet.getBigDecimal(7).doubleValue(), 7.7, 0.000001);
+
+        resultSet.close();
+        statement.close();
+    }
+
+    @Test
+    public void testSetObject2() throws SQLException {
+        String sql = "insert into " + db_name + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        PreparedStatement statement = connection.prepareStatement(sql);
+        long current = System.currentTimeMillis();
+        statement.setObject(1, new Timestamp(current), Types.TIMESTAMP);
+        statement.setObject(2, (byte) 2, Types.TINYINT);
+        statement.setObject(3, (short) 3, Types.SMALLINT);
+        statement.setObject(4, 4, Types.INTEGER);
+        statement.setObject(5, 5L, Types.BIGINT);
+        statement.setObject(6, 6.6f, Types.FLOAT);
+        statement.setObject(7, 7.7, Types.DOUBLE);
+        statement.setObject(8, true, Types.BOOLEAN);
+        statement.setObject(9, "你好", Types.VARCHAR);
+        statement.setObject(10, "世界", Types.NCHAR);
+        statement.setObject(11, "hello world", Types.VARCHAR);
+        statement.setObject(12, expectedVarBinary, Types.VARBINARY);
+        statement.setObject(13, expectedGeometry,  Types.VARBINARY);
+
+        statement.setObject(14, TSDBConstants.MAX_UNSIGNED_BYTE, Types.SMALLINT);
+        statement.setObject(15, TSDBConstants.MAX_UNSIGNED_SHORT, Types.INTEGER);
+        statement.setObject(16, TSDBConstants.MAX_UNSIGNED_INT, Types.BIGINT);
         statement.setObject(17, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
 
         statement.executeUpdate();
@@ -174,111 +291,150 @@ public class WsPstmtAllTypeLineModeTest {
     @Test(expected = SQLException.class)
     public void testUtinyIntOutOfRange() throws SQLException {
         String sql = "insert into " + db_name + "." + tableName2 + " values(?, ?, ?, ?, ?)";
-        PreparedStatement statement = connection.prepareStatement(sql);
-        statement.setTimestamp(1, new Timestamp(0));
-        statement.setShort(2, (short)(TSDBConstants.MAX_UNSIGNED_BYTE + 1));
-        statement.setInt(3, TSDBConstants.MAX_UNSIGNED_SHORT);
-        statement.setLong(4, TSDBConstants.MAX_UNSIGNED_INT);
-        statement.setObject(5, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setTimestamp(1, new Timestamp(0));
+            statement.setShort(2, (short) (TSDBConstants.MAX_UNSIGNED_BYTE + 1));
+            statement.setInt(3, TSDBConstants.MAX_UNSIGNED_SHORT);
+            statement.setLong(4, TSDBConstants.MAX_UNSIGNED_INT);
+            statement.setObject(5, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
 
-        statement.executeUpdate();
-        statement.close();
+            statement.executeUpdate();
+        }
     }
     @Test(expected = SQLException.class)
     public void testUtinyIntOutOfRange2() throws SQLException {
         String sql = "insert into " + db_name + "." + tableName2 + " values(?, ?, ?, ?, ?)";
-        PreparedStatement statement = connection.prepareStatement(sql);
-        statement.setTimestamp(1, new Timestamp(0));
-        statement.setShort(2, (short) -1);
-        statement.setInt(3, TSDBConstants.MAX_UNSIGNED_SHORT);
-        statement.setLong(4, TSDBConstants.MAX_UNSIGNED_INT);
-        statement.setObject(5, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setTimestamp(1, new Timestamp(0));
+            statement.setShort(2, (short) -1);
+            statement.setInt(3, TSDBConstants.MAX_UNSIGNED_SHORT);
+            statement.setLong(4, TSDBConstants.MAX_UNSIGNED_INT);
+            statement.setObject(5, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
 
-        statement.executeUpdate();
-        statement.close();
+            statement.executeUpdate();
+        }
     }
 
     @Test(expected = SQLException.class)
     public void testUShortOutOfRange() throws SQLException {
         String sql = "insert into " + db_name + "." + tableName2 + " values(?, ?, ?, ?, ?)";
-        PreparedStatement statement = connection.prepareStatement(sql);
-        statement.setTimestamp(1, new Timestamp(0));
-        statement.setShort(2, (short) 0);
-        statement.setInt(3, TSDBConstants.MAX_UNSIGNED_SHORT + 1);
-        statement.setLong(4, TSDBConstants.MAX_UNSIGNED_INT);
-        statement.setObject(5, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setTimestamp(1, new Timestamp(0));
+            statement.setShort(2, (short) 0);
+            statement.setInt(3, TSDBConstants.MAX_UNSIGNED_SHORT + 1);
+            statement.setLong(4, TSDBConstants.MAX_UNSIGNED_INT);
+            statement.setObject(5, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
 
-        statement.executeUpdate();
-        statement.close();
+            statement.executeUpdate();
+        }
     }
 
     @Test(expected = SQLException.class)
     public void testUShortOutOfRange2() throws SQLException {
         String sql = "insert into " + db_name + "." + tableName2 + " values(?, ?, ?, ?, ?)";
-        PreparedStatement statement = connection.prepareStatement(sql);
-        statement.setTimestamp(1, new Timestamp(0));
-        statement.setShort(2, (short) 0);
-        statement.setInt(3, -1);
-        statement.setLong(4, TSDBConstants.MAX_UNSIGNED_INT);
-        statement.setObject(5, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setTimestamp(1, new Timestamp(0));
+            statement.setShort(2, (short) 0);
+            statement.setInt(3, -1);
+            statement.setLong(4, TSDBConstants.MAX_UNSIGNED_INT);
+            statement.setObject(5, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
 
-        statement.executeUpdate();
-        statement.close();
+            statement.executeUpdate();
+        }
     }
 
     @Test(expected = SQLException.class)
     public void testUIntOutOfRange() throws SQLException {
         String sql = "insert into " + db_name + "." + tableName2 + " values(?, ?, ?, ?, ?)";
-        PreparedStatement statement = connection.prepareStatement(sql);
-        statement.setTimestamp(1, new Timestamp(0));
-        statement.setShort(2, (short) 0);
-        statement.setInt(3, 0);
-        statement.setLong(4, TSDBConstants.MAX_UNSIGNED_INT + 1);
-        statement.setObject(5, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setTimestamp(1, new Timestamp(0));
+            statement.setShort(2, (short) 0);
+            statement.setInt(3, 0);
+            statement.setLong(4, TSDBConstants.MAX_UNSIGNED_INT + 1);
+            statement.setObject(5, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
 
-        statement.executeUpdate();
-        statement.close();
+            statement.executeUpdate();
+        }
     }
 
     @Test(expected = SQLException.class)
     public void testUIntOutOfRange2() throws SQLException {
         String sql = "insert into " + db_name + "." + tableName2 + " values(?, ?, ?, ?, ?)";
-        PreparedStatement statement = connection.prepareStatement(sql);
-        statement.setTimestamp(1, new Timestamp(0));
-        statement.setShort(2, (short) 0);
-        statement.setInt(3, 0);
-        statement.setLong(4, -1L);
-        statement.setObject(5, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setTimestamp(1, new Timestamp(0));
+            statement.setShort(2, (short) 0);
+            statement.setInt(3, 0);
+            statement.setLong(4, -1L);
+            statement.setObject(5, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
 
-        statement.executeUpdate();
-        statement.close();
+            statement.executeUpdate();
+        }
     }
 
     @Test(expected = SQLException.class)
     public void testULongOutOfRange() throws SQLException {
         String sql = "insert into " + db_name + "." + tableName2 + " values(?, ?, ?, ?, ?)";
-        PreparedStatement statement = connection.prepareStatement(sql);
-        statement.setTimestamp(1, new Timestamp(0));
-        statement.setShort(2, (short) 0);
-        statement.setInt(3, 0);
-        statement.setLong(4, 0);
-        statement.setObject(5, new BigInteger("18446744073709551616"));
 
-        statement.executeUpdate();
-        statement.close();
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setTimestamp(1, new Timestamp(0));
+            statement.setShort(2, (short) 0);
+            statement.setInt(3, 0);
+            statement.setLong(4, 0);
+            statement.setObject(5, new BigInteger("18446744073709551616"));
+
+            statement.executeUpdate();
+        }
     }
     @Test(expected = SQLException.class)
     public void testULongOutOfRange2() throws SQLException {
         String sql = "insert into " + db_name + "." + tableName2 + " values(?, ?, ?, ?, ?)";
-        PreparedStatement statement = connection.prepareStatement(sql);
-        statement.setTimestamp(1, new Timestamp(0));
-        statement.setShort(2, (short) 0);
-        statement.setInt(3, 0);
-        statement.setLong(4, 0);
-        statement.setObject(5, new BigInteger("-1"));
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setTimestamp(1, new Timestamp(0));
+            statement.setShort(2, (short) 0);
+            statement.setInt(3, 0);
+            statement.setLong(4, 0);
+            statement.setObject(5, new BigInteger("-1"));
 
-        statement.executeUpdate();
-        statement.close();
+            statement.executeUpdate();
+        }
+    }
+
+    @Test
+    public void testQuery() throws SQLException {
+        String sql = "select * from " + db_name + "." + tableName2 + " where ts > ? and ts < ?";
+        PreparedStatement statement = connection.prepareStatement(sql);
+        statement.setTimestamp(1, new Timestamp(1735660800000L - 1000));
+        statement.setTimestamp(2, new Timestamp(1735660800000L + 1000));
+        ResultSet resultSet = statement.executeQuery();
+        if (resultSet.next()) {
+            System.out.println(resultSet.getTimestamp(1) + " " + resultSet.getInt(2));
+            resultSet.close();
+            statement.close();
+            return;
+        }
+        Assert.fail();
+    }
+
+    @Test
+    public void testQuery2() throws SQLException {
+        String sql = "select * from " + db_name + "." + tableName2 + " where ts > ? and ts < ?";
+        PreparedStatement statement = connection.prepareStatement(sql);
+        statement.setTimestamp(1, new Timestamp(1735660800000L - 1000));
+        statement.setTimestamp(2, new Timestamp(1735660800000L + 1000));
+        statement.setQueryTimeout(10);
+        boolean isQuery = statement.execute();
+        if (!isQuery) {
+            Assert.fail("Expected to execute query statement, but got a insert result.");
+        }
+
+        ResultSet resultSet = statement.getResultSet();
+        if (resultSet.next()) {
+            System.out.println(resultSet.getTimestamp(1) + " " + resultSet.getInt(2));
+            resultSet.close();
+            statement.close();
+            return;
+        }
+        Assert.fail();
     }
 
     @Before
@@ -309,6 +465,8 @@ public class WsPstmtAllTypeLineModeTest {
         statement.execute("create table if not exists " + db_name + "." + tableName2 +
                 "(ts timestamp, " +
                 "c1 tinyint unsigned, c2 smallint unsigned, c3 int unsigned, c4 bigint unsigned)");
+        statement.execute("insert into " + db_name + "." + tableName2 +
+                " values ('2025-01-01', 255, 65535, 4294967295, 18446744073709551615)");
 
         statement.close();
     }

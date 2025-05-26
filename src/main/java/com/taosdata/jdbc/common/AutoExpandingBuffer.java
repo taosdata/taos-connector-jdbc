@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.common;
 import com.taosdata.jdbc.TSDBError;
+import com.taosdata.jdbc.TSDBErrorNumbers;
 import io.netty.buffer.*;
 import io.netty.util.ReferenceCountUtil;
 
@@ -21,6 +22,9 @@ public class AutoExpandingBuffer {
     }
 
      public void writeBytes(byte[] src) throws SQLException {
+        if (stopWrite){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "Cannot write to buffer after stopWrite has been called");
+        }
         int bytesWritten = 0;
         while (bytesWritten < src.length) {
             int writableBytes = currentBuffer.writableBytes();
@@ -33,34 +37,41 @@ public class AutoExpandingBuffer {
             // if current buffer is full, allocate a new buffer
             if (currentBuffer.writableBytes() == 0) {
                 if (composite.numComponents() >= composite.maxNumComponents()) {
-                    throw TSDBError.createSQLException(1, "Exceeded maximum components");
+                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "Data too long, exceeded maximum components");
                 }
-
                 composite.addComponent(true, currentBuffer);
                 currentBuffer = allocator.buffer(bufferSize);
             }
         }
     }
-
     public int writeString(String src) throws SQLException {
-        int bytesWritten = 0;
         int totalLen = ByteBufUtil.utf8Bytes(src);
-        while (bytesWritten < totalLen) {
-            int writableBytes = currentBuffer.writableBytes();
-            int bytesToWrite = Math.min(writableBytes, totalLen - bytesWritten);
+        int writableBytes = currentBuffer.writableBytes();
 
-            currentBuffer.writeCharSequence(src.subSequence(bytesWritten, bytesWritten + bytesToWrite), StandardCharsets.UTF_8);
 
-            bytesWritten += bytesToWrite;
+        if (writableBytes >= totalLen) {
+            currentBuffer.writeCharSequence(src, StandardCharsets.UTF_8);
+            return totalLen;
+        } else {
+            int bytesWritten = 0;
+            byte[] srcBytes = src.getBytes(StandardCharsets.UTF_8);
+            while (bytesWritten < totalLen) {
+                writableBytes = currentBuffer.writableBytes();
 
-            // 如果当前缓冲区已满，分配新缓冲区
-            if (currentBuffer.writableBytes() == 0) {
-                if (composite.numComponents() >= composite.maxNumComponents()) {
-                    throw TSDBError.createSQLException(1, "Exceeded maximum components");
+                if (writableBytes >= totalLen - bytesWritten) {
+                    currentBuffer.writeBytes(srcBytes, bytesWritten, totalLen - bytesWritten);
+                    bytesWritten = totalLen;
+                } else {
+                    currentBuffer.writeBytes(srcBytes, bytesWritten, writableBytes);
+                    bytesWritten += writableBytes;
                 }
-
-                composite.addComponent(true, currentBuffer);
-                currentBuffer = allocator.buffer(bufferSize);
+                if (currentBuffer.writableBytes() == 0) {
+                    if (composite.numComponents() >= composite.maxNumComponents()) {
+                        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "Data too long, exceeded maximum components");
+                    }
+                    composite.addComponent(true, currentBuffer);
+                    currentBuffer = allocator.buffer(bufferSize);
+                }
             }
         }
         return totalLen;
@@ -348,13 +359,13 @@ public class AutoExpandingBuffer {
         buffer.writeIntLE(isNull ? 0 : strlen);
         buffer.writeIntLE(isNull ? 0 : strlen);
         if (!isNull){
-            buffer.writeCharSequence(src, StandardCharsets.UTF_8);
+            ByteBufUtil.reserveAndWriteUtf8(buffer, src, strlen);
         }
     }
 
     public int serializeString(String src, boolean isNull, int type) throws SQLException {
         int writableBytes = currentBuffer.writableBytes();
-        int requiredBytes = ByteBufUtil.utf8Bytes(src);
+        int requiredBytes = src != null ? ByteBufUtil.utf8Bytes(src) : 0;
         int totalLen = 22 + requiredBytes;
         if (writableBytes > totalLen){
             serializeString(currentBuffer, totalLen, requiredBytes, src, isNull, type);
@@ -370,7 +381,6 @@ public class AutoExpandingBuffer {
         return totalLen;
     }
 
-    // 获取合并后的完整缓冲区
     public CompositeByteBuf getBuffer() {
         return composite;
     }
@@ -385,7 +395,7 @@ public class AutoExpandingBuffer {
 
     public void stopWrite(){
         if (!stopWrite) {
-            composite.addComponent(true, currentBuffer); // 转移所有权
+            composite.addComponent(true, currentBuffer);
             stopWrite = true;
         }
     }

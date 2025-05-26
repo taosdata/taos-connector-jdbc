@@ -2,7 +2,7 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.*;
 import com.taosdata.jdbc.common.*;
-import com.taosdata.jdbc.enums.FeildBindType;
+import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.utils.SyncObj;
@@ -10,7 +10,6 @@ import com.taosdata.jdbc.ws.entity.*;
 import com.taosdata.jdbc.ws.stmt2.entity.*;
 import com.taosdata.jdbc.ws.stmt2.entity.RequestFactory;
 import io.netty.buffer.ByteBuf;
-import io.netty.util.ReferenceCountUtil;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
@@ -151,7 +150,7 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
         for (int i = 0; i < fields.size(); i++){
             Field field = fields.get(i);
             Column column = map.get(i + 1);
-            if (DataLengthCfg.getDataLength(column.getType()) == null && field.getBindType() != FeildBindType.TAOS_FIELD_TBNAME.getValue()){
+            if (DataLengthCfg.getDataLength(column.getType()) == null && field.getBindType() != FieldBindType.TAOS_FIELD_TBNAME.getValue()){
                 if (column.getData() instanceof byte[]){
                     byte[] data = (byte[]) column.getData();
                     if (data.length > field.getBytes()){
@@ -333,13 +332,13 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
             toBeBindColCount = 0;
             for (int i = 0; i < fields.size(); i++){
                 Field field = fields.get(i);
-                if (field.getBindType() == FeildBindType.TAOS_FIELD_TBNAME.getValue()){
+                if (field.getBindType() == FieldBindType.TAOS_FIELD_TBNAME.getValue()){
                     toBeBindTableNameIndex = i;
                 }
-                if (field.getBindType() == FeildBindType.TAOS_FIELD_TAG.getValue()){
+                if (field.getBindType() == FieldBindType.TAOS_FIELD_TAG.getValue()){
                     toBeBindTagCount++;
                 }
-                if (field.getBindType() == FeildBindType.TAOS_FIELD_COL.getValue()){
+                if (field.getBindType() == FieldBindType.TAOS_FIELD_COL.getValue()){
                     toBeBindColCount++;
                 }
             }

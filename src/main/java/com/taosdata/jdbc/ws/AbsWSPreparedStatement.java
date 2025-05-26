@@ -5,18 +5,16 @@ import com.taosdata.jdbc.common.Column;
 import com.taosdata.jdbc.common.ColumnInfo;
 import com.taosdata.jdbc.common.SerializeBlock;
 import com.taosdata.jdbc.common.TableInfo;
-import com.taosdata.jdbc.enums.FeildBindType;
+import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.DateTimeUtils;
-import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.ws.entity.Action;
 import com.taosdata.jdbc.ws.entity.Code;
 import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.stmt2.entity.*;
 import io.netty.buffer.ByteBuf;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
@@ -86,14 +84,14 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
             }
             for (int i = 0; i < fields.size(); i++){
                 Field field = fields.get(i);
-                if (field.getBindType() == FeildBindType.TAOS_FIELD_TBNAME.getValue()){
+                if (field.getBindType() == FieldBindType.TAOS_FIELD_TBNAME.getValue()){
                     toBeBindTableNameIndex = i;
                 }
-                if (field.getBindType() == FeildBindType.TAOS_FIELD_TAG.getValue()){
+                if (field.getBindType() == FieldBindType.TAOS_FIELD_TAG.getValue()){
                     toBeBindTagCount++;
                     tagTypeList.add((int) field.getFieldType());
                 }
-                if (field.getBindType() == FeildBindType.TAOS_FIELD_COL.getValue()){
+                if (field.getBindType() == FieldBindType.TAOS_FIELD_COL.getValue()){
                     toBeBindColCount++;
                     colTypeList.add((int) field.getFieldType());
                 }
@@ -644,18 +642,18 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
 
     public static void bindAllToTableInfo(List<Field> fields, Map<Integer, Column> colOrderedMap, TableInfo tableInfo){
         for (int index = 0; index < fields.size(); index++) {
-            if (fields.get(index).getBindType() == FeildBindType.TAOS_FIELD_TBNAME.getValue()) {
+            if (fields.get(index).getBindType() == FieldBindType.TAOS_FIELD_TBNAME.getValue()) {
                 if (colOrderedMap.get(index + 1).getData() instanceof byte[]){
                     tableInfo.setTableName(ByteBuffer.wrap((byte[]) colOrderedMap.get(index + 1).getData()));
                 }
                 if (colOrderedMap.get(index + 1).getData() instanceof String){
                     tableInfo.setTableName(ByteBuffer.wrap(((String) colOrderedMap.get(index + 1).getData()).getBytes()));
                 }
-            } else if (fields.get(index).getBindType() == FeildBindType.TAOS_FIELD_TAG.getValue()) {
+            } else if (fields.get(index).getBindType() == FieldBindType.TAOS_FIELD_TAG.getValue()) {
                 LinkedList<Object> list = new LinkedList<>();
                 list.add(colOrderedMap.get(index + 1).getData());
                 tableInfo.getTagInfo().add(new ColumnInfo(index + 1, list, fields.get(index).getFieldType()));
-            } else if (fields.get(index).getBindType() == FeildBindType.TAOS_FIELD_COL.getValue()) {
+            } else if (fields.get(index).getBindType() == FieldBindType.TAOS_FIELD_COL.getValue()) {
                 LinkedList<Object> list = new LinkedList<>();
                 list.add(colOrderedMap.get(index + 1).getData());
                 tableInfo.getDataList().add(new ColumnInfo(index + 1, list, fields.get(index).getFieldType()));

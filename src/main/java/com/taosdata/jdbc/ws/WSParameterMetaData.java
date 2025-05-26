@@ -5,7 +5,7 @@ import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.enums.DataType;
-import com.taosdata.jdbc.enums.FeildBindType;
+import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.ws.stmt2.entity.Field;
 
 import java.sql.ParameterMetaData;
@@ -40,7 +40,7 @@ public class WSParameterMetaData extends AbstractParameterMetaData {
         if (param < 1 && param >= colTypeList.size())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_PARAMETER_INDEX_OUT_RANGE);
 
-        if (fields.get(param - 1).getBindType() == FeildBindType.TAOS_FIELD_TBNAME.getValue()) {
+        if (fields.get(param - 1).getBindType() == FieldBindType.TAOS_FIELD_TBNAME.getValue()) {
             return ParameterMetaData.parameterNoNulls;
         }
 
