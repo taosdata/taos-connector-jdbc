@@ -6,6 +6,7 @@ import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.FixMethodOrder;
@@ -27,7 +28,7 @@ public class WSConFailOverTest {
 
     private static final String hostB = "127.0.0.1";
     private static final int portB = 9041;
-    private static final String db_name = "test";
+    private final String db_name = TestUtils.camelToSnake(WSConFailOverTest.class);
     private static final String tableName = "meters";
     private Connection connection;
     private TaosAdapterMock taosAdapterMock;
@@ -111,6 +112,9 @@ public class WSConFailOverTest {
     @After
     public void after() throws SQLException {
         if (null != connection) {
+            Statement statement = connection.createStatement();
+            statement.execute("drop database if exists " + db_name);
+            statement.close();
             connection.close();
         }
     }

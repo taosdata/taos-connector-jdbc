@@ -62,7 +62,11 @@ public class AutoExpandingBufferTest {
         AutoExpandingBuffer smallBuffer = new AutoExpandingBuffer(4, 2);  // Max 2 components
         byte[] data = new byte[12];  // Requires 3 components (4+4+4)
 
-        smallBuffer.writeBytes(data);  // Should trigger exception
+        try {
+            smallBuffer.writeBytes(data);  // Should trigger exception
+        } finally {
+            smallBuffer.release();  // Ensure resources are released
+        }
     }
 
     // ====================================== writeString Tests ======================================
@@ -387,6 +391,8 @@ public class AutoExpandingBufferTest {
         buffer.stopWrite();
         assertEquals(0, buffer.getBuffer().readableBytes());
 
+        buffer.release();
+
         // Test zero-length string
         buffer = new AutoExpandingBuffer(INITIAL_BUFFER_SIZE, MAX_COMPONENTS);
         buffer.writeString("");
@@ -411,13 +417,17 @@ public class AutoExpandingBufferTest {
         // Test writing when max components is reached
         AutoExpandingBuffer buffer = new AutoExpandingBuffer(4, 2); // 4 bytes per component, max 2 components
 
-        // First write: 4 bytes → first component
-        buffer.writeBytes(new byte[4]);
-        // Second write: 4 bytes → second component
-        buffer.writeBytes(new byte[4]);
+        try {
+            // First write: 4 bytes → first component
+            buffer.writeBytes(new byte[4]);
+            // Second write: 4 bytes → second component
+            buffer.writeBytes(new byte[4]);
 
-        // Third write: 1 byte → should throw exception (exceeds max components)
-        assertThrows(SQLException.class, () -> buffer.writeBytes(new byte[4]));
+            // Third write: 1 byte → should throw exception (exceeds max components)
+            assertThrows(SQLException.class, () -> buffer.writeBytes(new byte[4]));
+        }finally {
+            buffer.release();
+        }
     }
 
     // ====================================== Exception Handling Tests ======================================
@@ -434,7 +444,12 @@ public class AutoExpandingBufferTest {
     @Test(expected = Exception.class)
     public void testWriteAfterStop() throws SQLException {
         buffer.stopWrite();
-        buffer.writeBytes(new byte[1]); // Writing after stopping should throw exception
+        try {
+            buffer.writeBytes(new byte[1]); // Writing after stopping should throw exception
+        } finally {
+            buffer.release();  // Ensure resources are released
+        }
+
     }
 
 // ====================================== Enhanced Helper Methods ======================================

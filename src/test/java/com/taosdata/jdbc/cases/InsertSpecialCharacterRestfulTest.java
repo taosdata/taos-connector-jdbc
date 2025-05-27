@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
 import java.sql.*;
@@ -9,7 +10,7 @@ public class InsertSpecialCharacterRestfulTest {
 
     private static final String host = "127.0.0.1";
     private static Connection conn;
-    private static final String dbName = "spec_char_test";
+    private static final String dbName = TestUtils.camelToSnake(InsertSpecialCharacterRestfulTest.class);
     private static final String tbname1 = "test";
     private static final String tbname2 = "weather";
     private static final String special_character_str_1 = "$asd$$fsfsf$";

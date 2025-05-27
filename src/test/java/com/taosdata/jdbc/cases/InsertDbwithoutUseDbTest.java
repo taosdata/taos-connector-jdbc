@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
@@ -17,7 +18,7 @@ public class InsertDbwithoutUseDbTest {
     private static final String host = "127.0.0.1";
     private static Properties properties;
     private static final Random random = new Random(System.currentTimeMillis());
-    private static final String dbname = "inwithoutdb";
+    private static final String dbname = TestUtils.camelToSnake(InsertDbwithoutUseDbTest.class);
 
     @Test
     public void case001() throws SQLException {
@@ -59,7 +60,7 @@ public class InsertDbwithoutUseDbTest {
         // prepare the schema
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/inWithoutDb?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + host + ":6041/" + dbname + "?user=root&password=taosdata";
         }
         Connection conn = DriverManager.getConnection(url, properties);
         Statement stmt = conn.createStatement();

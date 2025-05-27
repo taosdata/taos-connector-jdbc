@@ -10,7 +10,6 @@ import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.entity.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,7 +32,7 @@ import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT;
  * send message
  */
 public class Transport implements AutoCloseable {
-    private final Logger log = LoggerFactory.getLogger(Transport.class);
+    private static final Logger log = LoggerFactory.getLogger(Transport.class);
 
     public static final int DEFAULT_MESSAGE_WAIT_TIMEOUT = 60_000;
 
@@ -57,40 +56,6 @@ public class Transport implements AutoCloseable {
                      InFlightRequest inFlightRequest) throws SQLException {
         WSClient master = WSClient.getInstance(param, function, this);
         WSClient slave = WSClient.getSlaveInstance(param, function, this);
-
-        if (param.isDisableSslCertValidation()){
-            // creat a TrustManager that trusts all certificates
-            TrustManager[] trustAllCerts = new TrustManager[]{
-                    new X509TrustManager() {
-                        public X509Certificate[] getAcceptedIssuers() {
-                            return new X509Certificate[0];
-                        }
-                        @SuppressWarnings("unused")
-                        public void checkClientTrusted(X509Certificate[] certs, String authType) {
-                            // Intentionally left blank to accept all certificates
-                        }
-                        @SuppressWarnings("unused")
-                        public void checkServerTrusted(X509Certificate[] certs, String authType) {
-                            // Intentionally left blank to accept all certificates
-                        }
-                    }
-            };
-
-            try{
-                // create a custom SSLContext
-                SSLContext sslContext = SSLContext.getInstance("TLS");
-                sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
-                // get SSLContext SocketFactory
-                final SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
-//                master.setSocketFactory(sslSocketFactory);
-//
-//                if (slave != null){
-//                    slave.setSocketFactory(sslSocketFactory);
-//                }
-            } catch (Exception e){
-                throw new SQLException("setSocketFactory failed ", e);
-            }
-        }
 
         this.clientArr.add(master);
         if (slave != null){
@@ -372,7 +337,7 @@ public class Transport implements AutoCloseable {
 
     public void checkConnection(int connectTimeout) throws SQLException {
         if (WSConnection.g_FirstConnection && clientArr.size() > 1) {
-            // 测试所有节点，如果连接失败，直接异常
+            // test all nodes, if connection failed, throw exception
             for (WSClient wsClient : clientArr){
                 if (!wsClient.connectBlocking()) {
                     close();
@@ -382,7 +347,7 @@ public class Transport implements AutoCloseable {
                 log.debug("connect success to {}", StringUtils.getBasicUrl(wsClient.serverUri.toString()));
             }
 
-            // 断开其他节点
+            // disconnect all nodes except current node
             for (int i = 0; i < clientArr.size(); i++){
                 if (i != currentNodeIndex) {
                     clientArr.get(i).closeBlocking();

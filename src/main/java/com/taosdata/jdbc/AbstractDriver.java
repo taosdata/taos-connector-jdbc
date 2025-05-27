@@ -23,7 +23,7 @@ import java.sql.SQLException;
 import java.util.Properties;
 
 public abstract class AbstractDriver implements Driver {
-    private final org.slf4j.Logger log = LoggerFactory.getLogger(AbstractDriver.class);
+    private static final org.slf4j.Logger log = LoggerFactory.getLogger(AbstractDriver.class);
 
     protected DriverPropertyInfo[] getPropertyInfo(Properties info) {
         DriverPropertyInfo hostProp = new DriverPropertyInfo(TSDBDriver.PROPERTY_KEY_HOST, info.getProperty(TSDBDriver.PROPERTY_KEY_HOST));

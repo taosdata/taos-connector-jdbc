@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.common;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
+import com.taosdata.jdbc.utils.Utils;
 import io.netty.buffer.*;
 import io.netty.util.ReferenceCountUtil;
 
@@ -45,6 +46,10 @@ public class AutoExpandingBuffer {
         }
     }
     public int writeString(String src) throws SQLException {
+        if (stopWrite){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "Cannot write string after stopWrite has been called");
+        }
+
         int totalLen = ByteBufUtil.utf8Bytes(src);
         int writableBytes = currentBuffer.writableBytes();
 
@@ -387,8 +392,9 @@ public class AutoExpandingBuffer {
 
     // must call stopWrite before
     public void release() {
+        stopWrite();
         if (composite != null && composite.refCnt() > 0) {
-            ReferenceCountUtil.safeRelease(composite);
+            Utils.releaseByteBuf(composite);
         }
         composite = null;
     }

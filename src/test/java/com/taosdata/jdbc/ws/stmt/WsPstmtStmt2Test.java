@@ -1,8 +1,10 @@
 package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.TSWSPreparedStatement;
+import io.netty.util.ResourceLeakDetector;
 import org.junit.*;
 
 import java.sql.*;
@@ -12,7 +14,7 @@ import java.util.Random;
 @FixMethodOrder
 public class WsPstmtStmt2Test {
     String host = "localhost";
-    String db_name = "ws_prepare";
+    String db_name = TestUtils.camelToSnake(WsPstmtStmt2Test.class);
     String tableName = "wpt";
     String superTable = "wpt_st";
     Connection connection;
@@ -403,5 +405,15 @@ public class WsPstmtStmt2Test {
             statement.execute("drop database if exists " + db_name);
         }
         connection.close();
+    }
+
+    @BeforeClass
+    public static void setUp() {
+        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+    }
+
+    @AfterClass
+    public static void tearDown() {
+        System.gc();
     }
 }

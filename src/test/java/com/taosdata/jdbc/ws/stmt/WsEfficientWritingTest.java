@@ -1,9 +1,12 @@
 package com.taosdata.jdbc.ws.stmt;
 
+import com.taosdata.jdbc.GeometryTest;
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.TaosAdapterMock;
 import com.taosdata.jdbc.ws.WSEWPreparedStatement;
+import io.netty.util.ResourceLeakDetector;
 import org.junit.*;
 
 import java.io.IOException;
@@ -14,7 +17,7 @@ import java.util.Random;
 @FixMethodOrder
 public class WsEfficientWritingTest {
     private final String host = "localhost";
-    private final String db_name = "ws_fw";
+    private final String db_name = TestUtils.camelToSnake(WsEfficientWritingTest.class);
     private final String tableName = "wpt";
     private final String tableNameCopyData = "wpt_cp";
     private final String tableReconnect = "wpt_rc";
@@ -397,7 +400,7 @@ public class WsEfficientWritingTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BACKEND_WRITE_THREAD_NUM, "5");
 
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, "5000");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, "50000");
 
         if (copyData) {
             properties.setProperty(TSDBDriver.PROPERTY_KEY_COPY_DATA, "true");
@@ -417,5 +420,15 @@ public class WsEfficientWritingTest {
         connection.close();
 
 
+    }
+
+    @BeforeClass
+    public static void setUp() {
+        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+    }
+
+    @AfterClass
+    public static void tearDown() {
+        System.gc();
     }
 }

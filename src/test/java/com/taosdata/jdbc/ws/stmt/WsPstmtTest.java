@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.TSWSPreparedStatement;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
@@ -22,7 +23,7 @@ import java.util.Properties;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class WsPstmtTest {
     String host = "127.0.0.1";
-    String db_name = "ws_prepare";
+    String db_name = TestUtils.camelToSnake(WsPstmtTest.class);
     String tableName = "wpt";
     String superTable = "wpt_st";
     Connection connection;
@@ -343,5 +344,15 @@ public class WsPstmtTest {
             pstmt.close();
         }
         connection.close();
+    }
+
+    @BeforeClass
+    public static void setUp() {
+        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+    }
+
+    @AfterClass
+    public static void tearDown() {
+        System.gc();
     }
 }

@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.rs;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 import org.junit.runners.MethodSorters;
 
@@ -13,7 +14,7 @@ public class RestfulJDBCTest {
     private static final String host = "127.0.0.1";
     private static final Random random = new Random(System.currentTimeMillis());
     private static Connection connection;
-    private static final String dbname = "restful_test";
+    private static final String dbname = TestUtils.camelToSnake(RestfulJDBCTest.class);
 
     @Test
     public void testCase001() throws SQLException {

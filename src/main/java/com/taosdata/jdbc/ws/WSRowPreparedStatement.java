@@ -9,6 +9,7 @@ import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.DateTimeUtils;
+import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.entity.Action;
 import com.taosdata.jdbc.ws.entity.Code;
 import com.taosdata.jdbc.ws.entity.Request;
@@ -304,7 +305,6 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
         setBooleanInner(parameterIndex, x, false);
     }
 
-    // ---------------- 以下为统一风格的基础类型处理 ----------------
     private void setByteInner(int parameterIndex, byte x, boolean isNull, byte type) throws SQLException {
         byte bindType = fields.get(parameterIndex - 1).getBindType();
         if (bindType == FieldBindType.TAOS_FIELD_COL.getValue()) {
@@ -903,6 +903,7 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
         if (buf != null){
             buf.release();
         }
+
     }
     private void freeBuffers(){
         freeBuffer(tableNameLensBuf);

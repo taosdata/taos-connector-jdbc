@@ -9,7 +9,6 @@ import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.Utils;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
 import io.netty.channel.socket.SocketChannel;
@@ -22,15 +21,10 @@ import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensio
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensionHandshaker;
 import io.netty.handler.codec.http.websocketx.extensions.compression.DeflateFrameClientExtensionHandshaker;
 import io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateClientExtensionHandshaker;
-import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketClientCompressionHandler;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.timeout.TimeoutException;
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.ResourceLeakDetector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,12 +32,10 @@ import javax.net.ssl.SSLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
-import java.util.Collections;
-import java.util.concurrent.TimeUnit;
 
 public class WSClient implements AutoCloseable {
 
-    private final Logger log = LoggerFactory.getLogger(WSClient.class);
+    private static final Logger log = LoggerFactory.getLogger(WSClient.class);
     Transport transport;
 
     public final URI serverUri;
@@ -242,7 +234,6 @@ public class WSClient implements AutoCloseable {
         if (!channel.isActive()) {
             throw new WebsocketNotConnectedException();
         }
-        // 通过 EventLoop 异步执行（确保在通道所属线程）
         channel.eventLoop().execute(() -> {
             channel.writeAndFlush(new TextWebSocketFrame(strData));
         });

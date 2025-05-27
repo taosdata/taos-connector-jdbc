@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
 import java.sql.*;
@@ -13,7 +14,7 @@ import java.util.Properties;
 public class WSBigQueryTest {
     String host = "127.0.0.1";
     String db_name = "ws_prepare";
-    String tableName = "wpt";
+    String tableName = TestUtils.camelToSnake(WSBigQueryTest.class);
     String superTable = "wpt_st";
     Connection connection;
 

@@ -11,7 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class WebSocketHandshakeHandler extends ChannelInboundHandlerAdapter {
-    private final Logger log = LoggerFactory.getLogger(WebSocketHandshakeHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(WebSocketHandshakeHandler.class);
 
     private final WebSocketClientHandshaker handshaker;
     private ChannelPromise handshakeFuture;

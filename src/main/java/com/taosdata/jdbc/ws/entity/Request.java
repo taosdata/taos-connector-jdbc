@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
  * send to taosadapter
  */
 public class Request {
-    private final Logger log = LoggerFactory.getLogger(Request.class);
+    private static final Logger log = LoggerFactory.getLogger(Request.class);
 
     private String action;
     private Payload args;

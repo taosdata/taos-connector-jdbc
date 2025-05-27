@@ -15,7 +15,7 @@ import java.nio.ByteBuffer;
 import java.util.function.Consumer;
 
 public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> {
-    private final Logger log = LoggerFactory.getLogger(WebSocketClientHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(WebSocketClientHandler.class);
     private final Consumer<String> textMessageHandler;
     private final Consumer<ByteBuf> binaryMessageHandler;
 
@@ -63,7 +63,7 @@ public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> 
         Channel ch = ctx.channel();
         if (msg instanceof FullHttpResponse) {
             FullHttpResponse response = (FullHttpResponse) msg;
-            if (response.status().code() != 101) { // 101 是 WebSocket 握手成功状态码
+            if (response.status().code() != 101) { // 101 is the status code for switching protocols
                 String content = response.content().toString(CharsetUtil.UTF_8);
                 log.error("WebSocket handshake error，code: {}, msg: {}", response.status(), content);
                 ctx.close();

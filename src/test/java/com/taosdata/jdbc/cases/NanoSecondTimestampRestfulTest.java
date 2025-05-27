@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
 import java.sql.*;
@@ -10,7 +11,7 @@ import java.util.Random;
 public class NanoSecondTimestampRestfulTest {
 
     private static final String host = "127.0.0.1";
-    private static final String dbname = "nano_sec_test";
+    private static final String dbname = TestUtils.camelToSnake(NanoSecondTimestampRestfulTest.class);
     private static final Random random = new Random(System.currentTimeMillis());
     private static Connection conn;
 

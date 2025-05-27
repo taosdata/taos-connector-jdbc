@@ -1,7 +1,9 @@
 package com.taosdata.jdbc.tmq;
 
+import com.taosdata.jdbc.GeometryTest;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -20,7 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class ConsumerCommitTest {
     private static final String host = "127.0.0.1";
-    private static final String dbName = "tmq_test_callback";
+    private static final String dbName = TestUtils.camelToSnake(ConsumerCommitTest.class);
     private static final String superTable = "st";
     private static Connection connection;
     private static Statement statement;

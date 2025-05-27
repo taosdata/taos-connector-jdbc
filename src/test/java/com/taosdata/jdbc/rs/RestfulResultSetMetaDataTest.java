@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.rs;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -16,7 +17,7 @@ public class RestfulResultSetMetaDataTest {
     private static Statement stmt;
     private static ResultSet rs;
     private static ResultSetMetaData meta;
-    private static final String dbname = "restful_test";
+    private static final String dbname = TestUtils.camelToSnake(RestfulResultSetMetaDataTest.class);
 
     @Test
     public void getColumnCount() throws SQLException {

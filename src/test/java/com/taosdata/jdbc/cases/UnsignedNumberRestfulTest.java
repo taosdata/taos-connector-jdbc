@@ -2,6 +2,7 @@ package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 import org.junit.runners.MethodSorters;
 
@@ -15,7 +16,7 @@ public class UnsignedNumberRestfulTest {
     private static final String host = "127.0.0.1";
     private static Connection conn;
     private static long ts;
-    private static final String dbname = "unsign_restful";
+    private static final String dbname = TestUtils.camelToSnake(UnsignedNumberRestfulTest.class);
 
     @Test
     public void testCase001() throws SQLException {

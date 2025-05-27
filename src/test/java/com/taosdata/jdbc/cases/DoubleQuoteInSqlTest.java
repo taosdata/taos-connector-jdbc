@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -15,7 +16,7 @@ import java.util.Properties;
 
 public class DoubleQuoteInSqlTest {
     private static final String host = "127.0.0.1";
-    private static final String dbname = "td4174";
+    private static final String dbname = TestUtils.camelToSnake(DoubleQuoteInSqlTest.class);
 
     private Connection conn;
 

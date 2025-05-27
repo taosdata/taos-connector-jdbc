@@ -22,7 +22,7 @@ import java.util.Properties;
 import java.util.logging.Logger;
 
 public class RestfulDriver extends AbstractDriver {
-    private final org.slf4j.Logger log = LoggerFactory.getLogger(RestfulDriver.class);
+    private static final org.slf4j.Logger log = LoggerFactory.getLogger(RestfulDriver.class);
     public static final String URL_PREFIX = "jdbc:TAOS-RS://";
 
     static {

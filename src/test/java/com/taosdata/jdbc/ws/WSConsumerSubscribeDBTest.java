@@ -4,10 +4,9 @@ import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.SpecifyAddress;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import com.taosdata.jdbc.utils.TestUtils;
+import io.netty.util.ResourceLeakDetector;
+import org.junit.*;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -20,7 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class WSConsumerSubscribeDBTest {
     private static final String host = "127.0.0.1";
-    private static final String dbName = "tmq_ws_enh_test";
+    private final String dbName = TestUtils.camelToSnake(WSConsumerSubscribeDBTest.class);
     private static final String superTable1 = "st1";
     private static final String superTable2 = "st2";
     private static final String superTableFullType = "st3";
@@ -273,5 +272,15 @@ public class WSConsumerSubscribeDBTest {
         } catch (SQLException e) {
             // ignore
         }
+    }
+
+    @BeforeClass
+    public static void setUp() {
+        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+    }
+
+    @AfterClass
+    public static void tearDown() {
+        System.gc();
     }
 }

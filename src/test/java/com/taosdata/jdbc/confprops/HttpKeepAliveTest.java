@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.confprops;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
 import java.sql.Connection;
@@ -17,7 +18,7 @@ import java.util.stream.IntStream;
 public class HttpKeepAliveTest {
 
     private static final String host = "127.0.0.1";
-    private static final String db_name = "test_db";
+    private static final String db_name = TestUtils.camelToSnake(HttpKeepAliveTest.class);
     private static Connection connection;
 
     @Test

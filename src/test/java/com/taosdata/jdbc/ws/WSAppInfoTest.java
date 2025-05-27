@@ -17,8 +17,6 @@ public class WSAppInfoTest {
     private static final String host = "127.0.0.1";
     private static final int port = 6041;
     private Connection connection;
-
-
     private static final String appName = "jdbc_appName";
     private static final String appIp = "192.168.1.1";
 

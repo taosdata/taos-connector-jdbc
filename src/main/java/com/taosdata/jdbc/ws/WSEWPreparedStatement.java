@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 // Efficient Writing Mode PreparedStatement
 public class WSEWPreparedStatement extends AbsWSPreparedStatement {
-    private final org.slf4j.Logger log = LoggerFactory.getLogger(AbstractDriver.class);
+    private static final org.slf4j.Logger log = LoggerFactory.getLogger(WSEWPreparedStatement.class);
 
     private final boolean copyData;
     private final int writeThreadNum;
@@ -265,7 +265,7 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
 
 
     static class WorkerThread implements Runnable {
-        private final org.slf4j.Logger log = LoggerFactory.getLogger(WorkerThread.class);
+        private static final org.slf4j.Logger log = LoggerFactory.getLogger(WorkerThread.class);
         private final ArrayBlockingQueue<Map<Integer, Column>> dataQueue;
         private final int batchSize;
         private final String sql;

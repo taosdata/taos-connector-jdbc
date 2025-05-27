@@ -3,11 +3,10 @@ package com.taosdata.jdbc.ws.stmt;
 import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.StringUtils;
+import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.TSWSPreparedStatement;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import io.netty.util.ResourceLeakDetector;
+import org.junit.*;
 
 import java.math.BigInteger;
 import java.sql.*;
@@ -16,7 +15,7 @@ import java.util.Properties;
 
 public class WsPstmtAllTypeTest {
     String host = "127.0.0.1";
-    String db_name = "ws_prepare_type";
+    String db_name = TestUtils.camelToSnake(WsPstmtAllTypeTest.class);
     String tableName = "wpt";
     String stableName = "swpt";
 
@@ -317,5 +316,15 @@ public class WsPstmtAllTypeTest {
             statement.execute("drop database if exists " + db_name);
         }
         connection.close();
+    }
+
+    @BeforeClass
+    public static void setUp() {
+        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+    }
+
+    @AfterClass
+    public static void tearDown() {
+        System.gc();
     }
 }

@@ -31,7 +31,7 @@ import java.util.concurrent.atomic.AtomicLong;
 @Deprecated
 // will be removed in future, please use writer functions in connection object.
 public class SchemalessWriter implements AutoCloseable {
-    private final org.slf4j.Logger log = LoggerFactory.getLogger(SchemalessWriter.class);
+    private static final org.slf4j.Logger log = LoggerFactory.getLogger(SchemalessWriter.class);
 
     // jni
     private TSDBJNIConnector connector;

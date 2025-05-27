@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -11,7 +12,7 @@ import java.sql.*;
 public class ResultSetMetaShouldNotBeNullRestfulTest {
 
     private static final String host = "127.0.0.1";
-    private static final String dbname = "td4745";
+    private static final String dbname = TestUtils.camelToSnake(ResultSetMetaShouldNotBeNullRestfulTest.class);
 
     private Connection connection;
 

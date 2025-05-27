@@ -230,7 +230,7 @@ public class Utils {
         // Example:
         //
         eventLoopGroup = new NioEventLoopGroup(0, new DefaultThreadFactory("netty-eventloop", true));
-        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+        //ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
     }
     public static EventLoopGroup getEventLoopGroup() {
         return eventLoopGroup;
@@ -239,7 +239,7 @@ public class Utils {
     public static void releaseByteBuf(ByteBuf byteBuf){
         if (log.isTraceEnabled()){
             String stackTrace = Arrays.stream(Thread.currentThread().getStackTrace())
-                    .limit(5) // 仅记录前 3 层有效调用堆栈
+                    .limit(5)
                     .map(StackTraceElement::toString)
                     .collect(Collectors.joining("\n\t"));
 
@@ -262,7 +262,7 @@ public class Utils {
     public static void retainByteBuf(ByteBuf byteBuf){
         if (log.isTraceEnabled()){
             String stackTrace = Arrays.stream(Thread.currentThread().getStackTrace())
-                    .limit(5) // 仅记录前 3 层有效调用堆栈
+                    .limit(5)
                     .map(StackTraceElement::toString)
                     .collect(Collectors.joining("\n\t"));
 

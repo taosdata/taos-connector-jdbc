@@ -30,12 +30,13 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class WSConsumer<V> implements Consumer<V> {
-    private final org.slf4j.Logger log = LoggerFactory.getLogger(WSConsumer.class);
+    private static final org.slf4j.Logger log = LoggerFactory.getLogger(WSConsumer.class);
     private Transport transport;
     private ConsumerParam param;
     private TMQRequestFactory factory;
     private long lastCommitTime = 0;
     private long messageId = 0L;
+    private long lastMessageId = 0L;
 
     private Collection<String> topics;
     @Override
@@ -132,7 +133,7 @@ public class WSConsumer<V> implements Consumer<V> {
             }
         }
 
-        Request request = factory.generatePoll(timeout.toMillis());
+        Request request = factory.generatePoll(lastMessageId, timeout.toMillis());
         PollResp pollResp = (PollResp) transport.send(request);
 
         if (Code.SUCCESS.getCode() != pollResp.getCode()) {
@@ -143,6 +144,7 @@ public class WSConsumer<V> implements Consumer<V> {
         }
 
         messageId = pollResp.getMessageId();
+        lastMessageId = messageId;
 
         if (pollResp.getMessageType() == TmqMessageType.TMQ_RES_TABLE_META.getCode() || pollResp.getMessageType() == TmqMessageType.TMQ_RES_METADATA.getCode()) {
             Request fetchJsonMetaReq = factory.generateFetchJsonMeata(pollResp.getMessageId());

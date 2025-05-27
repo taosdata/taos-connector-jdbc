@@ -2,20 +2,19 @@ package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.TSDBDriver;
-import com.taosdata.jdbc.utils.SpecifyAddress;
-import com.taosdata.jdbc.utils.StringUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import com.taosdata.jdbc.utils.*;
+import io.netty.util.ResourceLeakDetector;
+import org.junit.*;
 
 import java.math.BigInteger;
 import java.sql.*;
+import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Properties;
 
 public class WsPstmtLineModeAllTypeTest {
     String host = "127.0.0.1";
-    String db_name = "ws_prepare_type_line";
+    String db_name = TestUtils.camelToSnake(WsPstmtLineModeAllTypeTest.class);
     String tableName = "wpt";
     String stableName = "swpt";
 
@@ -29,6 +28,17 @@ public class WsPstmtLineModeAllTypeTest {
     public void testExecuteUpdate() throws SQLException {
         String sql = "insert into " + db_name + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         PreparedStatement statement = connection.prepareStatement(sql);
+        ParameterMetaData parameterMetaData = statement.getParameterMetaData();
+        Assert.assertEquals(17, parameterMetaData.getParameterCount());
+        Assert.assertEquals(ParameterMetaData.parameterNullableUnknown, parameterMetaData.isNullable(1));
+        Assert.assertTrue(parameterMetaData.isSigned(2));
+        Assert.assertEquals(0, parameterMetaData.getPrecision(2));
+        Assert.assertEquals(0, parameterMetaData.getScale(2));
+        Assert.assertEquals(Types.TINYINT, parameterMetaData.getParameterType(2));
+        Assert.assertEquals("TINYINT", parameterMetaData.getParameterTypeName(2));
+        Assert.assertEquals("java.lang.Byte", parameterMetaData.getParameterClassName(2));
+        Assert.assertEquals(ParameterMetaData.parameterModeIn, parameterMetaData.getParameterMode(2));
+
         long current = System.currentTimeMillis();
         statement.setTimestamp(1, new Timestamp(current));
         statement.setByte(2, (byte) 2);
@@ -200,6 +210,57 @@ public class WsPstmtLineModeAllTypeTest {
         Assert.assertEquals(resultSet.getBigDecimal(7).doubleValue(), 7.7, 0.000001);
 
         resultSet.close();
+        statement.close();
+    }
+
+    @Test
+    public void testSetObject3() throws SQLException {
+        String sql = "insert into " + db_name + "." + tableName + " (ts, c1, c2, c3, c4, c5, c6) values(?, ?, ?, ?, ?, ?, ?)";
+        PreparedStatement statement = connection.prepareStatement(sql);
+        long current = System.currentTimeMillis();
+        statement.setObject(1, new Timestamp(current), Types.TIMESTAMP);
+        statement.setObject(2, Boolean.TRUE, Types.TINYINT);
+        statement.setObject(3, Boolean.TRUE, Types.SMALLINT);
+        statement.setObject(4, Boolean.TRUE, Types.INTEGER);
+        statement.setObject(5, Boolean.TRUE, Types.BIGINT);
+        statement.setObject(6, Boolean.TRUE, Types.FLOAT);
+        statement.setObject(7, Boolean.TRUE, Types.DOUBLE);
+
+        statement.executeUpdate();
+
+        ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + tableName);
+        resultSet.next();
+        Assert.assertEquals(resultSet.getTimestamp(1), new Timestamp(current));
+        Assert.assertEquals(resultSet.getByte(2), (byte) 1);
+        Assert.assertEquals(resultSet.getShort(3), (short) 1);
+        Assert.assertEquals(resultSet.getInt(4), 1);
+        Assert.assertEquals(resultSet.getLong(5), 1L);
+        Assert.assertEquals(resultSet.getFloat(6), 1f, 0.0001);
+        Assert.assertEquals(resultSet.getDouble(7), 1, 0.0001);
+        resultSet.close();
+        statement.close();
+    }
+
+    @Test
+    public void testSetObject4() throws SQLException {
+        String sql = "insert into " + db_name + "." + tableName + " (ts) values(?)";
+        PreparedStatement statement = connection.prepareStatement(sql);
+        long current = System.currentTimeMillis();
+        statement.setObject(1, new Date(current), Types.TIMESTAMP);
+        statement.executeUpdate();
+        statement.setObject(1, new Time(current + 1), Types.TIMESTAMP);
+        statement.executeUpdate();
+        statement.setObject(1, Instant.ofEpochMilli(current + 2), Types.TIMESTAMP);
+        statement.executeUpdate();
+        statement.setObject(1, DateTimeUtils.getLocalDateTime(Instant.ofEpochMilli(current + 3), null), Types.TIMESTAMP);
+        statement.executeUpdate();
+        statement.setObject(1, DateTimeUtils.getOffsetDateTime(Instant.ofEpochMilli(current + 4), null), Types.TIMESTAMP);
+        statement.executeUpdate();
+        statement.setObject(1, DateTimeUtils.getZonedDateTime(Instant.ofEpochMilli(current + 5), null), Types.TIMESTAMP);
+        statement.execute();
+
+        int insertedRows = Utils.getSqlRows(connection,db_name + "." + tableName);
+        Assert.assertEquals(6, insertedRows);
         statement.close();
     }
 
@@ -466,7 +527,7 @@ public class WsPstmtLineModeAllTypeTest {
                 "(ts timestamp, " +
                 "c1 tinyint unsigned, c2 smallint unsigned, c3 int unsigned, c4 bigint unsigned)");
         statement.execute("insert into " + db_name + "." + tableName2 +
-                " values ('2025-01-01', 255, 65535, 4294967295, 18446744073709551615)");
+                " values (1735660800000, 255, 65535, 4294967295, 18446744073709551615)");
 
         statement.close();
     }
@@ -478,4 +539,15 @@ public class WsPstmtLineModeAllTypeTest {
         }
         connection.close();
     }
+
+    @BeforeClass
+    public static void setUp() {
+        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+    }
+
+    @AfterClass
+    public static void tearDown() {
+        System.gc();
+    }
+
 }
