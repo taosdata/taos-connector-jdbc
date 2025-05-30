@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.concurrent.*;
 
 public abstract class AbstractWSResultSet extends AbstractResultSet {
-    private final Logger log = LoggerFactory.getLogger(Transport.class);
+    private static final Logger log = LoggerFactory.getLogger(AbstractWSResultSet.class);
 
     protected final Statement statement;
     protected final Transport transport;
@@ -163,7 +163,6 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
             this.result = blockData.getData();
             this.numOfRows = blockData.getNumOfRows();
         } else {
-
             byte[] version = {1, 0};
             FetchBlockNewResp resp = (FetchBlockNewResp) transport.send(Action.FETCH_BLOCK_NEW.getAction(),
                     reqId, queryId, 7, version);

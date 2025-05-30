@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -11,6 +12,7 @@ public class NullValueInResultSetRestfulTest {
 
     private static final String host = "127.0.0.1";
     Connection conn;
+    private String dbName = TestUtils.camelToSnake(NullValueInResultSetRestfulTest.class);
 
     @Test
     public void test() throws SQLException {
@@ -33,9 +35,9 @@ public class NullValueInResultSetRestfulTest {
         }
         conn = DriverManager.getConnection(url);
         try (Statement stmt = conn.createStatement()) {
-            stmt.execute("drop database if exists test_null");
-            stmt.execute("create database if not exists test_null");
-            stmt.execute("use test_null");
+            stmt.execute("drop database if exists " + dbName);
+            stmt.execute("create database if not exists " + dbName);
+            stmt.execute("use " + dbName);
             stmt.execute("create table weather(ts timestamp, f1 int, f2 bigint, f3 float, f4 double, f5 smallint, f6 tinyint, f7 bool, f8 binary(64), f9 nchar(64))");
             stmt.executeUpdate("insert into weather(ts, f1) values(now+1s, 1)");
             stmt.executeUpdate("insert into weather(ts, f2) values(now+2s, 2)");
@@ -53,7 +55,7 @@ public class NullValueInResultSetRestfulTest {
     public void after() throws SQLException {
         if (conn != null) {
             Statement statement = conn.createStatement();
-            statement.execute("drop database if exists test_null");
+            statement.execute("drop database if exists " + dbName);
             statement.close();
             conn.close();
         }

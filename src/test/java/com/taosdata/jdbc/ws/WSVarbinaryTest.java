@@ -3,6 +3,7 @@ package com.taosdata.jdbc.ws;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.StringUtils;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
 import java.sql.*;
@@ -11,7 +12,7 @@ import java.util.Properties;
 
 public class WSVarbinaryTest {
     static String host = "127.0.0.1";
-    static String dbName = "varbinary_test";
+    static String dbName = TestUtils.camelToSnake(WSVarbinaryTest.class);
     static String tableNative = "varbinary_noraml";
     static String tableStmt = "varbinary_stmt";
     static Connection connection;

@@ -1,7 +1,9 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.cloud.CloudSchemalessTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -18,7 +20,7 @@ import static org.junit.Assert.assertEquals;
 public class BatchInsertTest {
 
     static String host = "127.0.0.1";
-    static String dbName = "test";
+    static String dbName = TestUtils.camelToSnake(BatchInsertTest.class);
     static String stbName = "meters";
     static int numOfTables = 30;
     final static int numOfRecordsPerTable = 1000;
@@ -111,8 +113,12 @@ public class BatchInsertTest {
     @After
     public void after() {
         try {
-            if (connection != null)
+            if (connection != null) {
+                Statement statement = connection.createStatement();
+                statement.execute("drop database if exists " + dbName);
+                statement.close();
                 connection.close();
+            }
         } catch (SQLException e) {
             e.printStackTrace();
         }

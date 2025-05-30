@@ -1,20 +1,13 @@
 package com.taosdata.jdbc.ws.tmq;
 
-import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
-import com.google.common.primitives.Shorts;
 import com.taosdata.jdbc.AbstractResultSet;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
-import com.taosdata.jdbc.TaosGlobalConfig;
-import com.taosdata.jdbc.enums.TimestampPrecision;
-import com.taosdata.jdbc.enums.TmqMessageType;
 import com.taosdata.jdbc.rs.RestfulResultSet;
 import com.taosdata.jdbc.rs.RestfulResultSetMetaData;
 import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.DataTypeConverUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
-import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.Transport;
 import com.taosdata.jdbc.ws.entity.Code;
 import com.taosdata.jdbc.ws.entity.Request;
@@ -22,7 +15,6 @@ import com.taosdata.jdbc.ws.tmq.entity.FetchRawBlockResp;
 import com.taosdata.jdbc.ws.tmq.entity.PollResp;
 import com.taosdata.jdbc.ws.tmq.entity.TMQRequestFactory;
 
-import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.sql.*;
 import java.time.Instant;
@@ -30,10 +22,8 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
-import java.util.Map;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
-import static com.taosdata.jdbc.utils.UnsignedDataUtils.*;
 
 public class WSConsumerResultSet extends AbstractResultSet {
     private final Transport transport;

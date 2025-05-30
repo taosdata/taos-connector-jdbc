@@ -2,26 +2,26 @@ package com.taosdata.jdbc.ws;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.taosdata.jdbc.SchemalessWriter;
+import com.taosdata.jdbc.AbstractConnection;
+import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.SpecifyAddress;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import com.taosdata.jdbc.utils.TestUtils;
+import com.taosdata.jdbc.utils.Utils;
+import org.junit.*;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
-public class SchemalessTest {
+public class WSSchemalessNewTest {
     private static final String host = "127.0.0.1";
-    private static final String dbName = "test_schemaless_ws";
+    private static final String dbName = TestUtils.camelToSnake(WSSchemalessNewTest.class);
     private static final String dbName_ttl = "test_schemaless_ws_ttl";
-    public static SchemalessWriter writer;
     public static Connection connection;
 
     @Before
@@ -30,12 +30,15 @@ public class SchemalessTest {
         if (url == null) {
             url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
         }
-        connection = DriverManager.getConnection(url);
+        Properties properties = new Properties();
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
+
+        connection = DriverManager.getConnection(url, properties);
         try (Statement statement = connection.createStatement()) {
             statement.executeUpdate("drop database if exists " + dbName);
             statement.executeUpdate("create database " + dbName);
+            statement.executeUpdate("use " + dbName);
         }
-        writer = new SchemalessWriter(url, "root", "taosdata", dbName);
     }
 
     @Test
@@ -46,7 +49,7 @@ public class SchemalessTest {
                 "st,t1=4i64,t3=\"t4\",t2=5f64,t4=5f64 c1=3i64,c3=L\"passitagin\",c2=true,c4=5f64,c5=5f64 1626006833640000000"};
 
         // when
-        writer.write(lines, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS);
+        ((AbstractConnection)connection).write(lines, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS);
         // then
         Statement statement = connection.createStatement();
         statement.executeUpdate("use " + dbName);
@@ -61,8 +64,8 @@ public class SchemalessTest {
         Assert.assertEquals(lines.length, rowCnt);
         rs.close();
         statement.close();
-        writer.close();
     }
+
     @Test
     public void testLine2() throws SQLException {
         // given
@@ -71,9 +74,7 @@ public class SchemalessTest {
                 "st,t1=4i64,t3=\"t4\",t2=5f64,t4=5f64 c1=3i64,c3=L\"passitagin\",c2=true,c4=5f64,c5=5f64 1626006833640000000"};
 
         // when
-        SchemalessWriter writer = new SchemalessWriter(connection, dbName);
-        writer.write(lines, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS, 10000, 100L);
-
+        ((AbstractConnection)connection).write(lines, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS, 10000, 100L);
         // then
         Statement statement = connection.createStatement();
         statement.executeUpdate("use " + dbName);
@@ -88,7 +89,6 @@ public class SchemalessTest {
         Assert.assertEquals(lines.length, rowCnt);
         rs.close();
         statement.close();
-        writer.close();
     }
 
     @Test
@@ -97,12 +97,10 @@ public class SchemalessTest {
         // given
         String line = "st,t1=3i64,t2=4f64,t3=\"t3\" c1=3i64,c3=L\"passit\",c2=false,c4=4f64 1626006833639000000";
 
-        SchemalessWriter writer = new SchemalessWriter(connection, dbName);
-        writer.writeRaw(line, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS);
+        ((AbstractConnection)connection).writeRaw(line, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS);
 
         // then
         Statement statement = connection.createStatement();
-        statement.executeUpdate("use " + dbName);
         ResultSet rs = statement.executeQuery("show tables");
         Assert.assertNotNull(rs);
         ResultSetMetaData metaData = rs.getMetaData();
@@ -114,16 +112,13 @@ public class SchemalessTest {
         Assert.assertEquals(1, rowCnt);
         rs.close();
         statement.close();
-        writer.close();
     }
     @Test
     public void testWriteRaw2() throws SQLException {
         // given
         String line = "st,t1=3i64,t2=4f64,t3=\"t3\" c1=3i64,c3=L\"passit\",c2=false,c4=4f64 1626006833639000000";
         // when
-        SchemalessWriter writer = new SchemalessWriter(connection, dbName);
-        writer.writeRaw(line, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS, 10000, 100L);
-
+        ((AbstractConnection)connection).writeRaw(line, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS, 10000, 100L);
         // then
         Statement statement = connection.createStatement();
         statement.executeUpdate("use " + dbName);
@@ -138,8 +133,47 @@ public class SchemalessTest {
         Assert.assertEquals(1, rowCnt);
         rs.close();
         statement.close();
-        writer.close();
     }
+
+    @Test
+    @Description("telnet insert with raw data")
+    @Ignore
+    public void testWriteRawTelnet() throws SQLException {
+
+        String[] lines = new String[]{
+                "stb1 1742374817157 false t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\"",
+                "stb1 1742374817158 true t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\"",
+                "stb1 1742374817159 true t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\"",
+                "stb1 1742374817160 false t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\"",
+                "stb1 1742374817161 false t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\"",
+                "stb1 1742374817162 true t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\"",
+                "stb1 1742374817163 true t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\"",
+                "stb1 1742374817164 false t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\"",
+                "stb1 1742374817165 false t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\"",
+                "stb1 1742374817166 false t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\""
+        };
+
+
+        // given
+        String line = String.join("\n", lines);
+
+        ((AbstractConnection)connection).writeRaw(line, SchemalessProtocolType.TELNET, SchemalessTimestampType.MILLI_SECONDS);
+
+        // then
+        Statement statement = connection.createStatement();
+        ResultSet rs = statement.executeQuery("show tables");
+        Assert.assertNotNull(rs);
+        ResultSetMetaData metaData = rs.getMetaData();
+        Assert.assertTrue(metaData.getColumnCount() > 0);
+        int rowCnt = 0;
+        while (rs.next()) {
+            rowCnt++;
+        }
+        Assert.assertEquals(lines.length, Utils.getSqlRows(connection, dbName + ".stb1"));
+        rs.close();
+        statement.close();
+    }
+
     @Test
     public void testLineTtl() throws SQLException {
         // given
@@ -148,8 +182,7 @@ public class SchemalessTest {
                 "st,t1=4i64,t3=\"t4\",t2=5f64,t4=5f64 c1=3i64,c3=L\"passitagin\",c2=true,c4=5f64,c5=5f64 1626006833640000000"};
 
         // when
-        writer.write(lines, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS, dbName_ttl, 1000, 1L);
-        writer.close();
+        ((AbstractConnection)connection).write(lines, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS, 1000, 1L);
     }
 
 
@@ -157,14 +190,21 @@ public class SchemalessTest {
     public void telnetInsert() throws SQLException {
         // given
         String[] lines = new String[]{
-                "stb0_0 1626006833 4 host=host0 interface=eth0",
-                "stb0_1 1626006833 4 host=host0 interface=eth0",
-                "stb0_2 1626006833 4 host=host0 interface=eth0 id=\"special_name\"",
+                "stb1 1742374817157 false t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817158 true t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817159 true t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817160 false t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817161 false t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817162 true t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817163 true t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817164 false t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817165 false t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" ",
+                "stb1 1742374817166 false t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\" "
         };
 
         // when
 
-        writer.write(lines, SchemalessProtocolType.TELNET, SchemalessTimestampType.MILLI_SECONDS);
+        ((AbstractConnection)connection).write(lines, SchemalessProtocolType.TELNET, SchemalessTimestampType.MILLI_SECONDS);
 
         // then
         Statement statement = connection.createStatement();
@@ -177,10 +217,9 @@ public class SchemalessTest {
         while (rs.next()) {
             rowCnt++;
         }
-        Assert.assertEquals(lines.length, rowCnt);
+        Assert.assertEquals(lines.length, Utils.getSqlRows(connection,dbName + ".stb1"));
         rs.close();
         statement.close();
-        writer.close();
     }
 
     @Test
@@ -210,7 +249,7 @@ public class SchemalessTest {
                 "]";
 
         // when
-        writer.write(json, SchemalessProtocolType.JSON, SchemalessTimestampType.MILLI_SECONDS);
+        ((AbstractConnection)connection).write(json, SchemalessProtocolType.JSON, SchemalessTimestampType.MILLI_SECONDS);
 
         // then
         Statement statement = connection.createStatement();
@@ -225,10 +264,10 @@ public class SchemalessTest {
         }
 
         JsonNode jsonArray = JsonUtil.getObjectReader().readTree(json);
+        // 断言 JSON 数组的大小
         Assert.assertEquals(jsonArray.size(), rowCnt);
         rs.close();
         statement.close();
-        writer.close();
     }
 
     @Test
@@ -240,7 +279,7 @@ public class SchemalessTest {
         list.add("stb0_2 1626006833 4 host=host0 interface=eth0 id=\"special_name\"");
         // when
 
-        writer.write(list, SchemalessProtocolType.TELNET, SchemalessTimestampType.MILLI_SECONDS);
+        ((AbstractConnection)connection).write(list, SchemalessProtocolType.TELNET, SchemalessTimestampType.MILLI_SECONDS);
 
         // then
         Statement statement = connection.createStatement();
@@ -256,7 +295,6 @@ public class SchemalessTest {
         Assert.assertEquals(list.size(), rowCnt);
         rs.close();
         statement.close();
-        writer.close();
     }
 
     @AfterClass

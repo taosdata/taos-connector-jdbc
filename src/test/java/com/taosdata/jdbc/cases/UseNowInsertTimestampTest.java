@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -12,14 +13,15 @@ import static org.junit.Assert.assertTrue;
 
 public class UseNowInsertTimestampTest {
     private static String url ;
+    private static String dbName = TestUtils.camelToSnake(UseNowInsertTimestampTest.class);
 
     @Test
     public void millisec() throws SQLException {
         try (Connection conn = DriverManager.getConnection(url)) {
             Statement stmt = conn.createStatement();
-            stmt.execute("drop database if exists test");
-            stmt.execute("create database if not exists test precision 'ms'");
-            stmt.execute("use test");
+            stmt.execute("drop database if exists " + dbName);
+            stmt.execute("create database if not exists " + dbName + " precision 'ms'");
+            stmt.execute("use " + dbName);
             stmt.execute("create table weather(ts timestamp, f1 int)");
             stmt.execute("insert into weather values(now, 1)");
 
@@ -39,9 +41,9 @@ public class UseNowInsertTimestampTest {
     public void microsec() throws SQLException {
         try (Connection conn = DriverManager.getConnection(url)) {
             Statement stmt = conn.createStatement();
-            stmt.execute("drop database if exists test");
-            stmt.execute("create database if not exists test precision 'us'");
-            stmt.execute("use test");
+            stmt.execute("drop database if exists " + dbName);
+            stmt.execute("create database if not exists " + dbName + " precision 'us'");
+            stmt.execute("use " + dbName);
             stmt.execute("create table weather(ts timestamp, f1 int)");
             stmt.execute("insert into weather values(now, 1)");
 
@@ -61,9 +63,9 @@ public class UseNowInsertTimestampTest {
         long now_time = System.currentTimeMillis() * 1000_000L + 123456;
         try (Connection conn = DriverManager.getConnection(url)) {
             Statement stmt = conn.createStatement();
-            stmt.execute("drop database if exists test");
-            stmt.execute("create database if not exists test precision 'ns'");
-            stmt.execute("use test");
+            stmt.execute("drop database if exists " + dbName);
+            stmt.execute("create database if not exists " + dbName + " precision 'ns'");
+            stmt.execute("use " + dbName);
             stmt.execute("create table weather(ts timestamp, f1 int)");
             stmt.execute("insert into weather values(" + now_time + ", 1)");
 
@@ -91,7 +93,7 @@ public class UseNowInsertTimestampTest {
     public static void afterClass() {
         try (Connection conn = DriverManager.getConnection(url);
              Statement stmt = conn.createStatement()) {
-            stmt.execute("drop database if exists test");
+            stmt.execute("drop database if exists " + dbName);
         } catch (SQLException e) {
             e.printStackTrace();
         }

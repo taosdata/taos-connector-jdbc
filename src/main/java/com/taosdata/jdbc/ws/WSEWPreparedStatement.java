@@ -2,13 +2,14 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.*;
 import com.taosdata.jdbc.common.*;
-import com.taosdata.jdbc.enums.FeildBindType;
+import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.utils.SyncObj;
 import com.taosdata.jdbc.ws.entity.*;
 import com.taosdata.jdbc.ws.stmt2.entity.*;
 import com.taosdata.jdbc.ws.stmt2.entity.RequestFactory;
+import io.netty.buffer.ByteBuf;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
@@ -20,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 // Efficient Writing Mode PreparedStatement
 public class WSEWPreparedStatement extends AbsWSPreparedStatement {
-    private final org.slf4j.Logger log = LoggerFactory.getLogger(AbstractDriver.class);
+    private static final org.slf4j.Logger log = LoggerFactory.getLogger(WSEWPreparedStatement.class);
 
     private final boolean copyData;
     private final int writeThreadNum;
@@ -149,7 +150,7 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
         for (int i = 0; i < fields.size(); i++){
             Field field = fields.get(i);
             Column column = map.get(i + 1);
-            if (DataLengthCfg.getDataLength(column.getType()) == null && field.getBindType() != FeildBindType.TAOS_FIELD_TBNAME.getValue()){
+            if (DataLengthCfg.getDataLength(column.getType()) == null && field.getBindType() != FieldBindType.TAOS_FIELD_TBNAME.getValue()){
                 if (column.getData() instanceof byte[]){
                     byte[] data = (byte[]) column.getData();
                     if (data.length > field.getBytes()){
@@ -264,7 +265,7 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
 
 
     static class WorkerThread implements Runnable {
-        private final org.slf4j.Logger log = LoggerFactory.getLogger(WorkerThread.class);
+        private static final org.slf4j.Logger log = LoggerFactory.getLogger(WorkerThread.class);
         private final ArrayBlockingQueue<Map<Integer, Column>> dataQueue;
         private final int batchSize;
         private final String sql;
@@ -331,13 +332,13 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
             toBeBindColCount = 0;
             for (int i = 0; i < fields.size(); i++){
                 Field field = fields.get(i);
-                if (field.getBindType() == FeildBindType.TAOS_FIELD_TBNAME.getValue()){
+                if (field.getBindType() == FieldBindType.TAOS_FIELD_TBNAME.getValue()){
                     toBeBindTableNameIndex = i;
                 }
-                if (field.getBindType() == FeildBindType.TAOS_FIELD_TAG.getValue()){
+                if (field.getBindType() == FieldBindType.TAOS_FIELD_TAG.getValue()){
                     toBeBindTagCount++;
                 }
-                if (field.getBindType() == FeildBindType.TAOS_FIELD_COL.getValue()){
+                if (field.getBindType() == FieldBindType.TAOS_FIELD_COL.getValue()){
                     toBeBindColCount++;
                 }
             }
@@ -408,7 +409,7 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
 
         private void writeBlockWithRetry() throws SQLException {
             for (int i = 0; i < connectionParam.getRetryTimes(); i++) {
-                byte[] rawBlock;
+                ByteBuf rawBlock;
                 try {
                     rawBlock = SerializeBlock.getStmt2BindBlock(
                             reqId,
@@ -418,6 +419,7 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
                             toBeBindTagCount,
                             toBeBindColCount,
                             precision);
+                    log.trace("buffer allocated: {}", Integer.toHexString(System.identityHashCode(rawBlock)));
                 } catch (Exception e) {
                     lastError = e;
                     log.error("Error in serialize data to block, stmt id: {}, req id: {}", stmtId, reqId, e);
@@ -474,6 +476,8 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
                         continue;
                     }
                     break;
+                } finally {
+                    log.trace("buffer {}, refCnt: {}", Integer.toHexString(System.identityHashCode(rawBlock)), rawBlock.refCnt());
                 }
             }
         }

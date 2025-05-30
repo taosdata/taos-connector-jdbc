@@ -2,6 +2,7 @@ package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 import org.junit.runners.MethodSorters;
 
@@ -13,7 +14,7 @@ import static org.junit.Assert.assertEquals;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class ImportTest {
     private static Connection connection;
-    static String dbName = "test_import";
+    static String dbName = TestUtils.camelToSnake(ImportTest.class);
     static String tName = "t0";
     static String host = "127.0.0.1";
     private static long ts;

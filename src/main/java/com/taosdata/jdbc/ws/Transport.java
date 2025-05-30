@@ -2,13 +2,14 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
-import com.taosdata.jdbc.common.SerializeBlock;
 import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.CompletableFutureTimeout;
 import com.taosdata.jdbc.utils.StringUtils;
+import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.entity.*;
-import org.java_websocket.exceptions.WebsocketNotConnectedException;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,9 +17,6 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.security.cert.X509Certificate;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -27,7 +25,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
 
 import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT;
 
@@ -35,7 +32,7 @@ import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT;
  * send message
  */
 public class Transport implements AutoCloseable {
-    private final Logger log = LoggerFactory.getLogger(Transport.class);
+    private static final Logger log = LoggerFactory.getLogger(Transport.class);
 
     public static final int DEFAULT_MESSAGE_WAIT_TIMEOUT = 60_000;
 
@@ -54,43 +51,11 @@ public class Transport implements AutoCloseable {
     public static final byte[] EMPTY_BYTE_ARRAY = new byte[0];
 
     private int currentNodeIndex = 0;
-    public Transport(WSFunction function, ConnectionParam param, InFlightRequest inFlightRequest) throws SQLException {
+    public Transport(WSFunction function,
+                     ConnectionParam param,
+                     InFlightRequest inFlightRequest) throws SQLException {
         WSClient master = WSClient.getInstance(param, function, this);
         WSClient slave = WSClient.getSlaveInstance(param, function, this);
-
-        if (param.isDisableSslCertValidation()){
-            // creat a TrustManager that trusts all certificates
-            TrustManager[] trustAllCerts = new TrustManager[]{
-                    new X509TrustManager() {
-                        public X509Certificate[] getAcceptedIssuers() {
-                            return new X509Certificate[0];
-                        }
-                        @SuppressWarnings("unused")
-                        public void checkClientTrusted(X509Certificate[] certs, String authType) {
-                            // Intentionally left blank to accept all certificates
-                        }
-                        @SuppressWarnings("unused")
-                        public void checkServerTrusted(X509Certificate[] certs, String authType) {
-                            // Intentionally left blank to accept all certificates
-                        }
-                    }
-            };
-
-            try{
-                // create a custom SSLContext
-                SSLContext sslContext = SSLContext.getInstance("TLS");
-                sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
-                // get SSLContext SocketFactory
-                final SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
-                master.setSocketFactory(sslSocketFactory);
-
-                if (slave != null){
-                    slave.setSocketFactory(sslSocketFactory);
-                }
-            } catch (Exception e){
-                throw new SQLException("setSocketFactory failed ", e);
-            }
-        }
 
         this.clientArr.add(master);
         if (slave != null){
@@ -103,19 +68,6 @@ public class Transport implements AutoCloseable {
 
         setTimeout(param.getRequestTimeout());
     }
-
-    public void setTextMessageHandler(Consumer<String> textMessageHandler) {
-        for (WSClient wsClient : clientArr){
-            wsClient.setTextMessageHandler(textMessageHandler);
-        }
-    }
-
-    public void setBinaryMessageHandler(Consumer<ByteBuffer> binaryMessageHandler) {
-        for (WSClient wsClient : clientArr) {
-            wsClient.setBinaryMessageHandler(binaryMessageHandler);
-        }
-    }
-
     public void setTimeout(long timeout) {
         if (timeout < 0){
             timeout = DEFAULT_MESSAGE_WAIT_TIMEOUT;
@@ -135,11 +87,11 @@ public class Transport implements AutoCloseable {
                 boolean reconnected = reconnectCurNode();
                 if (reconnected) {
                     reconnectCount.incrementAndGet();
-                    log.debug("reconnect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri));
+                    log.debug("reconnect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri.toString()));
                     return;
                 }
 
-                log.debug("reconnect failed to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri));
+                log.debug("reconnect failed to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri.toString()));
 
                 currentNodeIndex = (currentNodeIndex + 1) % clientArr.size();
             }
@@ -204,16 +156,14 @@ public class Transport implements AutoCloseable {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
         }
 
-        ByteArrayOutputStream buffer = new ByteArrayOutputStream(24 + rawData.length + rawData2.length);
-        try {
-            buffer.write(SerializeBlock.longToBytes(reqId));
-            buffer.write(SerializeBlock.longToBytes(resultId));
-            buffer.write(SerializeBlock.longToBytes(type));
-            buffer.write(rawData);
-            buffer.write(rawData2);
-        } catch (IOException e) {
-            throw new SQLException("data serialize error!", e);
-        }
+        int totalLength = 24 + rawData.length + rawData2.length;
+        ByteBuf buffer = PooledByteBufAllocator.DEFAULT.directBuffer(totalLength);
+
+        buffer.writeLongLE(reqId);
+        buffer.writeLongLE(resultId);
+        buffer.writeLongLE(type);
+        buffer.writeBytes(rawData);
+        buffer.writeBytes(rawData2);
 
         Response response;
         CompletableFuture<Response> completableFuture = new CompletableFuture<>();
@@ -224,16 +174,20 @@ public class Transport implements AutoCloseable {
         }
 
         try {
-            clientArr.get(currentNodeIndex).send(buffer.toByteArray());
+            Utils.retainByteBuf(buffer);
+            clientArr.get(currentNodeIndex).send(buffer);
         } catch (WebsocketNotConnectedException e) {
             tmqRethrowConnectionCloseException();
             reconnect();
             try {
-                clientArr.get(currentNodeIndex).send(buffer.toByteArray());
+                Utils.retainByteBuf(buffer);
+                clientArr.get(currentNodeIndex).send(buffer);
             }catch (Exception ex){
                 inFlightRequest.remove(action, reqId);
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());
             }
+        } finally {
+            Utils.releaseByteBuf(buffer);
         }
 
         String reqString = "action:" + action + ", reqId:" + reqId + ", resultId:" + resultId + ", actionType" + type;
@@ -248,11 +202,11 @@ public class Transport implements AutoCloseable {
         return response;
     }
 
-    public Response send(String action, long reqId, byte[] buffer) throws SQLException {
+    public Response send(String action, long reqId, ByteBuf buffer) throws SQLException {
         if (isClosed()){
+            Utils.releaseByteBuf(buffer);
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
         }
-
 
         Response response;
         CompletableFuture<Response> completableFuture = new CompletableFuture<>();
@@ -263,16 +217,20 @@ public class Transport implements AutoCloseable {
         }
 
         try {
+            Utils.retainByteBuf(buffer);
             clientArr.get(currentNodeIndex).send(buffer);
         } catch (WebsocketNotConnectedException e) {
             tmqRethrowConnectionCloseException();
             reconnect();
             try {
+                Utils.retainByteBuf(buffer);
                 clientArr.get(currentNodeIndex).send(buffer);
             }catch (Exception ex){
                 inFlightRequest.remove(action, reqId);
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());
             }
+        } finally {
+            Utils.releaseByteBuf(buffer);
         }
 
         String reqString = "action:" + action + ", reqId:" + reqId;
@@ -373,42 +331,36 @@ public class Transport implements AutoCloseable {
         closed = true;
         inFlightRequest.close();
         for (WSClient wsClient : clientArr){
-            wsClient.shutdown();
+            wsClient.close();
         }
     }
 
     public void checkConnection(int connectTimeout) throws SQLException {
-        try {
-            if (WSConnection.g_FirstConnection && clientArr.size() > 1) {
-                // 测试所有节点，如果连接失败，直接异常
-                for (WSClient wsClient : clientArr){
-                    if (!wsClient.connectBlocking(connectTimeout, TimeUnit.MILLISECONDS)) {
-                        close();
-                        throw TSDBError.createSQLException(ERROR_CONNECTION_TIMEOUT,
-                                "can't create connection with server " + wsClient.serverUri.toString() + " within: " + connectTimeout + " milliseconds");
-                    }
-                    log.debug("connect success to {}", StringUtils.getBasicUrl(wsClient.serverUri));
-                }
-
-                // 断开其他节点
-                for (int i = 0; i < clientArr.size(); i++){
-                    if (i != currentNodeIndex) {
-                        clientArr.get(i).closeBlocking();
-                        log.debug("disconnect success to {}", StringUtils.getBasicUrl(clientArr.get(i).serverUri));
-                    }
-                }
-            } else {
-                if (!clientArr.get(currentNodeIndex).connectBlocking(connectTimeout, TimeUnit.MILLISECONDS)) {
+        if (WSConnection.g_FirstConnection && clientArr.size() > 1) {
+            // test all nodes, if connection failed, throw exception
+            for (WSClient wsClient : clientArr){
+                if (!wsClient.connectBlocking()) {
                     close();
                     throw TSDBError.createSQLException(ERROR_CONNECTION_TIMEOUT,
-                            "can't create connection with server within: " + connectTimeout + " milliseconds");
+                            "can't create connection with server " + wsClient.serverUri.toString() + " within: " + connectTimeout + " milliseconds");
                 }
-                log.debug("connect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri));
+                log.debug("connect success to {}", StringUtils.getBasicUrl(wsClient.serverUri.toString()));
             }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            close();
-            throw new SQLException("create websocket connection has been Interrupted ", e);
+
+            // disconnect all nodes except current node
+            for (int i = 0; i < clientArr.size(); i++){
+                if (i != currentNodeIndex) {
+                    clientArr.get(i).closeBlocking();
+                    log.debug("disconnect success to {}", StringUtils.getBasicUrl(clientArr.get(i).serverUri.toString()));
+                }
+            }
+        } else {
+            if (!clientArr.get(currentNodeIndex).connectBlocking()) {
+                close();
+                throw TSDBError.createSQLException(ERROR_CONNECTION_TIMEOUT,
+                        "can't create connection with server within: " + connectTimeout + " milliseconds");
+            }
+            log.debug("connect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri.toString()));
         }
     }
 

@@ -224,21 +224,4 @@ public class TSDBDriverTest {
                 "jdbc:TAOS://" + specifyHost + ":0/?user=root&password=taosdata"
         };
     }
-
-    @Test
-    public void oo() throws SQLException {
-        int count = 1000000;
-        long startTime = System.nanoTime();
-        for (int i = 0; i < count; i++) {
-            System.currentTimeMillis();
-        }
-        long endTime = System.nanoTime();
-        long totalTime = endTime - startTime;
-        double averageTime = (double) totalTime / count;
-        System.out.println("调用 " + count + " 次 System.currentTimeMillis() 总共花费 " + totalTime + " 纳秒");
-        System.out.println("平均每次调用花费 " + averageTime + " 纳秒");
-        double callsPerSecond = 1000000000 / averageTime;
-        System.out.println("每秒大约可以调用 " + callsPerSecond + " 次");
-    }
-
 }

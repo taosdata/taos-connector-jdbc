@@ -1,6 +1,8 @@
 package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
+import io.netty.util.ResourceLeakDetector;
 import org.junit.*;
 
 import java.sql.*;
@@ -14,7 +16,7 @@ import static com.taosdata.jdbc.TSDBConstants.TIMESTAMP_DATA_OUT_OF_RANGE;
 @FixMethodOrder
 public class WsPstmtNsTest {
     String host = "localhost";
-    String db_name = "ws_prepare_ns";
+    String db_name = TestUtils.camelToSnake(WsPstmtNsTest.class);
     String tableName = "wpt";
     String superTable = "wpt_st";
     Connection connection;
@@ -115,28 +117,16 @@ public class WsPstmtNsTest {
     private void initDbAndTable(String precision) throws SQLException, InterruptedException{
         Statement statement = connection.createStatement();
         statement.execute("drop database if exists " + db_name);
-        waitTransactionDone();
+        TestUtils.waitTransactionDone(connection);
         statement.execute("create database " + db_name + " PRECISION '" + precision + "'");
-        waitTransactionDone();
+        TestUtils.waitTransactionDone(connection);
         statement.execute("use " + db_name);
         statement.execute("create table if not exists " + db_name + "." + tableName + " (ts timestamp, c1 int)");
 
         statement.close();
     }
 
-    private void waitTransactionDone() throws SQLException, InterruptedException{
-        while (true) {
-            try (Statement statement = connection.createStatement()){
-                ResultSet resultSet = statement.executeQuery("show transactions");
-                if (resultSet.next()) {
-                    continue;
-                }
-                break;
-            } catch (SQLException e) {
-                Thread.sleep(1000);
-            }
-        }
-    }
+
     @Before
     public void before() throws SQLException, InterruptedException {
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();
@@ -154,10 +144,21 @@ public class WsPstmtNsTest {
     public void after() throws SQLException {
         try (Statement statement = connection.createStatement()) {
             statement.execute("drop database if exists " + db_name);
-            waitTransactionDone();
+            TestUtils.waitTransactionDone(connection);
+
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
         connection.close();
+    }
+
+    @BeforeClass
+    public static void setUp() {
+        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+    }
+
+    @AfterClass
+    public static void tearDown() {
+        System.gc();
     }
 }

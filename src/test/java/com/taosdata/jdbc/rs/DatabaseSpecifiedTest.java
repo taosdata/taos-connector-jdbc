@@ -1,6 +1,8 @@
 package com.taosdata.jdbc.rs;
 
+import com.taosdata.jdbc.tmq.OffsetSeekTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -13,7 +15,7 @@ import static org.junit.Assert.assertNotNull;
 public class DatabaseSpecifiedTest {
 
     private static String host = "127.0.0.1";
-    private static String dbname = "test_db_spec";
+    private String dbname = TestUtils.camelToSnake(DatabaseSpecifiedTest.class);
 
     private Connection connection;
     private long ts;

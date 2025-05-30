@@ -1,6 +1,8 @@
 package com.taosdata.jdbc.confprops;
 
+import com.taosdata.jdbc.cases.QueryDataTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 import org.junit.runners.MethodSorters;
 
@@ -14,11 +16,13 @@ public class BatchFetchTest {
     private static String host = "127.0.0.1";
     private long rowFetchCost, batchFetchCost;
 
+    private static String dbName = TestUtils.camelToSnake(BatchFetchTest.class);
+
     @Test
     public void case01_rowFetch() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/test?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + host + ":6030/" + dbName + "?user=root&password=taosdata";
         } else {
             url += "test?user=root&password=taosdata";
         }
@@ -41,7 +45,7 @@ public class BatchFetchTest {
     public void case02_batchFetch() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/test?user=root&password=taosdata&batchfetch=true";
+            url = "jdbc:TAOS://" + host + ":6030/" + dbName + "?user=root&password=taosdata&batchfetch=true";
         } else {
             url += "test?user=root&password=taosdata&batchfetch=true";
         }
@@ -73,9 +77,9 @@ public class BatchFetchTest {
         }
         try (Connection conn = DriverManager.getConnection(url);
              Statement stmt = conn.createStatement()) {
-            stmt.execute("drop database if exists test");
-            stmt.execute("create database if not exists test");
-            stmt.execute("use test");
+            stmt.execute("drop database if exists " + dbName);
+            stmt.execute("create database if not exists " + dbName);
+            stmt.execute("use " + dbName);
             stmt.execute("create table weather(ts timestamp, f int) tags(t int)");
             for (int i = 0; i < 1000; i++) {
                 stmt.execute(generateSql(100, 100));
@@ -103,7 +107,7 @@ public class BatchFetchTest {
         }
         try (Connection conn = DriverManager.getConnection(url);
              Statement stmt = conn.createStatement()) {
-            stmt.execute("drop database if exists test");
+            stmt.execute("drop database if exists " + dbName);
         } catch (SQLException e) {
             e.printStackTrace();
         }

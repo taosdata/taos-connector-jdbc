@@ -10,6 +10,7 @@ import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.utils.DataTypeConverUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.Utils;
+import com.taosdata.jdbc.ws.entity.FetchBlockNewResp;
 import com.taosdata.jdbc.ws.entity.QueryResp;
 
 import java.io.UnsupportedEncodingException;

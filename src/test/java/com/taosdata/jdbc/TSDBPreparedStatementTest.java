@@ -1,6 +1,7 @@
 package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
 import java.io.ByteArrayInputStream;
@@ -18,7 +19,7 @@ public class TSDBPreparedStatementTest {
     private static Connection conn;
     private static final String sql_insert = "insert into t1 values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     private static final String sql_select = "select * from t1 where ts >= ? and ts < ? and f1 >= ?";
-    private static final String dbname = "test_pstmt_jni";
+    private static final String dbname = TestUtils.camelToSnake(TSDBPreparedStatementTest.class);;
 
     private PreparedStatement pstmt_insert;
     private PreparedStatement pstmt_select;

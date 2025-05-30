@@ -115,6 +115,38 @@ public class DateTimeUtils {
         return v;
     }
 
+    public static Long toLong(Timestamp timestamp,  ZoneId zoneId, int precision) {
+        if (timestamp == null) {
+            return null;
+        }
+        Instant instant = toInstant(timestamp, zoneId);
+        return toLong(instant, precision);
+    }
+
+    public static Long toLong(LocalDateTime localDateTime,  ZoneId zoneId, int precision) {
+        if (localDateTime == null) {
+            return null;
+        }
+        ZonedDateTime zonedDateTime = localDateTime.atZone(zoneId);
+        return toLong(zonedDateTime.toInstant(), precision);
+    }
+
+    public static Long toLong(ZonedDateTime zonedDateTime, int precision) {
+        if (zonedDateTime == null) {
+            return null;
+        }
+        return toLong(zonedDateTime.toInstant(), precision);
+    }
+
+    public static Long toLong(OffsetDateTime offsetDateTime, int precision) {
+        if (offsetDateTime == null) {
+            return null;
+        }
+        return toLong(offsetDateTime.toInstant(), precision);
+    }
+
+
+
     public static Instant parseTimestampColumnData(long value, int timestampPrecision) {
         if (TimestampPrecision.MS == timestampPrecision)
             return Instant.ofEpochMilli(value);

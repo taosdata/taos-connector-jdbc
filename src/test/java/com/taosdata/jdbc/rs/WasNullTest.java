@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.rs;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -12,15 +13,16 @@ public class WasNullTest {
 
     private static final String host = "127.0.0.1";
     private Connection conn;
+    private String dbName = TestUtils.camelToSnake(WasNullTest.class);
 
     @Test
     public void testGetTimestamp() throws SQLException {
         try (Statement stmt = conn.createStatement()) {
             stmt.execute("drop table if exists weather");
             stmt.execute("create table if not exists weather(f1 timestamp, f2 timestamp, f3 int)");
-            stmt.execute("insert into restful_test.weather values('2021-01-01 00:00:00.000', NULL, 100)");
+            stmt.execute("insert into " + dbName + ".weather values('2021-01-01 00:00:00.000', NULL, 100)");
 
-            ResultSet rs = stmt.executeQuery("select * from restful_test.weather");
+            ResultSet rs = stmt.executeQuery("select * from " + dbName + ".weather");
             ResultSetMetaData meta = rs.getMetaData();
             while (rs.next()) {
                 for (int i = 1; i <= meta.getColumnCount(); i++) {
@@ -45,9 +47,9 @@ public class WasNullTest {
         try (Statement stmt = conn.createStatement()) {
             stmt.execute("drop table if exists weather");
             stmt.execute("create table if not exists weather(f1 timestamp, f2 int, f3 bigint, f4 float, f5 double, f6 binary(64), f7 smallint, f8 tinyint, f9 bool, f10 nchar(64))");
-            stmt.execute("insert into restful_test.weather values('2021-01-01 00:00:00.000', 1, 100, 3.1415, 3.1415926, NULL, 10, 10, true, '涛思数据')");
+            stmt.execute("insert into " + dbName + ".weather values('2021-01-01 00:00:00.000', 1, 100, 3.1415, 3.1415926, NULL, 10, 10, true, '涛思数据')");
 
-            ResultSet rs = stmt.executeQuery("select * from restful_test.weather");
+            ResultSet rs = stmt.executeQuery("select * from " + dbName + ".weather");
             ResultSetMetaData meta = rs.getMetaData();
             while (rs.next()) {
                 for (int i = 1; i <= meta.getColumnCount(); i++) {
@@ -74,9 +76,9 @@ public class WasNullTest {
         }
         conn = DriverManager.getConnection(url);
         try (Statement stmt = conn.createStatement()) {
-            stmt.execute("drop database if exists restful_test");
-            stmt.execute("create database if not exists restful_test");
-            stmt.execute("use restful_test");
+            stmt.execute("drop database if exists " + dbName);
+            stmt.execute("create database if not exists " + dbName);
+            stmt.execute("use " + dbName);
         }
     }
 
@@ -84,7 +86,7 @@ public class WasNullTest {
     public void after() throws SQLException {
         if (conn != null) {
             Statement statement = conn.createStatement();
-            statement.execute("drop database if exists restful_test");
+            statement.execute("drop database if exists " + dbName);
             conn.close();
         }
     }

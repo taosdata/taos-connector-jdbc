@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -15,7 +16,7 @@ import java.util.stream.IntStream;
 public class PreparedStatementBatchInsertJNITest {
 
     private static final String host = "127.0.0.1";
-    private static final String dbname = "td4668";
+    private static final String dbname = TestUtils.camelToSnake(PreparedStatementBatchInsertJNITest.class);
 
     private final Random random = new Random(System.currentTimeMillis());
     private Connection conn;

@@ -2,6 +2,7 @@ package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -15,7 +16,7 @@ public class GroupByFetchBlockTest {
     private static Statement statement;
 
     private String host = "127.0.0.1";
-    private String dbName = "block_test";
+    private String dbName = TestUtils.camelToSnake(GroupByFetchBlockTest.class);
     private String tName = "st";
 
     @Test

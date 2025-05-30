@@ -1,6 +1,7 @@
 package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -14,7 +15,7 @@ public class TSDBDatabaseMetaDataTest {
     private static String url;
     private static Connection connection;
     private static TSDBDatabaseMetaData metaData;
-    private static String db_name = "log_test";
+    private static String db_name = TestUtils.camelToSnake(TSDBDatabaseMetaDataTest.class);
 
     @Test
     public void unwrap() throws SQLException {

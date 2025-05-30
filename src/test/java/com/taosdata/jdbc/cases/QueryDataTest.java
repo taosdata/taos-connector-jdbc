@@ -2,6 +2,7 @@ package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -15,7 +16,7 @@ public class QueryDataTest {
 
     static Connection connection;
     static Statement statement;
-    static String dbName = "test";
+    static String dbName = TestUtils.camelToSnake(QueryDataTest.class);
     static String stbName = "meters";
     static String host = "127.0.0.1";
 
@@ -59,8 +60,10 @@ public class QueryDataTest {
 
     @After
     public void close() throws SQLException {
-        if (statement != null)
+        if (statement != null) {
+            statement.execute("drop database if exists " + dbName);
             statement.close();
+        }
         if (connection != null)
             connection.close();
     }

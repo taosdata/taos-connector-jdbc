@@ -5,17 +5,16 @@ import com.taosdata.jdbc.common.Column;
 import com.taosdata.jdbc.common.ColumnInfo;
 import com.taosdata.jdbc.common.SerializeBlock;
 import com.taosdata.jdbc.common.TableInfo;
-import com.taosdata.jdbc.enums.FeildBindType;
+import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.DateTimeUtils;
-import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.ws.entity.Action;
 import com.taosdata.jdbc.ws.entity.Code;
 import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.stmt2.entity.*;
+import io.netty.buffer.ByteBuf;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
@@ -85,14 +84,14 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
             }
             for (int i = 0; i < fields.size(); i++){
                 Field field = fields.get(i);
-                if (field.getBindType() == FeildBindType.TAOS_FIELD_TBNAME.getValue()){
+                if (field.getBindType() == FieldBindType.TAOS_FIELD_TBNAME.getValue()){
                     toBeBindTableNameIndex = i;
                 }
-                if (field.getBindType() == FeildBindType.TAOS_FIELD_TAG.getValue()){
+                if (field.getBindType() == FieldBindType.TAOS_FIELD_TAG.getValue()){
                     toBeBindTagCount++;
                     tagTypeList.add((int) field.getFieldType());
                 }
-                if (field.getBindType() == FeildBindType.TAOS_FIELD_COL.getValue()){
+                if (field.getBindType() == FieldBindType.TAOS_FIELD_COL.getValue()){
                     toBeBindColCount++;
                     colTypeList.add((int) field.getFieldType());
                 }
@@ -643,18 +642,18 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
 
     public static void bindAllToTableInfo(List<Field> fields, Map<Integer, Column> colOrderedMap, TableInfo tableInfo){
         for (int index = 0; index < fields.size(); index++) {
-            if (fields.get(index).getBindType() == FeildBindType.TAOS_FIELD_TBNAME.getValue()) {
+            if (fields.get(index).getBindType() == FieldBindType.TAOS_FIELD_TBNAME.getValue()) {
                 if (colOrderedMap.get(index + 1).getData() instanceof byte[]){
                     tableInfo.setTableName(ByteBuffer.wrap((byte[]) colOrderedMap.get(index + 1).getData()));
                 }
                 if (colOrderedMap.get(index + 1).getData() instanceof String){
                     tableInfo.setTableName(ByteBuffer.wrap(((String) colOrderedMap.get(index + 1).getData()).getBytes()));
                 }
-            } else if (fields.get(index).getBindType() == FeildBindType.TAOS_FIELD_TAG.getValue()) {
+            } else if (fields.get(index).getBindType() == FieldBindType.TAOS_FIELD_TAG.getValue()) {
                 LinkedList<Object> list = new LinkedList<>();
                 list.add(colOrderedMap.get(index + 1).getData());
                 tableInfo.getTagInfo().add(new ColumnInfo(index + 1, list, fields.get(index).getFieldType()));
-            } else if (fields.get(index).getBindType() == FeildBindType.TAOS_FIELD_COL.getValue()) {
+            } else if (fields.get(index).getBindType() == FieldBindType.TAOS_FIELD_COL.getValue()) {
                 LinkedList<Object> list = new LinkedList<>();
                 list.add(colOrderedMap.get(index + 1).getData());
                 tableInfo.getDataList().add(new ColumnInfo(index + 1, list, fields.get(index).getFieldType()));
@@ -1086,7 +1085,7 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
             throw new SQLException("batch data is empty");
         }
 
-        byte[] rawBlock;
+        ByteBuf rawBlock;
         try {
             rawBlock = SerializeBlock.getStmt2BindBlock(reqId, stmtId, tableInfoMap, toBeBindTableNameIndex, toBeBindTagCount, toBeBindColCount, precision);
         } finally {
@@ -1113,25 +1112,6 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
     @Override
     public void columnDataExecuteBatch() throws SQLException {
         executeBatchImpl();
-    }
-
-    public int columnDataExecuteBatch(byte[] data) throws SQLException {
-        // bind
-        Stmt2Resp bindResp = (Stmt2Resp) transport.send(Action.STMT2_BIND.getAction(),
-                reqId, data);
-        if (Code.SUCCESS.getCode() != bindResp.getCode()) {
-            throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
-        }
-
-        // execute
-        Request request = RequestFactory.generateExec(stmtId, reqId);
-        Stmt2ExecResp resp = (Stmt2ExecResp) transport.send(request);
-        if (Code.SUCCESS.getCode() != resp.getCode()) {
-            throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
-        }
-
-        this.affectedRows = resp.getAffected();
-        return this.affectedRows;
     }
 
     public void columnDataCloseBatch() throws SQLException {

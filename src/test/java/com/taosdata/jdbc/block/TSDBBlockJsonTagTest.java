@@ -5,7 +5,9 @@ import com.taosdata.jdbc.TSDBPreparedStatement;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
+import com.taosdata.jdbc.cases.UnsignedNumberRestfulTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.MethodSorters;
@@ -21,7 +23,7 @@ import java.util.*;
 @TestTarget(alias = "JsonTag", author = "huolibo", version = "2.0.38")
 public class TSDBBlockJsonTagTest {
     private static String host = "127.0.0.1";
-    private static final String dbName = "json_tag_test";
+    private static final String dbName = TestUtils.camelToSnake(TSDBBlockJsonTagTest.class);
     private static Connection connection;
     private static Statement statement;
     private static final String superSql = "create table if not exists jsons1(ts timestamp, dataInt int, dataBool bool, dataStr nchar(50), dataStrBin binary(150)) tags(jtag json)";

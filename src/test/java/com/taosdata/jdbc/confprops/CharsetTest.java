@@ -2,6 +2,8 @@ package com.taosdata.jdbc.confprops;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Test;
@@ -11,6 +13,7 @@ import java.util.Properties;
 
 public class CharsetTest {
     private static final String host = "127.0.0.1";
+    private String dbName = TestUtils.camelToSnake(CharsetTest.class);
 
     @Test
     public void test() throws SQLException {
@@ -26,9 +29,9 @@ public class CharsetTest {
              Statement stmt = conn.createStatement()) {
 
             // when
-            stmt.execute("drop database if exists test");
-            stmt.execute("create database if not exists test");
-            stmt.execute("use test");
+            stmt.execute("drop database if exists " + dbName);
+            stmt.execute("create database if not exists " + dbName);
+            stmt.execute("use " + dbName);
             stmt.execute("create table weather(ts timestamp, temperature nchar(10))");
             stmt.execute("insert into weather values(now, '北京')");
 
@@ -42,8 +45,8 @@ public class CharsetTest {
         }
     }
 
-    @AfterClass
-    public static void afterClass(){
+    @After
+    public void afterClass(){
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
             url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
@@ -53,7 +56,7 @@ public class CharsetTest {
 
         try (Connection conn = DriverManager.getConnection(url, props);
              Statement stmt = conn.createStatement()) {
-            stmt.execute("drop database if exists test");
+            stmt.execute("drop database if exists " + dbName);
         } catch (SQLException e) {
             e.printStackTrace();
         }

@@ -5,20 +5,18 @@ import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
-import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.SpecifyAddress;
-import org.junit.*;
+import com.taosdata.jdbc.utils.TestUtils;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.FixMethodOrder;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.URISyntaxException;
 import java.sql.*;
-import java.time.Duration;
-import java.util.Collections;
 import java.util.Properties;
-import java.util.concurrent.TimeoutException;
 
 
 @RunWith(CatalogRunner.class)
@@ -30,7 +28,7 @@ public class WSConFailOverTest {
 
     private static final String hostB = "127.0.0.1";
     private static final int portB = 9041;
-    private static final String db_name = "test";
+    private final String db_name = TestUtils.camelToSnake(WSConFailOverTest.class);
     private static final String tableName = "meters";
     private Connection connection;
     private TaosAdapterMock taosAdapterMock;
@@ -44,7 +42,7 @@ public class WSConFailOverTest {
             for (int i = 0; i < 4; i++){
                 try {
                     if (i == 2){
-                        taosAdapterMock.stopServer();
+                        taosAdapterMock.stop();
                     }
                     resultSet = statement.executeQuery("select ts from " + db_name + "." + tableName + " limit 1;");
 
@@ -77,10 +75,6 @@ public class WSConFailOverTest {
     public void before() throws SQLException, InterruptedException, IOException, URISyntaxException {
         taosAdapterMock = new TaosAdapterMock(9041);
         taosAdapterMock.start();
-
-        while (!taosAdapterMock.isReady()){
-            Thread.sleep(10);
-        }
 
         String url;
         url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
@@ -118,6 +112,9 @@ public class WSConFailOverTest {
     @After
     public void after() throws SQLException {
         if (null != connection) {
+            Statement statement = connection.createStatement();
+            statement.execute("drop database if exists " + db_name);
+            statement.close();
             connection.close();
         }
     }

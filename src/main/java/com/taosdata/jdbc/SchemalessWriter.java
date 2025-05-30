@@ -31,7 +31,7 @@ import java.util.concurrent.atomic.AtomicLong;
 @Deprecated
 // will be removed in future, please use writer functions in connection object.
 public class SchemalessWriter implements AutoCloseable {
-    private final org.slf4j.Logger log = LoggerFactory.getLogger(SchemalessWriter.class);
+    private static final org.slf4j.Logger log = LoggerFactory.getLogger(SchemalessWriter.class);
 
     // jni
     private TSDBJNIConnector connector;
@@ -150,9 +150,7 @@ public class SchemalessWriter implements AutoCloseable {
                     .setUseSsl(useSSL)
                     .build();
             InFlightRequest inFlightRequest = new InFlightRequest(timeout, 20);
-            this.transport = new Transport(WSFunction.SCHEMALESS, param, inFlightRequest);
-
-            this.transport.setTextMessageHandler(message -> {
+            param.setTextMessageHandler(message -> {
                 try {
                     JsonNode jsonObject = JsonUtil.getObjectReader().readTree(message);
                     ObjectReader actionReader = JsonUtil.getObjectReader(CommonResp.class);
@@ -165,6 +163,10 @@ public class SchemalessWriter implements AutoCloseable {
                     log.error("Error processing message", e);
                 }
             });
+
+            this.transport = new Transport(WSFunction.SCHEMALESS, param, inFlightRequest);
+
+
 
             transport.checkConnection(connectTime);
 
