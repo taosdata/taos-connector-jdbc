@@ -79,7 +79,7 @@ public class ConsumerParam {
     public ConsumerParam(Properties properties) throws SQLException {
         if (null != properties.getProperty(TMQConstants.CONNECT_URL)) {
             String url = properties.getProperty(TMQConstants.CONNECT_URL);
-            StringUtils.parseUrl(url, properties);
+            StringUtils.parseUrl(url, properties, false);
         }
         if (null != properties.getProperty(TMQConstants.CONNECT_USER))
             properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, properties.getProperty(TMQConstants.CONNECT_USER));
@@ -96,7 +96,7 @@ public class ConsumerParam {
         }
 
         groupId = properties.getProperty(TMQConstants.GROUP_ID);
-        clientId = properties.getProperty(TMQConstants.CLIENT_ID);
+                                                                        clientId = properties.getProperty(TMQConstants.CLIENT_ID);
         offsetRest = properties.getProperty(TMQConstants.AUTO_OFFSET_RESET);
         autoCommitInterval = Long.parseLong(properties.getProperty(TMQConstants.AUTO_COMMIT_INTERVAL, "5000"));
         if (autoCommitInterval < 0){
