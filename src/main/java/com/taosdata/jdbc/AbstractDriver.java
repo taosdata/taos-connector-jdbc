@@ -54,13 +54,6 @@ public abstract class AbstractDriver implements Driver {
         propertyInfo[4] = passwordProp;
         return propertyInfo;
     }
-
-    protected Properties parseURL(String url, Properties defaults) {
-        return StringUtils.parseUrl(url, defaults);
-    }
-
-
-
     protected Connection getWSConnection(String url, ConnectionParam param, Properties props) throws SQLException {
         if (log.isDebugEnabled()){
             log.debug("getWSConnection, url = {}", StringUtils.getBasicUrl(url));

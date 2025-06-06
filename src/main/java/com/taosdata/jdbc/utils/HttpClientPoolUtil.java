@@ -86,30 +86,6 @@ public class HttpClientPoolUtil {
         }
     }
 
-    /*** execute GET request ***/
-//    public static String execute(String uri) throws SQLException {
-//        HttpEntity httpEntity = null;
-//        String responseBody = "";
-//        HttpRequestBase method = getRequest(uri, HttpGet.METHOD_NAME);
-//        HttpContext context = HttpClientContext.create();
-//
-//        try (CloseableHttpResponse httpResponse = httpClient.execute(method, context)) {
-//            httpEntity = httpResponse.getEntity();
-//            if (httpEntity != null) {
-//                responseBody = EntityUtils.toString(httpEntity, StandardCharsets.UTF_8);
-//            }
-//        } catch (ClientProtocolException e) {
-//            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_Protocol_Exception, e.getMessage());
-//        } catch (IOException exception) {
-//            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, exception.getMessage());
-//        } finally {
-//            if (httpEntity != null) {
-//                EntityUtils.consumeQuietly(httpEntity);
-//            }
-//        }
-//        return responseBody;
-//    }
-
     public static String execute(String uri, String data, String auth) throws SQLException {
         return execute(uri, data, auth, null);
     }

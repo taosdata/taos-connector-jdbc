@@ -1,7 +1,10 @@
 package com.taosdata.jdbc.utils;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.TSDBError;
+import com.taosdata.jdbc.TSDBErrorNumbers;
 
+import java.sql.SQLException;
 import java.util.Properties;
 import java.util.StringTokenizer;
 
@@ -31,62 +34,109 @@ public class StringUtils {
         return true;
     }
 
-    public static Properties parseUrl(String url, Properties defaults) {
+    public static Properties parseHostPort(String hostPortDb, boolean isNative) throws SQLException {
+        Properties properties = new Properties();
+
+        // parse host and port
+        String host = hostPortDb;
+        String port = null;
+
+        // ipv6 address
+        if (hostPortDb.startsWith("[")) {
+            int endBracket = hostPortDb.indexOf(']');
+            if (endBracket != -1) {
+                // extract host
+                if (isNative){
+                    host = hostPortDb.substring(1, endBracket);
+                } else {
+                    host = hostPortDb.substring(0, endBracket + 1);
+                }
+
+                // if have port
+                if (endBracket + 1 < hostPortDb.length() &&
+                        hostPortDb.charAt(endBracket + 1) == ':') {
+                    port = hostPortDb.substring(endBracket + 2);
+                }
+            } else {
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "Invalid IPv6 address: " + hostPortDb);
+            }
+        }
+        // ipv4 address or hostname
+        else {
+            // find last ':'
+            int lastColon = hostPortDb.lastIndexOf(':');
+
+            if (lastColon != -1) {
+                host = hostPortDb.substring(0, lastColon);
+                port = hostPortDb.substring(lastColon + 1);
+            }
+        }
+
+        // handle Scope Identifier like fe80::1%eth0
+        if (host.contains("%")) {
+            host = host.replace("%", "%25");
+        }
+
+        // set property
+        if (!host.trim().isEmpty()) {
+            properties.setProperty(TSDBDriver.PROPERTY_KEY_HOST, host);
+        }
+        if (port != null && !port.trim().isEmpty()) {
+            properties.setProperty(TSDBDriver.PROPERTY_KEY_PORT, port);
+        }
+
+        return properties;
+    }
+
+    public static Properties parseUrl(String url, Properties defaults, boolean isNative) throws SQLException {
         Properties urlProps = (defaults != null) ? defaults : new Properties();
         if (StringUtils.isEmpty(url)) {
             return urlProps;
         }
 
-        // parse properties in url
-        int beginningOfSlashes = url.indexOf("//");
-        int index = url.indexOf("?");
-        if (index != -1) {
-            String paramString = url.substring(index + 1);
-            url = url.substring(0, index);
+        // parse parameters
+        int paramStart = url.indexOf("?");
+        if (paramStart != -1) {
+            String paramString = url.substring(paramStart + 1);
+            url = url.substring(0, paramStart);
             StringTokenizer queryParams = new StringTokenizer(paramString, "&");
             while (queryParams.hasMoreElements()) {
-                String parameterValuePair = queryParams.nextToken();
-                int indexOfEqual = parameterValuePair.indexOf("=");
-                String parameter = null;
-                String value = null;
-                if (indexOfEqual != -1) {
-                    parameter = parameterValuePair.substring(0, indexOfEqual);
-                    if (indexOfEqual + 1 < parameterValuePair.length()) {
-                        value = parameterValuePair.substring(indexOfEqual + 1);
+                String pair = queryParams.nextToken();
+                int eqIdx = pair.indexOf("=");
+                if (eqIdx != -1) {
+                    String key = pair.substring(0, eqIdx);
+                    String value = eqIdx + 1 < pair.length() ? pair.substring(eqIdx + 1) : "";
+                    if (!key.isEmpty() && !value.isEmpty()) {
+                        urlProps.setProperty(key, value);
                     }
-                }
-                if (value != null && value.length() > 0 && parameter.length() > 0) {
-                    urlProps.setProperty(parameter, value);
                 }
             }
         }
 
-        // parse Product Name
-        String dbProductName = url.substring(0, beginningOfSlashes);
+        // parse product name
+        int slashesStart = url.indexOf("//");
+        String dbProductName = url.substring(0, slashesStart);
         dbProductName = dbProductName.substring(dbProductName.indexOf(":") + 1);
         dbProductName = dbProductName.substring(0, dbProductName.indexOf(":"));
         urlProps.setProperty(TSDBDriver.PROPERTY_KEY_PRODUCT_NAME, dbProductName);
+
+        // extract host,port and dbname
+        String hostPortDb = url.substring(slashesStart + 2);
+
         // parse dbname
-        url = url.substring(beginningOfSlashes + 2);
-        int indexOfSlash = url.indexOf("/");
-        if (indexOfSlash != -1) {
-            if (indexOfSlash + 1 < url.length()) {
-                urlProps.setProperty(TSDBDriver.PROPERTY_KEY_DBNAME, url.substring(indexOfSlash + 1).toLowerCase());
+        int dbStart = hostPortDb.indexOf("/");
+        if (dbStart != -1) {
+            if (dbStart + 1 < hostPortDb.length()) {
+                urlProps.setProperty(TSDBDriver.PROPERTY_KEY_DBNAME,
+                        hostPortDb.substring(dbStart + 1).toLowerCase());
             }
-            url = url.substring(0, indexOfSlash);
+            hostPortDb = hostPortDb.substring(0, dbStart);
         }
-        // parse port
-        int indexOfColon = url.indexOf(":");
-        if (indexOfColon != -1) {
-            if (indexOfColon + 1 < url.length()) {
-                urlProps.setProperty(TSDBDriver.PROPERTY_KEY_PORT, url.substring(indexOfColon + 1));
-            }
-            url = url.substring(0, indexOfColon);
-        }
-        // parse host
-        if (url.length() > 0 && url.trim().length() > 0) {
-            urlProps.setProperty(TSDBDriver.PROPERTY_KEY_HOST, url);
-        }
+
+        // parse host and port
+        Properties hostPortProps = parseHostPort(hostPortDb, isNative);
+        urlProps.putAll(hostPortProps);
+
         return urlProps;
     }
 

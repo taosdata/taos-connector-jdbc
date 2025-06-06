@@ -1,5 +1,7 @@
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.utils.StringUtils;
+
 import java.sql.*;
 import java.util.Properties;
 import java.util.StringTokenizer;
@@ -222,62 +224,15 @@ public class TSDBDriver extends AbstractDriver {
     /**
      * example: jdbc:TAOS://127.0.0.1:0/db?user=root&password=your_password
      */
-    @Override
-    public Properties parseURL(String url, Properties defaults) {
-        Properties urlProps = (defaults != null) ? defaults : new Properties();
+    public Properties parseURL(String url, Properties defaults) throws SQLException {
         if (url == null || url.length() <= 0 || url.trim().length() <= 0)
-            return null;
+            return new Properties();
         if (!url.startsWith(URL_PREFIX) && !url.startsWith(URL_PREFIX1))
-            return null;
+            return new Properties();
 
         // parse properties
-        String urlForMeta = url;
-        int beginningOfSlashes = url.indexOf("//");
-        int index = url.indexOf("?");
-        if (index != -1) {
-            String paramString = url.substring(index + 1);
-            url = url.substring(0, index);
-            StringTokenizer queryParams = new StringTokenizer(paramString, "&");
-            while (queryParams.hasMoreElements()) {
-                String oneToken = queryParams.nextToken();
-                String[] pair = oneToken.split("=");
-
-                if ((pair[0] != null && pair[0].trim().length() > 0) && (pair[1] != null && pair[1].trim().length() > 0)) {
-                    urlProps.setProperty(pair[0].trim(), pair[1].trim());
-                }
-            }
-        }
-
-        // parse Product Name
-        String dbProductName = url.substring(0, beginningOfSlashes);
-        dbProductName = dbProductName.substring(dbProductName.indexOf(":") + 1);
-        dbProductName = dbProductName.substring(0, dbProductName.indexOf(":"));
-        urlProps.setProperty(TSDBDriver.PROPERTY_KEY_PRODUCT_NAME, dbProductName);
-
-        // parse database name
-        url = url.substring(beginningOfSlashes + 2);
-        int indexOfSlash = url.indexOf("/");
-        if (indexOfSlash != -1) {
-            if (indexOfSlash + 1 < url.length()) {
-                urlProps.setProperty(TSDBDriver.PROPERTY_KEY_DBNAME, url.substring(indexOfSlash + 1).toLowerCase());
-            }
-            url = url.substring(0, indexOfSlash);
-        }
-
-        // parse port
-        int indexOfColon = url.indexOf(":");
-        if (indexOfColon != -1) {
-            if (indexOfColon + 1 < url.length()) {
-                urlProps.setProperty(TSDBDriver.PROPERTY_KEY_PORT, url.substring(indexOfColon + 1));
-            }
-            url = url.substring(0, indexOfColon);
-        }
-
-        if (url.length() > 0 && url.trim().length() > 0) {
-            urlProps.setProperty(TSDBDriver.PROPERTY_KEY_HOST, url);
-        }
-
-        this.dbMetaData = new TSDBDatabaseMetaData(urlForMeta, urlProps.getProperty(TSDBDriver.PROPERTY_KEY_USER));
+        Properties urlProps = StringUtils.parseUrl(url, defaults,true);
+        this.dbMetaData = new TSDBDatabaseMetaData(url, urlProps.getProperty(TSDBDriver.PROPERTY_KEY_USER));
         return urlProps;
     }
 

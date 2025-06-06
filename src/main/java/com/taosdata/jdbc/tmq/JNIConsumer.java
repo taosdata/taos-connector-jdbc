@@ -3,6 +3,7 @@ package com.taosdata.jdbc.tmq;
 import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.common.Consumer;
 import com.taosdata.jdbc.enums.TmqMessageType;
+import com.taosdata.jdbc.utils.StringUtils;
 
 import java.sql.SQLException;
 import java.time.Duration;
@@ -21,6 +22,16 @@ public class JNIConsumer<V> implements  Consumer<V> {
 
     @Override
     public void create(Properties properties) throws SQLException {
+        if (!StringUtils.isEmpty(properties.getProperty(TMQConstants.CONNECT_IP)) &&
+                properties.getProperty(TMQConstants.CONNECT_IP).startsWith("[")
+        ) {
+            // IPv6 address
+            String ip = properties.getProperty(TMQConstants.CONNECT_IP);
+            if (ip.endsWith("]")) {
+                ip = ip.substring(1, ip.length() - 1);
+            }
+            properties.setProperty(TMQConstants.CONNECT_IP, ip);
+        }
         long config = connector.createConfig(properties);
         try {
             connector.createConsumer(config);

@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.tmq;
 
+import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.common.Consumer;
@@ -37,14 +38,13 @@ public class TaosConsumer<V> implements AutoCloseable {
 
         String servers = properties.getProperty(TMQConstants.BOOTSTRAP_SERVERS);
         if (!StringUtils.isEmpty(servers)) {
-            Arrays.stream(servers.split(",")).filter(s -> !StringUtils.isEmpty(s))
-                    .findFirst().ifPresent(s -> {
-                        String[] host = s.split(":");
-                        properties.setProperty(TMQConstants.CONNECT_IP, host[0]);
-                        if (host.length > 1) {
-                            properties.setProperty(TMQConstants.CONNECT_PORT, host[1]);
-                        }
-                    });
+            Properties tempProp = StringUtils.parseHostPort(servers, false);
+            if (!StringUtils.isEmpty(tempProp.getProperty(TSDBDriver.PROPERTY_KEY_HOST))) {
+                properties.setProperty(TMQConstants.CONNECT_IP, tempProp.getProperty(TSDBDriver.PROPERTY_KEY_HOST));
+            }
+            if (!StringUtils.isEmpty(tempProp.getProperty(TSDBDriver.PROPERTY_KEY_PORT))) {
+                properties.setProperty(TMQConstants.CONNECT_PORT, tempProp.getProperty(TSDBDriver.PROPERTY_KEY_PORT));
+            }
         }
 
         String s = properties.getProperty(TMQConstants.VALUE_DESERIALIZER);
