@@ -59,7 +59,7 @@ public class TSDBDriverTest {
     }
 
     @Test
-    public void testParseURL() {
+    public void testParseURL() throws SQLException {
         TSDBDriver driver = new TSDBDriver();
 
         String url = SpecifyAddress.getInstance().getJniWithoutUrl();
@@ -135,6 +135,19 @@ public class TSDBDriverTest {
         assertNull("failure - dbname should be null", actual.getProperty("dbname"));
     }
 
+    @Test
+    public void parseURLWithIPv6Host() throws SQLException {
+        TSDBDriver driver = new TSDBDriver();
+        Properties defaults = new Properties();
+        defaults.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
+        defaults.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+
+        Properties result = driver.parseURL("jdbc:TAOS://[2001:db8::1]:6030/db?charset=UTF-8", defaults);
+        assertEquals("failure - host should be 2001:db8::1", "2001:db8::1", result.getProperty(TSDBDriver.PROPERTY_KEY_HOST));
+        assertEquals("failure - port should be 6030", "6030", result.getProperty(TSDBDriver.PROPERTY_KEY_PORT));
+        assertEquals("failure - dbname should be db", "db", result.getProperty(TSDBDriver.PROPERTY_KEY_DBNAME));
+        assertEquals("failure - charset should be UTF-8", "UTF-8", result.getProperty(TSDBDriver.PROPERTY_KEY_CHARSET));
+    }
 
     @Test(expected = SQLException.class)
     public void acceptsURL() throws SQLException {
