@@ -5,6 +5,7 @@ import com.taosdata.jdbc.AbstractDriver;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.utils.StringUtils;
 
 import java.sql.*;
 import java.util.Properties;
@@ -31,7 +32,7 @@ public class WebSocketDriver extends AbstractDriver {
         if (!acceptsURL(url))
             return null;
 
-        Properties props = parseURL(url, info);
+        Properties props = StringUtils.parseUrl(url, info, false);
         ConnectionParam param = ConnectionParam.getParamWs(props);
         return getWSConnection(url, param, props);
 
@@ -50,7 +51,7 @@ public class WebSocketDriver extends AbstractDriver {
             info = new Properties();
         }
         if (acceptsURL(url)) {
-            info = parseURL(url, info);
+            info = StringUtils.parseUrl(url, info, false);
         }
         return getPropertyInfo(info);
     }
