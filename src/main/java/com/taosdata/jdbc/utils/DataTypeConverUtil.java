@@ -565,6 +565,7 @@ public class DataTypeConverUtil {
             case TSDB_DATA_TYPE_DECIMAL128:
             case TSDB_DATA_TYPE_DECIMAL64:
             case TSDB_DATA_TYPE_GEOMETRY:
+            case TSDB_DATA_TYPE_BLOB:
             case TSDB_DATA_TYPE_TIMESTAMP:{
                 return source;
             }

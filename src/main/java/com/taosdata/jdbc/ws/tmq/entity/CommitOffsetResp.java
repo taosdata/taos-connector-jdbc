@@ -5,6 +5,7 @@ import com.taosdata.jdbc.ws.entity.CommonResp;
 
 public class CommitOffsetResp extends CommonResp {
     private long timing;
+    @JsonProperty("topic")
     private String topic;
     @JsonProperty("vg_id")
     private int vgId;

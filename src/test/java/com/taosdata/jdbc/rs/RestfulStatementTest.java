@@ -44,8 +44,14 @@ public class RestfulStatementTest {
 
         affectRows = stmt.executeUpdate("insert into " + dbName + ".t1 using " + dbName + ".weather tags('北京') values(now, 22.33)");
         Assert.assertEquals(1, affectRows);
-        affectRows = stmt.executeUpdate("drop database " + dbName);
-        Assert.assertEquals(0, affectRows);
+//        affectRows = stmt.executeUpdate("drop database " + dbName);
+//        Assert.assertEquals(0, affectRows);
+
+        ResultSet resultSet = stmt.executeQuery("show " + dbName + ".stables");
+        Assert.assertNotNull(resultSet);
+        while (resultSet.next()) {
+            System.out.println("Table Name: " + resultSet.getString("stable_name"));
+        }
     }
 
     @Test

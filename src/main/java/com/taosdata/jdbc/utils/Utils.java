@@ -44,6 +44,9 @@ public class Utils {
     private static final Pattern ptn = Pattern.compile(".*?'");
 
     private static EventLoopGroup eventLoopGroup = null;
+
+    private Utils() {}
+
     public static String escapeSingleQuota(String origin) {
         Matcher m = ptn.matcher(origin);
         StringBuilder sb = new StringBuilder();

@@ -1,7 +1,9 @@
 package com.taosdata.jdbc.utils;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.introspect.VisibilityChecker;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.taosdata.jdbc.ws.tmq.meta.*;
@@ -47,6 +49,13 @@ public class JsonUtil {
         // timestamp format
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         objectMapper.setDateFormat(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss"));
+
+        // set visibility for fields, getters, setters, and constructors
+        objectMapper.setVisibility(VisibilityChecker.Std.defaultInstance()
+                .withFieldVisibility(JsonAutoDetect.Visibility.NONE)  // disable field detection
+                .withGetterVisibility(JsonAutoDetect.Visibility.PUBLIC_ONLY)  // only detect public getters
+                .withSetterVisibility(JsonAutoDetect.Visibility.PUBLIC_ONLY)  // only detect public setters
+                .withCreatorVisibility(JsonAutoDetect.Visibility.NONE));  // disable constructor detection
 
         // register JavaTimeModule
         objectMapper.registerModule(new JavaTimeModule());

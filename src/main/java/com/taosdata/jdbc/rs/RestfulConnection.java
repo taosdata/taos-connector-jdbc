@@ -13,6 +13,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Properties;
 
+@Deprecated
 public class RestfulConnection extends AbstractConnection {
 
     private final String host;

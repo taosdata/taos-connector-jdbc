@@ -13,13 +13,12 @@ public class CompletableFutureTimeout {
 
     public static <T> CompletableFuture<T> orTimeout(CompletableFuture<T> future, long timeout, TimeUnit unit, String msg) {
         final CompletableFuture<T> timeoutFuture = timeoutAfter(timeout, unit, msg);
+        future.whenComplete((result, throwable) -> {
+            if (future.isDone() && !timeoutFuture.isDone()) {
+                timeoutFuture.cancel(false);
+            }
+        });
         return future.applyToEither(timeoutFuture, Function.identity());
-    }
-
-    // return the default value when exception
-    public static <T> CompletableFuture<T> orTimeout(T t, CompletableFuture<T> future, long timeout, TimeUnit unit, String msg) {
-        final CompletableFuture<T> timeoutFuture = timeoutAfter(timeout, unit, msg);
-        return future.applyToEither(timeoutFuture, Function.identity()).exceptionally(throwable -> t);
     }
 
     private static <T> CompletableFuture<T> timeoutAfter(long timeout, TimeUnit unit, String msg) {

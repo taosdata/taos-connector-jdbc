@@ -1,18 +1,22 @@
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.TSDBPreparedStatement;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.TestUtils;
-import org.junit.*;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Properties;
 
-public class WSVarbinaryTest {
+public class WSBlobTest {
     static String host = "127.0.0.1";
-    static String dbName = TestUtils.camelToSnake(WSVarbinaryTest.class);
+    static String dbName = TestUtils.camelToSnake(WSBlobTest.class);;
     static String tableNative = "varbinary_noraml";
     static String tableStmt = "varbinary_stmt";
     static Connection connection;
@@ -21,57 +25,44 @@ public class WSVarbinaryTest {
     static String testStr = "20160601";
     static byte[] expectedArray = StringUtils.hexToBytes(testStr);
 
+
     @Test
     public void testInsert() throws Exception {
-        statement.executeUpdate("insert into " + dbName + "." + tableNative + " values(now, \"\\x" + testStr + "\")");
-        ResultSet resultSet = statement.executeQuery("select c1 from " + dbName + "." + tableNative);
-
+        statement.executeUpdate("insert into subt_a using " + dbName + "." + tableNative + "  tags( \"123456abcdef\")  values(now, \"\\x" + testStr + "\")");
+        ResultSet resultSet = statement.executeQuery("select c1, t1 from " + dbName + "." + tableNative);
         resultSet.next();
-        byte[] result1 = resultSet.getBytes(1);
-        Assert.assertArrayEquals(expectedArray, result1);
+        Assert.assertArrayEquals(expectedArray, resultSet.getBytes(1));
     }
-
 
     @Test
     public void testPrepare() throws SQLException {
-        TSWSPreparedStatement preparedStatement = (TSWSPreparedStatement) connection.prepareStatement("insert into " + dbName + "." + tableStmt + " values (?, ?)");
-        preparedStatement.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
+        TSDBPreparedStatement preparedStatement = (TSDBPreparedStatement) connection.prepareStatement("insert into ? using " + dbName + "." + tableStmt + "   tags(?)  values (?, ?)");
+        preparedStatement.setTableName("subt_b");
+        preparedStatement.setTagString(0, testStr);
 
-        preparedStatement.setBytes(2, expectedArray);
-        preparedStatement.addBatch();
-        preparedStatement.executeBatch();
-        ResultSet resultSet = statement.executeQuery("select c1 from " + dbName + "." + tableStmt);
-        while (resultSet.next()) {
-            Assert.assertArrayEquals(expectedArray, resultSet.getBytes(1));
-        }
-    }
-
-    @Test
-    public void testPrepareOld() throws SQLException {
-        TSWSPreparedStatement preparedStatement = (TSWSPreparedStatement) connection.prepareStatement("insert into " + dbName + "." + tableStmt + " values (?, ?)");
 
         long current = System.currentTimeMillis();
         ArrayList<Long> tsList = new ArrayList<>();
         tsList.add(current);
         preparedStatement.setTimestamp(0, tsList);
 
-        ArrayList<byte[]> list1 = new ArrayList<>();
-        list1.add(expectedArray);
-        preparedStatement.setVarbinary(1, list1, 20);
+        ArrayList<String> list = new ArrayList<>();
+        list.add(testStr);
+        preparedStatement.setString(1, list, 20);
 
         preparedStatement.columnDataAddBatch();
         preparedStatement.columnDataExecuteBatch();
         ResultSet resultSet = statement.executeQuery("select c1 from " + dbName + "." + tableStmt);
         while (resultSet.next()) {
-            Assert.assertArrayEquals(expectedArray, resultSet.getBytes(1));
+            Assert.assertArrayEquals(expectedArray, resultSet.getBytes(2));
         }
     }
 
     @BeforeClass
     public static void before() throws SQLException {
-        String url = SpecifyAddress.getInstance().getRestUrl();
+        String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata&batchfetch=true";
+            url = "jdbc:TAOS://" + host + ":6041/?user=root&password=taosdata";
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
@@ -81,8 +72,8 @@ public class WSVarbinaryTest {
         statement.executeUpdate("drop database if exists " + dbName);
         statement.executeUpdate("create database if not exists " + dbName);
         statement.executeUpdate("use " + dbName);
-        statement.executeUpdate("create table " + tableNative + " (ts timestamp, c1 varbinary(20))");
-        statement.executeUpdate("create table " + tableStmt + " (ts timestamp, c1 varbinary(20))");
+        statement.executeUpdate("create table " + tableNative + " (ts timestamp, c1 blob(20))  tags(t1 varchar(20))");
+        statement.executeUpdate("create table " + tableStmt + " (ts timestamp, c1 blob(20)) tags(t1 varchar(20))");
     }
 
     @AfterClass

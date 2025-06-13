@@ -1,12 +1,16 @@
 package com.taosdata.jdbc.ws.schemaless;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.taosdata.jdbc.ws.entity.Payload;
 
 public class InsertReq extends Payload {
-
+    @JsonProperty("protocol")
     private int protocol;
+    @JsonProperty("precision")
     private String precision;
+    @JsonProperty("data")
     private String data;
+    @JsonProperty("ttl")
     private int ttl;
 
     public int getProtocol() {

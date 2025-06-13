@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.ws.stmt;
 
+import com.taosdata.jdbc.common.TDBlob;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.TSWSPreparedStatement;
@@ -190,64 +191,9 @@ public class WsPstmtTest {
         pstmt.setNClob(1, null, 0);
     }
 
-    @Test (expected = SQLException.class)
+    @Test
     public void test104_SetBlob() throws SQLException {
-        pstmt.setBlob(1, new Blob() {
-            @Override
-            public long length() throws SQLException {
-                return 0;
-            }
-
-            @Override
-            public byte[] getBytes(long pos, int length) throws SQLException {
-                return new byte[0];
-            }
-
-            @Override
-            public InputStream getBinaryStream() throws SQLException {
-                return null;
-            }
-
-            @Override
-            public long position(byte[] pattern, long start) throws SQLException {
-                return 0;
-            }
-
-            @Override
-            public long position(Blob pattern, long start) throws SQLException {
-                return 0;
-            }
-
-            @Override
-            public int setBytes(long pos, byte[] bytes) throws SQLException {
-                return 0;
-            }
-
-            @Override
-            public int setBytes(long pos, byte[] bytes, int offset, int len) throws SQLException {
-                return 0;
-            }
-
-            @Override
-            public OutputStream setBinaryStream(long pos) throws SQLException {
-                return null;
-            }
-
-            @Override
-            public void truncate(long len) throws SQLException {
-
-            }
-
-            @Override
-            public void free() throws SQLException {
-
-            }
-
-            @Override
-            public InputStream getBinaryStream(long pos, long length) throws SQLException {
-                return null;
-            }
-        });
+        pstmt.setBlob(1, new TDBlob(new byte[]{1, 2, 3, 4, 5}, true));
     }
     @Test (expected = SQLException.class)
     public void test105_SetBlob2() throws SQLException {

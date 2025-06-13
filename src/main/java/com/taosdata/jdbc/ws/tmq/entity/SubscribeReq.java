@@ -6,8 +6,11 @@ import com.taosdata.jdbc.ws.entity.Payload;
 import java.util.HashMap;
 
 public class SubscribeReq extends Payload {
+    @JsonProperty("user")
     private String user;
+    @JsonProperty("password")
     private String password;
+    @JsonProperty("db")
     private String db;
     @JsonProperty("group_id")
     private String groupId;
@@ -25,9 +28,13 @@ public class SubscribeReq extends Payload {
     private String withTableName;
     @JsonProperty("enable_batch_meta")
     private String enableBatchMeta;
+    @JsonProperty("tz")
     private String tz;
+    @JsonProperty("app")
     private String app;
+    @JsonProperty("ip")
     private String ip;
+    @JsonProperty("config")
     private HashMap<String, String> config = new HashMap<>();
 
     public String getUser() {

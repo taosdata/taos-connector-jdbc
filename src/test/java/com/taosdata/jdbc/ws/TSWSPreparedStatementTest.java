@@ -998,7 +998,7 @@ public class TSWSPreparedStatementTest {
         pstmt_insert.setRef(1, null);
     }
 
-    @Test(expected = SQLFeatureNotSupportedException.class)
+    @Test
     public void setBlob() throws SQLException {
         pstmt_insert.setBlob(1, (Blob) null);
     }

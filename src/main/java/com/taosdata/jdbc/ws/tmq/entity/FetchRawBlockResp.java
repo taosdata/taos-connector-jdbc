@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.ws.tmq.entity;
 
 import com.taosdata.jdbc.TSDBError;
+import com.taosdata.jdbc.common.TDBlob;
 import com.taosdata.jdbc.enums.DataType;
 import com.taosdata.jdbc.enums.TmqMessageType;
 import com.taosdata.jdbc.rs.RestfulResultSet;
@@ -300,7 +301,7 @@ public class FetchRawBlockResp extends Response {
         int bytes = parseZigzagVariableByteInteger();
         parseZigzagVariableByteInteger(); // skip colid
         String name = parseName();
-        return new RestfulResultSet.Field(name, jdbcType, bytes, "", taosType, 0);
+        return new RestfulResultSet.Field(name, jdbcType, bytes, "", taosType, 0, 0);
     }
 
     private void skipSchema(boolean withTableName){
@@ -435,6 +436,7 @@ public class FetchRawBlockResp extends Response {
                 }
                 case TSDB_DATA_TYPE_BINARY:
                 case TSDB_DATA_TYPE_JSON:
+                case TSDB_DATA_TYPE_BLOB:
                 case TSDB_DATA_TYPE_VARBINARY:
                 case TSDB_DATA_TYPE_GEOMETRY:{
                     length = numOfRows * 4;
@@ -449,10 +451,19 @@ public class FetchRawBlockResp extends Response {
                             continue;
                         }
                         buffer.readerIndex(start + offset.get(m));
-                        int len = buffer.readShortLE() & 0xFFFF;
+                        int len;
+                        if (type != TSDB_DATA_TYPE_BLOB){
+                            len = buffer.readShortLE() & 0xFFFF;
+                        } else {
+                            len = buffer.readIntLE();
+                        }
                         byte[] tmp = new byte[len];
                         buffer.readBytes(tmp);
-                        col.add(tmp);
+                        if (type != TSDB_DATA_TYPE_BLOB) {
+                            col.add(tmp);
+                        } else {
+                            col.add(new TDBlob(tmp, true));
+                        }
                     }
                     break;
                 }

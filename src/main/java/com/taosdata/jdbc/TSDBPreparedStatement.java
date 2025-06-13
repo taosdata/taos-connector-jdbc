@@ -1,5 +1,6 @@
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.utils.BlobUtil;
 import com.taosdata.jdbc.utils.Utils;
 
 import java.io.InputStream;
@@ -600,6 +601,10 @@ public class TSDBPreparedStatement extends TSDBStatement implements TaosPrepareS
     }
 
     @Override
+    public void setBlob(int columnIndex, List<Blob> list, int size) throws SQLException {
+        setValueImpl(columnIndex, BlobUtil.getListBytes(list), TSDBConstants.TSDB_DATA_TYPE_BLOB, size);
+    }
+    @Override
     public void setVarbinary(int columnIndex, List<byte[]> list, int size) throws SQLException {
         setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_VARBINARY, size);
     }
@@ -876,6 +881,7 @@ public class TSDBPreparedStatement extends TSDBStatement implements TaosPrepareS
                     }
                     break;
                 }
+                case TSDBConstants.TSDB_DATA_TYPE_BLOB:
                 case TSDBConstants.TSDB_DATA_TYPE_VARBINARY:
                 case TSDBConstants.TSDB_DATA_TYPE_GEOMETRY: {
                     for (int j = 0; j < rows; ++j) {
@@ -883,7 +889,7 @@ public class TSDBPreparedStatement extends TSDBStatement implements TaosPrepareS
                         colDataList.position(j * col1.bytes);  // seek to the correct position
                         if (val != null) {
                             if (val.length > col1.bytes) {
-                                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "varbinary/geometry data too long");
+                                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "varbinary/geometry/blob data too long");
                             }
                             colDataList.put(val);
                             lengthList.putInt(val.length);
