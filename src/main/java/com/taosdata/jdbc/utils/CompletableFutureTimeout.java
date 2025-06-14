@@ -13,7 +13,7 @@ public class CompletableFutureTimeout {
 
     public static <T> CompletableFuture<T> orTimeout(CompletableFuture<T> future, long timeout, TimeUnit unit, String msg) {
         final CompletableFuture<T> timeoutFuture = timeoutAfter(timeout, unit, msg);
-        future.whenComplete((result, throwable) -> {
+        future.whenCompleteAsync((result, throwable) -> {
             if (future.isDone() && !timeoutFuture.isDone()) {
                 timeoutFuture.cancel(false);
             }

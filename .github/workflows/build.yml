@@ -26,6 +26,7 @@ jobs:
         os: [ Ubuntu-22.04 ]
         java: [ 8 ]
         maven: [ '3.6.3' ]
+        tdengine_version: [ 'base_ref', 'ver-3.3.6.0' ]
     runs-on: ${{ matrix.os }}
     steps:
       - name: checkout TDengine
@@ -33,7 +34,7 @@ jobs:
         with:
           repository: 'taosdata/TDengine'
           path: 'TDengine'
-          ref: ${{ github.base_ref }}
+          ref: ${{ matrix.tdengine_version == 'base_ref' && github.base_ref || matrix.tdengine_version }}
 
       - name: prepare install
         run: | 

@@ -6,6 +6,7 @@ import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.utils.HttpClientPoolUtil;
+import com.taosdata.jdbc.utils.StringUtils;
 import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
