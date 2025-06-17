@@ -16,6 +16,7 @@ import com.taosdata.jdbc.ws.entity.QueryResp;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.time.*;
 import java.time.format.DateTimeParseException;
@@ -26,21 +27,23 @@ import static com.taosdata.jdbc.utils.UnsignedDataUtils.*;
 
 public class BlockResultSet extends AbstractWSResultSet {
     private final ZoneId zoneId;
+    private final boolean varcharAsString;
 
     public BlockResultSet(Statement statement, Transport transport,
                           QueryResp response, String database, ZoneId zoneId) throws SQLException {
         super(statement, transport, response, database);
         this.zoneId = zoneId;
+        this.varcharAsString = transport.getConnectionParam().isVarcharAsString();
     }
 
 
-    public Object parseValue(int columnIndex) {
+    public Object parseValue(int columnIndex) throws SQLException {
         Object source = result.get(columnIndex - 1).get(rowIndex);
         if (null == source)
             return null;
 
         int type = fields.get(columnIndex - 1).getTaosType();
-        return DataTypeConverUtil.parseValue(type, source);
+        return DataTypeConverUtil.parseValue(type, source, this.varcharAsString);
     }
 
     @Override
@@ -59,7 +62,8 @@ public class BlockResultSet extends AbstractWSResultSet {
             return DateTimeUtils.getTimestamp((Instant) value, zoneId).toString();
 
         if (value instanceof byte[]) {
-            String charset = TaosGlobalConfig.getCharset();
+            // for websocket, only support utf8
+            String charset = StandardCharsets.UTF_8.name();
             try {
                 return new String((byte[]) value, charset);
             } catch (UnsupportedEncodingException e) {
@@ -295,7 +299,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             try {
                 if (type == String.class) {
                     if (value instanceof byte[]) {
-                        String charset = TaosGlobalConfig.getCharset();
+                        String charset = StandardCharsets.UTF_8.name();
                         return type.cast(new String((byte[]) value, charset));
                     }
                     return type.cast(value.toString());

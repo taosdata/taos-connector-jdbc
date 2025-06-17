@@ -429,4 +429,8 @@ public class Transport implements AutoCloseable {
     public boolean isConnected() {
         return clientArr.get(currentNodeIndex).isOpen();
     }
+
+    public final ConnectionParam getConnectionParam() {
+        return connectionParam;
+    }
 }
