@@ -11,6 +11,7 @@ import com.taosdata.jdbc.enums.TimestampPrecision;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -543,7 +544,7 @@ public class DataTypeConverUtil {
         return new BigDecimal(0);
     }
 
-    static public Object parseValue(int type, Object source){
+    static public Object parseValue(int type, Object source, boolean varcharAsString) throws SQLException {
         switch (type) {
             case TSDB_DATA_TYPE_BOOL: {
                 byte val = (byte) source;
@@ -559,7 +560,6 @@ public class DataTypeConverUtil {
             case TSDB_DATA_TYPE_BIGINT:
             case TSDB_DATA_TYPE_FLOAT:
             case TSDB_DATA_TYPE_DOUBLE:
-            case TSDB_DATA_TYPE_BINARY:
             case TSDB_DATA_TYPE_JSON:
             case TSDB_DATA_TYPE_VARBINARY:
             case TSDB_DATA_TYPE_DECIMAL128:
@@ -568,6 +568,19 @@ public class DataTypeConverUtil {
             case TSDB_DATA_TYPE_TIMESTAMP:{
                 return source;
             }
+            case TSDB_DATA_TYPE_BINARY:{
+                if (varcharAsString){
+                    String charset = StandardCharsets.UTF_8.name();
+                    try {
+                        return new String((byte[]) source, charset);
+                    } catch (UnsupportedEncodingException e) {
+                        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_ENCODING, "Unsupported encoding: " + charset);
+                    }
+                } else {
+                    return source;
+                }
+            }
+
             case TSDB_DATA_TYPE_USMALLINT: {
                 short val = (short) source;
                 return parseUSmallInt(val);
