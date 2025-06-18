@@ -6,6 +6,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.math.BigInteger;
+import java.sql.SQLException;
 import java.util.stream.Stream;
 
 public class UtilsTest {
@@ -215,5 +216,39 @@ public class UtilsTest {
         long v = bigInteger.longValue();
         short b = (short)(v & 0xFF);
         Assert.assertEquals(255, b);
+    }
+
+    @Test
+    public void testCompareVersions() throws SQLException {
+        // Major version comparison
+        Assert.assertEquals(1, Utils.compareVersions("4.0.0", "3.0.0"));
+        Assert.assertEquals(-1, Utils.compareVersions("2.0.0", "3.0.0"));
+
+        // Minor version comparison
+        Assert.assertEquals(1, Utils.compareVersions("3.1.0", "3.0.0"));
+        Assert.assertEquals(-1, Utils.compareVersions("3.0.0", "3.1.0"));
+
+        // Patch version comparison
+        Assert.assertEquals(1, Utils.compareVersions("3.0.1", "3.0.0"));
+        Assert.assertEquals(-1, Utils.compareVersions("3.0.0", "3.0.1"));
+
+        // Build number comparison
+        Assert.assertEquals(1, Utils.compareVersions("3.0.0.1", "3.0.0.0"));
+        Assert.assertEquals(-1, Utils.compareVersions("3.0.0.0", "3.0.0.1"));
+
+        // Pre-release version comparison
+        Assert.assertEquals(1, Utils.compareVersions("3.0.0", "3.0.0-alpha"));
+        Assert.assertEquals(-1, Utils.compareVersions("3.0.0-alpha", "3.0.0"));
+        Assert.assertEquals(1, Utils.compareVersions("3.0.0-beta", "3.0.0-alpha"));
+        Assert.assertEquals(-1, Utils.compareVersions("3.0.0-alpha", "3.0.0-beta"));
+
+        // Different version length comparison
+        Assert.assertTrue( Utils.compareVersions("3.3.6.0.0613", "3.3.6.0") > 0);
+        Assert.assertTrue(Utils.compareVersions("3.3.6.0", "3.3.6.0.0613") < 0);
+
+        // Equal versions comparison
+        Assert.assertEquals(0, Utils.compareVersions("3.3.6.0", "3.3.6.0"));
+        Assert.assertEquals(0, Utils.compareVersions("3.3.6.0.0613", "3.3.6.0.0613"));
+        Assert.assertEquals(0, Utils.compareVersions("3.3.6.5-alpha", "3.3.6.5-alpha"));
     }
 }

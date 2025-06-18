@@ -98,6 +98,7 @@ public abstract class TSDBConstants {
     public static final int MAX_UNSIGNED_SHORT = 65535;
     public static final long MAX_UNSIGNED_INT = 4294967295L;
     public static final String MAX_UNSIGNED_LONG = "18446744073709551615";
+    public static final String MIN_SUPPORT_VERSION = "3.3.6.0";
 
     public static String jdbcType2TaosTypeName(int jdbcType) throws SQLException {
         switch (jdbcType) {
