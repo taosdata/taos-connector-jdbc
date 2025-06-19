@@ -6,6 +6,7 @@ import com.taosdata.jdbc.ws.tmq.ConsumerAction;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -45,6 +46,19 @@ public class InFlightRequest {
     }
 
     public FutureResponse remove(String action, Long id) {
+        if (action.equals("version") && (id == null || id == 0) && futureMap.get(action).size() == 1) {
+            Optional<Long> optionalLong = futureMap.get(action).keySet().stream().findFirst();
+            if (optionalLong.isPresent()) {
+                id = optionalLong.get();
+            } else {
+                return null;
+            }
+            FutureResponse future = futureMap.get(action).remove(id);
+            if (null != future) {
+                semaphore.release();
+            }
+            return future;
+        }
         FutureResponse future = futureMap.get(action).remove(id);
         if (null != future) {
             semaphore.release();

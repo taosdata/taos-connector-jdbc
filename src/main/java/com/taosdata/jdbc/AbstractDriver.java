@@ -6,9 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.rs.ConnectionParam;
-import com.taosdata.jdbc.utils.JsonUtil;
-import com.taosdata.jdbc.utils.StringUtils;
-import com.taosdata.jdbc.utils.Utils;
+import com.taosdata.jdbc.utils.*;
 import com.taosdata.jdbc.ws.FutureResponse;
 import com.taosdata.jdbc.ws.InFlightRequest;
 import com.taosdata.jdbc.ws.Transport;
@@ -16,11 +14,14 @@ import com.taosdata.jdbc.ws.WSConnection;
 import com.taosdata.jdbc.ws.entity.*;
 import org.slf4j.LoggerFactory;
 
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.DriverPropertyInfo;
 import java.sql.SQLException;
 import java.util.Properties;
+
+import static com.taosdata.jdbc.TSDBConstants.MIN_SUPPORT_VERSION;
 
 public abstract class AbstractDriver implements Driver {
     private static final org.slf4j.Logger log = LoggerFactory.getLogger(AbstractDriver.class);
@@ -105,7 +106,8 @@ public abstract class AbstractDriver implements Driver {
             throw new SQLException("(0x" + Integer.toHexString(auth.getCode()) + "):" + "auth failure:" + auth.getMessage());
         }
 
-        TaosGlobalConfig.setCharset(props.getProperty(TSDBDriver.PROPERTY_KEY_CHARSET));
+        VersionUtil.checkVersion(auth.getVersion(), transport);
+        TaosGlobalConfig.setCharset(StandardCharsets.UTF_8.name());
         return new WSConnection(url, props, transport, param);
     }
 
