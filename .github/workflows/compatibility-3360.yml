@@ -28,20 +28,15 @@ jobs:
         maven: [ '3.6.3' ]
     runs-on: ${{ matrix.os }}
     steps:
-      - name: checkout TDengine
-        uses: actions/checkout@v3
-        with:
-          repository: 'taosdata/TDengine'
-          path: 'TDengine'
-          ref: ${{ github.base_ref }}
+      - name: get TDengine
+        run: |
+          wget https://github.com/taosdata/TDengine/releases/download/ver-3.3.6.0/TDengine-server-3.3.6.0-Linux-x64.tar.gz
 
-      - name: prepare install
-        run: | 
-          sudo apt-get install  -y libgeos-dev
-          geos-config --version
-     
-      - name: install TDengine
-        run: cd TDengine && mkdir debug && cd debug && cmake .. -DBUILD_JDBC=false -DBUILD_TOOLS=false -DBUILD_HTTP=false -DBUILD_DEPENDENCY_TESTS=false && make && sudo make install
+      - name: install
+        run: |
+          tar -zxf TDengine-server-3.3.6.0-Linux-x64.tar.gz
+          cd TDengine-server-3.3.6.0
+          sudo ./install.sh -e no
 
       - name: shell
         run: |
@@ -72,16 +67,6 @@ jobs:
         env:
           TDENGINE_CLOUD_URL: ${{ secrets.TDENGINE_CLOUD_URL }}
         run: mvn -B clean verify --file pom.xml
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: jdbc-workspace/target/site/jacoco/jacoco.xml
-          flags: unittests
-          name: codecov-umbrella
-          fail_ci_if_error: false
-          verbose: true
 
 
 
