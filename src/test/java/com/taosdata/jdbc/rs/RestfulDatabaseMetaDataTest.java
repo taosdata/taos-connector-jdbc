@@ -3,6 +3,7 @@ package com.taosdata.jdbc.rs;
 import com.taosdata.jdbc.AbstractDatabaseMetaData;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -17,7 +18,7 @@ public class RestfulDatabaseMetaDataTest {
     private static String url;
     private static Connection connection;
     private static RestfulDatabaseMetaData metaData;
-    private static final String dbName = "log_test";
+    private static final String dbName = TestUtils.camelToSnake(RestfulDatabaseMetaDataTest.class);
 
     @Test
     public void unwrap() throws SQLException {

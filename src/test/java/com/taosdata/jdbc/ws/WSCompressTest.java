@@ -11,6 +11,7 @@ import com.taosdata.jdbc.tmq.ConsumerRecords;
 import com.taosdata.jdbc.tmq.TMQConstants;
 import com.taosdata.jdbc.tmq.TaosConsumer;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 import org.junit.runner.RunWith;
 
@@ -26,7 +27,7 @@ import java.util.Properties;
 public class WSCompressTest {
     private static final String host = "127.0.0.1";
     private static final int port = 6041;
-    private static final String db_name = "ws_query";
+    private static final String db_name = TestUtils.camelToSnake(WSCompressTest.class);
     private static final String tableName = "compressA";
 
     private static final String topicName = "compress_topic";

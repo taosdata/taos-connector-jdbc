@@ -2,6 +2,7 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
@@ -13,7 +14,7 @@ public class PrepareStatementUseDBTest {
     private static final String host = "127.0.0.1";
     private static Connection conn;
     private static final String sql_insert = "insert into t1 values (?, ?)";
-    private static final String dbname = "stmt_ws_use_db1";
+    private static final String dbname = TestUtils.camelToSnake(PrepareStatementUseDBTest.class);
     private static final String use_db = "stmt_ws_use_db2";
 
     @Test

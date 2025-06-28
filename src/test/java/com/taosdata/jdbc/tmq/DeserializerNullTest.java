@@ -2,6 +2,7 @@ package com.taosdata.jdbc.tmq;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
 import java.sql.*;
@@ -12,7 +13,7 @@ import java.util.Properties;
 @FixMethodOrder
 public class DeserializerNullTest {
     private static final String host = "127.0.0.1";
-    private static final String dbName = "tmq_null_test";
+    private static final String dbName = TestUtils.camelToSnake(DeserializerNullTest.class);
     private static final String superTable = "st";
     private static String topic = "topic_with_bean";
 

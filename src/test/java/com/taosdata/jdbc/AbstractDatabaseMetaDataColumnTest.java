@@ -1,6 +1,7 @@
 package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
 import java.sql.*;
@@ -11,6 +12,7 @@ public class AbstractDatabaseMetaDataColumnTest {
     static Connection connection;
     static String host = "127.0.0.1";
     static DatabaseMetaData metaData;
+    static String dbName = TestUtils.camelToSnake(AbstractDatabaseMetaDataColumnTest.class);
 
     @Test
     public void getColumnsAllNull() throws SQLException {
@@ -191,18 +193,19 @@ public class AbstractDatabaseMetaDataColumnTest {
     }
 
     @BeforeClass
-    public static void before() throws SQLException {
+    public static void before() throws SQLException, InterruptedException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
             url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
         }
         connection = DriverManager.getConnection(url);
         metaData = connection.getMetaData();
+        TestUtils.waitTransactionDone(connection);
 
         try(Statement stmt = connection.createStatement()){
-            stmt.execute("drop database if exists test");
-            stmt.execute("create database if not exists test");
-            stmt.execute("use test");
+            stmt.execute("drop database if exists " + dbName);
+            stmt.execute("create database if not exists " + dbName);
+            stmt.execute("use " + dbName);
             stmt.execute("CREATE STABLE meters(ts timestamp,current float,voltage int,phase float) TAGS (location varchar(64),group_id int);");
             stmt.execute("INSERT INTO d1001 USING meters TAGS (\"California.SanFrancisco\", 2) VALUES \n" +
                     "    (\"2018-10-03 14:38:05\", 10.2, 220, 0.23),\n" +
@@ -214,6 +217,11 @@ public class AbstractDatabaseMetaDataColumnTest {
     @AfterClass
     public static void after() throws SQLException {
         if (connection != null) {
+            try (Statement statement = connection.createStatement()) {
+                statement.execute("drop database if exists " + dbName);
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
             connection.close();
         }
     }

@@ -1,6 +1,7 @@
 package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
 import java.math.BigDecimal;
@@ -16,7 +17,7 @@ import java.util.concurrent.TimeUnit;
 public class TSDBPreparedStatementPerfTest {
 
     private static final String host = "localhost";
-    private static final String dbName = "meters_perf_test";
+    private static final String dbName = TestUtils.camelToSnake(TSDBPreparedStatementPerfTest.class);
     private static final String superTable = "meters";
     private static Connection connection;
     private static Statement statement;

@@ -2,6 +2,7 @@ package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.StringUtils;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -13,7 +14,7 @@ import java.util.Properties;
 
 public class GeometryTest {
     static String host = "127.0.0.1";
-    static String dbName = "geometry_test";
+    static String dbName = TestUtils.camelToSnake(GeometryTest.class);
     static String tableNative = "geometry_noraml";
     static String tableStmt = "geometry_stmt";
     static Connection connection;

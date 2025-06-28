@@ -6,6 +6,7 @@ import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -18,7 +19,7 @@ import java.sql.*;
 @TestTarget(alias = "Schemaless", author = "huolibo", version = "2.0.36")
 public class SchemalessRawInsertNewTest {
     private static String host = "127.0.0.1";
-    private final String dbname = "test_schemaless_insert";
+    private final String dbname = TestUtils.camelToSnake(SchemalessRawInsertNewTest.class);
     private Connection conn;
 
     /**

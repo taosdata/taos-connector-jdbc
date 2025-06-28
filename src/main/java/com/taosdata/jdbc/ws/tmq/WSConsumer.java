@@ -10,6 +10,8 @@ import com.taosdata.jdbc.enums.TmqMessageType;
 import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.JsonUtil;
+import com.taosdata.jdbc.utils.Utils;
+import com.taosdata.jdbc.utils.VersionUtil;
 import com.taosdata.jdbc.ws.FutureResponse;
 import com.taosdata.jdbc.ws.InFlightRequest;
 import com.taosdata.jdbc.ws.Transport;
@@ -28,13 +30,16 @@ import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.taosdata.jdbc.TSDBConstants.MIN_SUPPORT_VERSION;
+
 public class WSConsumer<V> implements Consumer<V> {
-    private final org.slf4j.Logger log = LoggerFactory.getLogger(WSConsumer.class);
+    private static final org.slf4j.Logger log = LoggerFactory.getLogger(WSConsumer.class);
     private Transport transport;
     private ConsumerParam param;
     private TMQRequestFactory factory;
     private long lastCommitTime = 0;
     private long messageId = 0L;
+    private long lastMessageId = 0L;
 
     private Collection<String> topics;
     @Override
@@ -43,9 +48,8 @@ public class WSConsumer<V> implements Consumer<V> {
         param = new ConsumerParam(properties);
         InFlightRequest inFlightRequest = new InFlightRequest(param.getConnectionParam().getRequestTimeout()
                 , param.getConnectionParam().getMaxRequest());
-        transport = new Transport(WSFunction.TMQ, param.getConnectionParam(), inFlightRequest);
 
-        transport.setTextMessageHandler(message -> {
+        param.getConnectionParam().setTextMessageHandler(message -> {
             try {
                 JsonNode jsonObject = JsonUtil.getObjectReader().readTree(message);
                 ConsumerAction action = ConsumerAction.of(jsonObject.get("action").asText());
@@ -59,19 +63,21 @@ public class WSConsumer<V> implements Consumer<V> {
                 log.error("Error processing message", e);
             }
         });
-        transport.setBinaryMessageHandler(byteBuffer -> {
-            byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
-            byteBuffer.position(26);
-            // request_id
-            long id = byteBuffer.getLong();
-            byteBuffer.position(8);
+
+        param.getConnectionParam().setBinaryMessageHandler(byteBuf -> {
+            byteBuf.order(ByteOrder.LITTLE_ENDIAN);
+            byteBuf.readerIndex(26);
+            long id = byteBuf.readLongLE();
+            byteBuf.readerIndex(8);
             FutureResponse remove = inFlightRequest.remove(ConsumerAction.FETCH_RAW_DATA.getAction(), id);
             if (null != remove) {
-                FetchRawBlockResp fetchBlockResp = new FetchRawBlockResp(byteBuffer);
+                Utils.retainByteBuf(byteBuf);
+                FetchRawBlockResp fetchBlockResp = new FetchRawBlockResp(byteBuf);
                 remove.getFuture().complete(fetchBlockResp);
             }
         });
 
+        transport = new Transport(WSFunction.TMQ, param.getConnectionParam(), inFlightRequest);
         transport.checkConnection(param.getConnectionParam().getConnectTimeout());
     }
 
@@ -86,6 +92,8 @@ public class WSConsumer<V> implements Consumer<V> {
             throw new SQLException("subscribe topic error, code: (0x" + Integer.toHexString(response.getCode())
                     + "), message: " + response.getMessage());
         }
+
+        VersionUtil.checkVersion(response.getVersion(), transport);
         this.topics = topics;
     }
 
@@ -130,7 +138,7 @@ public class WSConsumer<V> implements Consumer<V> {
             }
         }
 
-        Request request = factory.generatePoll(timeout.toMillis());
+        Request request = factory.generatePoll(lastMessageId, timeout.toMillis());
         PollResp pollResp = (PollResp) transport.send(request);
 
         if (Code.SUCCESS.getCode() != pollResp.getCode()) {
@@ -140,13 +148,20 @@ public class WSConsumer<V> implements Consumer<V> {
             return ConsumerRecords.emptyRecord();
         }
 
+        messageId = pollResp.getMessageId();
+        lastMessageId = messageId;
+
         if (pollResp.getMessageType() == TmqMessageType.TMQ_RES_TABLE_META.getCode() || pollResp.getMessageType() == TmqMessageType.TMQ_RES_METADATA.getCode()) {
             Request fetchJsonMetaReq = factory.generateFetchJsonMeata(pollResp.getMessageId());
             FetchJsonMetaResp fetchJsonMetaResp = (FetchJsonMetaResp) transport.send(fetchJsonMetaReq);
             if (Code.SUCCESS.getCode() != fetchJsonMetaResp.getCode()) {
                 throw new SQLException("consumer fetch json meta error, code: (0x" + Integer.toHexString(fetchJsonMetaResp.getCode()) + "), message: " + fetchJsonMetaResp.getMessage());
             }
-            messageId = pollResp.getMessageId();
+
+            if (fetchJsonMetaResp.getData() == null || fetchJsonMetaResp.getData().getMetas() == null) {
+                return ConsumerRecords.emptyRecord();
+            }
+
             ConsumerRecords<V> records = new ConsumerRecords<>();
 
             for (Meta meta : fetchJsonMetaResp.getData().getMetas()){
@@ -169,11 +184,13 @@ public class WSConsumer<V> implements Consumer<V> {
         if (pollResp.getMessageType() != TmqMessageType.TMQ_RES_DATA.getCode()) {
             return ConsumerRecords.emptyRecord();
         }
-        messageId = pollResp.getMessageId();
-
 
         ConsumerRecords<V> records = new ConsumerRecords<>();
-        try (WSConsumerResultSet rs = new WSConsumerResultSet(transport, factory, pollResp.getMessageId(), pollResp.getDatabase())) {
+        try (WSConsumerResultSet rs = new WSConsumerResultSet(transport, factory, pollResp.getMessageId(), pollResp.getDatabase(), param.getConnectionParam().getZoneId())) {
+            if (deserializer instanceof MapEnhanceDeserializer){
+                ConsumerRecords<TMQEnhMap> resultRecords = rs.handleSubscribeDB(pollResp);
+                return (ConsumerRecords<V>) resultRecords;
+            }
             while (rs.next()) {
                 String topic = pollResp.getTopic();
                 String dbName = pollResp.getDatabase();

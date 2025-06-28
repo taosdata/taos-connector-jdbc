@@ -68,7 +68,7 @@ public class TMQRequestFactoryTest {
     @Test
     @Description("Generate Poll")
     public void testGeneratePoll() throws JsonProcessingException {
-        Request request = factory.generatePoll(1000);
+        Request request = factory.generatePoll(0, 1000);
         JsonNode jsonObject = objectMapper.readTree(request.toString());
         PollReq req = objectMapper.treeToValue(jsonObject.get("args"), PollReq.class);
         Assert.assertEquals(1, req.getReqId());

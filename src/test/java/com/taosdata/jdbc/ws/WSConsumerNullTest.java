@@ -3,6 +3,7 @@ package com.taosdata.jdbc.ws;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -19,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 
 public class WSConsumerNullTest {
     private static final String host = "127.0.0.1";
-    private static final String dbName = "tmq_ws_test_type";
+    private static final String dbName = TestUtils.camelToSnake(WSConsumerNullTest.class);
     private static final String superTable = "tmq_type";
     private static Connection connection;
     private static Statement statement;

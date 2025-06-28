@@ -20,6 +20,33 @@ public class ConsumerParam {
         knownKeys.add(TSDBDriver.PROPERTY_KEY_PASSWORD);
         knownKeys.add(TSDBDriver.PROPERTY_KEY_HOST);
         knownKeys.add(TSDBDriver.PROPERTY_KEY_PORT);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_TOKEN);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_PRODUCT_NAME);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_DBNAME);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_USE_SSL);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_CONFIG_DIR);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_LOCALE);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_CHARSET);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_BATCH_LOAD);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_BATCH_ERROR_IGNORE);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_CONNECT_MODE);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_VARCHAR_AS_STRING);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_ENABLE_COMPRESSION);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_HOST);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_PORT);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_RECONNECT_INTERVAL_MS);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_RECONNECT_RETRY_COUNT);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_DISABLE_SSL_CERT_VALIDATION);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_APP_IP);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_APP_NAME);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_TIME_ZONE);
+
+        knownKeys.add(TSDBDriver.HTTP_POOL_SIZE);
+        knownKeys.add(TSDBDriver.HTTP_KEEP_ALIVE);
+        knownKeys.add(TSDBDriver.HTTP_CONNECT_TIMEOUT);
+        knownKeys.add(TSDBDriver.HTTP_SOCKET_TIMEOUT);
 
         knownKeys.add(TMQConstants.CONNECT_USER);
         knownKeys.add(TMQConstants.CONNECT_PASS);
@@ -37,18 +64,6 @@ public class ConsumerParam {
         knownKeys.add(TMQConstants.VALUE_DESERIALIZER_ENCODING);
         knownKeys.add(TMQConstants.CONNECT_TYPE);
         knownKeys.add(TMQConstants.CONNECT_URL);
-
-        knownKeys.add(TSDBDriver.PROPERTY_KEY_ENABLE_COMPRESSION);
-        knownKeys.add(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT);
-        knownKeys.add(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_HOST);
-        knownKeys.add(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_PORT);
-        knownKeys.add(TSDBDriver.PROPERTY_KEY_RECONNECT_INTERVAL_MS);
-        knownKeys.add(TSDBDriver.PROPERTY_KEY_RECONNECT_RETRY_COUNT);
-        knownKeys.add(TSDBDriver.PROPERTY_KEY_DISABLE_SSL_CERT_VALIDATION);
-
-        knownKeys.add(TSDBDriver.PROPERTY_KEY_APP_IP);
-        knownKeys.add(TSDBDriver.PROPERTY_KEY_APP_NAME);
-        knownKeys.add(TSDBDriver.PROPERTY_KEY_TIME_ZONE);
     }
 
     private ConnectionParam connectionParam;
@@ -65,7 +80,7 @@ public class ConsumerParam {
     public ConsumerParam(Properties properties) throws SQLException {
         if (null != properties.getProperty(TMQConstants.CONNECT_URL)) {
             String url = properties.getProperty(TMQConstants.CONNECT_URL);
-            StringUtils.parseUrl(url, properties);
+            StringUtils.parseUrl(url, properties, false);
         }
         if (null != properties.getProperty(TMQConstants.CONNECT_USER))
             properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, properties.getProperty(TMQConstants.CONNECT_USER));
@@ -82,7 +97,7 @@ public class ConsumerParam {
         }
 
         groupId = properties.getProperty(TMQConstants.GROUP_ID);
-        clientId = properties.getProperty(TMQConstants.CLIENT_ID);
+                                                                        clientId = properties.getProperty(TMQConstants.CLIENT_ID);
         offsetRest = properties.getProperty(TMQConstants.AUTO_OFFSET_RESET);
         autoCommitInterval = Long.parseLong(properties.getProperty(TMQConstants.AUTO_COMMIT_INTERVAL, "5000"));
         if (autoCommitInterval < 0){

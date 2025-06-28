@@ -6,6 +6,7 @@ import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.tmq.meta.*;
 import org.junit.*;
 
@@ -16,7 +17,7 @@ import java.util.concurrent.TimeUnit;
 
 public class WSConsumerMetaTest {
     private static final String host = "127.0.0.1";
-    private static final String dbName = "tmq_ws_test";
+    private static final String dbName = TestUtils.camelToSnake(WSConsumerMetaTest.class);
     private static final String superTable = "st";
     private static final String superTableJson = "st_json";
     private static Connection connection;

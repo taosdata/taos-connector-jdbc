@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
+import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.TaosInfo;
 
 import java.io.UnsupportedEncodingException;
@@ -17,6 +18,7 @@ import java.util.Properties;
 import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.text.MessageFormat;
 
 import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_INVALID_VARIABLE;
 
@@ -33,7 +35,50 @@ public class TSDBJNIConnector {
     private int affectedRows = -1;
 
     static {
-        System.loadLibrary("taos");
+        final String name = "TD_LIBRARY_PATH";
+        final String taosLibName = "taos";
+        final String fn = System.mapLibraryName(taosLibName);
+        final String separator = System.getProperty("path.separator");
+        String lp = System.getProperty(name); // system property takes precedence over env
+        if (lp == null) {
+          lp = System.getenv(name);
+        }
+        try {
+          if (lp == null) {
+            // let system to choose how to search and load
+            System.loadLibrary(taosLibName);
+          } else {
+            // we'll traverse the paths and try to load one after another until one succeeds
+            final String[] paths = lp.split(separator);
+
+            boolean found = false;
+            for (final String path : paths) {
+              final String p  = path + "/" + fn;
+              try {
+                System.load(p);
+                found = true;
+              } catch (UnsatisfiedLinkError e) {
+              } catch (Exception e) {
+              }
+              if (found) break;
+            }
+            if (!found) {
+              final String pattern = "dynamic libraries `{0}` not found in: `{1}`";
+              final String msg = MessageFormat.format(pattern, fn, lp);
+              throw new RuntimeException(msg);
+            }
+          }
+        } catch (UnsatisfiedLinkError e) {
+          final String pattern = "You can set the `{0}` through environment variables or " +
+                           "Java system properties to specify the search path for dynamic libraries `{1}`";
+          final String msg = MessageFormat.format(pattern, name, fn);
+          throw new RuntimeException(msg, e);
+        } catch (Exception e) {
+          final String pattern = "You can set the `{0}` through environment variables or " +
+                           "Java system properties to specify the search path for dynamic libraries `{1}`";
+          final String msg = MessageFormat.format(pattern, name, fn);
+          throw new RuntimeException(msg, e);
+        }
     }
 
     /***********************************************************************/
@@ -42,7 +87,7 @@ public class TSDBJNIConnector {
         synchronized (LOCK) {
             if (!isInitialized) {
 
-                ObjectMapper objectMapper = new ObjectMapper();
+                ObjectMapper objectMapper = JsonUtil.getObjectMapper();
                 ObjectNode configJSON = objectMapper.createObjectNode();
 
                 for (String key : props.stringPropertyNames()) {

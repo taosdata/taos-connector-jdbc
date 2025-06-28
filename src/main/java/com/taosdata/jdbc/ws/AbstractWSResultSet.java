@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.concurrent.*;
 
 public abstract class AbstractWSResultSet extends AbstractResultSet {
-    private final Logger log = LoggerFactory.getLogger(Transport.class);
+    private static final Logger log = LoggerFactory.getLogger(AbstractWSResultSet.class);
 
     protected final Statement statement;
     protected final Transport transport;
@@ -65,7 +65,7 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
             }
             fields.add(new RestfulResultSet.Field(colName, jdbcType, length, "", taosType, scale));
         }
-        this.metaData = new RestfulResultSetMetaData(database, fields);
+        this.metaData = new RestfulResultSetMetaData(database, fields, transport.getConnectionParam().isVarcharAsString());
         this.timestampPrecision = response.getPrecision();
     }
 
@@ -83,6 +83,7 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
 
                     if (Code.SUCCESS.getCode() != resp.getCode()) {
                         blockData.setReturnCode(resp.getCode());
+                        blockData.setErrorMessage(resp.getMessage());
                         blockingQueueOut.put(blockData);
                         break;
                     }
@@ -152,7 +153,7 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
             }
 
             if (blockData.getReturnCode() != Code.SUCCESS.getCode()) {
-                throw TSDBError.createSQLException(blockData.getReturnCode(), "FETCH DATA ERROR");
+                throw TSDBError.createSQLException(blockData.getReturnCode(), "FETCH DATA ERROR:" + blockData.getErrorMessage());
             }
             this.reset();
             if (blockData.isCompleted()) {
@@ -163,20 +164,20 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
             this.result = blockData.getData();
             this.numOfRows = blockData.getNumOfRows();
         } else {
-
             byte[] version = {1, 0};
             FetchBlockNewResp resp = (FetchBlockNewResp) transport.send(Action.FETCH_BLOCK_NEW.getAction(),
                     reqId, queryId, 7, version);
             resp.init();
 
             if (Code.SUCCESS.getCode() != resp.getCode()) {
-                throw TSDBError.createSQLException(resp.getCode(), "FETCH DATA ERROR");
+                throw TSDBError.createSQLException(resp.getCode(), "FETCH DATA ERROR:" + resp.getMessage());
             }
             this.reset();
             BlockData blockData = BlockData.getEmptyBlockData(fields, timestampPrecision);
 
             if (resp.isCompleted() || isClosed) {
                 blockData.setCompleted(true);
+                isCompleted = true;
                 return false;
             }
 

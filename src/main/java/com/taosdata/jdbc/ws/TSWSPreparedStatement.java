@@ -16,4 +16,13 @@ public class TSWSPreparedStatement extends AbsWSPreparedStatement {
                                  Stmt2PrepareResp prepareResp) throws SQLException {
         super(transport, param, database, connection, sql, instanceId, prepareResp);
     }
+
+    public TSWSPreparedStatement(Transport transport,
+                                 ConnectionParam param,
+                                 String database,
+                                 AbstractConnection connection,
+                                 String sql,
+                                 Long instanceId) throws SQLException {
+        super(transport, param, database, connection, sql, instanceId);
+    }
 }

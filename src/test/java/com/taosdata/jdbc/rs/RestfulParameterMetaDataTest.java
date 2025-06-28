@@ -2,6 +2,7 @@ package com.taosdata.jdbc.rs;
 
 import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -19,7 +20,7 @@ public class RestfulParameterMetaDataTest {
     private static PreparedStatement pstmt_select;
     private static ParameterMetaData parameterMetaData_insert;
     private static ParameterMetaData parameterMetaData_select;
-    private static final String dbname = "test_pstmt";
+    private static final String dbname = TestUtils.camelToSnake(RestfulParameterMetaDataTest.class);
 
     @Test
     public void getParameterCount() throws SQLException {

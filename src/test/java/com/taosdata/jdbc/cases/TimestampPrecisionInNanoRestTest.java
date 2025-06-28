@@ -3,6 +3,7 @@ package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
 import java.sql.*;
@@ -13,7 +14,7 @@ import java.util.Properties;
 public class TimestampPrecisionInNanoRestTest {
 
     private static final String host = "127.0.0.1";
-    private static final String ns_timestamp_db = "ns_precision_test";
+    private static final String ns_timestamp_db = TestUtils.camelToSnake(TimestampPrecisionInNanoRestTest.class);
     private static final long timestamp1 = System.currentTimeMillis();
     private static final long timestamp2 = timestamp1 * 1000_000 + 123455;
     private static final long timestamp3 = (timestamp1 + 10) * 1000_000 + 123456;

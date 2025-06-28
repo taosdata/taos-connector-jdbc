@@ -5,6 +5,8 @@ import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
+import io.netty.util.ResourceLeakDetector;
 import org.junit.*;
 import org.junit.runner.RunWith;
 
@@ -19,7 +21,7 @@ import java.util.stream.IntStream;
 public class WSQueryTest {
     private static final String host = "127.0.0.1";
     private static final int port = 6041;
-    private static final String db_name = "ws_query";
+    private final String db_name = TestUtils.camelToSnake(WSQueryTest.class);
     private static final String tableName = "wq";
     private Connection connection;
 
@@ -74,5 +76,15 @@ public class WSQueryTest {
             }
             connection.close();
         }
+    }
+
+    @BeforeClass
+    public static void setUp() {
+        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+    }
+
+    @AfterClass
+    public static void tearDown() {
+        System.gc();
     }
 }

@@ -3,9 +3,10 @@ package com.taosdata.jdbc;
 import com.taosdata.jdbc.rs.RestfulResultSet;
 import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.DecimalUtil;
+import io.netty.buffer.ByteBuf;
+import io.netty.util.ReferenceCountUtil;
 
 import java.math.BigDecimal;
-import java.nio.ByteBuffer;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -19,21 +20,24 @@ public class BlockData {
     private List<List<Object>> data;
 
     private int returnCode;
+    private String errorMessage;
     private boolean isCompleted;
     private int numOfRows;
-    private ByteBuffer buffer;
+    private ByteBuf buffer;
     private List<RestfulResultSet.Field> fields;
     private final Semaphore semaphore;
     private int precision;
 
     public BlockData(List<List<Object>> data,
                      int returnCode,
+                     String errorMessage,
                      int numOfRows,
-                     ByteBuffer buffer,
+                     ByteBuf buffer,
                      List<RestfulResultSet.Field> fields,
                      int precision) {
         this.data = data;
         this.returnCode = returnCode;
+        this.errorMessage = errorMessage;
         this.numOfRows = numOfRows;
         this.buffer = buffer;
         this.fields = fields;
@@ -43,28 +47,27 @@ public class BlockData {
     }
 
     public static BlockData getEmptyBlockData(List<RestfulResultSet.Field> fields, int precision) {
-        return new BlockData(null, 0, 0, null, fields, precision);
+        return new BlockData(null, 0, "",0, null, fields, precision);
     }
 
     public void handleData() {
-
         try {
             int columns = fields.size();
             List<List<Object>> list = new ArrayList<>();
             if (buffer != null) {
-                buffer.getInt(); // buffer length
-                int pHeader = buffer.position() + 28 + columns * 5;
-                buffer.position(buffer.position() + 8);
-                this.numOfRows = buffer.getInt();
+                buffer.readIntLE(); // buffer length
+                int pHeader = buffer.readerIndex() + 28 + columns * 5;
+                buffer.skipBytes(8);
+                this.numOfRows = buffer.readIntLE();
 
-                buffer.position(pHeader);
-                int bitMapOffset = BitmapLen(numOfRows);
+                buffer.readerIndex(pHeader);
+                int bitMapOffset = bitmapLen(numOfRows);
 
                 List<Integer> lengths = new ArrayList<>(columns);
                 for (int i = 0; i < columns; i++) {
-                    lengths.add(buffer.getInt());
+                    lengths.add(buffer.readIntLE());
                 }
-                pHeader = buffer.position();
+                pHeader = buffer.readerIndex();
                 int length = 0;
                 for (int i = 0; i < columns; i++) {
                     List<Object> col = new ArrayList<>(numOfRows);
@@ -76,9 +79,9 @@ public class BlockData {
                         case TSDB_DATA_TYPE_UTINYINT: {
                             length = bitMapOffset;
                             byte[] tmp = new byte[bitMapOffset];
-                            buffer.get(tmp);
+                            buffer.readBytes(tmp);
                             for (int j = 0; j < numOfRows; j++) {
-                                byte b = buffer.get();
+                                byte b = buffer.readByte();
                                 if (isNull(tmp, j)) {
                                     col.add(null);
                                 } else {
@@ -91,9 +94,9 @@ public class BlockData {
                         case TSDB_DATA_TYPE_USMALLINT: {
                             length = bitMapOffset;
                             byte[] tmp = new byte[bitMapOffset];
-                            buffer.get(tmp);
+                            buffer.readBytes(tmp);
                             for (int j = 0; j < numOfRows; j++) {
-                                short s = buffer.getShort();
+                                short s = buffer.readShortLE();
                                 if (isNull(tmp, j)) {
                                     col.add(null);
                                 } else {
@@ -106,9 +109,9 @@ public class BlockData {
                         case TSDB_DATA_TYPE_UINT: {
                             length = bitMapOffset;
                             byte[] tmp = new byte[bitMapOffset];
-                            buffer.get(tmp);
+                            buffer.readBytes(tmp);
                             for (int j = 0; j < numOfRows; j++) {
-                                int in = buffer.getInt();
+                                int in = buffer.readIntLE();
                                 if (isNull(tmp, j)) {
                                     col.add(null);
                                 } else {
@@ -121,9 +124,9 @@ public class BlockData {
                         case TSDB_DATA_TYPE_UBIGINT: {
                             length = bitMapOffset;
                             byte[] tmp = new byte[bitMapOffset];
-                            buffer.get(tmp);
+                            buffer.readBytes(tmp);
                             for (int j = 0; j < numOfRows; j++) {
-                                long l = buffer.getLong();
+                                long l = buffer.readLongLE();
                                 if (isNull(tmp, j)) {
                                     col.add(null);
                                 } else {
@@ -135,9 +138,9 @@ public class BlockData {
                         case TSDB_DATA_TYPE_TIMESTAMP: {
                             length = bitMapOffset;
                             byte[] tmp = new byte[bitMapOffset];
-                            buffer.get(tmp);
+                            buffer.readBytes(tmp);
                             for (int j = 0; j < numOfRows; j++) {
-                                long l = buffer.getLong();
+                                long l = buffer.readLongLE();
                                 if (isNull(tmp, j)) {
                                     col.add(null);
                                 } else {
@@ -150,9 +153,9 @@ public class BlockData {
                         case TSDB_DATA_TYPE_FLOAT: {
                             length = bitMapOffset;
                             byte[] tmp = new byte[bitMapOffset];
-                            buffer.get(tmp);
+                            buffer.readBytes(tmp);
                             for (int j = 0; j < numOfRows; j++) {
-                                float f = buffer.getFloat();
+                                float f = buffer.readFloatLE();
                                 if (isNull(tmp, j)) {
                                     col.add(null);
                                 } else {
@@ -164,9 +167,9 @@ public class BlockData {
                         case TSDB_DATA_TYPE_DOUBLE: {
                             length = bitMapOffset;
                             byte[] tmp = new byte[bitMapOffset];
-                            buffer.get(tmp);
+                            buffer.readBytes(tmp);
                             for (int j = 0; j < numOfRows; j++) {
-                                double d = buffer.getDouble();
+                                double d = buffer.readDoubleLE();
                                 if (isNull(tmp, j)) {
                                     col.add(null);
                                 } else {
@@ -182,18 +185,18 @@ public class BlockData {
                             length = numOfRows * 4;
                             List<Integer> offset = new ArrayList<>(numOfRows);
                             for (int m = 0; m < numOfRows; m++) {
-                                offset.add(buffer.getInt());
+                                offset.add(buffer.readIntLE());
                             }
-                            int start = buffer.position();
+                            int start = buffer.readerIndex();
                             for (int m = 0; m < numOfRows; m++) {
                                 if (-1 == offset.get(m)) {
                                     col.add(null);
                                     continue;
                                 }
-                                buffer.position(start + offset.get(m));
-                                int len = buffer.getShort() & 0xFFFF;
+                                buffer.readerIndex(start + offset.get(m));
+                                int len = buffer.readShortLE() & 0xFFFF;
                                 byte[] tmp = new byte[len];
-                                buffer.get(tmp);
+                                buffer.readBytes(tmp);
                                 col.add(tmp);
                             }
                             break;
@@ -202,19 +205,19 @@ public class BlockData {
                             length = numOfRows * 4;
                             List<Integer> offset = new ArrayList<>(numOfRows);
                             for (int m = 0; m < numOfRows; m++) {
-                                offset.add(buffer.getInt());
+                                offset.add(buffer.readIntLE());
                             }
-                            int start = buffer.position();
+                            int start = buffer.readerIndex();
                             for (int m = 0; m < numOfRows; m++) {
                                 if (-1 == offset.get(m)) {
                                     col.add(null);
                                     continue;
                                 }
-                                buffer.position(start + offset.get(m));
-                                int len = (buffer.getShort() & 0xFFFF) / 4;
+                                buffer.readerIndex(start + offset.get(m));
+                                int len = (buffer.readShortLE() & 0xFFFF) / 4;
                                 int[] tmp = new int[len];
                                 for (int n = 0; n < len; n++) {
-                                    tmp[n] = buffer.getInt();
+                                    tmp[n] = buffer.readIntLE();
                                 }
                                 col.add(tmp);
                             }
@@ -225,10 +228,10 @@ public class BlockData {
                             int dataLen = type == TSDB_DATA_TYPE_DECIMAL128 ? 16 : 8;
                             length = bitMapOffset;
                             byte[] tmp = new byte[bitMapOffset];
-                            buffer.get(tmp);
+                            buffer.readBytes(tmp);
                             for (int j = 0; j < numOfRows; j++) {
                                 byte[] tb = new byte[dataLen];
-                                buffer.get(tb);
+                                buffer.readBytes(tb);
 
                                 if (isNull(tmp, j)) {
                                     col.add(null);
@@ -244,19 +247,20 @@ public class BlockData {
                             break;
                     }
                     pHeader += length + lengths.get(i);
-                    buffer.position(pHeader);
+                    buffer.readerIndex(pHeader);
                     list.add(col);
                 }
             }
             this.data = list;
             semaphore.release();
-        }catch (Exception e){
+        } catch (Exception e){
             e.printStackTrace();
+        } finally {
+            ReferenceCountUtil.safeRelease(buffer);
         }
-
     }
 
-    private int BitmapLen(int n) {
+    private int bitmapLen(int n) {
         return (n + 0x7) >> 3;
     }
 
@@ -282,9 +286,6 @@ public class BlockData {
         }
     }
 
-
-
-
     public List<List<Object>> getData() {
         return data;
     }
@@ -300,7 +301,13 @@ public class BlockData {
     public void setReturnCode(int returnCode) {
         this.returnCode = returnCode;
     }
+    public String getErrorMessage() {
+        return errorMessage;
+    }
 
+    public void setErrorMessage(String errorMessage) {
+        this.errorMessage = errorMessage;
+    }
     public int getNumOfRows() {
         return numOfRows;
     }
@@ -309,11 +316,11 @@ public class BlockData {
         this.numOfRows = numOfRows;
     }
 
-    public ByteBuffer getBuffer() {
+    public ByteBuf getBuffer() {
         return buffer;
     }
 
-    public void setBuffer(ByteBuffer buffer) {
+    public void setBuffer(ByteBuf buffer) {
         this.buffer = buffer;
     }
 

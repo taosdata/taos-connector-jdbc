@@ -59,7 +59,7 @@ public class TSDBDriverTest {
     }
 
     @Test
-    public void testParseURL() {
+    public void testParseURL() throws SQLException {
         TSDBDriver driver = new TSDBDriver();
 
         String url = SpecifyAddress.getInstance().getJniWithoutUrl();
@@ -135,6 +135,19 @@ public class TSDBDriverTest {
         assertNull("failure - dbname should be null", actual.getProperty("dbname"));
     }
 
+    @Test
+    public void parseURLWithIPv6Host() throws SQLException {
+        TSDBDriver driver = new TSDBDriver();
+        Properties defaults = new Properties();
+        defaults.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
+        defaults.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+
+        Properties result = driver.parseURL("jdbc:TAOS://[2001:db8::1]:6030/db?charset=UTF-8", defaults);
+        assertEquals("failure - host should be 2001:db8::1", "2001:db8::1", result.getProperty(TSDBDriver.PROPERTY_KEY_HOST));
+        assertEquals("failure - port should be 6030", "6030", result.getProperty(TSDBDriver.PROPERTY_KEY_PORT));
+        assertEquals("failure - dbname should be db", "db", result.getProperty(TSDBDriver.PROPERTY_KEY_DBNAME));
+        assertEquals("failure - charset should be UTF-8", "UTF-8", result.getProperty(TSDBDriver.PROPERTY_KEY_CHARSET));
+    }
 
     @Test(expected = SQLException.class)
     public void acceptsURL() throws SQLException {
@@ -224,21 +237,4 @@ public class TSDBDriverTest {
                 "jdbc:TAOS://" + specifyHost + ":0/?user=root&password=taosdata"
         };
     }
-
-    @Test
-    public void oo() throws SQLException {
-        int count = 1000000;
-        long startTime = System.nanoTime();
-        for (int i = 0; i < count; i++) {
-            System.currentTimeMillis();
-        }
-        long endTime = System.nanoTime();
-        long totalTime = endTime - startTime;
-        double averageTime = (double) totalTime / count;
-        System.out.println("调用 " + count + " 次 System.currentTimeMillis() 总共花费 " + totalTime + " 纳秒");
-        System.out.println("平均每次调用花费 " + averageTime + " 纳秒");
-        double callsPerSecond = 1000000000 / averageTime;
-        System.out.println("每秒大约可以调用 " + callsPerSecond + " 次");
-    }
-
 }

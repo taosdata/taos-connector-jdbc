@@ -7,6 +7,7 @@ import com.taosdata.jdbc.utils.HttpClientPoolUtil;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.Transport;
+import io.netty.buffer.ByteBuf;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
@@ -15,6 +16,7 @@ import java.sql.SQLException;
 import java.time.DateTimeException;
 import java.time.ZoneId;
 import java.util.Properties;
+import java.util.function.Consumer;
 
 public class ConnectionParam {
     private String host;
@@ -30,6 +32,7 @@ public class ConnectionParam {
     private int connectTimeout;
     private int requestTimeout;
     private int connectMode;
+    private boolean varcharAsString;
     private boolean enableCompression;
     private boolean enableAutoConnect;
 
@@ -47,6 +50,10 @@ public class ConnectionParam {
     private boolean strictCheck;
     private int retryTimes;
     private String asyncWrite;
+    private String pbsMode;
+
+    private Consumer<String> textMessageHandler;
+    private Consumer<ByteBuf> binaryMessageHandler;
     static public final int CONNECT_MODE_BI = 1;
 
     private ConnectionParam(Builder builder) {
@@ -62,6 +69,7 @@ public class ConnectionParam {
         this.connectTimeout = builder.connectTimeout;
         this.requestTimeout = builder.requestTimeout;
         this.connectMode = builder.connectMode;
+        this.varcharAsString = builder.varcharAsString;
         this.enableCompression = builder.enableCompression;
         this.slaveClusterHost = builder.slaveClusterHost;
         this.slaveClusterPort = builder.slaveClusterPort;
@@ -78,6 +86,9 @@ public class ConnectionParam {
         this.strictCheck = builder.strictCheck;
         this.retryTimes = builder.retryTimes;
         this.asyncWrite = builder.asyncWrite;
+        this.textMessageHandler = builder.textMessageHandler;
+        this.binaryMessageHandler = builder.binaryMessageHandler;
+        this.pbsMode = builder.pbsMode;
     }
 
     public void setHost(String host) {
@@ -195,6 +206,10 @@ public class ConnectionParam {
     public void setAsyncWrite(String asyncWrite) {
         this.asyncWrite = asyncWrite;
     }
+
+    public void setPbsMode(String pbsMode) {
+        this.pbsMode = pbsMode;
+    }
     public String getHost() {
         return host;
     }
@@ -234,6 +249,9 @@ public class ConnectionParam {
     }
     public int getConnectMode() {
         return connectMode;
+    }
+    public boolean isVarcharAsString() {
+        return varcharAsString;
     }
     public boolean isEnableCompression() {
         return enableCompression;
@@ -291,6 +309,27 @@ public class ConnectionParam {
     public String getAsyncWrite() {
         return asyncWrite;
     }
+
+    public String getPbsMode() {
+        return pbsMode;
+    }
+
+    public Consumer<String> getTextMessageHandler() {
+        return textMessageHandler;
+    }
+
+    public void setTextMessageHandler(Consumer<String> textMessageHandler) {
+        this.textMessageHandler = textMessageHandler;
+    }
+
+    public Consumer<ByteBuf> getBinaryMessageHandler() {
+        return binaryMessageHandler;
+    }
+
+    public void setBinaryMessageHandler(Consumer<ByteBuf> binaryMessageHandler) {
+        this.binaryMessageHandler = binaryMessageHandler;
+    }
+
     public static ConnectionParam getParamWs(Properties perperties) throws SQLException {
         ConnectionParam connectionParam = getParam(perperties);
         if (connectionParam.getTz() == null
@@ -369,6 +408,8 @@ public class ConnectionParam {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "unsupported connect mode");
         }
 
+        boolean varcharAsString = Boolean.parseBoolean(properties.getProperty(TSDBDriver.PROPERTY_KEY_VARCHAR_AS_STRING, "false"));
+
         String slaveClusterHost = properties.getProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_HOST, "");
         String slaveClusterPort = properties.getProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_PORT, "");
 
@@ -430,6 +471,11 @@ public class ConnectionParam {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "PROPERTY_KEY_ASYNC_WRITE only support STMT");
         }
 
+        String pbsMode = properties.getProperty(TSDBDriver.PROPERTY_KEY_PBS_MODE, "");
+        if (!pbsMode.equals("") && !pbsMode.equalsIgnoreCase("line")){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "PROPERTY_KEY_PBS_MODE only support line");
+        }
+
         return new Builder(host, port)
                 .setDatabase(database)
                 .setCloudToken(cloudToken)
@@ -440,6 +486,7 @@ public class ConnectionParam {
                 .setConnectionTimeout(connectTimeout)
                 .setRequestTimeout(requestTimeout)
                 .setConnectMode(connectMode)
+                .setVarcharAsString(varcharAsString)
                 .setEnableCompression(enableCompression)
                 .setSlaveClusterHost(slaveClusterHost)
                 .setSlaveClusterPort(slaveClusterPort)
@@ -456,6 +503,7 @@ public class ConnectionParam {
                 .setStrictCheck(strictCheck)
                 .setRetryTimes(retryTimes)
                 .setAsyncWrite(asyncWrite)
+                .setPbsMode(pbsMode)
                 .build();
     }
 
@@ -472,6 +520,7 @@ public class ConnectionParam {
         private int connectTimeout;
         private int requestTimeout;
         private int connectMode;
+        private boolean varcharAsString;
 
         private boolean enableCompression;
         private boolean enableAutoReconnect;
@@ -490,6 +539,10 @@ public class ConnectionParam {
         private boolean strictCheck;
         private int retryTimes;
         private String asyncWrite;
+        private String pbsMode;
+
+        private Consumer<String> textMessageHandler;
+        private Consumer<ByteBuf> binaryMessageHandler;
 
         public Builder(String host, String port) {
             this.host = host;
@@ -541,6 +594,10 @@ public class ConnectionParam {
             return this;
         }
 
+        public Builder setVarcharAsString(boolean varcharAsString) {
+            this.varcharAsString = varcharAsString;
+            return this;
+        }
         public Builder setEnableCompression(boolean enableCompression) {
             this.enableCompression = enableCompression;
             return this;
@@ -616,6 +673,20 @@ public class ConnectionParam {
 
         public Builder setAsyncWrite(String asyncWrite) {
             this.asyncWrite = asyncWrite;
+            return this;
+        }
+
+        public Builder setPbsMode(String pbsMode) {
+            this.pbsMode = pbsMode;
+            return this;
+        }
+        public Builder setTextMessageHandler(Consumer<String> textMessageHandler) {
+            this.textMessageHandler = textMessageHandler;
+            return this;
+        }
+
+        public Builder setBinaryMessageHandler(Consumer<ByteBuf> binaryMessageHandler) {
+            this.binaryMessageHandler = binaryMessageHandler;
             return this;
         }
         public ConnectionParam build() {

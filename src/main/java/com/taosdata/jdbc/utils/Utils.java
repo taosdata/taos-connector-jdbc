@@ -3,8 +3,20 @@ package com.taosdata.jdbc.utils;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
+import com.taosdata.jdbc.TSDBError;
+import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.ws.entity.ConnectReq;
+import com.taosdata.jdbc.ws.tmq.WSConsumer;
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ResourceLeakDetector;
+import io.netty.util.concurrent.DefaultThreadFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Constructor;
 import java.net.InetAddress;
@@ -17,18 +29,22 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class Utils {
-
+    private static final Logger log = LoggerFactory.getLogger(Utils.class);
     private static final ForkJoinPool forkJoinPool = new ForkJoinPool();
     private static final Pattern ptn = Pattern.compile(".*?'");
+
+    private static EventLoopGroup eventLoopGroup = null;
     public static String escapeSingleQuota(String origin) {
         Matcher m = ptn.matcher(origin);
         StringBuilder sb = new StringBuilder();
@@ -204,6 +220,116 @@ public class Utils {
                 rs.next();
                 return rs.getInt(1);
             }
+        }
+    }
+
+    public static void initEventLoopGroup() {
+        // Initialize the EventLoopGroup
+        // This is just a placeholder, you need to implement the actual initialization logic
+        // For example, you might want to use NioEventLoopGroup or another implementation
+        // based on your requirements.
+        // Example:
+        //
+        eventLoopGroup = new NioEventLoopGroup(0, new DefaultThreadFactory("netty-eventloop", true));
+        //ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+    }
+    public static EventLoopGroup getEventLoopGroup() {
+        return eventLoopGroup;
+    }
+
+    public static void releaseByteBuf(ByteBuf byteBuf){
+        if (log.isTraceEnabled()){
+            String stackTrace = Arrays.stream(Thread.currentThread().getStackTrace())
+                    .limit(5)
+                    .map(StackTraceElement::toString)
+                    .collect(Collectors.joining("\n\t"));
+
+            log.trace("ByteBuf release called, addr: {}, refCnt: {}, Caller Stack Trace:{}}",
+                    Integer.toHexString(System.identityHashCode(byteBuf)),
+                    byteBuf.refCnt(),
+                    stackTrace
+            );
+        }
+
+        if (byteBuf.refCnt() > 0){
+            ReferenceCountUtil.safeRelease(byteBuf);
+        } else {
+            log.error("ByteBuf {} already released, refCnt: {}",
+                    Integer.toHexString(System.identityHashCode(byteBuf)),
+                    byteBuf.refCnt());
+        }
+    }
+
+    public static void retainByteBuf(ByteBuf byteBuf){
+        if (log.isTraceEnabled()){
+            String stackTrace = Arrays.stream(Thread.currentThread().getStackTrace())
+                    .limit(5)
+                    .map(StackTraceElement::toString)
+                    .collect(Collectors.joining("\n\t"));
+
+            log.trace("ByteBuf retain called, addr: {}, refCnt: {}, Caller Stack Trace:{}}",
+                    Integer.toHexString(System.identityHashCode(byteBuf)),
+                    byteBuf.refCnt(),
+                    stackTrace
+            );
+        }
+        if (byteBuf.refCnt() > 0){
+            byteBuf.retain();
+        } else {
+            log.error("ByteBuf already released, addr: {}, refCnt: {}",
+                    Integer.toHexString(System.identityHashCode(byteBuf)),
+                    byteBuf.refCnt());
+        }
+    }
+    public static int compareVersions(String v1, String v2) throws SQLException {
+        if (v1 == null || v2 == null) {
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "Version strings cannot be null");
+        }
+
+        String[] v1Parts = v1.split("[.-]");
+        String[] v2Parts = v2.split("[.-]");
+
+        int maxLength = Math.max(v1Parts.length, v2Parts.length);
+
+        for (int i = 0; i < maxLength; i++) {
+            String v1Part = i < v1Parts.length ? v1Parts[i] : "0";
+            String v2Part = i < v2Parts.length ? v2Parts[i] : "0";
+
+            if (i == v1Parts.length - 1 && containsNonDigit(v1Part)) {
+                if (i < v2Parts.length && containsNonDigit(v2Part)) {
+                    return v1Part.compareTo(v2Part);
+                } else {
+                    return -1;
+                }
+            } else if (i == v2Parts.length - 1 && containsNonDigit(v2Part)) {
+                return 1;
+            }
+
+            int v1Num = parseVersionPart(v1Part);
+            int v2Num = parseVersionPart(v2Part);
+
+            if (v1Num != v2Num) {
+                return v1Num - v2Num;
+            }
+        }
+
+        return 0;
+    }
+
+    private static boolean containsNonDigit(String s) {
+        for (char c : s.toCharArray()) {
+            if (!Character.isDigit(c)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static int parseVersionPart(String part) {
+        try {
+            return Integer.parseInt(part);
+        } catch (NumberFormatException e) {
+            return 0;
         }
     }
 }

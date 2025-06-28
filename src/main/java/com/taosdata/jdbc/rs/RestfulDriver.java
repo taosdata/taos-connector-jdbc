@@ -1,20 +1,14 @@
 package com.taosdata.jdbc.rs;
 
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectReader;
-import com.taosdata.jdbc.*;
-import com.taosdata.jdbc.enums.WSFunction;
+import com.taosdata.jdbc.AbstractDriver;
+import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.TSDBError;
+import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.utils.HttpClientPoolUtil;
 import com.taosdata.jdbc.utils.StringUtils;
-import com.taosdata.jdbc.ws.*;
-import com.taosdata.jdbc.ws.entity.*;
-import com.taosdata.jdbc.utils.JsonUtil;
 import org.slf4j.LoggerFactory;
 
-import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.util.Base64;
@@ -22,7 +16,7 @@ import java.util.Properties;
 import java.util.logging.Logger;
 
 public class RestfulDriver extends AbstractDriver {
-    private final org.slf4j.Logger log = LoggerFactory.getLogger(RestfulDriver.class);
+    private static final org.slf4j.Logger log = LoggerFactory.getLogger(RestfulDriver.class);
     public static final String URL_PREFIX = "jdbc:TAOS-RS://";
 
     static {
@@ -43,7 +37,7 @@ public class RestfulDriver extends AbstractDriver {
         if (!acceptsURL(url))
             return null;
 
-        Properties props = parseURL(url, info);
+        Properties props = StringUtils.parseUrl(url, info, false);
         String batchLoad = info.getProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD);
         if (Boolean.parseBoolean(batchLoad)) {
             ConnectionParam param = ConnectionParam.getParamWs(props);
@@ -82,7 +76,7 @@ public class RestfulDriver extends AbstractDriver {
             info = new Properties();
         }
         if (acceptsURL(url)) {
-            info = parseURL(url, info);
+            info = StringUtils.parseUrl(url, info, false);
         }
         return getPropertyInfo(info);
     }

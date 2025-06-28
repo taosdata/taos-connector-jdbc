@@ -6,6 +6,7 @@ import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -33,7 +34,7 @@ public class WSTimeZoneTest {
 
     private static final String host = "127.0.0.1";
     private static final int port = 6041;
-    private static final String db_name = "ws_timezone";
+    private final String db_name = TestUtils.camelToSnake(WSTimeZoneTest.class) + "_" + UUID.randomUUID().toString().replace("-", "_");
     private static final String tableName = "simple_t";
     private static final String fullTableName = "full_t";
     private Connection connection;

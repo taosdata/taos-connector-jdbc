@@ -31,7 +31,7 @@ import java.util.concurrent.atomic.AtomicLong;
 @Deprecated
 // will be removed in future, please use writer functions in connection object.
 public class SchemalessWriter implements AutoCloseable {
-    private final org.slf4j.Logger log = LoggerFactory.getLogger(SchemalessWriter.class);
+    private static final org.slf4j.Logger log = LoggerFactory.getLogger(SchemalessWriter.class);
 
     // jni
     private TSDBJNIConnector connector;
@@ -94,15 +94,18 @@ public class SchemalessWriter implements AutoCloseable {
 
     private void init(String url, String user, String password, String cloudToken, String dbName, Boolean useSSL) throws SQLException {
         String t;
+        Properties properties;
+
         if (url.startsWith(TSDBDriver.URL_PREFIX)) {
             t = "jni";
+            properties = StringUtils.parseUrl(url, null, true);
         } else if (url.startsWith(RestfulDriver.URL_PREFIX)) {
             t = "ws";
+            properties = StringUtils.parseUrl(url, null, false);
         } else {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "unknown url：" + url);
         }
 
-        Properties properties = StringUtils.parseUrl(url, null);
         if (user != null)
             properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, user);
         if (password != null)
@@ -150,9 +153,7 @@ public class SchemalessWriter implements AutoCloseable {
                     .setUseSsl(useSSL)
                     .build();
             InFlightRequest inFlightRequest = new InFlightRequest(timeout, 20);
-            this.transport = new Transport(WSFunction.SCHEMALESS, param, inFlightRequest);
-
-            this.transport.setTextMessageHandler(message -> {
+            param.setTextMessageHandler(message -> {
                 try {
                     JsonNode jsonObject = JsonUtil.getObjectReader().readTree(message);
                     ObjectReader actionReader = JsonUtil.getObjectReader(CommonResp.class);
@@ -165,6 +166,10 @@ public class SchemalessWriter implements AutoCloseable {
                     log.error("Error processing message", e);
                 }
             });
+
+            this.transport = new Transport(WSFunction.SCHEMALESS, param, inFlightRequest);
+
+
 
             transport.checkConnection(connectTime);
 

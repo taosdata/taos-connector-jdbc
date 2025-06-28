@@ -3,6 +3,7 @@ package com.taosdata.jdbc.rs;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 import org.junit.runners.MethodSorters;
 
@@ -16,7 +17,7 @@ public class RestfulCompressTest {
     private static final String host = "127.0.0.1";
     private static final Random random = new Random(System.currentTimeMillis());
     private static Connection connection;
-    private static final String db_name = "restful_test";
+    private static final String db_name = TestUtils.camelToSnake(RestfulCompressTest.class);
     private static final String tableName = "compressA";
 
     @Description("inertRows")

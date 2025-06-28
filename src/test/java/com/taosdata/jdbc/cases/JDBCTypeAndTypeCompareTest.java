@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -10,7 +11,7 @@ import java.sql.*;
 @Ignore
 public class JDBCTypeAndTypeCompareTest {
     private static Connection conn;
-    private static final String dbname = "test";
+    private static final String dbname = TestUtils.camelToSnake(JDBCTypeAndTypeCompareTest.class);
 
     @Test
     public void test() throws SQLException {

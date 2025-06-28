@@ -2,6 +2,7 @@ package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
@@ -17,7 +18,7 @@ import static org.junit.Assert.assertEquals;
 public class StableTest {
 
     private static Connection connection;
-    private static final String dbName = "test";
+    private static final String dbName = TestUtils.camelToSnake(StableTest.class);
     private static final String stbName = "st";
     private static final String host = "127.0.0.1";
 
@@ -96,8 +97,12 @@ public class StableTest {
     @AfterClass
     public static void close() {
         try {
-            if (connection != null)
+            if (connection != null){
+                Statement statement = connection.createStatement();
+                statement.execute("drop database if exists " + dbName);
+                statement.close();
                 connection.close();
+            }
         } catch (SQLException e) {
             e.printStackTrace();
         }

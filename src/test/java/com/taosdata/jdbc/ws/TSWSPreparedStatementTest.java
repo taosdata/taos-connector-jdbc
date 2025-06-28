@@ -2,6 +2,7 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
 import java.math.BigInteger;
@@ -15,7 +16,7 @@ public class TSWSPreparedStatementTest {
     private static Connection conn;
     private static final String sql_insert = "insert into t1 values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     private static final String sql_select = "select * from t1 where ts >= ? and ts < ? and f1 >= ?";
-    private static final String dbname = "test_pstmt_ws";
+    private static final String dbname = TestUtils.camelToSnake(TSWSPreparedStatementTest.class);
 
     private PreparedStatement pstmt_insert;
     private PreparedStatement pstmt_select;

@@ -2,8 +2,10 @@ package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.sql.Connection;
@@ -13,7 +15,7 @@ import java.sql.Statement;
 
 public class SchemalessConnectionTest {
     private static final String host = "127.0.0.1";
-    private static final String db = "schemaless_connction";
+    private static final String db = TestUtils.camelToSnake(SchemalessConnectionTest.class);
     private static Connection connection;
 
     @Test(expected = SQLException.class)
@@ -46,8 +48,8 @@ public class SchemalessConnectionTest {
         writer.write("measurement,host=host1 field1=2i,field2=2.0 1577837300000", SchemalessProtocolType.LINE, SchemalessTimestampType.MILLI_SECONDS);
     }
 
-    @Before
-    public void before() throws SQLException {
+    @BeforeClass
+    public static void before() throws SQLException {
         String url = "jdbc:TAOS://" + host + ":6030/";
         connection = DriverManager.getConnection(url, "root", "taosdata");
         try (Statement statement = connection.createStatement()) {

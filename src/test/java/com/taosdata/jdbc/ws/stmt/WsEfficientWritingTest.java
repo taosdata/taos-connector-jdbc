@@ -1,11 +1,15 @@
 package com.taosdata.jdbc.ws.stmt;
 
+import com.taosdata.jdbc.GeometryTest;
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.TaosAdapterMock;
 import com.taosdata.jdbc.ws.WSEWPreparedStatement;
+import io.netty.util.ResourceLeakDetector;
 import org.junit.*;
 
+import java.io.IOException;
 import java.sql.*;
 import java.util.Properties;
 import java.util.Random;
@@ -13,10 +17,11 @@ import java.util.Random;
 @FixMethodOrder
 public class WsEfficientWritingTest {
     private final String host = "localhost";
-    private final String db_name = "ws_fw";
+    private final String db_name = TestUtils.camelToSnake(WsEfficientWritingTest.class);
     private final String tableName = "wpt";
     private final String tableNameCopyData = "wpt_cp";
     private final String tableReconnect = "wpt_rc";
+    private final String tableNcharTag = "wpt_nchar";
     private final String asyncSqlTable = tableReconnect;
     private Connection connection;
     private TaosAdapterMock taosAdapterMock;
@@ -70,7 +75,7 @@ public class WsEfficientWritingTest {
         }
 
         Assert.assertEquals(numOfSubTable * numOfRow, Utils.getSqlRows(connection, db_name + "." + tableName));
-}
+    }
 
     @Test
     public void testCopyData() throws SQLException {
@@ -110,13 +115,9 @@ public class WsEfficientWritingTest {
 
 
     @Test
-    public void testReconnect() throws SQLException, InterruptedException {
+    public void testReconnect() throws SQLException, InterruptedException, IOException {
         taosAdapterMock = new TaosAdapterMock(proxyPort);
         taosAdapterMock.start();
-
-        while (!taosAdapterMock.isReady()){
-            Thread.sleep(10);
-        }
 
         String sql = "INSERT INTO " + db_name + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
 
@@ -141,7 +142,7 @@ public class WsEfficientWritingTest {
                 }
 
                 if (j == 1){
-                    taosAdapterMock.stopServer();
+                    taosAdapterMock.stop();
                     Thread.sleep(1000);
                     taosAdapterMock = new TaosAdapterMock(proxyPort);
                     taosAdapterMock.start();
@@ -155,18 +156,14 @@ public class WsEfficientWritingTest {
         Assert.assertEquals(numOfSubTable * numOfRow, Utils.getSqlRows(connection, db_name + "." + tableReconnect));
 
         if (taosAdapterMock != null) {
-            taosAdapterMock.stopServer();
+            taosAdapterMock.stop();
         }
     }
 
     @Test
-    public void testWriteException() throws SQLException, InterruptedException {
+    public void testWriteException() throws SQLException, InterruptedException, IOException {
         taosAdapterMock = new TaosAdapterMock(proxyPort);
         taosAdapterMock.start();
-
-        while (!taosAdapterMock.isReady()){
-            Thread.sleep(10);
-        }
 
         String sql = "INSERT INTO " + db_name + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
 
@@ -191,7 +188,7 @@ public class WsEfficientWritingTest {
                 }
 
                 if (j == 0){
-                    taosAdapterMock.stopServer();
+                    taosAdapterMock.stop();
                     Thread.sleep(1000);
                 }
 
@@ -347,6 +344,24 @@ public class WsEfficientWritingTest {
         }
     }
 
+    @Test(expected = SQLException.class)
+    public void testNcharTagThrowsSQLException() throws SQLException {
+        String sql = "INSERT INTO " + db_name + "." + tableNcharTag + "(tbname, ts, i, tag_nchar) VALUES (?,?,?,?)";
+        try (Connection con = getConnection(false);
+             PreparedStatement pstmt = con.prepareStatement(sql)) {
+            long current = System.currentTimeMillis();
+            for (int i = 0; i < 1000; i++) {
+                pstmt.setString(1, "ncahr_bind_1");
+                pstmt.setTimestamp(2, new Timestamp(current + i));
+                pstmt.setInt(3, 100);
+                pstmt.setString(4, "中国人");
+                pstmt.addBatch();
+                pstmt.executeBatch();
+            }
+            pstmt.executeUpdate();
+        }
+    }
+
     @Before
     public void before() throws SQLException {
         connection = getConnection(false);
@@ -357,6 +372,8 @@ public class WsEfficientWritingTest {
         statement.execute("create stable if not exists " + db_name + "." + tableName + " (ts TIMESTAMP, current FLOAT, voltage INT, phase FLOAT) TAGS (groupId INT, location BINARY(24))");
         statement.execute("create stable if not exists " + db_name + "." + tableNameCopyData + " (ts TIMESTAMP, b varbinary(10)) TAGS (groupId INT)");
         statement.execute("create stable if not exists " + db_name + "." + tableReconnect + " (ts TIMESTAMP, i INT) TAGS (groupId INT)");
+        statement.execute("create stable if not exists " + db_name + "." + tableNcharTag + " (ts TIMESTAMP, i INT) TAGS (tag_nchar nchar(100))");
+
         statement.close();
 
         createSubTable();
@@ -383,7 +400,7 @@ public class WsEfficientWritingTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BACKEND_WRITE_THREAD_NUM, "5");
 
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, "5000");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, "50000");
 
         if (copyData) {
             properties.setProperty(TSDBDriver.PROPERTY_KEY_COPY_DATA, "true");
@@ -403,5 +420,15 @@ public class WsEfficientWritingTest {
         connection.close();
 
 
+    }
+
+    @BeforeClass
+    public static void setUp() {
+        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+    }
+
+    @AfterClass
+    public static void tearDown() {
+        System.gc();
     }
 }

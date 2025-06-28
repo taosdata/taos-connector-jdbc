@@ -4,6 +4,7 @@ import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.rs.RestfulDatabaseMetaData;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 import org.junit.runner.RunWith;
 
@@ -16,7 +17,7 @@ import java.util.Properties;
 public class WSQueryBIModeTest {
     private static final String host = "127.0.0.1";
     private static final int port = 6041;
-    private static final String db_name = "ws_bi_mode";
+    private final String db_name = TestUtils.camelToSnake(WSQueryBIModeTest.class);
     private static final String tableName = "wq";
     private Connection connection;
 

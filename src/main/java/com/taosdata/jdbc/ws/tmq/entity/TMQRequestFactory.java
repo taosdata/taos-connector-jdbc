@@ -50,10 +50,11 @@ public class TMQRequestFactory {
         return new Request(ConsumerAction.SUBSCRIBE.getAction(), subscribeReq);
     }
 
-    public Request generatePoll(long blockingTime) {
+    public Request generatePoll(long messageId, long blockingTime) {
         long reqId = this.getId(ConsumerAction.POLL.getAction());
         PollReq pollReq = new PollReq();
         pollReq.setReqId(reqId);
+        pollReq.setMessageId(messageId);
         pollReq.setBlockingTime(blockingTime);
         return new Request(ConsumerAction.POLL.getAction(), pollReq);
     }

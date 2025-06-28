@@ -3,6 +3,7 @@ package com.taosdata.jdbc.ws;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -26,7 +27,7 @@ public class WSConsumerOffsetSeekTest {
     private static Connection connection = null;
     private static Statement statement = null;
     private static final String host = "127.0.0.1";
-    private static final String dbName = "tmq_ws_offset_seek";
+    private static final String dbName = TestUtils.camelToSnake(WSConsumerOffsetSeekTest.class);
     private static final String superTable = "st";
     private static final String topic = "offset_seek_ws_test";
 

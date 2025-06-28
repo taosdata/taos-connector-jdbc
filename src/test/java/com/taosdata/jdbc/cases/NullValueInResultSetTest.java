@@ -2,11 +2,9 @@ package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.utils.TimestampUtil;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 
 import java.sql.*;
 import java.util.Properties;
@@ -14,8 +12,8 @@ import java.util.Properties;
 public class NullValueInResultSetTest {
     private static final String host = "127.0.0.1";
     private static Properties properties;
-    private static Connection conn_restful;
-    private static Connection conn_jni;
+    private Connection conn;
+    private String dbName = TestUtils.camelToSnake(NullValueInResultSetTest.class);
 
     @Test
     public void testRestful() throws SQLException {
@@ -23,12 +21,12 @@ public class NullValueInResultSetTest {
         if (url == null) {
             url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
         }
-        conn_restful = DriverManager.getConnection(url, properties);
+        conn = DriverManager.getConnection(url, properties);
 
-        try (Statement stmt = conn_restful.createStatement()) {
-            stmt.execute("drop database if exists test_null");
-            stmt.execute("create database if not exists test_null");
-            stmt.execute("use test_null");
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute("drop database if exists " + dbName);
+            stmt.execute("create database if not exists " + dbName);
+            stmt.execute("use " + dbName);
             stmt.execute("create table weather(ts timestamp, f1 timestamp, f2 int, f3 bigint, f4 float, f5 double, f6 smallint, f7 tinyint, f8 bool, f9 binary(64), f10 nchar(64))");
             stmt.executeUpdate("insert into weather(ts, f1) values(now+1s, " + TimestampUtil.datetimeToLong("2021-04-21 12:00:00.000") + ")");
             ResultSet rs = stmt.executeQuery("select * from weather");
@@ -48,6 +46,8 @@ public class NullValueInResultSetTest {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+
+
     }
 
     @Test
@@ -56,12 +56,12 @@ public class NullValueInResultSetTest {
         if (url == null) {
             url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
         }
-        conn_jni = DriverManager.getConnection(url, properties);
+        conn = DriverManager.getConnection(url, properties);
 
-        try (Statement stmt = conn_jni.createStatement()) {
-            stmt.execute("drop database if exists test_null");
-            stmt.execute("create database if not exists test_null");
-            stmt.execute("use test_null");
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute("drop database if exists " + dbName);
+            stmt.execute("create database if not exists " + dbName);
+            stmt.execute("use " + dbName);
             stmt.execute("create table weather(ts timestamp, f1 timestamp, f2 int, f3 bigint, f4 float, f5 double, f6 smallint, f7 tinyint, f8 bool, f9 binary(64), f10 nchar(64))");
             stmt.executeUpdate("insert into weather(ts, f1) values(now+1s, " + TimestampUtil.datetimeToLong("2021-04-21 12:00:00.000") + ")");
             ResultSet rs = stmt.executeQuery("select * from weather");
@@ -91,15 +91,13 @@ public class NullValueInResultSetTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
     }
 
-    @AfterClass
-    public static void afterClass() throws SQLException {
-        if (conn_restful != null)
-            conn_restful.close();
-        if (conn_jni != null) {
-            Statement statement = conn_jni.createStatement();
-            statement.execute("drop database if exists test_null");
+    @After
+    public void after() throws SQLException {
+        if (conn != null) {
+            Statement statement = conn.createStatement();
+            statement.execute("drop database if exists " + dbName);
             statement.close();
-            conn_jni.close();
+            conn.close();
         }
     }
 }

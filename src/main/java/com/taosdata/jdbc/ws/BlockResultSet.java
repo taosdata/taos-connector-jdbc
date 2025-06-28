@@ -10,11 +10,13 @@ import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.utils.DataTypeConverUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.Utils;
+import com.taosdata.jdbc.ws.entity.FetchBlockNewResp;
 import com.taosdata.jdbc.ws.entity.QueryResp;
 
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.time.*;
 import java.time.format.DateTimeParseException;
@@ -25,30 +27,23 @@ import static com.taosdata.jdbc.utils.UnsignedDataUtils.*;
 
 public class BlockResultSet extends AbstractWSResultSet {
     private final ZoneId zoneId;
+    private final boolean varcharAsString;
 
     public BlockResultSet(Statement statement, Transport transport,
                           QueryResp response, String database, ZoneId zoneId) throws SQLException {
         super(statement, transport, response, database);
         this.zoneId = zoneId;
+        this.varcharAsString = transport.getConnectionParam().isVarcharAsString();
     }
 
 
-    public Object parseValue(int columnIndex) {
+    public Object parseValue(int columnIndex) throws SQLException {
         Object source = result.get(columnIndex - 1).get(rowIndex);
         if (null == source)
             return null;
 
         int type = fields.get(columnIndex - 1).getTaosType();
-        return DataTypeConverUtil.parseValue(type, source);
-    }
-
-    public Object parseValueWithZoneId(int columnIndex, ZoneId zoneId) {
-        Object source = result.get(columnIndex - 1).get(rowIndex);
-        if (null == source)
-            return null;
-
-        int type = fields.get(columnIndex - 1).getTaosType();
-        return DataTypeConverUtil.parseValue(type, source);
+        return DataTypeConverUtil.parseValue(type, source, this.varcharAsString);
     }
 
     @Override
@@ -67,7 +62,8 @@ public class BlockResultSet extends AbstractWSResultSet {
             return DateTimeUtils.getTimestamp((Instant) value, zoneId).toString();
 
         if (value instanceof byte[]) {
-            String charset = TaosGlobalConfig.getCharset();
+            // for websocket, only support utf8
+            String charset = StandardCharsets.UTF_8.name();
             try {
                 return new String((byte[]) value, charset);
             } catch (UnsupportedEncodingException e) {
@@ -303,7 +299,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             try {
                 if (type == String.class) {
                     if (value instanceof byte[]) {
-                        String charset = TaosGlobalConfig.getCharset();
+                        String charset = StandardCharsets.UTF_8.name();
                         return type.cast(new String((byte[]) value, charset));
                     }
                     return type.cast(value.toString());
@@ -504,16 +500,5 @@ public class BlockResultSet extends AbstractWSResultSet {
     @Override
     public Timestamp getTimestamp(int columnIndex, Calendar cal) throws SQLException {
         return getTimestamp(columnIndex);
-    }
-
-    //    ceil(numOfRows/8.0)
-    private int BitmapLen(int n) {
-        return (n + 0x7) >> 3;
-    }
-
-    private boolean isNull(byte[] c, int n) {
-        int position = n >>> 3;
-        int index = n & 0x7;
-        return (c[position] & (1 << (7 - index))) == (1 << (7 - index));
     }
 }

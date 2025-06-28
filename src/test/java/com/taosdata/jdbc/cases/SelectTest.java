@@ -2,6 +2,7 @@ package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -13,7 +14,7 @@ import static org.junit.Assert.assertEquals;
 
 public class SelectTest {
     Connection connection;
-    String dbName = "test";
+    String dbName = TestUtils.camelToSnake(SelectTest.class);
     String tName = "t0";
     String host = "127.0.0.1";
 

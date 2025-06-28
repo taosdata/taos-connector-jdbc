@@ -90,6 +90,8 @@ public class WSStatement extends AbstractStatement {
                 reqId, 0, 6, result, sqlBytes);
 
         QueryResp queryResp = (QueryResp) response;
+//        BinQueryNewResp binQueryNewResp = (BinQueryNewResp) response;
+//        QueryResp queryResp = binQueryNewResp.getQueryResp();
         if (Code.SUCCESS.getCode() != queryResp.getCode()) {
             throw TSDBError.createSQLException(queryResp.getCode(), queryResp.getMessage());
         }
@@ -104,6 +106,7 @@ public class WSStatement extends AbstractStatement {
             return false;
         } else {
             this.resultSet = new BlockResultSet(this, this.transport, queryResp, this.database, this.zoneId);
+            //this.resultSet = new BlockResultSet(this, this.transport, queryResp, this.database, this.zoneId, binQueryNewResp.getFetchBlockNewResp());
             this.affectedRows = -1;
             return true;
         }

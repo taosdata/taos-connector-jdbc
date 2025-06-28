@@ -37,6 +37,7 @@ public class TSDBErrorNumbers {
     public static final int ERROR_QUERY_TIMEOUT = 0x231e;
     public static final int ERROR_RESTFUL_CLIENT_QUERY_EXCEPTION = 0x231f;
     public static final int ERROR_TYPE_CONVERT_EXCEPTION = 0x2320;
+    public static final int ERROR_VERSION_INCOPMATIABLE = 0x2321;
 
     public static final int ERROR_UNKNOWN = 0x2350;    //unknown error
 

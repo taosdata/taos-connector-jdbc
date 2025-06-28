@@ -1,25 +1,20 @@
 package com.taosdata.jdbc.ws.tmq;
 
-import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
-import com.google.common.primitives.Shorts;
 import com.taosdata.jdbc.AbstractResultSet;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
-import com.taosdata.jdbc.TaosGlobalConfig;
-import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.rs.RestfulResultSet;
 import com.taosdata.jdbc.rs.RestfulResultSetMetaData;
+import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.DataTypeConverUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
-import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.Transport;
 import com.taosdata.jdbc.ws.entity.Code;
 import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.tmq.entity.FetchRawBlockResp;
+import com.taosdata.jdbc.ws.tmq.entity.PollResp;
 import com.taosdata.jdbc.ws.tmq.entity.TMQRequestFactory;
 
-import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.sql.*;
 import java.time.Instant;
@@ -29,7 +24,6 @@ import java.util.Calendar;
 import java.util.List;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
-import static com.taosdata.jdbc.utils.UnsignedDataUtils.*;
 
 public class WSConsumerResultSet extends AbstractResultSet {
     private final Transport transport;
@@ -40,19 +34,27 @@ public class WSConsumerResultSet extends AbstractResultSet {
     protected volatile boolean isClosed;
     // meta
     protected RestfulResultSetMetaData metaData;
-    protected final List<RestfulResultSet.Field> fields = new ArrayList<>();
+    protected List<RestfulResultSet.Field> fields = new ArrayList<>();
     protected List<String> columnNames;
     // data
     protected List<List<Object>> result = new ArrayList<>();
 
     protected int numOfRows = 0;
     protected int rowIndex = 0;
+    protected final ZoneId zoneId;
+    protected final boolean varcharAsString;
 
-    public WSConsumerResultSet(Transport transport, TMQRequestFactory factory, long messageId, String database) {
+    public WSConsumerResultSet(Transport transport, TMQRequestFactory factory, long messageId, String database, ZoneId zoneId) {
         this.transport = transport;
         this.factory = factory;
         this.messageId = messageId;
         this.database = database;
+        this.zoneId = zoneId;
+        if (transport != null) {
+            this.varcharAsString = transport.getConnectionParam().isVarcharAsString();
+        } else {
+            this.varcharAsString = false; // Default to false if transport is null
+        }
     }
 
     private boolean forward() {
@@ -92,14 +94,25 @@ public class WSConsumerResultSet extends AbstractResultSet {
             return false;
 
         columnNames = fetchResp.getColumnNames();
-        fields.clear();
-        fields.addAll(fetchResp.getFields());
+        fields = fetchResp.getFields();
 
-        this.metaData = new RestfulResultSetMetaData(database, fields, fetchResp.getTableName());
+        this.metaData = new RestfulResultSetMetaData(database, fields, fetchResp.getTableName(), varcharAsString);
         this.numOfRows = fetchResp.getRows();
         this.result = fetchResp.getResultData();
         this.timestampPrecision = fetchResp.getPrecision();
         return true;
+    }
+
+    public ConsumerRecords<TMQEnhMap> handleSubscribeDB(PollResp pollResp) throws SQLException {
+
+        Request request = factory.generateFetchRaw(messageId);
+        FetchRawBlockResp fetchResp = (FetchRawBlockResp) transport.send(request);
+        fetchResp.init();
+
+        if (Code.SUCCESS.getCode() != fetchResp.getCode())
+            throw TSDBError.createSQLException(fetchResp.getCode(), fetchResp.getMessage());
+
+        return fetchResp.getEhnMapList(pollResp, zoneId, varcharAsString);
     }
 
     @Override
@@ -271,7 +284,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
             return (Timestamp) value;
         if (value instanceof Long) {
             Instant instant = DateTimeUtils.parseTimestampColumnData((long) value, this.timestampPrecision);
-            return DateTimeUtils.getTimestamp(instant, null);
+            return DateTimeUtils.getTimestamp(instant, zoneId);
         }
         Timestamp ret;
         try {
@@ -466,7 +479,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
         return getString(columnIndex);
     }
 
-    public Object parseValue(int columnIndex) {
+    public Object parseValue(int columnIndex) throws SQLException {
         Object source = result.get(columnIndex - 1).get(rowIndex);
         if (null == source)
             return null;
@@ -474,13 +487,10 @@ public class WSConsumerResultSet extends AbstractResultSet {
         int type = fields.get(columnIndex - 1).getTaosType();
 
         if (type == TSDB_DATA_TYPE_TIMESTAMP){
-            Long o = (Long)DataTypeConverUtil.parseValue(type, source);
+            Long o = (Long)DataTypeConverUtil.parseValue(type, source, varcharAsString);
             Instant instant = DateTimeUtils.parseTimestampColumnData(o, this.timestampPrecision);
-            return DateTimeUtils.getTimestamp(instant, null);
+            return DateTimeUtils.getTimestamp(instant, zoneId);
         }
-        return DataTypeConverUtil.parseValue(type, source);
+        return DataTypeConverUtil.parseValue(type, source, varcharAsString);
     }
-
-    //    ceil(numOfRows/8.0)
-
 }
