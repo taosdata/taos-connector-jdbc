@@ -41,8 +41,6 @@ public class WebSocketHandshakeHandler extends ChannelInboundHandlerAdapter {
             try {
                 handshaker.finishHandshake(ctx.channel(), (FullHttpResponse) msg);
                 handshakeFuture.setSuccess();
-
-                ctx.pipeline().remove(this);
             } catch (WebSocketHandshakeException e) {
                 log.error("handshake failed: ", e);
                 handshakeFuture.setFailure(e);
@@ -59,4 +57,6 @@ public class WebSocketHandshakeHandler extends ChannelInboundHandlerAdapter {
         }
         ctx.close();
     }
+
+
 }

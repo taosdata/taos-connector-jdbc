@@ -82,7 +82,7 @@ public class RestfulResultSet extends AbstractResultSet {
 
         // parse column_meta
         parseColumnMeta_new(columnMeta);
-        this.metaData = new RestfulResultSetMetaData(database, columns);
+        this.metaData = new RestfulResultSetMetaData(database, columns, false);
 
         if (data == null || !data.isArray() || data.size() == 0)
             return;

@@ -49,7 +49,7 @@ public class FetchRawBlockResp extends Response {
     private int rows = 0;
     private String tableName = "";
 
-    public FetchRawBlockResp(ByteBuf buffer) {
+    public FetchRawBlockResp(ByteBuf buffer){
         this.setAction(ConsumerAction.FETCH_RAW_DATA.getAction());
         this.buffer = buffer;
     }
@@ -171,7 +171,7 @@ public class FetchRawBlockResp extends Response {
         }
         buffer.release();
     }
-    public ConsumerRecords<TMQEnhMap> getEhnMapListInner(PollResp pollResp, ZoneId zoneId) throws SQLException {
+    public ConsumerRecords<TMQEnhMap> getEhnMapListInner(PollResp pollResp, ZoneId zoneId, boolean varcharAsString) throws SQLException {
         skipHead();
         int blockNum = buffer.readIntLE();
         int cols = 0;
@@ -229,13 +229,13 @@ public class FetchRawBlockResp extends Response {
                 HashMap<String, Object> lineDataMap = new HashMap<>();
                 for (int k = 0; k < cols; k++) {
                     if (fields.get(k).getTaosType() == TSDB_DATA_TYPE_TIMESTAMP){
-                        Long o = (Long) DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_TIMESTAMP, resultData.get(k).get(j));
+                        Long o = (Long) DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_TIMESTAMP, resultData.get(k).get(j), varcharAsString);
                         Instant instant = DateTimeUtils.parseTimestampColumnData(o, precision);
                         Timestamp t = DateTimeUtils.getTimestamp(instant, zoneId);
                         lineDataMap.put(columnNames.get(k), t);
                         continue;
                     }
-                    Object o = DataTypeConverUtil.parseValue(fields.get(k).getTaosType(), resultData.get(k).get(j));
+                    Object o = DataTypeConverUtil.parseValue(fields.get(k).getTaosType(), resultData.get(k).get(j), varcharAsString);
                     lineDataMap.put(columnNames.get(k), o);
                 }
                 TMQEnhMap map = new TMQEnhMap(tableName, lineDataMap);
@@ -256,9 +256,9 @@ public class FetchRawBlockResp extends Response {
 
         return records;
     }
-    public ConsumerRecords<TMQEnhMap> getEhnMapList(PollResp pollResp, ZoneId zoneId) throws SQLException {
+    public ConsumerRecords<TMQEnhMap> getEhnMapList(PollResp pollResp, ZoneId zoneId, boolean varcharAsString) throws SQLException {
         try {
-            return getEhnMapListInner(pollResp, zoneId);
+            return getEhnMapListInner(pollResp, zoneId, varcharAsString);
         } finally {
             Utils.releaseByteBuf(buffer);
         }

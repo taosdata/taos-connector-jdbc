@@ -6,7 +6,6 @@ import com.taosdata.jdbc.enums.DataType;
 
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.Collections;
 import java.util.List;
@@ -16,16 +15,19 @@ public class RestfulResultSetMetaData extends WrapperImpl implements ResultSetMe
     private String tableName = "";
     private final String database;
     private final List<RestfulResultSet.Field> fields;
+    private final boolean varcharAsString;
 
-    public RestfulResultSetMetaData(String database, List<RestfulResultSet.Field> fields) {
+    public RestfulResultSetMetaData(String database, List<RestfulResultSet.Field> fields, boolean varcharAsString) {
         this.database = database;
         this.fields = fields == null ? Collections.emptyList() : fields;
+        this.varcharAsString = varcharAsString;
     }
 
-    public RestfulResultSetMetaData(String database, List<RestfulResultSet.Field> fields, String tableName) {
+    public RestfulResultSetMetaData(String database, List<RestfulResultSet.Field> fields, String tableName, boolean varcharAsString) {
         this.tableName = tableName;
         this.database = database;
         this.fields = fields == null ? Collections.emptyList() : fields;
+        this.varcharAsString = varcharAsString;
     }
 
     public List<RestfulResultSet.Field> getFields() {
@@ -149,6 +151,9 @@ public class RestfulResultSetMetaData extends WrapperImpl implements ResultSetMe
     @Override
     public String getColumnTypeName(int column) throws SQLException {
         int taosType = fields.get(column - 1).taos_type;
+        if (taosType == TSDBConstants.TSDB_DATA_TYPE_BINARY && varcharAsString){
+            return "VARCHAR";
+        }
         return DataType.convertTaosType2DataType(taosType).getTypeName();
     }
 
@@ -170,6 +175,9 @@ public class RestfulResultSetMetaData extends WrapperImpl implements ResultSetMe
     @Override
     public String getColumnClassName(int column) throws SQLException {
         int type = this.fields.get(column - 1).taos_type;
+        if (type == TSDBConstants.TSDB_DATA_TYPE_BINARY && varcharAsString) {
+            return String.class.getName();
+        }
         return DataType.convertTaosType2DataType(type).getClassName();
     }
 

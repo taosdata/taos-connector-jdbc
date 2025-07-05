@@ -12,7 +12,7 @@ public class TMQConstants {
     private TMQConstants() {
     }
 
-    public static final Set<String> knownKeys = new HashSet<>();
+    protected static final Set<String> knownKeys = new HashSet<>();
 
     public static final String GROUP_ID = "group.id";
 

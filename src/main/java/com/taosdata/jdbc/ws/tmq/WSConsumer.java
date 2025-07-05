@@ -11,6 +11,7 @@ import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.Utils;
+import com.taosdata.jdbc.utils.VersionUtil;
 import com.taosdata.jdbc.ws.FutureResponse;
 import com.taosdata.jdbc.ws.InFlightRequest;
 import com.taosdata.jdbc.ws.Transport;
@@ -28,6 +29,8 @@ import java.time.Duration;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static com.taosdata.jdbc.TSDBConstants.MIN_SUPPORT_VERSION;
 
 public class WSConsumer<V> implements Consumer<V> {
     private static final org.slf4j.Logger log = LoggerFactory.getLogger(WSConsumer.class);
@@ -89,6 +92,8 @@ public class WSConsumer<V> implements Consumer<V> {
             throw new SQLException("subscribe topic error, code: (0x" + Integer.toHexString(response.getCode())
                     + "), message: " + response.getMessage());
         }
+
+        VersionUtil.checkVersion(response.getVersion(), transport);
         this.topics = topics;
     }
 

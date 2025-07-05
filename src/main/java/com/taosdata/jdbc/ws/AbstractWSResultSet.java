@@ -68,7 +68,7 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
             }
             fields.add(new RestfulResultSet.Field(colName, jdbcType, length, "", taosType, scale, precision));
         }
-        this.metaData = new RestfulResultSetMetaData(database, fields);
+        this.metaData = new RestfulResultSetMetaData(database, fields, transport.getConnectionParam().isVarcharAsString());
         this.timestampPrecision = response.getPrecision();
     }
 
@@ -86,6 +86,7 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
 
                     if (Code.SUCCESS.getCode() != resp.getCode()) {
                         blockData.setReturnCode(resp.getCode());
+                        blockData.setErrorMessage(resp.getMessage());
                         blockingQueueOut.put(blockData);
                         break;
                     }
@@ -155,7 +156,7 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
             }
 
             if (blockData.getReturnCode() != Code.SUCCESS.getCode()) {
-                throw TSDBError.createSQLException(blockData.getReturnCode(), "FETCH DATA ERROR");
+                throw TSDBError.createSQLException(blockData.getReturnCode(), "FETCH DATA ERROR:" + blockData.getErrorMessage());
             }
             this.reset();
             if (blockData.isCompleted()) {
@@ -172,7 +173,7 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
             resp.init();
 
             if (Code.SUCCESS.getCode() != resp.getCode()) {
-                throw TSDBError.createSQLException(resp.getCode(), "FETCH DATA ERROR");
+                throw TSDBError.createSQLException(resp.getCode(), "FETCH DATA ERROR:" + resp.getMessage());
             }
             this.reset();
             BlockData blockData = BlockData.getEmptyBlockData(fields, timestampPrecision);

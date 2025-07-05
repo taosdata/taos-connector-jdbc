@@ -66,7 +66,6 @@ public enum DataType {
     public int getJdbcTypeValue() {
         return jdbcTypeValue;
     }
-
     public int getSize() {
         return size;
     }

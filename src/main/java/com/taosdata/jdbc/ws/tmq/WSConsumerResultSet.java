@@ -42,6 +42,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
     protected int numOfRows = 0;
     protected int rowIndex = 0;
     protected final ZoneId zoneId;
+    protected final boolean varcharAsString;
 
     public WSConsumerResultSet(Transport transport, TMQRequestFactory factory, long messageId, String database, ZoneId zoneId) {
         this.transport = transport;
@@ -49,6 +50,11 @@ public class WSConsumerResultSet extends AbstractResultSet {
         this.messageId = messageId;
         this.database = database;
         this.zoneId = zoneId;
+        if (transport != null) {
+            this.varcharAsString = transport.getConnectionParam().isVarcharAsString();
+        } else {
+            this.varcharAsString = false; // Default to false if transport is null
+        }
     }
 
     private boolean forward() {
@@ -90,7 +96,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
         columnNames = fetchResp.getColumnNames();
         fields = fetchResp.getFields();
 
-        this.metaData = new RestfulResultSetMetaData(database, fields, fetchResp.getTableName());
+        this.metaData = new RestfulResultSetMetaData(database, fields, fetchResp.getTableName(), varcharAsString);
         this.numOfRows = fetchResp.getRows();
         this.result = fetchResp.getResultData();
         this.timestampPrecision = fetchResp.getPrecision();
@@ -106,7 +112,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
         if (Code.SUCCESS.getCode() != fetchResp.getCode())
             throw TSDBError.createSQLException(fetchResp.getCode(), fetchResp.getMessage());
 
-        return fetchResp.getEhnMapList(pollResp, zoneId);
+        return fetchResp.getEhnMapList(pollResp, zoneId, varcharAsString);
     }
 
     @Override
@@ -473,7 +479,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
         return getString(columnIndex);
     }
 
-    public Object parseValue(int columnIndex) {
+    public Object parseValue(int columnIndex) throws SQLException {
         Object source = result.get(columnIndex - 1).get(rowIndex);
         if (null == source)
             return null;
@@ -481,10 +487,10 @@ public class WSConsumerResultSet extends AbstractResultSet {
         int type = fields.get(columnIndex - 1).getTaosType();
 
         if (type == TSDB_DATA_TYPE_TIMESTAMP){
-            Long o = (Long)DataTypeConverUtil.parseValue(type, source);
+            Long o = (Long)DataTypeConverUtil.parseValue(type, source, varcharAsString);
             Instant instant = DateTimeUtils.parseTimestampColumnData(o, this.timestampPrecision);
             return DateTimeUtils.getTimestamp(instant, zoneId);
         }
-        return DataTypeConverUtil.parseValue(type, source);
+        return DataTypeConverUtil.parseValue(type, source, varcharAsString);
     }
 }

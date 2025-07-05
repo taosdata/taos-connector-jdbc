@@ -109,6 +109,11 @@ public class TSDBDriver extends AbstractDriver {
      * connect mode
      */
     public static final String PROPERTY_KEY_CONNECT_MODE = "conmode";
+    /**
+     * Specifies whether to treat VARCHAR as STRING type. Only effected in WebSocket connection mode.
+     * This property can be used to control how VARCHAR data is handled.
+     */
+    public static final String PROPERTY_KEY_VARCHAR_AS_STRING = "varcharAsString";
 
 
     public static final String PROPERTY_KEY_ENABLE_COMPRESSION = "enableCompression";

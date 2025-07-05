@@ -13,6 +13,7 @@ import java.util.Map;
  * request type
  */
 public enum Action {
+    VERSION("version", VersionResp.class),
     CONN("conn", ConnectResp.class),
     QUERY("query", QueryResp.class),
     //BINARY_QUERY("binary_query_with_result", QueryResp.class),

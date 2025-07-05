@@ -1,9 +1,11 @@
-package com.taosdata.jdbc.ws.tmq.entity;
+package com.taosdata.jdbc.ws.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.taosdata.jdbc.ws.entity.CommonResp;
 
-public class SubscribeResp extends CommonResp {
+/**
+ * connection result pojo
+ */
+public class VersionResp extends CommonResp {
     @JsonProperty("version")
     String version;
     public String getVersion() {

@@ -11,7 +11,6 @@ import io.netty.buffer.ByteBuf;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.time.DateTimeException;
@@ -33,6 +32,7 @@ public class ConnectionParam {
     private int connectTimeout;
     private int requestTimeout;
     private int connectMode;
+    private boolean varcharAsString;
     private boolean enableCompression;
     private boolean enableAutoConnect;
 
@@ -69,6 +69,7 @@ public class ConnectionParam {
         this.connectTimeout = builder.connectTimeout;
         this.requestTimeout = builder.requestTimeout;
         this.connectMode = builder.connectMode;
+        this.varcharAsString = builder.varcharAsString;
         this.enableCompression = builder.enableCompression;
         this.slaveClusterHost = builder.slaveClusterHost;
         this.slaveClusterPort = builder.slaveClusterPort;
@@ -249,6 +250,9 @@ public class ConnectionParam {
     public int getConnectMode() {
         return connectMode;
     }
+    public boolean isVarcharAsString() {
+        return varcharAsString;
+    }
     public boolean isEnableCompression() {
         return enableCompression;
     }
@@ -404,6 +408,8 @@ public class ConnectionParam {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "unsupported connect mode");
         }
 
+        boolean varcharAsString = Boolean.parseBoolean(properties.getProperty(TSDBDriver.PROPERTY_KEY_VARCHAR_AS_STRING, "false"));
+
         String slaveClusterHost = properties.getProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_HOST, "");
         String slaveClusterPort = properties.getProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_PORT, "");
 
@@ -480,6 +486,7 @@ public class ConnectionParam {
                 .setConnectionTimeout(connectTimeout)
                 .setRequestTimeout(requestTimeout)
                 .setConnectMode(connectMode)
+                .setVarcharAsString(varcharAsString)
                 .setEnableCompression(enableCompression)
                 .setSlaveClusterHost(slaveClusterHost)
                 .setSlaveClusterPort(slaveClusterPort)
@@ -513,6 +520,7 @@ public class ConnectionParam {
         private int connectTimeout;
         private int requestTimeout;
         private int connectMode;
+        private boolean varcharAsString;
 
         private boolean enableCompression;
         private boolean enableAutoReconnect;
@@ -586,6 +594,10 @@ public class ConnectionParam {
             return this;
         }
 
+        public Builder setVarcharAsString(boolean varcharAsString) {
+            this.varcharAsString = varcharAsString;
+            return this;
+        }
         public Builder setEnableCompression(boolean enableCompression) {
             this.enableCompression = enableCompression;
             return this;

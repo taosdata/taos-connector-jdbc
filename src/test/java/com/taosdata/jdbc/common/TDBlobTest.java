@@ -43,15 +43,15 @@ public class TDBlobTest {
 
     @Test
     public void testGetBytes() throws SQLException {
-        // 正常范围
+        // normal range
         byte[] result = writableBlob.getBytes(1, 3);
         assertArrayEquals(new byte[]{1, 2, 3}, result);
 
-        // 长度超过实际数据
+        // length out range
         result = writableBlob.getBytes(3, 10);
         assertArrayEquals(new byte[]{3, 4, 5}, result);
 
-        // 边界值测试
+        // edge test
         result = writableBlob.getBytes(5, 1);
         assertArrayEquals(new byte[]{5}, result);
     }
@@ -81,30 +81,30 @@ public class TDBlobTest {
         assertEquals(-1, readOnlyBlob.position(pattern, 0));
         assertEquals(-1, readOnlyBlob.position(pattern, 6));
 
-        // 找不到的情况
+        // could not find
         pattern = new TDBlob(new byte[]{6, 7}, false);
         assertEquals(-1, writableBlob.position(pattern, 1));
 
-        // 空模式
+        // empty data
         pattern = new TDBlob(new byte[]{}, false);
         assertEquals(1, writableBlob.position(pattern, 1));
     }
 
     @Test
     public void testPositionByteArrayPattern() throws SQLException {
-        // 找到模式
+        // can be find
         assertEquals(2, writableBlob.position(new byte[]{2, 3}, 1));
 
-        // 从指定位置开始
+        // find from position
         assertEquals(4, writableBlob.position(new byte[]{4, 5}, 2));
 
-        // 找不到模式
+        // could not find
         assertEquals(-1, writableBlob.position(new byte[]{6, 7}, 1));
 
-        // 空模式
+        // empty data
         assertEquals(1, writableBlob.position(new byte[]{}, 1));
 
-        // Boyer-Moore算法测试（长模式）
+        // Boyer-Moore test
         byte[] longData = "ABCABDABACDABABCABAB".getBytes();
         byte[] pattern = "ABABCABAB".getBytes();
         TDBlob longBlob = new TDBlob(longData, true);
@@ -113,7 +113,6 @@ public class TDBlobTest {
 
     @Test
     public void testSetBytes() throws SQLException {
-        // 可写Blob测试
         int result = writableBlob.setBytes(1, new byte[]{9, 8, 7});
         assertEquals(3, result);
         assertArrayEquals(new byte[]{9, 8, 7}, writableBlob.getBytes(1, 3));

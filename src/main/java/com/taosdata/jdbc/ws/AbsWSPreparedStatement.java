@@ -846,7 +846,7 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
             setNull(parameterIndex, Types.BLOB);
             return;
         }
-        colOrderedMap.put(parameterIndex, new Column(BlobUtil.getBytes(x), TSDB_DATA_TYPE_BINARY, parameterIndex));
+        colOrderedMap.put(parameterIndex, new Column(BlobUtil.getBytes(x), TSDB_DATA_TYPE_BLOB, parameterIndex));
     }
 
     @Override

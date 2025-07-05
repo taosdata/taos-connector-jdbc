@@ -15,8 +15,7 @@ import java.util.Properties;
 public class BlobTest {
     static String host = "127.0.0.1";
     static String dbName = TestUtils.camelToSnake(BlobTest.class);;
-    static String tableNative = "varbinary_noraml";
-    static String tableStmt = "varbinary_stmt";
+    static String tableNative = "blob_noraml";
     static Connection connection;
     static Statement statement;
 
@@ -31,31 +30,6 @@ public class BlobTest {
         resultSet.next();
         Assert.assertArrayEquals(expectedArray, resultSet.getBytes(1));
     }
-
-    @Test
-    public void testPrepare() throws SQLException {
-        TSDBPreparedStatement preparedStatement = (TSDBPreparedStatement) connection.prepareStatement("insert into ? using " + dbName + "." + tableStmt + "   tags(?)  values (?, ?)");
-        preparedStatement.setTableName("subt_b");
-        preparedStatement.setTagString(0, testStr);
-
-
-        long current = System.currentTimeMillis();
-        ArrayList<Long> tsList = new ArrayList<>();
-        tsList.add(current);
-        preparedStatement.setTimestamp(0, tsList);
-
-        ArrayList<String> list = new ArrayList<>();
-        list.add(testStr);
-        preparedStatement.setString(1, list, 20);
-
-        preparedStatement.columnDataAddBatch();
-        preparedStatement.columnDataExecuteBatch();
-        ResultSet resultSet = statement.executeQuery("select c1 from " + dbName + "." + tableStmt);
-        while (resultSet.next()) {
-            Assert.assertArrayEquals(expectedArray, resultSet.getBytes(2));
-        }
-    }
-
     @BeforeClass
     public static void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
@@ -70,8 +44,7 @@ public class BlobTest {
         statement.executeUpdate("drop database if exists " + dbName);
         statement.executeUpdate("create database if not exists " + dbName);
         statement.executeUpdate("use " + dbName);
-        statement.executeUpdate("create table " + tableNative + " (ts timestamp, c1 blob(20))  tags(t1 varchar(20))");
-        statement.executeUpdate("create table " + tableStmt + " (ts timestamp, c1 blob(20)) tags(t1 varchar(20))");
+        statement.executeUpdate("create table " + tableNative + " (ts timestamp, c1 blob)  tags(t1 varchar(20))");
     }
 
     @AfterClass

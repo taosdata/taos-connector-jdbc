@@ -18,6 +18,7 @@ public class SubscribeReq extends Payload {
     private String clientId;
     @JsonProperty("offset_rest")
     private String offsetRest;
+    @JsonProperty("topics")
     private String[] topics;
 
     @JsonProperty("auto_commit")

@@ -2,14 +2,13 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.TSDBPreparedStatement;
+import com.taosdata.jdbc.common.TDBlob;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.TestUtils;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 
+import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Properties;
@@ -17,8 +16,8 @@ import java.util.Properties;
 public class WSBlobTest {
     static String host = "127.0.0.1";
     static String dbName = TestUtils.camelToSnake(WSBlobTest.class);;
-    static String tableNative = "varbinary_noraml";
-    static String tableStmt = "varbinary_stmt";
+    static String tableNative = "blob_noraml";
+    static String tableStmt = "blob_stmt";
     static Connection connection;
     static Statement statement;
 
@@ -35,8 +34,8 @@ public class WSBlobTest {
     }
 
     @Test
-    public void testPrepare() throws SQLException {
-        TSDBPreparedStatement preparedStatement = (TSDBPreparedStatement) connection.prepareStatement("insert into ? using " + dbName + "." + tableStmt + "   tags(?)  values (?, ?)");
+    public void testPrepareExt() throws SQLException {
+        TSWSPreparedStatement preparedStatement = (TSWSPreparedStatement) connection.prepareStatement("insert into ? using " + dbName + "." + tableStmt + "   tags(?)  values (?, ?)");
         preparedStatement.setTableName("subt_b");
         preparedStatement.setTagString(0, testStr);
 
@@ -46,9 +45,9 @@ public class WSBlobTest {
         tsList.add(current);
         preparedStatement.setTimestamp(0, tsList);
 
-        ArrayList<String> list = new ArrayList<>();
-        list.add(testStr);
-        preparedStatement.setString(1, list, 20);
+        ArrayList<Blob> list = new ArrayList<>();
+        list.add(new TDBlob(testStr.getBytes(StandardCharsets.UTF_8), true));
+        preparedStatement.setBlob(1, list, 200);
 
         preparedStatement.columnDataAddBatch();
         preparedStatement.columnDataExecuteBatch();
@@ -58,11 +57,29 @@ public class WSBlobTest {
         }
     }
 
-    @BeforeClass
-    public static void before() throws SQLException {
+    @Test
+    public void testPrepareStd() throws SQLException {
+        long current = System.currentTimeMillis();
+        PreparedStatement preparedStatement = connection.prepareStatement("insert into " + dbName + "." + tableStmt + " (tbname, t1, ts, c1) values (?, ?, ?, ?)");
+        preparedStatement.setString(1, "subt_b");
+        preparedStatement.setString(2, testStr);
+
+        preparedStatement.setTimestamp(3, new Timestamp(current));
+        preparedStatement.setBlob(4, new TDBlob(testStr.getBytes(StandardCharsets.UTF_8), true));
+
+        preparedStatement.addBatch();
+        preparedStatement.executeBatch();
+        ResultSet resultSet = statement.executeQuery("select c1 from " + dbName + "." + tableStmt);
+        while (resultSet.next()) {
+            Assert.assertArrayEquals(expectedArray, resultSet.getBytes(2));
+        }
+    }
+
+    @Before
+    public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + host + ":6041/?user=root&password=taosdata";
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
@@ -72,22 +89,22 @@ public class WSBlobTest {
         statement.executeUpdate("drop database if exists " + dbName);
         statement.executeUpdate("create database if not exists " + dbName);
         statement.executeUpdate("use " + dbName);
-        statement.executeUpdate("create table " + tableNative + " (ts timestamp, c1 blob(20))  tags(t1 varchar(20))");
-        statement.executeUpdate("create table " + tableStmt + " (ts timestamp, c1 blob(20)) tags(t1 varchar(20))");
+        statement.executeUpdate("create table " + tableNative + " (ts timestamp, c1 blob) tags(t1 varchar(20))");
+        statement.executeUpdate("create table " + tableStmt + " (ts timestamp, c1 blob) tags(t1 varchar(20))");
     }
 
-    @AfterClass
-    public static void after() {
-        try {
-            if (statement != null && !statement.isClosed()) {
-                statement.executeUpdate("drop database if exists " + dbName);
-                statement.close();
-            }
-            if (connection != null && !connection.isClosed()) {
-                connection.close();
-            }
-        } catch (SQLException e) {
-            // ignore
-        }
+    @After
+    public void after() {
+//        try {
+//            if (statement != null && !statement.isClosed()) {
+//                statement.executeUpdate("drop database if exists " + dbName);
+//                statement.close();
+//            }
+//            if (connection != null && !connection.isClosed()) {
+//                connection.close();
+//            }
+//        } catch (SQLException e) {
+//            // ignore
+//        }
     }
 }

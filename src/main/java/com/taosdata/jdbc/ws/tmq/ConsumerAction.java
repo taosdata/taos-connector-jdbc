@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.ws.tmq;
 
 import com.taosdata.jdbc.ws.entity.Response;
+import com.taosdata.jdbc.ws.entity.VersionResp;
 import com.taosdata.jdbc.ws.tmq.entity.*;
 
 import java.util.HashMap;
@@ -8,6 +9,7 @@ import java.util.Map;
 
 public enum ConsumerAction {
     // subscribe
+    VERSION("version", VersionResp.class),
     SUBSCRIBE("subscribe", SubscribeResp.class),
     POLL("poll", PollResp.class),
     FETCH_RAW_DATA("fetch_raw_data", FetchRawBlockResp.class),

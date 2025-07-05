@@ -204,13 +204,13 @@ public class WsPStmtLineModeNullTest {
 
     @Test(expected = SQLException.class)
     public void testSetRef() throws SQLException {
-        Ref ref = null; // 不需要实际实现
+        Ref ref = null;
         preparedStatement.setRef(1, ref);
     }
 
     @Test(expected = SQLException.class)
     public void testSetBlob_int_Blob() throws SQLException {
-        Blob blob = null; // 不需要实际实现
+        Blob blob = null;
         preparedStatement.setBlob(1, blob);
     }
 

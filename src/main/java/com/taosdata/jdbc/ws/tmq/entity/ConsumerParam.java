@@ -31,6 +31,7 @@ public class ConsumerParam {
         knownKeys.add(TSDBDriver.PROPERTY_KEY_BATCH_ERROR_IGNORE);
         knownKeys.add(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT);
         knownKeys.add(TSDBDriver.PROPERTY_KEY_CONNECT_MODE);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_VARCHAR_AS_STRING);
         knownKeys.add(TSDBDriver.PROPERTY_KEY_ENABLE_COMPRESSION);
         knownKeys.add(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT);
         knownKeys.add(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_HOST);

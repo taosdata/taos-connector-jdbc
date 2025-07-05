@@ -582,47 +582,47 @@ public class DataTypeConverUtilTest {
     }
 
     @Test
-    public void testParseValue() {
+    public void testParseValue() throws SQLException {
         // BOOL
-        assertEquals(Boolean.TRUE, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_BOOL, (byte) 1));
-        assertEquals(Boolean.FALSE, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_BOOL, (byte) 0));
+        assertEquals(Boolean.TRUE, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_BOOL, (byte) 1, false));
+        assertEquals(Boolean.FALSE, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_BOOL, (byte) 0, false));
 
         // UTINYINT
-        assertEquals((short)255, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_UTINYINT, (byte) -1));
+        assertEquals((short)255, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_UTINYINT, (byte) -1, false));
 
         // TINYINT, SMALLINT, INT, BIGINT, FLOAT, DOUBLE, BINARY, JSON, VARBINARY, GEOMETRY
-        assertEquals((byte) 127, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_TINYINT, (byte) 127));
-        assertEquals((short) 32767, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_SMALLINT, (short) 32767));
-        assertEquals(2147483647, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_INT, 2147483647));
-        assertEquals(9223372036854775807L, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_BIGINT, 9223372036854775807L));
-        assertEquals(3.14f, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_FLOAT, 3.14f));
-        assertEquals(3.141592653589793, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_DOUBLE, 3.141592653589793));
-        assertEquals("binaryData", DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_BINARY, "binaryData"));
-        assertEquals("jsonData", DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_JSON, "jsonData"));
-        assertEquals("varbinaryData", DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_VARBINARY, "varbinaryData"));
-        assertEquals("geometryData", DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_GEOMETRY, "geometryData"));
-        assertEquals(new BigDecimal("1.2"), DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_DECIMAL128, new BigDecimal("1.2")));
-        assertEquals(new BigDecimal("1.2"), DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_DECIMAL64, new BigDecimal("1.2")));
+        assertEquals((byte) 127, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_TINYINT, (byte) 127, false));
+        assertEquals((short) 32767, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_SMALLINT, (short) 32767, false));
+        assertEquals(2147483647, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_INT, 2147483647, false));
+        assertEquals(9223372036854775807L, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_BIGINT, 9223372036854775807L, false));
+        assertEquals(3.14f, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_FLOAT, 3.14f, false));
+        assertEquals(3.141592653589793, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_DOUBLE, 3.141592653589793, false));
+        assertEquals("binaryData", DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_BINARY, "binaryData", false));
+        assertEquals("jsonData", DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_JSON, "jsonData", false));
+        assertEquals("varbinaryData", DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_VARBINARY, "varbinaryData", false));
+        assertEquals("geometryData", DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_GEOMETRY, "geometryData", false));
+        assertEquals(new BigDecimal("1.2"), DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_DECIMAL128, new BigDecimal("1.2"), false));
+        assertEquals(new BigDecimal("1.2"), DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_DECIMAL64, new BigDecimal("1.2"), false));
 
         // USMALLINT
-        assertEquals(65535, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_USMALLINT, (short) -1));
+        assertEquals(65535, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_USMALLINT, (short) -1, false));
 
         // UINT
-        assertEquals(4294967295L, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_UINT, -1));
+        assertEquals(4294967295L, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_UINT, -1, false));
 
         // TIMESTAMP
         Instant now = Instant.now();
-        assertEquals(now, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_TIMESTAMP, now));
+        assertEquals(now, DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_TIMESTAMP, now, false));
 
         // UBIGINT
-        assertEquals(new BigInteger(MAX_UNSIGNED_LONG), DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_UBIGINT, -1L));
+        assertEquals(new BigInteger(MAX_UNSIGNED_LONG), DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_UBIGINT, -1L, false));
 
         // NCHAR
         int[] ncharData = {65, 66, 67}; // Corresponds to "ABC"
-        assertEquals("ABC", DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_NCHAR, ncharData));
+        assertEquals("ABC", DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_NCHAR, ncharData, false));
 
         // Default case
-        assertNull(DataTypeConverUtil.parseValue(-1, "unknownType"));
+        assertNull(DataTypeConverUtil.parseValue(-1, "unknownType", false));
     }
 
     @Test

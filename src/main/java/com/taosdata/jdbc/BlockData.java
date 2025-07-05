@@ -20,6 +20,7 @@ public class BlockData {
     private List<List<Object>> data;
 
     private int returnCode;
+    private String errorMessage;
     private boolean isCompleted;
     private int numOfRows;
     private ByteBuf buffer;
@@ -29,12 +30,14 @@ public class BlockData {
 
     public BlockData(List<List<Object>> data,
                      int returnCode,
+                     String errorMessage,
                      int numOfRows,
                      ByteBuf buffer,
                      List<RestfulResultSet.Field> fields,
                      int precision) {
         this.data = data;
         this.returnCode = returnCode;
+        this.errorMessage = errorMessage;
         this.numOfRows = numOfRows;
         this.buffer = buffer;
         this.fields = fields;
@@ -44,7 +47,7 @@ public class BlockData {
     }
 
     public static BlockData getEmptyBlockData(List<RestfulResultSet.Field> fields, int precision) {
-        return new BlockData(null, 0, 0, null, fields, precision);
+        return new BlockData(null, 0, "",0, null, fields, precision);
     }
 
     public void handleData() {
@@ -306,7 +309,13 @@ public class BlockData {
     public void setReturnCode(int returnCode) {
         this.returnCode = returnCode;
     }
+    public String getErrorMessage() {
+        return errorMessage;
+    }
 
+    public void setErrorMessage(String errorMessage) {
+        this.errorMessage = errorMessage;
+    }
     public int getNumOfRows() {
         return numOfRows;
     }

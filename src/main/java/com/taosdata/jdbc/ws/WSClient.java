@@ -170,6 +170,7 @@ public class WSClient implements AutoCloseable {
                 tmpChn.close().syncUninterruptibly();
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "Handshake failed: " + handshakeFuture.cause().getMessage());
             }
+            tmpChn.pipeline().remove(wsHandler);
             return tmpChn;
         } catch (TimeoutException e) {
             if (tmpChn != null) {
