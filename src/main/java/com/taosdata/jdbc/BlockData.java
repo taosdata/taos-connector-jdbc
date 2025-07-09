@@ -180,6 +180,7 @@ public class BlockData {
                         }
                         case TSDB_DATA_TYPE_BINARY:
                         case TSDB_DATA_TYPE_JSON:
+                        case TSDB_DATA_TYPE_BLOB:
                         case TSDB_DATA_TYPE_VARBINARY:
                         case TSDB_DATA_TYPE_GEOMETRY: {
                             length = numOfRows * 4;
@@ -194,7 +195,14 @@ public class BlockData {
                                     continue;
                                 }
                                 buffer.readerIndex(start + offset.get(m));
-                                int len = buffer.readShortLE() & 0xFFFF;
+                                int len;
+                                if (type != TSDB_DATA_TYPE_BLOB) {
+                                    len = buffer.readShortLE() & 0xFFFF;
+
+                                } else {
+                                    len = buffer.readIntLE();
+                                }
+
                                 byte[] tmp = new byte[len];
                                 buffer.readBytes(tmp);
                                 col.add(tmp);

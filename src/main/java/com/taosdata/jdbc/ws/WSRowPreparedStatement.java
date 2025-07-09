@@ -4,10 +4,12 @@ import com.taosdata.jdbc.AbstractConnection;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.common.AutoExpandingBuffer;
+import com.taosdata.jdbc.common.TDBlob;
 import com.taosdata.jdbc.common.TableInfo;
 import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.utils.BlobUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.entity.Action;
@@ -18,7 +20,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -215,6 +219,7 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
                 setTimestampInner(parameterIndex, 0, true);
                 break;
             case TSDB_DATA_TYPE_BINARY:
+            case TSDB_DATA_TYPE_BLOB:
             case TSDB_DATA_TYPE_VARBINARY:
             case TSDB_DATA_TYPE_GEOMETRY:
             case TSDB_DATA_TYPE_NCHAR:
@@ -261,6 +266,7 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
                 break;
             case Types.BINARY:
             case Types.VARCHAR:
+            case Types.BLOB:
             case Types.VARBINARY:
                 fieldType = fields.get(parameterIndex - 1).getFieldType();
                 if (fieldType > 0){
@@ -640,6 +646,15 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
                     throw new SQLException("Invalid type for binary: " + x.getClass().getName());
                 }
                 break;
+            case Types.BLOB:
+                if (x instanceof byte[]) {
+                    setBytes(parameterIndex, (byte[]) x);
+                } else if (x instanceof Blob) {
+                    setBytes(parameterIndex, ((Blob) x).getBytes(1, (int) ((Blob) x).length()));
+                } else {
+                    throw new SQLException("Invalid type for blob: " + x.getClass().getName());
+                }
+                break;
             default:
                 throw new SQLException("unsupported type: " + targetSqlType);
         }
@@ -697,7 +712,11 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "ubigint value is out of range");
             }
             setLongInner(parameterIndex, ((BigInteger) x).longValue(), false, (byte)TSDB_DATA_TYPE_UBIGINT);
-        } else {
+        } else if (x instanceof Blob){
+            byte[] bytes = ((Blob) x).getBytes(1, (int) ((Blob) x).length());
+            setBytesInner(parameterIndex, bytes, false, getTSDBType(parameterIndex, (byte)TSDB_DATA_TYPE_BLOB));
+        }
+        else {
             throw new SQLException("Unsupported data type: " + x.getClass().getName());
         }
     }
@@ -771,7 +790,12 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
 
     @Override
     public void setBlob(int parameterIndex, Blob x) throws SQLException {
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
+        if (x == null){
+            setNullByTSDBType(parameterIndex, TSDB_DATA_TYPE_BLOB);
+            return;
+        }
+        byte[] bytes = x.getBytes(1, (int) x.length());
+        setBytesInner(parameterIndex, bytes, false, getTSDBType(parameterIndex, (byte)TSDB_DATA_TYPE_BLOB));
     }
 
     @Override
@@ -832,7 +856,7 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
 
     @Override
     public void setBlob(int parameterIndex, InputStream inputStream, long length) throws SQLException {
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
+        setBytesInner(parameterIndex, BlobUtil.getFromInputStream(inputStream, length), false, getTSDBType(parameterIndex, (byte) TSDB_DATA_TYPE_BLOB));
     }
 
     @Override
@@ -892,7 +916,7 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
 
     @Override
     public void setBlob(int parameterIndex, InputStream inputStream) throws SQLException {
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
+        setBytesInner(parameterIndex, BlobUtil.getFromInputStream(inputStream), false, getTSDBType(parameterIndex, (byte) TSDB_DATA_TYPE_BLOB));
     }
 
     @Override

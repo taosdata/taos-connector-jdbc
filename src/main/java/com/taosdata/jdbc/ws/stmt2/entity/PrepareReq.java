@@ -9,6 +9,7 @@ public class PrepareReq extends Payload {
     @JsonProperty("stmt_id")
     @JsonSerialize(using = UInt64Serializer.class)
     private long stmtId;
+    @JsonProperty("sql")
     private String sql;
     @JsonProperty("get_fields")
     private boolean getFields = true;

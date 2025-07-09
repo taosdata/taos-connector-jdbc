@@ -9,6 +9,7 @@ public class Stmt2ExecResp extends CommonResp {
     @JsonProperty("stmt_id")
     @JsonDeserialize(using = UInt64Deserializer.class)
     private long stmtId;
+    @JsonProperty("affected")
     private int affected;
     public long getStmtId() {
         return stmtId;

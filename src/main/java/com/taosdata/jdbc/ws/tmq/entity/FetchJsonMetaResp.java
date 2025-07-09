@@ -6,11 +6,13 @@ import com.taosdata.jdbc.utils.UInt64Deserializer;
 import com.taosdata.jdbc.ws.entity.CommonResp;
 
 public class FetchJsonMetaResp extends CommonResp {
+    @JsonProperty("timing")
     private long timing;
     @JsonProperty("message_id")
     @JsonDeserialize(using = UInt64Deserializer.class)
     private long messageId;
 
+    @JsonProperty("data")
     private FetchJsonMetaData data;
 
     public long getTiming() {

@@ -44,6 +44,15 @@ public class WSSelectTest {
         long start = System.nanoTime();
         for (int i = 0; i < 1; i++) {
             ResultSet resultSet = statement.executeQuery("select ts,c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14,c15 from " + databaseName + ".alltype_query limit 3000");
+
+            ResultSetMetaData metaData = resultSet.getMetaData();
+
+
+            assertEquals(38, metaData.getPrecision(15));
+            assertEquals(10, metaData.getScale(15));
+            assertEquals(18, metaData.getPrecision(16));
+            assertEquals(6, metaData.getScale(16));
+
             while (resultSet.next()) {
                 count++;
                 resultSet.getTimestamp(1);

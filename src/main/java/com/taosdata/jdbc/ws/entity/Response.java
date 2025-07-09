@@ -6,8 +6,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * return from taosadapter
  */
 public class Response {
+    @JsonProperty("action")
     private String action;
-
     @JsonProperty("req_id")
     private long reqId;
 

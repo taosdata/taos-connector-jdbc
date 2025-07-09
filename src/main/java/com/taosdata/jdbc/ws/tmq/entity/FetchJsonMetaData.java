@@ -11,6 +11,7 @@ import java.util.List;
 public class FetchJsonMetaData {
     @JsonProperty("tmq_meta_version")
     private String tmqMetaVersion;
+    @JsonProperty("metas")
     private List<Meta> metas;
 
     public String getTmqMetaVersion() {

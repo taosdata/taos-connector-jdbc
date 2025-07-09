@@ -6,6 +6,7 @@ import com.google.common.primitives.Shorts;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.TaosGlobalConfig;
+import com.taosdata.jdbc.common.TDBlob;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 
 import java.io.UnsupportedEncodingException;
@@ -440,6 +441,8 @@ public class DataTypeConverUtil {
             return new byte[]{(byte) value};
         if (value instanceof Instant)
             return Timestamp.from((Instant) value).toString().getBytes();
+        if (value instanceof TDBlob)
+            return ((TDBlob) value).getBytes(1, (int) ((TDBlob) value).length());
         return value.toString().getBytes();
     }
 
@@ -565,6 +568,7 @@ public class DataTypeConverUtil {
             case TSDB_DATA_TYPE_DECIMAL128:
             case TSDB_DATA_TYPE_DECIMAL64:
             case TSDB_DATA_TYPE_GEOMETRY:
+            case TSDB_DATA_TYPE_BLOB:
             case TSDB_DATA_TYPE_TIMESTAMP:{
                 return source;
             }

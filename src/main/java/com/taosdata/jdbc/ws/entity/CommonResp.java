@@ -1,8 +1,12 @@
 package com.taosdata.jdbc.ws.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class CommonResp extends Response {
 
+    @JsonProperty("code")
     private int code;
+    @JsonProperty("message")
     private String message;
 
     public int getCode() {

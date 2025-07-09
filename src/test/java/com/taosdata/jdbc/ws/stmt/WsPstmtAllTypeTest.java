@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.TSDBConstants;
+import com.taosdata.jdbc.common.TDBlob;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.TestUtils;
@@ -27,7 +28,7 @@ public class WsPstmtAllTypeTest {
 
     @Test
     public void testExecuteUpdate() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "insert into " + db_name + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         PreparedStatement statement = connection.prepareStatement(sql);
         long current = System.currentTimeMillis();
         statement.setTimestamp(1, new Timestamp(current));
@@ -48,6 +49,7 @@ public class WsPstmtAllTypeTest {
         statement.setInt(15, TSDBConstants.MAX_UNSIGNED_SHORT);
         statement.setLong(16, TSDBConstants.MAX_UNSIGNED_INT);
         statement.setObject(17, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
+        statement.setObject(18, expectedVarBinary);
 
         statement.executeUpdate();
 
@@ -71,6 +73,9 @@ public class WsPstmtAllTypeTest {
         Assert.assertEquals(resultSet.getInt(15), TSDBConstants.MAX_UNSIGNED_SHORT);
         Assert.assertEquals(resultSet.getLong(16), TSDBConstants.MAX_UNSIGNED_INT);
         Assert.assertEquals(resultSet.getObject(17), new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
+        Blob blob = (TDBlob) resultSet.getObject(18);
+        byte[] bytes = blob.getBytes(1, (int)blob.length());
+        Assert.assertEquals(bytes, expectedVarBinary);
 
 
         Date date = new Date(current);
@@ -296,7 +301,7 @@ public class WsPstmtAllTypeTest {
         statement.execute("create table if not exists " + db_name + "." + tableName +
                 "(ts timestamp, c1 tinyint, c2 smallint, c3 int, c4 bigint, " +
                 "c5 float, c6 double, c7 bool, c8 binary(10), c9 nchar(10), c10 varchar(20), c11 varbinary(100), c12 geometry(100)," +
-                "c13 tinyint unsigned, c14 smallint unsigned, c15 int unsigned, c16 bigint unsigned)");
+                "c13 tinyint unsigned, c14 smallint unsigned, c15 int unsigned, c16 bigint unsigned, c17 blob(100))");
 
         statement.execute("create stable if not exists " + db_name + "." + stableName +
                 "(ts timestamp, c1 tinyint) tags (t1 timestamp, t2 tinyint, t3 smallint, t4 int, t5 bigint, " +

@@ -111,6 +111,7 @@ public class SerializeBlock {
                 switch (columnInfo.getType()) {
                     case TSDB_DATA_TYPE_BINARY:
                     case TSDB_DATA_TYPE_JSON:
+                    case TSDB_DATA_TYPE_BLOB:
                     case TSDB_DATA_TYPE_VARBINARY:
                     case TSDB_DATA_TYPE_GEOMETRY:{
                         byte[] v = (byte[]) o;
@@ -333,6 +334,7 @@ public class SerializeBlock {
         switch (dataType) {
             case TSDB_DATA_TYPE_JSON:
             case TSDB_DATA_TYPE_BINARY:
+            case TSDB_DATA_TYPE_BLOB:
             case TSDB_DATA_TYPE_VARBINARY:
             case TSDB_DATA_TYPE_GEOMETRY:{
                 for (Object o: objectList){
@@ -403,6 +405,7 @@ public class SerializeBlock {
         switch (column.getType()) {
             case TSDB_DATA_TYPE_JSON:
             case TSDB_DATA_TYPE_BINARY:
+            case TSDB_DATA_TYPE_BLOB:
             case TSDB_DATA_TYPE_VARBINARY:
             case TSDB_DATA_TYPE_GEOMETRY:{
                 int totalLength = 0;

@@ -7,6 +7,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -151,7 +152,11 @@ public class TMQResultSet extends AbstractResultSet {
     public Object getObject(int columnIndex) throws SQLException {
         checkAvailability(columnIndex, this.columnMetaDataList.size());
 
-        return this.blockData.get(columnIndex - 1);
+        Object o = this.blockData.get(columnIndex - 1);
+        if (o instanceof Instant){
+            return Timestamp.from((Instant) o);
+        }
+        return o;
     }
 
     public int findColumn(String columnLabel) throws SQLException {

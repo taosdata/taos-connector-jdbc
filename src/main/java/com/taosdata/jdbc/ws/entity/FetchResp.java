@@ -1,12 +1,18 @@
 package com.taosdata.jdbc.ws.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
  * fetch result pojo
  */
 public class FetchResp extends CommonResp{
+    @JsonProperty("id")
     private long id;
+    @JsonProperty("completed")
     private boolean completed;
+    @JsonProperty("lengths")
     private Integer[] lengths;
+    @JsonProperty("rows")
     private int rows;
 
     public long getId() {

@@ -11,6 +11,7 @@ public class Stmt2PrepareResp extends CommonResp {
     @JsonProperty("stmt_id")
     @JsonDeserialize(using = UInt64Deserializer.class)
     private long stmtId;
+    @JsonProperty("fields")
     private List<Field> fields;
     @JsonProperty("fields_count")
     private int fieldsCount;

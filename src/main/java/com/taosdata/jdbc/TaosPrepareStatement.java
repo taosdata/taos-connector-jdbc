@@ -1,6 +1,7 @@
 package com.taosdata.jdbc;
 
 import java.math.BigInteger;
+import java.sql.Blob;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -36,7 +37,6 @@ public interface TaosPrepareStatement extends PreparedStatement {
 
     void setTagVarbinary(int index, byte[] value);
     void setTagGeometry(int index, byte[] value);
-
     void setTagNString(int index, String value);
 
     void setTagJson(int index, String value);
@@ -60,6 +60,8 @@ public interface TaosPrepareStatement extends PreparedStatement {
 
      void setVarbinary(int columnIndex, List<byte[]> list, int size) throws SQLException;
      void setGeometry(int columnIndex, List<byte[]> list, int size) throws SQLException;
+
+    void setBlob(int columnIndex, List<Blob> list, int size) throws SQLException;
     // note: expand the required space for each NChar character
     void setNString(int columnIndex, List<String> list, int size) throws SQLException;
 

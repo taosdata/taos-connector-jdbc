@@ -37,7 +37,7 @@ public class WSVarbinaryTest {
         TSWSPreparedStatement preparedStatement = (TSWSPreparedStatement) connection.prepareStatement("insert into " + dbName + "." + tableStmt + " values (?, ?)");
         preparedStatement.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
 
-        preparedStatement.setVarbinary(2, expectedArray);
+        preparedStatement.setBytes(2, expectedArray);
         preparedStatement.addBatch();
         preparedStatement.executeBatch();
         ResultSet resultSet = statement.executeQuery("select c1 from " + dbName + "." + tableStmt);
