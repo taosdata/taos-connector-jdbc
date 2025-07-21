@@ -1595,9 +1595,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
 
 
     protected ResultSet getPrimaryKeys(String catalog, String schema, String table, Connection conn) throws SQLException {
-        if (catalog == null || catalog.isEmpty())
-            return null;
-        if (!isAvailableCatalog(conn, catalog))
+        if (catalog == null || catalog.isEmpty() || !isAvailableCatalog(conn, catalog))
             return new EmptyResultSet();
 
         DatabaseMetaDataResultSet resultSet = new DatabaseMetaDataResultSet();
