@@ -119,8 +119,7 @@ public class SerializeBlock {
                         break;
                     }
                     case TSDB_DATA_TYPE_NCHAR: {
-                        String v = (String) o;
-                        int len = v.getBytes().length;
+                        int len = ((byte[])o).length;
                         buf.writeIntLE(len);
                         bufferLength += len;
                         break;
@@ -346,9 +345,7 @@ public class SerializeBlock {
             case TSDB_DATA_TYPE_NCHAR: {
                 for (Object o: objectList){
                     if (o != null) {
-                        String v = (String) o;
-                        byte[] bytes = v.getBytes();
-                        serializeByteArray(buf, bytes);
+                        serializeByteArray(buf, (byte[])o);
                     }
                 }
                 break;
@@ -419,8 +416,7 @@ public class SerializeBlock {
                 int totalLength = 0;
                 for (Object o : column.getDataList()) {
                     if (o != null) {
-                        String v = (String) o;
-                        totalLength += v.getBytes().length;
+                        totalLength += ((byte[])o).length;
                     }
                 }
                 // TotalLength(4) + Type (4) + Num(4) + IsNull(1) * size + haveLength(1) + BufferLength(4) + 4 * v.length + totalLength
