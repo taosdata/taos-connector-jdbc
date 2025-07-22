@@ -21,7 +21,7 @@ public class WsPStmtAllTypeNullTest {
 
     @Test
     public void testExecuteUpdate() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "insert into " + db_name + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         PreparedStatement statement = connection.prepareStatement(sql);
         long current = System.currentTimeMillis();
         statement.setTimestamp(1, new Timestamp(current));
@@ -38,7 +38,6 @@ public class WsPStmtAllTypeNullTest {
         statement.setString(11, null);
         statement.setNull(12, Types.VARBINARY);
         statement.setNull(13, Types.VARBINARY);
-        statement.setNull(14, Types.BLOB);
         statement.executeUpdate();
 
         ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + tableName);
@@ -72,7 +71,6 @@ public class WsPStmtAllTypeNullTest {
 
         Assert.assertNull(resultSet.getBytes(12));
         Assert.assertNull(resultSet.getBytes(13));
-        Assert.assertNull(resultSet.getBytes(14));
         resultSet.close();
         statement.close();
     }
@@ -186,7 +184,7 @@ public class WsPStmtAllTypeNullTest {
         statement.execute("use " + db_name);
         statement.execute("create table if not exists " + db_name + "." + tableName +
                 "(ts timestamp, c1 tinyint, c2 smallint, c3 int, c4 bigint, " +
-                "c5 float, c6 double, c7 bool, c8 binary(10), c9 nchar(10), c10 varchar(20), c11 varbinary(100), c12 geometry(100), c13 blob(100))");
+                "c5 float, c6 double, c7 bool, c8 binary(10), c9 nchar(10), c10 varchar(20), c11 varbinary(100), c12 geometry(100))");
 
         statement.execute("create stable if not exists " + db_name + "." + stableName +
                 "(ts timestamp, c1 tinyint) tags (t1 timestamp, t2 tinyint, t3 smallint, t4 int, t5 bigint, " +

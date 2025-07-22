@@ -1,9 +1,6 @@
 package com.taosdata.jdbc.rs;
 
-import com.taosdata.jdbc.AbstractConnection;
-import com.taosdata.jdbc.TSDBDriver;
-import com.taosdata.jdbc.TSDBError;
-import com.taosdata.jdbc.TSDBErrorNumbers;
+import com.taosdata.jdbc.*;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 
@@ -29,7 +26,7 @@ public class RestfulConnection extends AbstractConnection {
     private final DatabaseMetaData metadata;
 
     public RestfulConnection(String host, String port, Properties props, String database, String url, String auth, boolean useSsl, String token, String tz) {
-        super(props);
+        super(props, TSDBConstants.UNKNOWN_VERSION);
         this.host = host;
         this.port = port;
         this.database = database;

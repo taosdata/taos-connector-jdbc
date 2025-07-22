@@ -36,7 +36,6 @@ public class WSSelectTest {
         }
         statement.close();
     }
-
     @Test
     public void testWSSelect() throws SQLException {
         Statement statement = connection.createStatement();

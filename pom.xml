@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.taosdata.jdbc</groupId>
     <artifactId>taos-jdbcdriver</artifactId>
-    <version>3.7.0-NOENCODE</version>
+    <version>3.7.0</version>
 
     <packaging>jar</packaging>
     <name>JDBCDriver</name>
@@ -187,7 +187,10 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.0.0-M6</version>
                 <configuration>
-                    <parallel>classes</parallel>
+                    <forkCount>1</forkCount>
+                    <reuseForks>false</reuseForks>
+
+                    <parallel>none</parallel>
                     <threadCount>1</threadCount>
                     <useUnlimitedThreads>false</useUnlimitedThreads>
                     <perCoreThreadCount>false</perCoreThreadCount>

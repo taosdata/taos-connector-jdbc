@@ -842,6 +842,7 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
 
     @Override
     public void setBlob(int parameterIndex, Blob x) throws SQLException {
+        checkBlobSupport();
         if (x == null){
             setNull(parameterIndex, Types.BLOB);
             return;
@@ -913,6 +914,7 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
 
     @Override
     public void setBlob(int parameterIndex, InputStream inputStream, long length) throws SQLException {
+        checkBlobSupport();
         colOrderedMap.put(parameterIndex, new Column(BlobUtil.getFromInputStream(inputStream, length), TSDB_DATA_TYPE_BINARY, parameterIndex));
     }
 
@@ -973,6 +975,7 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
 
     @Override
     public void setBlob(int parameterIndex, InputStream inputStream) throws SQLException {
+        checkBlobSupport();
         colOrderedMap.put(parameterIndex, new Column(BlobUtil.getFromInputStream(inputStream), TSDB_DATA_TYPE_BINARY, parameterIndex));
     }
 
@@ -1042,6 +1045,7 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
     }
     @Override
     public void setBlob(int columnIndex, List<Blob> list, int size) throws SQLException {
+        checkBlobSupport();
         setValueImpl(columnIndex, BlobUtil.getListBytes(list), TSDBConstants.TSDB_DATA_TYPE_BLOB, size);
     }
 

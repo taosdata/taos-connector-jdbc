@@ -44,6 +44,8 @@ public class TSDBError {
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TYPE_CONVERT_EXCEPTION, "type convert exception");
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_VERSION_INCOPMATIABLE, "TDengine version incompatible");
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_RESOURCE_FREEED, "resource has been freed");
+        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_BLOB_UNSUPPORTED_IN_SERVER, "BLOB is unsupported on the server");
+        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_LINE_BIND_MODE_UNSUPPORTED_IN_SERVER, "line bind mode is unsupported on the server");
 
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_UNKNOWN, "unknown error");
 

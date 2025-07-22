@@ -19,8 +19,6 @@ import java.util.Calendar;
 import java.util.Properties;
 import java.util.TimeZone;
 
-import static org.junit.Assert.fail;
-
 public class WsPStmtLineModeNullTest {
     String host = "127.0.0.1";
     String db_name = TestUtils.camelToSnake(WsPStmtLineModeNullTest.class);
@@ -207,8 +205,7 @@ public class WsPStmtLineModeNullTest {
         Ref ref = null;
         preparedStatement.setRef(1, ref);
     }
-
-    @Test(expected = SQLException.class)
+    @Test
     public void testSetBlob_int_Blob() throws SQLException {
         Blob blob = null;
         preparedStatement.setBlob(1, blob);
@@ -290,12 +287,12 @@ public class WsPStmtLineModeNullTest {
         Reader reader = new StringReader("test");
         preparedStatement.setClob(1, reader, 4L);
     }
-
-    @Test(expected = SQLException.class)
+    @Test
     public void testSetBlob_int_InputStream_long() throws SQLException {
         InputStream inputStream = new ByteArrayInputStream("test".getBytes());
         preparedStatement.setBlob(1, inputStream, 4L);
     }
+
 
     @Test(expected = SQLException.class)
     public void testSetNClob_int_Reader_long() throws SQLException {
@@ -363,7 +360,7 @@ public class WsPStmtLineModeNullTest {
         preparedStatement.setClob(1, reader);
     }
 
-    @Test(expected = SQLException.class)
+    @Test
     public void testSetBlob_int_InputStream() throws SQLException {
         InputStream inputStream = new ByteArrayInputStream("test".getBytes());
         preparedStatement.setBlob(1, inputStream);
@@ -421,6 +418,8 @@ public class WsPStmtLineModeNullTest {
 
     @BeforeClass
     public static void setUp() {
+        TestUtils.runInMain();
+
         ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
     }
 

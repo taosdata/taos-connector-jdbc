@@ -787,9 +787,10 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
     public void setRef(int parameterIndex, Ref x) throws SQLException {
         throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
     }
-
     @Override
     public void setBlob(int parameterIndex, Blob x) throws SQLException {
+        checkBlobSupport();
+
         if (x == null){
             setNullByTSDBType(parameterIndex, TSDB_DATA_TYPE_BLOB);
             return;
@@ -856,6 +857,7 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
 
     @Override
     public void setBlob(int parameterIndex, InputStream inputStream, long length) throws SQLException {
+        checkBlobSupport();
         setBytesInner(parameterIndex, BlobUtil.getFromInputStream(inputStream, length), false, getTSDBType(parameterIndex, (byte) TSDB_DATA_TYPE_BLOB));
     }
 
@@ -916,6 +918,7 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
 
     @Override
     public void setBlob(int parameterIndex, InputStream inputStream) throws SQLException {
+        checkBlobSupport();
         setBytesInner(parameterIndex, BlobUtil.getFromInputStream(inputStream), false, getTSDBType(parameterIndex, (byte) TSDB_DATA_TYPE_BLOB));
     }
 

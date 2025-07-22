@@ -1,7 +1,6 @@
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
-import com.taosdata.jdbc.TSDBPreparedStatement;
 import com.taosdata.jdbc.common.TDBlob;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.StringUtils;
@@ -24,6 +23,10 @@ public class WSBlobTest {
     static String testStr = "20160601";
     static byte[] expectedArray = StringUtils.hexToBytes(testStr);
 
+    @BeforeClass
+    public static void checkEnvironment() {
+        TestUtils.runInMain();
+    }
 
     @Test
     public void testInsert() throws Exception {
@@ -31,8 +34,16 @@ public class WSBlobTest {
         ResultSet resultSet = statement.executeQuery("select c1, t1 from " + dbName + "." + tableNative);
         resultSet.next();
         Assert.assertArrayEquals(expectedArray, resultSet.getBytes(1));
+        resultSet.close();
     }
-
+    @Test
+    public void testInsertNull() throws Exception {
+        statement.executeUpdate("insert into subt_a using " + dbName + "." + tableNative + "  tags( \"123456abcdef\")  values(now, NULL)");
+        ResultSet resultSet = statement.executeQuery("select c1, t1 from " + dbName + "." + tableNative);
+        resultSet.next();
+        Assert.assertArrayEquals(null, resultSet.getBytes(1));
+        resultSet.close();
+    }
     @Test
     public void testPrepareExt() throws SQLException {
         TSWSPreparedStatement preparedStatement = (TSWSPreparedStatement) connection.prepareStatement("insert into ? using " + dbName + "." + tableStmt + "   tags(?)  values (?, ?)");
@@ -43,18 +54,22 @@ public class WSBlobTest {
         long current = System.currentTimeMillis();
         ArrayList<Long> tsList = new ArrayList<>();
         tsList.add(current);
+        tsList.add(current + 1);
         preparedStatement.setTimestamp(0, tsList);
 
         ArrayList<Blob> list = new ArrayList<>();
         list.add(new TDBlob(testStr.getBytes(StandardCharsets.UTF_8), true));
+        list.add(null);
         preparedStatement.setBlob(1, list, 200);
 
         preparedStatement.columnDataAddBatch();
         preparedStatement.columnDataExecuteBatch();
-        ResultSet resultSet = statement.executeQuery("select c1 from " + dbName + "." + tableStmt);
-        while (resultSet.next()) {
-            Assert.assertArrayEquals(expectedArray, resultSet.getBytes(2));
-        }
+        ResultSet resultSet = statement.executeQuery("select c1 from " + dbName + "." + tableStmt + " order by ts asc");
+        resultSet.next();
+        Assert.assertArrayEquals(testStr.getBytes(StandardCharsets.UTF_8), resultSet.getBytes(1));
+        resultSet.next();
+        Assert.assertArrayEquals(null, resultSet.getBytes(1));
+        resultSet.close();
     }
 
     @Test
@@ -70,9 +85,9 @@ public class WSBlobTest {
         preparedStatement.addBatch();
         preparedStatement.executeBatch();
         ResultSet resultSet = statement.executeQuery("select c1 from " + dbName + "." + tableStmt);
-        while (resultSet.next()) {
-            Assert.assertArrayEquals(expectedArray, resultSet.getBytes(2));
-        }
+        resultSet.next();
+        Assert.assertArrayEquals(testStr.getBytes(StandardCharsets.UTF_8), resultSet.getBytes(1));
+        resultSet.close();
     }
 
     @Before
@@ -95,16 +110,16 @@ public class WSBlobTest {
 
     @After
     public void after() {
-//        try {
-//            if (statement != null && !statement.isClosed()) {
-//                statement.executeUpdate("drop database if exists " + dbName);
-//                statement.close();
-//            }
-//            if (connection != null && !connection.isClosed()) {
-//                connection.close();
-//            }
-//        } catch (SQLException e) {
-//            // ignore
-//        }
+        try {
+            if (statement != null && !statement.isClosed()) {
+                statement.executeUpdate("drop database if exists " + dbName);
+                statement.close();
+            }
+            if (connection != null && !connection.isClosed()) {
+                connection.close();
+            }
+        } catch (SQLException e) {
+            // ignore
+        }
     }
 }

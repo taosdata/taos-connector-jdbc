@@ -3,18 +3,16 @@ package com.taosdata.jdbc.ws;
 import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.common.Bean;
-import com.taosdata.jdbc.common.TDBlob;
-import com.taosdata.jdbc.tmq.*;
+import com.taosdata.jdbc.tmq.ConsumerRecord;
+import com.taosdata.jdbc.tmq.ConsumerRecords;
+import com.taosdata.jdbc.tmq.TMQConstants;
+import com.taosdata.jdbc.tmq.TaosConsumer;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.time.Duration;
 import java.util.Collections;
@@ -145,6 +143,8 @@ public class WSConsumerWithDiffTypeTest {
 
     @BeforeClass
     public static void before() throws SQLException {
+        TestUtils.runInMain();
+
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
             url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";

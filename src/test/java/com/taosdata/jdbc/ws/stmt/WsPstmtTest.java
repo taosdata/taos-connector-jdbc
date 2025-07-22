@@ -4,9 +4,6 @@ import com.taosdata.jdbc.common.TDBlob;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.TSWSPreparedStatement;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.CompositeByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.util.ResourceLeakDetector;
 import org.junit.*;
 import org.junit.runners.MethodSorters;
@@ -192,9 +189,17 @@ public class WsPstmtTest {
     }
 
     @Test
-    public void test104_SetBlob() throws SQLException {
+    public void test104_SetBlobOK() throws SQLException {
+        TestUtils.runInMain();
         pstmt.setBlob(1, new TDBlob(new byte[]{1, 2, 3, 4, 5}, true));
     }
+
+    @Test (expected = SQLException.class)
+    public void test104_SetBlobErr() throws SQLException {
+        TestUtils.runIn336();
+        pstmt.setBlob(1, new TDBlob(new byte[]{1, 2, 3, 4, 5}, true));
+    }
+
     @Test (expected = SQLException.class)
     public void test105_SetBlob2() throws SQLException {
         pstmt.setBlob(1, null, 0);
