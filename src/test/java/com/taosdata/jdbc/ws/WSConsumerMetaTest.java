@@ -3,19 +3,26 @@ package com.taosdata.jdbc.ws;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.taosdata.jdbc.TSDBDriver;
-import com.taosdata.jdbc.tmq.*;
+import com.taosdata.jdbc.common.BaseTest;
+import com.taosdata.jdbc.tmq.ConsumerRecord;
+import com.taosdata.jdbc.tmq.ConsumerRecords;
+import com.taosdata.jdbc.tmq.TMQConstants;
+import com.taosdata.jdbc.tmq.TaosConsumer;
 import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.tmq.meta.*;
 import org.junit.*;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-public class WSConsumerMetaTest {
+public class WSConsumerMetaTest extends BaseTest {
     private static final String host = "127.0.0.1";
     private static final String dbName = TestUtils.camelToSnake(WSConsumerMetaTest.class);
     private static final String superTable = "st";

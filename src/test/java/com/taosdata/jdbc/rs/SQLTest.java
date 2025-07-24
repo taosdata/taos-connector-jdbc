@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.rs;
 
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
@@ -8,7 +9,7 @@ import org.junit.runners.MethodSorters;
 import java.sql.*;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class SQLTest {
+public class SQLTest extends BaseTest {
 
     private static final String host = "127.0.0.1";
     private static Connection connection;

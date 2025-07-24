@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.cases;
 
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.After;
 import org.junit.Before;
@@ -13,7 +14,7 @@ import java.util.stream.IntStream;
 
 import static org.junit.Assert.*;
 
-public class MultiConnectionWithDifferentDbTest {
+public class MultiConnectionWithDifferentDbTest extends BaseTest {
 
     private static String host = "127.0.0.1";
     private static String db1 = "db1";

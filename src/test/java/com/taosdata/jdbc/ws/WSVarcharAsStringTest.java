@@ -2,6 +2,7 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.annotation.Description;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.After;
@@ -19,7 +20,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class WSVarcharAsStringTest {
+public class WSVarcharAsStringTest extends BaseTest {
     private static final String host = "127.0.0.1";
     private static final int port = 6041;
     private final String db_name = TestUtils.camelToSnake(WSVarcharAsStringTest.class);

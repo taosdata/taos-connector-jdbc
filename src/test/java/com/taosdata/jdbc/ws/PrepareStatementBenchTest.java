@@ -1,9 +1,9 @@
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBPreparedStatement;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
-import com.taosdata.jdbc.ws.stmt.WsPstmtTest;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.Properties;
 
 @Ignore
-public class PrepareStatementBenchTest {
+public class PrepareStatementBenchTest extends BaseTest {
     static String host = "127.0.0.1";
 //    static String host = "192.168.1.98";
     static String db_name = TestUtils.camelToSnake(PrepareStatementBenchTest.class);

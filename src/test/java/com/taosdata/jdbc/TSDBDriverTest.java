@@ -1,5 +1,6 @@
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -9,7 +10,7 @@ import java.util.Properties;
 
 import static org.junit.Assert.*;
 
-public class TSDBDriverTest {
+public class TSDBDriverTest extends BaseTest {
 
     private static String[] validURLs;
     private Connection conn;

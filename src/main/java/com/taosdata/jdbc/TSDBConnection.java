@@ -7,13 +7,8 @@ import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicLong;
 
 public class TSDBConnection extends AbstractConnection {
     private TSDBJNIConnector connector;
@@ -27,6 +22,12 @@ public class TSDBConnection extends AbstractConnection {
                 info.getProperty(TSDBDriver.PROPERTY_KEY_DBNAME),
                 info.getProperty(TSDBDriver.PROPERTY_KEY_USER),
                 info.getProperty(TSDBDriver.PROPERTY_KEY_PASSWORD));
+        try {
+            this.connector.initConnectionProperties(info);
+        } catch (SQLException e) {
+            close();
+            throw e;
+        }
     }
 
     private void connect(String host, int port, String dbName, String user, String password) throws SQLException {

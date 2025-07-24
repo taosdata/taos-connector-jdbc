@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.cloud;
 
+import com.taosdata.jdbc.common.BaseTest;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -9,7 +10,7 @@ import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertNotEquals;
 
-public class CloudTest {
+public class CloudTest extends BaseTest {
     String[] strings = {"abc", "涛思数据"};
     String[] types = {"BINARY", "TIMESTAMP"};
 

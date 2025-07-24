@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.tmq;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.*;
 
@@ -16,7 +17,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @FixMethodOrder
-public class TaosConsumerTest {
+public class TaosConsumerTest extends BaseTest {
     private static final String host = "127.0.0.1";
     private static final String dbName = "tmq_test";
     private static final String superTable = "st";

@@ -3,6 +3,7 @@ package com.taosdata.jdbc;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
@@ -16,7 +17,7 @@ import java.util.Properties;
 
 @RunWith(CatalogRunner.class)
 @TestTarget(author = "huolibo", version = "3.0.1")
-public class WasNullTest {
+public class WasNullTest extends BaseTest {
     static String host = "127.0.0.1";
     static String dbName = TestUtils.camelToSnake(WasNullTest.class);;
     static String tableName = "null_t";

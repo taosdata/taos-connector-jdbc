@@ -4,8 +4,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -20,7 +22,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 
-public class RestfulResultSetTest {
+public class RestfulResultSetTest extends BaseTest {
 
     private static final String host = "127.0.0.1";
     private static Connection conn;

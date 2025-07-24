@@ -1,15 +1,19 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.utils.TimestampUtil;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.sql.*;
 import java.util.Properties;
 
-public class NullValueInResultSetTest {
+public class NullValueInResultSetTest extends BaseTest {
     private static final String host = "127.0.0.1";
     private static Properties properties;
     private Connection conn;

@@ -1,7 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.TSDBDriver;
-import com.taosdata.jdbc.cloud.CloudSchemalessTest;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.After;
@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 
-public class BatchInsertTest {
+public class BatchInsertTest extends BaseTest {
 
     static String host = "127.0.0.1";
     static String dbName = TestUtils.camelToSnake(BatchInsertTest.class);

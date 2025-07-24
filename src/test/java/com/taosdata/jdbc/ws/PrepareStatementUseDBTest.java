@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
@@ -10,7 +11,7 @@ import org.junit.Test;
 import java.sql.*;
 import java.util.Properties;
 
-public class PrepareStatementUseDBTest {
+public class PrepareStatementUseDBTest extends BaseTest {
     private static final String host = "127.0.0.1";
     private static Connection conn;
     private static final String sql_insert = "insert into t1 values (?, ?)";

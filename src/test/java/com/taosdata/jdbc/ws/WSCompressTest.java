@@ -4,6 +4,7 @@ import com.taosdata.jdbc.AbstractConnection;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.tmq.ConsumerRecord;
@@ -24,7 +25,7 @@ import java.util.Properties;
 
 @RunWith(CatalogRunner.class)
 @FixMethodOrder
-public class WSCompressTest {
+public class WSCompressTest extends BaseTest {
     private static final String host = "127.0.0.1";
     private static final int port = 6041;
     private static final String db_name = TestUtils.camelToSnake(WSCompressTest.class);

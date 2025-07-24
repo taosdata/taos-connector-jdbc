@@ -1,15 +1,14 @@
 package com.taosdata.jdbc.utils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.taosdata.jdbc.common.BaseTest;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.text.SimpleDateFormat;
 
-public class JsonUtilTest {
+public class JsonUtilTest extends BaseTest {
     private static final ObjectMapper objectMapper = JsonUtil.getObjectMapper();
-
-
     @Test
     public void testIgnoreUnknownProperties() throws Exception {
         String json = "{\"knownProperty\":\"value\", \"unknownProperty\":\"value\"}";

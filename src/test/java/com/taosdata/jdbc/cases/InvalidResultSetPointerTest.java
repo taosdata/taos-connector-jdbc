@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.cases;
 
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.BeforeClass;
@@ -10,7 +11,7 @@ import java.sql.*;
 import java.util.Properties;
 
 @Ignore
-public class InvalidResultSetPointerTest {
+public class InvalidResultSetPointerTest extends BaseTest {
 
     private static final String host = "127.0.0.1";
     private static final String dbName = TestUtils.camelToSnake(InvalidResultSetPointerTest.class);

@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.TSDBConstants;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.TSWSPreparedStatement;
@@ -11,7 +12,7 @@ import java.math.BigInteger;
 import java.sql.*;
 import java.util.Properties;
 
-public class WsPstmtSubTableTest {
+public class WsPstmtSubTableTest extends BaseTest {
     String host = "127.0.0.1";
     String db_name = TestUtils.camelToSnake(WsPstmtSubTableTest.class);
     String superTable = "wpt_st";

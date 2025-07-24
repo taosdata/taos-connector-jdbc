@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.taosdata.jdbc.SchemalessWriter;
 import com.taosdata.jdbc.annotation.Description;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.utils.JsonUtil;
@@ -18,7 +19,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class WSSchemalessTest {
+public class WSSchemalessTest extends BaseTest {
     private static final String host = "127.0.0.1";
     private static final String dbName = TestUtils.camelToSnake(WSSchemalessTest.class);
     private static final String dbName_ttl = "test_schemaless_ws_ttl";

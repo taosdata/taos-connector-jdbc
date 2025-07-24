@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.TSDBConstants;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.TestUtils;
@@ -13,7 +14,7 @@ import java.sql.*;
 import java.util.Collections;
 import java.util.Properties;
 
-public class WsPstmtAllTypeTest {
+public class WsPstmtAllTypeTest extends BaseTest {
     String host = "127.0.0.1";
     String db_name = TestUtils.camelToSnake(WsPstmtAllTypeTest.class);
     String tableName = "wpt";

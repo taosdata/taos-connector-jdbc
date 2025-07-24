@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.utils.JsonUtil;
@@ -23,7 +24,7 @@ import java.util.List;
 
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "Schemaless", author = "huolibo", version = "2.0.36")
-public class SchemalessInsertNewTest {
+public class SchemalessInsertNewTest extends BaseTest {
     private static String host = "127.0.0.1";
     private final String dbname = TestUtils.camelToSnake(SchemalessInsertNewTest.class);
     private Connection conn;

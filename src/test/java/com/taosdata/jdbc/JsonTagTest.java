@@ -3,6 +3,7 @@ package com.taosdata.jdbc;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
@@ -15,7 +16,7 @@ import java.util.*;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "JsonTag", author = "huolibo", version = "2.0.36")
-public class JsonTagTest {
+public class JsonTagTest extends BaseTest {
     private static String host = "127.0.0.1";
     private static final String dbName = TestUtils.camelToSnake(JsonTagTest.class);
     private static Connection connection;

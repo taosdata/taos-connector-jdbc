@@ -1,7 +1,7 @@
 package com.taosdata.jdbc.utils;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.taosdata.jdbc.TSDBConstants;
+import com.taosdata.jdbc.common.BaseTest;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -9,7 +9,7 @@ import java.math.BigInteger;
 import java.sql.SQLException;
 import java.util.stream.Stream;
 
-public class UtilsTest {
+public class UtilsTest extends BaseTest {
 
     @Test
     public void escapeSingleQuota() {

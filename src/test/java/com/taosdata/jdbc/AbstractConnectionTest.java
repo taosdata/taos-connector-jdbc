@@ -1,5 +1,6 @@
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import org.junit.Before;
@@ -10,7 +11,7 @@ import java.util.Properties;
 
 import static org.junit.Assert.*;
 
-public class AbstractConnectionTest {
+public class AbstractConnectionTest extends BaseTest {
     private AbstractConnection connection;
 
     @Before

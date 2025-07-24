@@ -3,6 +3,7 @@ package com.taosdata.jdbc.cases;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TimestampUtil;
 import org.junit.After;
@@ -16,7 +17,7 @@ import java.sql.*;
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "negative value convert to timestamp", author = "huolibo", version = "2.0.37")
 @Ignore // TODO 3.0 timestamp
-public class DatetimeBefore1970Test {
+public class DatetimeBefore1970Test extends BaseTest {
 
     private static final String host = "127.0.0.1";
     private Connection conn;

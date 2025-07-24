@@ -1,14 +1,17 @@
 package com.taosdata.jdbc.rs;
+
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.common.BaseTest;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.sql.SQLException;
 import java.util.Properties;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
-public class RestfulConnectionParamTest {
+public class RestfulConnectionParamTest extends BaseTest {
     private ConnectionParam connectionParam;
 
     @Before

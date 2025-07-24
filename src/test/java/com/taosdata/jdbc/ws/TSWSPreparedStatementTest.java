@@ -1,17 +1,17 @@
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBConstants;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
-import java.math.BigInteger;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Random;
 
-public class TSWSPreparedStatementTest {
+public class TSWSPreparedStatementTest extends BaseTest {
     private static final String host = "127.0.0.1";
     private static Connection conn;
     private static final String sql_insert = "insert into t1 values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";

@@ -1,8 +1,8 @@
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.tmq.*;
-import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import io.netty.util.ResourceLeakDetector;
@@ -17,7 +17,7 @@ import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class WSConsumerSubscribeDBTest {
+public class WSConsumerSubscribeDBTest extends BaseTest {
     private static final String host = "127.0.0.1";
     private final String dbName = TestUtils.camelToSnake(WSConsumerSubscribeDBTest.class);
     private static final String superTable1 = "st1";

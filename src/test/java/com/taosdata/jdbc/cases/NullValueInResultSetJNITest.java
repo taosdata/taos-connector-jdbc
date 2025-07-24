@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.After;
 import org.junit.Before;
@@ -8,8 +9,7 @@ import org.junit.Test;
 
 import java.sql.*;
 import java.util.Properties;
-
-public class NullValueInResultSetJNITest {
+public class NullValueInResultSetJNITest extends BaseTest {
 
     private static final String host = "127.0.0.1";
     Connection conn;

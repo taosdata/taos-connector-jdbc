@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.Assert;
 import org.junit.Before;
@@ -11,7 +12,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
 
-public class DriverAutoloadTest {
+public class DriverAutoloadTest extends BaseTest {
 
     private Properties properties;
     private final String host = "127.0.0.1";

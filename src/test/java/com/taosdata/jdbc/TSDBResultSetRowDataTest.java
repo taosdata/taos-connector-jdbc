@@ -1,5 +1,6 @@
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.common.BaseTest;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -9,7 +10,7 @@ import java.sql.Timestamp;
 
 import static org.junit.Assert.*;
 
-public class TSDBResultSetRowDataTest {
+public class TSDBResultSetRowDataTest extends BaseTest {
     private TSDBResultSetRowData rowData;
 
     @Before

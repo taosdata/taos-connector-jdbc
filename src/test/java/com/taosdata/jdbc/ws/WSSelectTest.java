@@ -1,14 +1,13 @@
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.nio.ByteBuffer;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -17,7 +16,7 @@ import java.util.Properties;
 
 import static org.junit.Assert.*;
 
-public class WSSelectTest {
+public class WSSelectTest extends BaseTest {
     private static final String host = "127.0.0.1";
     private static final int port = 6041;
     private static Connection connection;
@@ -36,27 +35,6 @@ public class WSSelectTest {
         }
         statement.close();
     }
-
-    @Test
-    public void testGetTZ() throws SQLException {
-        String url = "jdbc:TAOS-WS://" + host + ":" + port + "/?user=root&password=taosdata";
-
-        Properties properties = new Properties();
-        try ( Connection connection = DriverManager.getConnection(url, properties);
-              Statement statement = connection.createStatement();
-              ResultSet resultSet = statement.executeQuery("show variables")) {
-
-            while (resultSet.next()) {
-                System.out.println("name: " + resultSet.getString("name"));
-                System.out.println("value: " + resultSet.getString("value"));
-            }
-
-            // print the timezone of jvm
-            String jvmTimeZone = System.getProperty("user.timezone");
-            System.out.println("JVM Time Zone: " + jvmTimeZone);
-        }
-    }
-
     @Test
     public void testWSSelect() throws SQLException {
         Statement statement = connection.createStatement();

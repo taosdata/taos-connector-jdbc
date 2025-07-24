@@ -21,7 +21,7 @@
 //import java.util.stream.IntStream;
 //
 //@Ignore
-//public class HttpClientPoolUtilTest {
+//public class HttpClientPoolUtilTest extends BaseTest {
 //
 //    String user = "root";
 //    String password = "taosdata";

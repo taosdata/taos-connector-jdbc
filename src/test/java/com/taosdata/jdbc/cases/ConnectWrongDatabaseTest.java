@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.cases;
 
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.Test;
 
@@ -8,7 +9,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-public class ConnectWrongDatabaseTest {
+public class ConnectWrongDatabaseTest extends BaseTest {
 
     @Test(expected = SQLException.class)
     public void connectByJni() throws SQLException {

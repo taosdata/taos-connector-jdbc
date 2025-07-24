@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.confprops;
 
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.After;
 import org.junit.Assert;
@@ -10,7 +11,7 @@ import java.sql.*;
 import java.time.Instant;
 import java.util.Properties;
 
-public class TimestampFormatTest {
+public class TimestampFormatTest extends BaseTest {
     private static final String host = "127.0.0.1";
     private long ts = Instant.now().toEpochMilli();
     private Connection conn;

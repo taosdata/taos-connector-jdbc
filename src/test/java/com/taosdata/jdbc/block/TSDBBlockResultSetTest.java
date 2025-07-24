@@ -5,6 +5,7 @@ import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.TSDBResultSet;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -20,7 +21,7 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Properties;
 
-public class TSDBBlockResultSetTest {
+public class TSDBBlockResultSetTest extends BaseTest {
 
     private static final String host = "127.0.0.1";
     private static Connection conn;

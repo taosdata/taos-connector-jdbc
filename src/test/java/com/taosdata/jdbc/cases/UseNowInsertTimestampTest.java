@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.cases;
 
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
@@ -11,7 +12,7 @@ import java.sql.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class UseNowInsertTimestampTest {
+public class UseNowInsertTimestampTest extends BaseTest {
     private static String url ;
     private static String dbName = TestUtils.camelToSnake(UseNowInsertTimestampTest.class);
 

@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.ws.stmt;
 
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.utils.Utils;
@@ -8,11 +9,12 @@ import io.netty.util.ResourceLeakDetector;
 import org.junit.*;
 
 import java.sql.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Properties;
 import java.util.Random;
 
 @FixMethodOrder
-public class WsPstmtStmt2Test {
+public class WsPstmtStmt2Test extends BaseTest {
     String host = "localhost";
     String db_name = TestUtils.camelToSnake(WsPstmtStmt2Test.class);
     String tableName = "wpt";

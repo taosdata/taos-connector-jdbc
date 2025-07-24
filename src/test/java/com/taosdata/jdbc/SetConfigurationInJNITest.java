@@ -1,5 +1,6 @@
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.Test;
 
@@ -9,8 +10,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Properties;
 
-
-public class SetConfigurationInJNITest {
+public class SetConfigurationInJNITest extends BaseTest {
 
     private String host = "127.0.0.1";
     private String dbname = "test_set_config";

@@ -3,6 +3,7 @@ package com.taosdata.jdbc;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.utils.SpecifyAddress;
@@ -16,7 +17,7 @@ import java.sql.*;
 
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "Schemaless", author = "huolibo", version = "2.0.36")
-public class SchemalessRawInsertTest {
+public class SchemalessRawInsertTest extends BaseTest {
     private static String host = "127.0.0.1";
     private final String dbname = "test_schemaless_insert";
     private Connection conn;

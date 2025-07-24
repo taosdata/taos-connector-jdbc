@@ -1,5 +1,6 @@
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.utils.SpecifyAddress;
@@ -21,7 +22,7 @@ import java.util.stream.IntStream;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class TSDBJNIConnectorTest {
+public class TSDBJNIConnectorTest extends BaseTest {
 
     private static String host = "127.0.0.1";
     private static TSDBResultSetRowData rowData;

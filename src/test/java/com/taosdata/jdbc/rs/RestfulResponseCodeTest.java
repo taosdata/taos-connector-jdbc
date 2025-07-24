@@ -1,13 +1,14 @@
 package com.taosdata.jdbc.rs;
 
 import com.taosdata.jdbc.TSDBErrorNumbers;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.sql.*;
 
-public class RestfulResponseCodeTest {
+public class RestfulResponseCodeTest extends BaseTest {
     private static final String host = "127.0.0.1";
 
     @Test

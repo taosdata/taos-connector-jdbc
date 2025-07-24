@@ -13,7 +13,7 @@ import java.util.Arrays;
 
 import static org.junit.Assert.*;
 
-public class AutoExpandingBufferTest {
+public class AutoExpandingBufferTest extends BaseTest {
     private static final int INITIAL_BUFFER_SIZE = 16;  // Initial buffer size (example value)
     private static final int MAX_COMPONENTS = 30;        // Maximum number of components (example value)
     private AutoExpandingBuffer buffer;

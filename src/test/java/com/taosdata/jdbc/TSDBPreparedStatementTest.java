@@ -1,5 +1,6 @@
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
@@ -8,12 +9,13 @@ import java.io.ByteArrayInputStream;
 import java.io.StringReader;
 import java.math.BigDecimal;
 import java.sql.*;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Properties;
 import java.util.Random;
 
-public class TSDBPreparedStatementTest {
+public class TSDBPreparedStatementTest extends BaseTest {
 
     private static final String host = "127.0.0.1";
     private static Connection conn;
@@ -27,6 +29,7 @@ public class TSDBPreparedStatementTest {
 
     @Test
     public void executeQuery() throws SQLException {
+        System.out.println("current jvm timezone: " + ZoneId.systemDefault());
         // given
         long ts = System.currentTimeMillis();
         pstmt_insert.setTimestamp(1, new Timestamp(ts));

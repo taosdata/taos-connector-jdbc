@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.ws;
 
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.rs.RestfulDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.Assert;
@@ -10,7 +11,7 @@ import java.sql.DriverPropertyInfo;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 
-public class WebSocketDriverTest {
+public class WebSocketDriverTest extends BaseTest {
     private static final String host = "127.0.0.1";
 
     @Test

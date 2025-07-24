@@ -1,10 +1,11 @@
 package com.taosdata.jdbc.utils;
 
+import com.taosdata.jdbc.common.BaseTest;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class OSUtilsTest {
+public class OSUtilsTest extends BaseTest {
 
     private String OS;
 

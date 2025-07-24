@@ -1,14 +1,18 @@
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
-import org.junit.*;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.sql.*;
 import java.util.HashSet;
 import java.util.Set;
 
-public class AbstractDatabaseMetaDataColumnTest {
+public class AbstractDatabaseMetaDataColumnTest extends BaseTest {
     static Connection connection;
     static String host = "127.0.0.1";
     static DatabaseMetaData metaData;

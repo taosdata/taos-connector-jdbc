@@ -1,17 +1,17 @@
 package com.taosdata.jdbc.confprops;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.sql.*;
 import java.util.Properties;
 
-public class CharsetTest {
+public class CharsetTest extends BaseTest {
     private static final String host = "127.0.0.1";
     private String dbName = TestUtils.camelToSnake(CharsetTest.class);
 

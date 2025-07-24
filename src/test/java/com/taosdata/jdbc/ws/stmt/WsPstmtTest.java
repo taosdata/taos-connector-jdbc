@@ -1,11 +1,9 @@
 package com.taosdata.jdbc.ws.stmt;
 
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.TSWSPreparedStatement;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.CompositeByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.util.ResourceLeakDetector;
 import org.junit.*;
 import org.junit.runners.MethodSorters;
@@ -21,7 +19,7 @@ import java.util.HashSet;
 import java.util.Properties;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class WsPstmtTest {
+public class WsPstmtTest extends BaseTest {
     String host = "127.0.0.1";
     String db_name = TestUtils.camelToSnake(WsPstmtTest.class);
     String tableName = "wpt";

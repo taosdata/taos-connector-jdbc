@@ -1,7 +1,7 @@
 package com.taosdata.jdbc.ws.stmt;
 
-import com.taosdata.jdbc.GeometryTest;
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.TaosAdapterMock;
@@ -15,7 +15,7 @@ import java.util.Properties;
 import java.util.Random;
 
 @FixMethodOrder
-public class WsEfficientWritingTest {
+public class WsEfficientWritingTest extends BaseTest {
     private final String host = "localhost";
     private final String db_name = TestUtils.camelToSnake(WsEfficientWritingTest.class);
     private final String tableName = "wpt";

@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
@@ -22,7 +23,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class ConsumerCommittedTest {
+public class ConsumerCommittedTest extends BaseTest {
     private static final String host = "127.0.0.1";
     private static final String dbName = "ws_tmq_test_committed";
     private static final String superTable = "st";

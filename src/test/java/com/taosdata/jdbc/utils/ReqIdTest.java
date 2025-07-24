@@ -2,6 +2,7 @@ package com.taosdata.jdbc.utils;
 
 import com.taosdata.jdbc.AbstractStatement;
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.common.BaseTest;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -14,7 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
-public class ReqIdTest {
+public class ReqIdTest extends BaseTest {
     String host = "127.0.0.1";
 
     @Test

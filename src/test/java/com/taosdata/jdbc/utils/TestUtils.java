@@ -4,11 +4,11 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Random;
-import java.util.UUID;
+import java.time.ZoneId;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class TestUtils {
+    private static ZoneId sysZoneId = ZoneId.systemDefault();
     private static AtomicInteger counter = new AtomicInteger(0);
     public static String camelToSnake(Class<?> clazz) {
         String className = clazz.getSimpleName();
