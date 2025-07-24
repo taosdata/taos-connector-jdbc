@@ -2,11 +2,9 @@ package com.taosdata.jdbc.cases;
 
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.common.TimeZoneResetRule;
 import com.taosdata.jdbc.utils.SpecifyAddress;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 
 import java.sql.*;
 import java.util.Properties;
@@ -21,6 +19,8 @@ public class MicroSecondPrecisionJNITest {
 
     private static Connection conn;
 
+    @Rule
+    public TimeZoneResetRule timeZoneResetRule = new TimeZoneResetRule();
     @Test
     public void testCase1() {
         try (Statement stmt = conn.createStatement()) {

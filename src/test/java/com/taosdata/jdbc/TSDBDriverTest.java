@@ -1,7 +1,9 @@
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.common.TimeZoneResetRule;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.sql.*;
@@ -14,6 +16,8 @@ public class TSDBDriverTest {
     private static String[] validURLs;
     private Connection conn;
 
+    @Rule
+    public TimeZoneResetRule timeZoneResetRule = new TimeZoneResetRule();
     @Test
     public void connectWithJdbcURL() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniWithoutUrl();

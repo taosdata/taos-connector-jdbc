@@ -2,13 +2,11 @@ package com.taosdata.jdbc.confprops;
 
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.common.TimeZoneResetRule;
 import com.taosdata.jdbc.rs.RestfulResultSetMetaDataTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.*;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -23,6 +21,8 @@ public class BadLocaleSettingTest {
     private static final String dbName = TestUtils.camelToSnake(BadLocaleSettingTest.class);
     private static Connection conn;
 
+    @Rule
+    public TimeZoneResetRule timeZoneResetRule = new TimeZoneResetRule();
     @Test
     public void canSetLocale() throws SQLException {
         Properties properties = new Properties();

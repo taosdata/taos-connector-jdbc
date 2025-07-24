@@ -1,11 +1,9 @@
 package com.taosdata.jdbc.cases;
 
+import com.taosdata.jdbc.common.TimeZoneResetRule;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runners.MethodSorters;
 
 import java.sql.*;
@@ -20,6 +18,8 @@ public class InsertDbwithoutUseDbTest {
     private static final Random random = new Random(System.currentTimeMillis());
     private static final String dbname = TestUtils.camelToSnake(InsertDbwithoutUseDbTest.class);
 
+    @Rule
+    public TimeZoneResetRule timeZoneResetRule = new TimeZoneResetRule();
     @Test
     public void case001() throws SQLException {
         // prepare schema

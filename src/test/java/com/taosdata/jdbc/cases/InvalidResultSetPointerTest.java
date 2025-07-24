@@ -1,9 +1,11 @@
 package com.taosdata.jdbc.cases;
 
+import com.taosdata.jdbc.common.TimeZoneResetRule;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.sql.*;
@@ -21,6 +23,8 @@ public class InvalidResultSetPointerTest {
     private static final int numOfTb = 3;
     private static int numOfThreads = 100;
 
+    @Rule
+    public TimeZoneResetRule timeZoneResetRule = new TimeZoneResetRule();
     @Test
     public void test() throws SQLException {
         execute("drop database if exists " + dbName);

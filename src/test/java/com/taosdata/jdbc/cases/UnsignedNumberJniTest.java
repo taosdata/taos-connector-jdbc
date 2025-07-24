@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.common.TimeZoneResetRule;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.*;
 import org.junit.runners.MethodSorters;
@@ -15,6 +16,8 @@ public class UnsignedNumberJniTest {
     private static Connection conn;
     private static long ts;
 
+    @Rule
+    public TimeZoneResetRule timeZoneResetRule = new TimeZoneResetRule();
     @Test
     public void testCase001() throws SQLException {
         try (Statement stmt = conn.createStatement()) {

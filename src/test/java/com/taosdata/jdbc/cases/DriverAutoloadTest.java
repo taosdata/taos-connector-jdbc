@@ -1,9 +1,11 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.common.TimeZoneResetRule;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.sql.Connection;
@@ -16,6 +18,8 @@ public class DriverAutoloadTest {
     private Properties properties;
     private final String host = "127.0.0.1";
 
+    @Rule
+    public TimeZoneResetRule timeZoneResetRule = new TimeZoneResetRule();
     @Test
     public void testRestful() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();

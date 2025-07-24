@@ -38,6 +38,26 @@ public class WSSelectTest {
     }
 
     @Test
+    public void testGetTZ() throws SQLException {
+        String url = "jdbc:TAOS-WS://" + host + ":" + port + "/?user=root&password=taosdata";
+
+        Properties properties = new Properties();
+        try ( Connection connection = DriverManager.getConnection(url, properties);
+              Statement statement = connection.createStatement();
+              ResultSet resultSet = statement.executeQuery("show variables")) {
+
+            while (resultSet.next()) {
+                System.out.println("name: " + resultSet.getString("name"));
+                System.out.println("value: " + resultSet.getString("value"));
+            }
+
+            // print the timezone of jvm
+            String jvmTimeZone = System.getProperty("user.timezone");
+            System.out.println("JVM Time Zone: " + jvmTimeZone);
+        }
+    }
+
+    @Test
     public void testWSSelect() throws SQLException {
         Statement statement = connection.createStatement();
         int count = 0;

@@ -1,6 +1,8 @@
 package com.taosdata.jdbc.cases;
 
+import com.taosdata.jdbc.common.TimeZoneResetRule;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.sql.Connection;
@@ -12,7 +14,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
 public class ResetQueryCacheTest {
-
+    @Rule
+    public TimeZoneResetRule timeZoneResetRule = new TimeZoneResetRule();
     @Test
     public void jni() throws SQLException {
         // given

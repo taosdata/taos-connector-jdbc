@@ -1,9 +1,11 @@
 package com.taosdata.jdbc.confprops;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.common.TimeZoneResetRule;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.Before;
 import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.sql.*;
@@ -17,6 +19,8 @@ public class TimeZoneTest {
 
     private String url;
 
+    @Rule
+    public TimeZoneResetRule timeZoneResetRule = new TimeZoneResetRule();
     @Test
     public void javaTimeZone() {
         LocalDateTime localDateTime = LocalDateTime.of(1970, 1, 1, 0, 0, 0);

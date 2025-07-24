@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.common.TimeZoneResetRule;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
@@ -18,6 +19,9 @@ public class ImportTest {
     static String tName = "t0";
     static String host = "127.0.0.1";
     private static long ts;
+
+    @Rule
+    public TimeZoneResetRule timeZoneResetRule = new TimeZoneResetRule();
 
     @Test
     public void case001_insertData() throws Exception {

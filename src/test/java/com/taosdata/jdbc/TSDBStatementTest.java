@@ -1,10 +1,8 @@
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.common.TimeZoneResetRule;
 import com.taosdata.jdbc.utils.SpecifyAddress;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 
 import java.sql.*;
 import java.util.Properties;
@@ -14,6 +12,9 @@ public class TSDBStatementTest {
     private static final String host = "127.0.0.1";
     private static Connection conn;
     private static Statement stmt;
+
+    @Rule
+    public TimeZoneResetRule timeZoneResetRule = new TimeZoneResetRule();
 
     @Test
     public void executeUpdate() throws SQLException {

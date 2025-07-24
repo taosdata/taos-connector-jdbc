@@ -1,11 +1,9 @@
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.common.TimeZoneResetRule;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 
 import java.sql.*;
 import java.util.Properties;
@@ -16,6 +14,9 @@ public class TSDBDatabaseMetaDataTest {
     private static Connection connection;
     private static TSDBDatabaseMetaData metaData;
     private static String db_name = TestUtils.camelToSnake(TSDBDatabaseMetaDataTest.class);
+
+    @Rule
+    public TimeZoneResetRule timeZoneResetRule = new TimeZoneResetRule();
 
     @Test
     public void unwrap() throws SQLException {

@@ -1,10 +1,12 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.common.TimeZoneResetRule;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.sql.*;
@@ -18,6 +20,8 @@ public class SelectTest {
     String tName = "t0";
     String host = "127.0.0.1";
 
+    @Rule
+    public TimeZoneResetRule timeZoneResetRule = new TimeZoneResetRule();
     @Before
     public void createDatabaseAndTable() throws SQLException {
         Properties properties = new Properties();
