@@ -24,6 +24,28 @@ public class WSTimeZoneTest2 {
     private static final String host = "127.0.0.1";
     private static final int port = 6041;
 
+    @Test
+    public void testGetTZ() throws SQLException {
+        String url = "jdbc:TAOS-WS://" + host + ":" + port + "/?user=root&password=taosdata";
+       
+        Properties properties = new Properties();
+        try ( Connection connection = DriverManager.getConnection(url, properties)) {
+                
+            Statement statement = connection.createStatement();
+    
+            ResultSet resultSet = statement.executeQuery("show variables");
+            if (resultSet.next()) {
+                System.out.println("name: " + resultSet.getString("name"));
+                System.out.println("value: " + resultSet.getString("value"));
+            }
+            resultSet.close();
+            statement.close();
+    
+            // print the timezone of jvm
+            String jvmTimeZone = System.getProperty("user.timezone");
+            System.out.println("JVM Time Zone: " + jvmTimeZone);
+        }
+    }
 
 
     @Test
