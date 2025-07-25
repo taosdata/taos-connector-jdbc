@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import io.netty.buffer.CompositeByteBuf;
@@ -19,9 +20,7 @@ import java.util.Calendar;
 import java.util.Properties;
 import java.util.TimeZone;
 
-import static org.junit.Assert.fail;
-
-public class WsPStmtLineModeNullTest {
+public class WsPStmtLineModeNullTest extends BaseTest {
     String host = "127.0.0.1";
     String db_name = TestUtils.camelToSnake(WsPStmtLineModeNullTest.class);
     String tableName = "wpt";

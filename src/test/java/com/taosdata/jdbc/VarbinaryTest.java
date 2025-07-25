@@ -1,5 +1,6 @@
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.TestUtils;
@@ -12,7 +13,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.Properties;
 
-public class VarbinaryTest {
+public class VarbinaryTest extends BaseTest {
     static String host = "127.0.0.1";
     static String dbName = TestUtils.camelToSnake(VarbinaryTest.class);;
     static String tableNative = "varbinary_noraml";

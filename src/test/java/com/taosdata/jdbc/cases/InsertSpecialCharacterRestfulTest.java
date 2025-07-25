@@ -1,12 +1,13 @@
 package com.taosdata.jdbc.cases;
 
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
 import java.sql.*;
 
-public class InsertSpecialCharacterRestfulTest {
+public class InsertSpecialCharacterRestfulTest extends BaseTest {
 
     private static final String host = "127.0.0.1";
     private static Connection conn;

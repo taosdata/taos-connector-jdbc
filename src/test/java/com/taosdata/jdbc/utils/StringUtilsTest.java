@@ -1,12 +1,13 @@
 package com.taosdata.jdbc.utils;
 
+import com.taosdata.jdbc.common.BaseTest;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.sql.SQLException;
 import java.util.Properties;
 
-public class StringUtilsTest {
+public class StringUtilsTest extends BaseTest {
 
     @Test
     public void isEmptyNull() {

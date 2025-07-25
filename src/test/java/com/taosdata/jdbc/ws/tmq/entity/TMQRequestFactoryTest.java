@@ -7,6 +7,7 @@ import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.tmq.TMQConstants;
 import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.ws.entity.Request;
@@ -20,7 +21,7 @@ import java.util.Properties;
 
 @TestTarget(alias = "consumer request content", author = "huolibo", version = "3.1.0")
 @RunWith(CatalogRunner.class)
-public class TMQRequestFactoryTest {
+public class TMQRequestFactoryTest extends BaseTest {
     private static TMQRequestFactory factory;
     private static final ObjectMapper objectMapper = JsonUtil.getObjectMapper();
 

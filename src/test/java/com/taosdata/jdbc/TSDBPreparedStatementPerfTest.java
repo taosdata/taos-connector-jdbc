@@ -1,10 +1,9 @@
 package com.taosdata.jdbc;
 
-import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
-import java.math.BigDecimal;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Properties;
@@ -14,7 +13,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-public class TSDBPreparedStatementPerfTest {
+public class TSDBPreparedStatementPerfTest extends BaseTest {
 
     private static final String host = "localhost";
     private static final String dbName = TestUtils.camelToSnake(TSDBPreparedStatementPerfTest.class);

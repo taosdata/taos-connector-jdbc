@@ -17,7 +17,7 @@
 //
 //import static org.junit.Assert.*;
 //
-//public class DatabaseMetaDataResultSetTest {
+//public class DatabaseMetaDataResultSetTest extends BaseTest {
 //
 //    static Connection connection;
 //    static String host = "127.0.0.1";

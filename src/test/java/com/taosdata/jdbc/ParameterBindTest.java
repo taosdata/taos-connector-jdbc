@@ -1,5 +1,6 @@
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.*;
 
@@ -12,7 +13,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
 
-public class ParameterBindTest {
+public class ParameterBindTest extends BaseTest {
 
     private static final String host = "127.0.0.1";
     private static final String stable = "weather";

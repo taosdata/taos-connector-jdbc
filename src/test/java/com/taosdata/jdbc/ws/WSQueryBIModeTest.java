@@ -3,6 +3,7 @@ package com.taosdata.jdbc.ws;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.rs.RestfulDatabaseMetaData;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
@@ -14,7 +15,7 @@ import java.util.Properties;
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "websocket query test", author = "sheyj", version = "2.3.7")
 @FixMethodOrder
-public class WSQueryBIModeTest {
+public class WSQueryBIModeTest extends BaseTest {
     private static final String host = "127.0.0.1";
     private static final int port = 6041;
     private final String db_name = TestUtils.camelToSnake(WSQueryBIModeTest.class);

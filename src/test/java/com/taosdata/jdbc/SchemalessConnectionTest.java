@@ -1,10 +1,10 @@
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -12,8 +12,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
-
-public class SchemalessConnectionTest {
+public class SchemalessConnectionTest extends BaseTest {
     private static final String host = "127.0.0.1";
     private static final String db = TestUtils.camelToSnake(SchemalessConnectionTest.class);
     private static Connection connection;

@@ -5,6 +5,7 @@ import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.After;
@@ -22,7 +23,7 @@ import java.util.Properties;
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "websocket master slave test", author = "yjshe", version = "3.2.11")
 @FixMethodOrder
-public class WSConFailOverTest {
+public class WSConFailOverTest extends BaseTest {
     private static final String hostA = "127.0.0.1";
     private static final int portA = 6041;
 

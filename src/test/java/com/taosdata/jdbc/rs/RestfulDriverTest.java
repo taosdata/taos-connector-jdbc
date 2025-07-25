@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.rs;
 
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.Assert;
 import org.junit.Test;
@@ -9,7 +10,7 @@ import java.sql.DriverPropertyInfo;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 
-public class RestfulDriverTest {
+public class RestfulDriverTest extends BaseTest {
     private static final String host = "127.0.0.1";
 
     @Test

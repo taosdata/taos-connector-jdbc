@@ -2,6 +2,7 @@ package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.*;
 import io.netty.util.ResourceLeakDetector;
 import org.junit.*;
@@ -9,10 +10,9 @@ import org.junit.*;
 import java.math.BigInteger;
 import java.sql.*;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.Properties;
 
-public class WsPstmtLineModeAllTypeTest {
+public class WsPstmtLineModeAllTypeTest extends BaseTest {
     String host = "127.0.0.1";
     String db_name = TestUtils.camelToSnake(WsPstmtLineModeAllTypeTest.class);
     String tableName = "wpt";

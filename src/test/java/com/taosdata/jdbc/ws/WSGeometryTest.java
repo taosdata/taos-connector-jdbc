@@ -1,7 +1,7 @@
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
-import com.taosdata.jdbc.TSDBPreparedStatement;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.TestUtils;
@@ -14,7 +14,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.Properties;
 
-public class WSGeometryTest {
+public class WSGeometryTest extends BaseTest {
     static String host = "127.0.0.1";
     static String dbName = TestUtils.camelToSnake(WSGeometryTest.class);
     static String tableNative = "geometry_noraml";

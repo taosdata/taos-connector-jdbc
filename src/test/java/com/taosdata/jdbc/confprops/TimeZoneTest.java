@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.confprops;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -13,7 +14,7 @@ import java.time.ZoneId;
 import java.util.Properties;
 
 @Ignore
-public class TimeZoneTest {
+public class TimeZoneTest extends BaseTest {
 
     private String url;
 

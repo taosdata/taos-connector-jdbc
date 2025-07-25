@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.ws.stmt;
 
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import io.netty.util.ResourceLeakDetector;
@@ -14,7 +15,7 @@ import java.util.Properties;
 import static com.taosdata.jdbc.TSDBConstants.TIMESTAMP_DATA_OUT_OF_RANGE;
 
 @FixMethodOrder
-public class WsPstmtNsTest {
+public class WsPstmtNsTest extends BaseTest {
     String host = "localhost";
     String db_name = TestUtils.camelToSnake(WsPstmtNsTest.class);
     String tableName = "wpt";

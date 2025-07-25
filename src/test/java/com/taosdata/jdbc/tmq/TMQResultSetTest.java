@@ -1,13 +1,14 @@
 package com.taosdata.jdbc.tmq;
 
+import com.taosdata.jdbc.common.BaseTest;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.sql.SQLException;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertNull;
 
-public class TMQResultSetTest {
+public class TMQResultSetTest extends BaseTest {
     private TMQResultSet resultSet;
 
     @Before

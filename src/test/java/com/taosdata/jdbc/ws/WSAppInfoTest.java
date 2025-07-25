@@ -3,6 +3,7 @@ package com.taosdata.jdbc.ws;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.TestTarget;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.*;
 import org.junit.runner.RunWith;
@@ -13,7 +14,7 @@ import java.util.Properties;
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "websocket query test", author = "huolibo", version = "2.0.38")
 @FixMethodOrder
-public class WSAppInfoTest {
+public class WSAppInfoTest extends BaseTest {
     private static final String host = "127.0.0.1";
     private static final int port = 6041;
     private Connection connection;

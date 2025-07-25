@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.cases;
 
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.Assert;
@@ -13,7 +14,7 @@ import java.util.Properties;
 import java.util.Random;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class InsertDbwithoutUseDbTest {
+public class InsertDbwithoutUseDbTest extends BaseTest {
 
     private static final String host = "127.0.0.1";
     private static Properties properties;

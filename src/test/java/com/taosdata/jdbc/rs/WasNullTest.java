@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.rs;
 
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.After;
@@ -9,7 +10,7 @@ import org.junit.Test;
 
 import java.sql.*;
 
-public class WasNullTest {
+public class WasNullTest extends BaseTest {
 
     private static final String host = "127.0.0.1";
     private Connection conn;

@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.tmq;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
@@ -21,7 +22,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class OffsetSeekTest {
+public class OffsetSeekTest extends BaseTest {
     private static ScheduledExecutorService scheduledExecutorService = null;
     private static Connection connection = null;
     private static Statement statement = null;

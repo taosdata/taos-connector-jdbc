@@ -2,6 +2,7 @@ package com.taosdata.jdbc.cases;
 
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -11,7 +12,7 @@ import org.junit.Test;
 import java.sql.*;
 import java.util.Properties;
 
-public class MicroSecondPrecisionRestfulTest {
+public class MicroSecondPrecisionRestfulTest extends BaseTest {
 
     private static final String host = "127.0.0.1";
     private static final String ms_timestamp_db = "ms_precision_test1";

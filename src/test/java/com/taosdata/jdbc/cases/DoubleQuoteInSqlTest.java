@@ -3,6 +3,7 @@ package com.taosdata.jdbc.cases;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
@@ -13,8 +14,7 @@ import org.junit.Test;
 
 import java.sql.*;
 import java.util.Properties;
-
-public class DoubleQuoteInSqlTest {
+public class DoubleQuoteInSqlTest extends BaseTest {
     private static final String host = "127.0.0.1";
     private static final String dbname = TestUtils.camelToSnake(DoubleQuoteInSqlTest.class);
 

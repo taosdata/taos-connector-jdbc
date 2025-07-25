@@ -1,5 +1,6 @@
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
@@ -10,7 +11,7 @@ import org.junit.Test;
 import java.sql.*;
 import java.util.Properties;
 
-public class TSDBDatabaseMetaDataTest {
+public class TSDBDatabaseMetaDataTest extends BaseTest {
     private static final String host = "127.0.0.1";
     private static String url;
     private static Connection connection;

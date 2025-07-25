@@ -2,6 +2,7 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
@@ -19,7 +20,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
-public class WSConsumerWithDiffTypeTest {
+public class WSConsumerWithDiffTypeTest extends BaseTest {
     private static final String host = "127.0.0.1";
     private static final String dbName = TestUtils.camelToSnake(WSConsumerWithDiffTypeTest.class);
     private static final String superTable = "tmq_type";

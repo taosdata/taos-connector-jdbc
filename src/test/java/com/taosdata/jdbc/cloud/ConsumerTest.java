@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.cloud;
 
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.tmq.*;
 import org.junit.Assert;
 import org.junit.Before;
@@ -10,7 +11,7 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.Properties;
 
-public class ConsumerTest {
+public class ConsumerTest extends BaseTest {
     String url = null;
 
     @Before

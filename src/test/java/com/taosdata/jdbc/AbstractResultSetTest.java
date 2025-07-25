@@ -1,22 +1,18 @@
 // src/test/java/com/taosdata/jdbc/AbstractResultSetTest.java
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.common.BaseTest;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.Reader;
-import java.io.Writer;
 import java.math.BigDecimal;
 import java.sql.*;
 import java.util.Calendar;
 import java.util.HashMap;
-import java.util.Map;
 
-import static org.junit.Assert.fail;
-
-public class AbstractResultSetTest {
+public class AbstractResultSetTest extends BaseTest {
 
     private ResultSetTest resultSet = new ResultSetTest();
 

@@ -1,14 +1,14 @@
 package com.taosdata.jdbc.cases;
 
+import com.taosdata.jdbc.common.BaseTest;
 import org.junit.Ignore;
 import org.junit.Test;
 
 import java.sql.*;
 import java.text.SimpleDateFormat;
 import java.util.concurrent.TimeUnit;
-
 @Ignore
-public class FailOverTest {
+public class FailOverTest extends BaseTest {
 
     private static final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
 

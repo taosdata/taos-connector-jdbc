@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.cases;
 
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.Test;
 
@@ -11,7 +12,7 @@ import java.sql.Statement;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
-public class ResetQueryCacheTest {
+public class ResetQueryCacheTest extends BaseTest {
 
     @Test
     public void jni() throws SQLException {

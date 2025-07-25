@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.rs;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -12,8 +13,7 @@ import java.util.Properties;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-
-public class RestfulConnectionTest {
+public class RestfulConnectionTest extends BaseTest {
 
     private static final String host = "127.0.0.1";
 

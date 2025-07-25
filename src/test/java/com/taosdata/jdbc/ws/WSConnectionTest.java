@@ -4,6 +4,7 @@ import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
@@ -18,7 +19,7 @@ import java.util.Properties;
  */
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "test connection with server", author = "huolibo", version = "2.0.37")
-public class WSConnectionTest {
+public class WSConnectionTest extends BaseTest {
     //    private static final String host = "192.168.1.98";
     private static String host = "127.0.0.1";
     private static String port = "6041";

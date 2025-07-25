@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.utils.JsonUtil;
+import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.TaosInfo;
 
 import java.io.UnsupportedEncodingException;
@@ -110,20 +111,7 @@ public class TSDBJNIConnector {
                 if (setOptions(0, locale) < 0) {
                     throw TSDBError.createSQLWarning("Failed to set locale: " + locale + ". System default will be used.");
                 }
-                String charset = props.getProperty(TSDBDriver.PROPERTY_KEY_CHARSET);
-                if (setOptions(1, charset) < 0) {
-                    throw TSDBError.createSQLWarning("Failed to set charset: " + charset + ". System default will be used.");
-                }
 
-                String timezone = props.getProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE);
-                if (setOptions(2, timezone) < 0) {
-                    throw TSDBError.createSQLWarning("Failed to set timezone: " + timezone + ". System default will be used.");
-                }
-
-                try{
-                    handleTimeZone(timezone.trim());
-                } catch (Exception e){
-                }
                 isInitialized = true;
                 TaosGlobalConfig.setCharset(getTsCharset());
             }
@@ -175,6 +163,7 @@ public class TSDBJNIConnector {
     private static native void initImp(String configDir);
 
     private static native int setOptions(int optionIndex, String optionValue);
+    private static native int setConnectionOptions(long connection, int optionIndex, String optionValue);
 
     private static native String getTsCharset();
 
@@ -191,9 +180,25 @@ public class TSDBJNIConnector {
             String errMsg = this.getErrMsg(0);
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_JNI_CONNECTION_NULL, errMsg);
         }
+
         // invoke connectImp only here
         taosInfo.conn_open_increment();
         return true;
+    }
+
+    public void initConnectionProperties(Properties info) throws SQLException {
+        String charset = info.getProperty(TSDBDriver.PROPERTY_KEY_CHARSET);
+        if (setConnectionOptions(taos, 0, charset) < 0) {
+            throw TSDBError.createSQLWarning("Failed to set charset: " + charset + ". System default will be used.");
+        }
+
+        String timezone = info.getProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE);
+        if (!StringUtils.isEmpty(timezone)){
+            if (setConnectionOptions(taos,1, timezone) < 0) {
+                throw TSDBError.createSQLWarning("Failed to set timezone: " + timezone + ". System default will be used.");
+            }
+            handleTimeZone(timezone.trim());
+        }
     }
 
     private native long connectImp(String host, int port, String dbName, String user, String password);

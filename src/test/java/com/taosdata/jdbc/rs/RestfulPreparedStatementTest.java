@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.rs;
 
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -9,7 +10,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.sql.*;
 
-public class RestfulPreparedStatementTest {
+public class RestfulPreparedStatementTest extends BaseTest {
     private static final String host = "127.0.0.1";
     private static Connection conn;
     private static final String sql_insert = "insert into t1 values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";

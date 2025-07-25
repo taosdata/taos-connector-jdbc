@@ -2,6 +2,7 @@ package com.taosdata.jdbc.rs;
 
 import com.taosdata.jdbc.AbstractDatabaseMetaData;
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
@@ -12,7 +13,7 @@ import org.junit.Test;
 import java.sql.*;
 import java.util.Properties;
 
-public class RestfulDatabaseMetaDataTest {
+public class RestfulDatabaseMetaDataTest extends BaseTest {
 
     private static final String host = "127.0.0.1";
     private static String url;

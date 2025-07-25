@@ -1,12 +1,13 @@
 package com.taosdata.jdbc.cases;
 
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.*;
 
 import java.sql.*;
 import java.util.stream.IntStream;
 
-public class BatchErrorIgnoreTest {
+public class BatchErrorIgnoreTest extends BaseTest {
 
     private static final String host = "127.0.0.1";
 

@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
@@ -11,7 +12,7 @@ import java.util.Properties;
 
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class UnsignedNumberRestfulTest {
+public class UnsignedNumberRestfulTest extends BaseTest {
 
     private static final String host = "127.0.0.1";
     private static Connection conn;

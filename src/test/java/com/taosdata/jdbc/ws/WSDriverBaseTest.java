@@ -4,6 +4,7 @@ import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
@@ -11,13 +12,11 @@ import org.junit.runner.RunWith;
 
 import java.sql.*;
 import java.util.Properties;
-import java.util.concurrent.CountDownLatch;
-import java.util.stream.IntStream;
 
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "websocket query test", author = "huolibo", version = "2.0.38")
 @FixMethodOrder
-public class WSDriverBaseTest {
+public class WSDriverBaseTest extends BaseTest {
     private static final String host = "127.0.0.1";
     private static final int port = 6041;
     private final String db_name = TestUtils.camelToSnake(WSDriverBaseTest.class);

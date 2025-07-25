@@ -2,7 +2,7 @@ package com.taosdata.jdbc.confprops;
 
 
 import com.taosdata.jdbc.TSDBDriver;
-import com.taosdata.jdbc.rs.RestfulResultSetMetaDataTest;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.After;
@@ -17,7 +17,7 @@ import java.sql.Statement;
 import java.util.Properties;
 
 @Ignore
-public class BadLocaleSettingTest {
+public class BadLocaleSettingTest extends BaseTest {
 
     private static final String host = "127.0.0.1";
     private static final String dbName = TestUtils.camelToSnake(BadLocaleSettingTest.class);

@@ -1,6 +1,6 @@
 package com.taosdata.jdbc.confprops;
 
-import com.taosdata.jdbc.cases.QueryDataTest;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
@@ -11,7 +11,7 @@ import java.util.Random;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @Ignore // performance
-public class BatchFetchTest {
+public class BatchFetchTest extends BaseTest {
 
     private static String host = "127.0.0.1";
     private long rowFetchCost, batchFetchCost;

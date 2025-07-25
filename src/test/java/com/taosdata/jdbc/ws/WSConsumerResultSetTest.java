@@ -1,16 +1,14 @@
 package com.taosdata.jdbc.ws;
 
-import com.taosdata.jdbc.EmptyResultSet;
-import com.taosdata.jdbc.TSDBError;
-import com.taosdata.jdbc.TSDBErrorNumbers;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.ws.tmq.WSConsumerResultSet;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.sql.*;
+import java.sql.SQLException;
 
 import static org.junit.Assert.*;
-public class WSConsumerResultSetTest {
+public class WSConsumerResultSetTest extends BaseTest {
 
     private WSConsumerResultSet wsConsumerResultSet;
 

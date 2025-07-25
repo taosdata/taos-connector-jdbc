@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.cases;
 
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.After;
@@ -9,7 +10,7 @@ import org.junit.Test;
 
 import java.sql.*;
 
-public class GroupByFetchBlockJNITest {
+public class GroupByFetchBlockJNITest extends BaseTest {
     private static Connection connection;
     private static Statement statement;
 

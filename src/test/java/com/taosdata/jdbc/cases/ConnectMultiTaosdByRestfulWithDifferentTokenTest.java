@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.common.BaseTest;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -10,7 +11,7 @@ import java.sql.*;
 import java.util.Properties;
 
 @Ignore
-public class ConnectMultiTaosdByRestfulWithDifferentTokenTest {
+public class ConnectMultiTaosdByRestfulWithDifferentTokenTest extends BaseTest {
 
     private static final String host1 = "192.168.17.156";
     private static final String user1 = "root";

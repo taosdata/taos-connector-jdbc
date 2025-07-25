@@ -1,24 +1,24 @@
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
-import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.tmq.ResultBean;
 import com.taosdata.jdbc.tmq.TMQConstants;
 import com.taosdata.jdbc.tmq.TaosConsumer;
-import com.taosdata.jdbc.utils.SpecifyAddress;
-import org.junit.*;
+import org.junit.Assert;
+import org.junit.FixMethodOrder;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.sql.*;
 import java.util.Properties;
 
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "websocket query test", author = "yjshe", version = "2.0.38")
 @FixMethodOrder
-public class WSMasterSlaveTest {
+public class WSMasterSlaveTest extends BaseTest {
     private static final String hostB = "vm95";
     private static final int portB = 6041;
 

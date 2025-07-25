@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.TSDBStatement;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.Assert;
 import org.junit.Before;
@@ -10,7 +11,7 @@ import org.junit.Test;
 import java.sql.*;
 
 
-public class QueryTimeoutTest {
+public class QueryTimeoutTest extends BaseTest {
     private String host = "127.0.0.1";
     private Connection conn;
 

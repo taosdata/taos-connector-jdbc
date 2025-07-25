@@ -1,28 +1,27 @@
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
-import com.taosdata.jdbc.annotation.CatalogRunner;
-import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.sql.*;
 import java.sql.Date;
+import java.sql.*;
 import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.concurrent.CountDownLatch;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 @RunWith(Parameterized.class)
 @TestTarget(alias = "websocket timezon test", author = "sheyj", version = "3.5.0")
-public class WSTimeZoneTest {
+public class WSTimeZoneTest extends BaseTest {
 
     // 定义参数
     private String precision;

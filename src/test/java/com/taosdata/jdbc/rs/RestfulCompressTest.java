@@ -2,6 +2,7 @@ package com.taosdata.jdbc.rs;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.annotation.Description;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
@@ -12,7 +13,7 @@ import java.util.Properties;
 import java.util.Random;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class RestfulCompressTest {
+public class RestfulCompressTest extends BaseTest {
 
     private static final String host = "127.0.0.1";
     private static final Random random = new Random(System.currentTimeMillis());

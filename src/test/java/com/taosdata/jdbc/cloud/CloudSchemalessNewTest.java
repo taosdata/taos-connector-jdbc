@@ -1,10 +1,9 @@
 package com.taosdata.jdbc.cloud;
 
 import com.taosdata.jdbc.AbstractConnection;
-import com.taosdata.jdbc.confprops.HttpKeepAliveTest;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
-import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -12,7 +11,7 @@ import org.junit.Test;
 import java.sql.*;
 
 
-public class CloudSchemalessNewTest {
+public class CloudSchemalessNewTest extends BaseTest {
     String url = null;
     public static Connection connection;
     String dbName = "javatest";

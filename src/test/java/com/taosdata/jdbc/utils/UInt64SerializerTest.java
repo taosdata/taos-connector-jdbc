@@ -2,11 +2,12 @@ package com.taosdata.jdbc.utils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.taosdata.jdbc.TSDBConstants;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.ws.entity.FetchReq;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class UInt64SerializerTest {
+public class UInt64SerializerTest extends BaseTest {
 
     @Test
     public void write() throws JsonProcessingException {

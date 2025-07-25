@@ -4,11 +4,10 @@ package com.taosdata.jdbc.utils;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
-import com.taosdata.jdbc.TSDBConstants;
+import com.taosdata.jdbc.common.BaseTest;
+import com.taosdata.jdbc.enums.TimestampPrecision;
 import org.junit.Ignore;
 import org.junit.Test;
-
-import com.taosdata.jdbc.enums.TimestampPrecision;
 
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
@@ -23,7 +22,7 @@ import java.util.Date;
 import static com.taosdata.jdbc.TSDBConstants.*;
 import static org.junit.Assert.*;
 
-public class DataTypeConverUtilTest {
+public class DataTypeConverUtilTest extends BaseTest {
 
     @Test
     public void testGetBoolean() throws SQLDataException {

@@ -1,20 +1,19 @@
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.common.BaseTest;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
-import java.net.URL;
 import java.sql.*;
 import java.util.Calendar;
 import java.util.HashMap;
-import java.util.Map;
 
 import static org.junit.Assert.*;
 
-public class EmptyResultSetTest {
+public class EmptyResultSetTest extends BaseTest {
 
     private EmptyResultSet emptyResultSet;
 

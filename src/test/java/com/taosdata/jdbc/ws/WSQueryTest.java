@@ -4,6 +4,7 @@ import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
+import com.taosdata.jdbc.common.BaseTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import io.netty.util.ResourceLeakDetector;
@@ -18,7 +19,7 @@ import java.util.stream.IntStream;
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "websocket query test", author = "huolibo", version = "2.0.38")
 @FixMethodOrder
-public class WSQueryTest {
+public class WSQueryTest extends BaseTest {
     private static final String host = "127.0.0.1";
     private static final int port = 6041;
     private final String db_name = TestUtils.camelToSnake(WSQueryTest.class);
