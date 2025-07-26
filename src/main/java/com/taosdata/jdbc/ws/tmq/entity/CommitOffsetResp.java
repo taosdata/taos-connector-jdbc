@@ -4,10 +4,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.taosdata.jdbc.ws.entity.CommonResp;
 
 public class CommitOffsetResp extends CommonResp {
+    @JsonProperty("timing")
     private long timing;
+    @JsonProperty("topic")
     private String topic;
     @JsonProperty("vg_id")
     private int vgId;
+    @JsonProperty("offset")
     private long offset;
     public long getTiming() {
         return timing;

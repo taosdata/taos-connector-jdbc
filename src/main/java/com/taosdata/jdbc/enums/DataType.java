@@ -6,6 +6,7 @@ import com.taosdata.jdbc.utils.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.sql.Blob;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.sql.Types;
@@ -35,6 +36,7 @@ public enum DataType {
     DECIMAL128("DECIMAL", Types.DECIMAL, BigDecimal.class, TSDB_DATA_TYPE_DECIMAL128, DECIMAL128_PRECISION),
     GEOMETRY("GEOMETRY", Types.BINARY, byte[].class, TSDB_DATA_TYPE_GEOMETRY, 0),
     DECIMAL64("DECIMAL", Types.DECIMAL, BigDecimal.class, TSDB_DATA_TYPE_DECIMAL64, DECIMAL64_PRECISION),
+    BLOB("BLOB", Types.BLOB, Blob.class, TSDB_DATA_TYPE_BLOB, 0),
     ;
     private final String typeName;
     private final int jdbcTypeValue;

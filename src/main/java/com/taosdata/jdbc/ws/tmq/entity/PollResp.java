@@ -8,22 +8,20 @@ import com.taosdata.jdbc.ws.entity.CommonResp;
 public class PollResp extends CommonResp {
     @JsonProperty("have_message")
     private boolean haveMessage;
-
+    @JsonProperty("topic")
     private String topic;
+    @JsonProperty("database")
     private String database;
-
     @JsonProperty("vgroup_id")
     private int vgroupId;
-
     @JsonProperty("message_type")
     private int messageType;
-
     @JsonProperty("message_id")
     @JsonDeserialize(using = UInt64Deserializer.class)
     private long messageId;
-
+    @JsonProperty("offset")
     private long offset;
-
+    @JsonProperty("timing")
     private long timing;
 
     public boolean isHaveMessage() {

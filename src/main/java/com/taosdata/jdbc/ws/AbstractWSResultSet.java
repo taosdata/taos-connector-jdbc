@@ -58,12 +58,15 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
             int jdbcType = DataType.convertTaosType2DataType(taosType).getJdbcTypeValue();
             int length = response.getFieldsLengths()[i];
             int scale = 0;
+            int precision = 0;
 
-            if (response.getFieldsScales() != null)
-            {
+            if (response.getFieldsScales() != null) {
                 scale = response.getFieldsScales()[i];
             }
-            fields.add(new RestfulResultSet.Field(colName, jdbcType, length, "", taosType, scale));
+            if (response.getFieldsPrecisions() != null) {
+                precision = response.getFieldsPrecisions()[i];
+            }
+            fields.add(new RestfulResultSet.Field(colName, jdbcType, length, "", taosType, scale, precision));
         }
         this.metaData = new RestfulResultSetMetaData(database, fields, transport.getConnectionParam().isVarcharAsString());
         this.timestampPrecision = response.getPrecision();

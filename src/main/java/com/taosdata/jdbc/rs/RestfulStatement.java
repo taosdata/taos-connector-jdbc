@@ -16,7 +16,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import static com.taosdata.jdbc.utils.SqlSyntaxValidator.getDatabaseName;
-
+@Deprecated
 public class RestfulStatement extends AbstractStatement {
 
     private boolean closed;

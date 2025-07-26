@@ -61,7 +61,9 @@ public class WSParameterMetaData extends AbstractParameterMetaData {
             || colTypeList.get(param - 1) == TSDBConstants.TSDB_DATA_TYPE_INT
             || colTypeList.get(param - 1) == TSDBConstants.TSDB_DATA_TYPE_BIGINT
             || colTypeList.get(param - 1) == TSDBConstants.TSDB_DATA_TYPE_FLOAT
-            || colTypeList.get(param - 1) == TSDBConstants.TSDB_DATA_TYPE_DOUBLE;
+            || colTypeList.get(param - 1) == TSDBConstants.TSDB_DATA_TYPE_DOUBLE
+            || colTypeList.get(param - 1) == TSDBConstants.TSDB_DATA_TYPE_DECIMAL64
+            || colTypeList.get(param - 1) == TSDBConstants.TSDB_DATA_TYPE_DECIMAL128;
     }
 
     @Override

@@ -4,11 +4,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.taosdata.jdbc.ws.entity.Payload;
 
 public class CommitOffsetReq extends Payload {
+    @JsonProperty("topic")
     private String topic;
 
     @JsonProperty("vgroup_id")
     private int vgroupId;
 
+    @JsonProperty("offset")
     private long offset;
 
     public String getTopic() {

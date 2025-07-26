@@ -8,6 +8,7 @@ import com.taosdata.jdbc.common.TableInfo;
 import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.utils.BlobUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.ws.entity.Action;
 import com.taosdata.jdbc.ws.entity.Code;
@@ -225,6 +226,9 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
             case Types.VARBINARY:
                 tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_VARBINARY));
                 break;
+            case Types.BLOB:
+                tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_BLOB));
+                break;
             case Types.NCHAR:
                 tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_NCHAR));
                 break;
@@ -278,6 +282,9 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
                 break;
             case TSDB_DATA_TYPE_BINARY:
                 tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_BINARY));
+                break;
+            case TSDB_DATA_TYPE_BLOB:
+                tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_BLOB));
                 break;
             case TSDB_DATA_TYPE_VARBINARY:
                 tag.add(new ColumnInfo(index, nullTag, TSDB_DATA_TYPE_VARBINARY));
@@ -405,6 +412,9 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
             case Types.VARBINARY:
                 colOrderedMap.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_VARBINARY, parameterIndex));
                 break;
+            case Types.BLOB:
+                colOrderedMap.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_BLOB, parameterIndex));
+                break;
             case Types.NCHAR:
                 colOrderedMap.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_NCHAR, parameterIndex));
                 break;
@@ -472,20 +482,6 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
     public void setBytes(int parameterIndex, byte[] x) throws SQLException {
         colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_BINARY, parameterIndex));
     }
-
-    public void setVarbinary(int parameterIndex, byte[] x) throws SQLException {
-        // UTF-8
-        if (x == null) {
-            setNull(parameterIndex, Types.VARBINARY);
-            return;
-        }
-        colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_VARBINARY, parameterIndex));
-    }
-
-    public void setGeometry(int parameterIndex, byte[] x) throws SQLException {
-        colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_GEOMETRY, parameterIndex));
-    }
-
     @Override
     public void setDate(int parameterIndex, Date x) throws SQLException {
         if (x == null) {
@@ -568,6 +564,17 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
             case Types.VARCHAR:
                 colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_BINARY, parameterIndex));
                 break;
+            case Types.BLOB:
+                if (x instanceof byte[]) {
+                    colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_BLOB, parameterIndex));
+                } else if (x instanceof Blob) {
+                    Blob blob = (Blob) x;
+                    byte[] bytes = blob.getBytes(1, (int) blob.length());
+                    colOrderedMap.put(parameterIndex, new Column(bytes, TSDB_DATA_TYPE_BLOB, parameterIndex));
+                } else {
+                    throw new SQLException("Unsupported BLOB type: " + x.getClass().getName());
+                }
+                break;
             case Types.VARBINARY:
                 colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_VARBINARY, parameterIndex));
                 break;
@@ -635,7 +642,11 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
             colOrderedMap.put(parameterIndex, new Column(instant, TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
         } else if (x instanceof BigInteger) {
             colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_UBIGINT, parameterIndex));
-        } else {
+        } else if (x instanceof Blob) {
+            byte[] bytes = ((Blob) x).getBytes(1, (int) ((Blob) x).length());
+            colOrderedMap.put(parameterIndex, new Column(bytes, TSDB_DATA_TYPE_BLOB, parameterIndex));
+        }
+        else {
             throw new SQLException("Unsupported data type: " + x.getClass().getName());
         }
     }
@@ -831,7 +842,12 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
 
     @Override
     public void setBlob(int parameterIndex, Blob x) throws SQLException {
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
+        checkBlobSupport();
+        if (x == null){
+            setNull(parameterIndex, Types.BLOB);
+            return;
+        }
+        colOrderedMap.put(parameterIndex, new Column(BlobUtil.getBytes(x), TSDB_DATA_TYPE_BLOB, parameterIndex));
     }
 
     @Override
@@ -898,7 +914,8 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
 
     @Override
     public void setBlob(int parameterIndex, InputStream inputStream, long length) throws SQLException {
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
+        checkBlobSupport();
+        colOrderedMap.put(parameterIndex, new Column(BlobUtil.getFromInputStream(inputStream, length), TSDB_DATA_TYPE_BINARY, parameterIndex));
     }
 
     @Override
@@ -958,16 +975,14 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
 
     @Override
     public void setBlob(int parameterIndex, InputStream inputStream) throws SQLException {
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
+        checkBlobSupport();
+        colOrderedMap.put(parameterIndex, new Column(BlobUtil.getFromInputStream(inputStream), TSDB_DATA_TYPE_BINARY, parameterIndex));
     }
 
     @Override
     public void setNClob(int parameterIndex, Reader reader) throws SQLException {
         throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
     }
-
-
-
     @Override
     public void setInt(int columnIndex, List<Integer> list) throws SQLException {
         setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_INT, Integer.BYTES);
@@ -1028,6 +1043,12 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
     public void setGeometry(int columnIndex, List<byte[]> list, int size) throws SQLException {
         setValueImpl(columnIndex, list, TSDB_DATA_TYPE_GEOMETRY, size);
     }
+    @Override
+    public void setBlob(int columnIndex, List<Blob> list, int size) throws SQLException {
+        checkBlobSupport();
+        setValueImpl(columnIndex, BlobUtil.getListBytes(list), TSDBConstants.TSDB_DATA_TYPE_BLOB, size);
+    }
+
     // note: expand the required space for each NChar character
     @Override
     public void setNString(int columnIndex, List<String> list, int size) throws SQLException {

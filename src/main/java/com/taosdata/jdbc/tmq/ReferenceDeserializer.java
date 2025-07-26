@@ -14,6 +14,7 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.sql.Blob;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -140,8 +141,10 @@ public class ReferenceDeserializer<V> implements Deserializer<V> {
                 } else if (param.clazz.isAssignableFrom(BigInteger.class)) {
                     BigInteger bigInteger = (BigInteger) data.getObject(param.name);
                     param.method.invoke(t, data.wasNull() ? null : bigInteger);
+                } else if (param.clazz.isAssignableFrom(Blob.class)) {
+                    Blob blob = (Blob) data.getObject(param.name);
+                    param.method.invoke(t, data.wasNull() ? null : blob);
                 }
-
             } catch (IllegalAccessException | InvocationTargetException e) {
                 throw new SQLException(this.getClass().getSimpleName() + ": " + param.name
                         + " through method:" + param.method.getName() + " get Data error: ", e);

@@ -6,6 +6,8 @@ import org.junit.*;
 
 import java.sql.*;
 
+import static org.junit.Assert.assertEquals;
+
 public class InsertSpecialCharacterRestfulTest {
 
     private static final String host = "127.0.0.1";
@@ -28,7 +30,7 @@ public class InsertSpecialCharacterRestfulTest {
             pstmt.setTimestamp(1, new Timestamp(now));
             pstmt.setBytes(2, special_character_str_1.getBytes());
             int ret = pstmt.executeUpdate();
-            Assert.assertEquals(1, ret);
+            assertEquals(1, ret);
         }
         // query
         final String query = "select * from ?";
@@ -38,9 +40,9 @@ public class InsertSpecialCharacterRestfulTest {
             ResultSet rs = pstmt.executeQuery();
             rs.next();
             long timestamp = rs.getTimestamp(1).getTime();
-            Assert.assertEquals(now, timestamp);
+            assertEquals(now, timestamp);
             String f1 = new String(rs.getBytes(2));
-            Assert.assertEquals(special_character_str_1, f1);
+            assertEquals(special_character_str_1, f1);
             String f2 = rs.getString(3);
             Assert.assertNull(f2);
         }
@@ -60,7 +62,7 @@ public class InsertSpecialCharacterRestfulTest {
             pstmt.setTimestamp(1, new Timestamp(now));
             pstmt.setBytes(2, special_character_str_2.getBytes());
             int ret = pstmt.executeUpdate();
-            Assert.assertEquals(1, ret);
+            assertEquals(1, ret);
         }
         // query
         final String query = "select * from " + tbname1;
@@ -68,11 +70,11 @@ public class InsertSpecialCharacterRestfulTest {
             ResultSet rs = pstmt.executeQuery();
             rs.next();
             long timestamp = rs.getTimestamp(1).getTime();
-            Assert.assertEquals(now, timestamp);
+            assertEquals(now, timestamp);
             String f1 = new String(rs.getBytes(2));
             //TODO: bug to be fixed
 //            Assert.assertEquals(special_character_str_2, f1);
-            Assert.assertEquals(special_character_str_2.substring(1, special_character_str_1.length() - 1), f1);
+            assertEquals(special_character_str_2.substring(1, special_character_str_1.length() - 1), f1);
             String f2 = rs.getString(3);
             Assert.assertNull(f2);
         }
@@ -89,7 +91,7 @@ public class InsertSpecialCharacterRestfulTest {
             pstmt.setTimestamp(1, new Timestamp(now));
             pstmt.setBytes(2, special_character_str_3.getBytes());
             int ret = pstmt.executeUpdate();
-            Assert.assertEquals(1, ret);
+            assertEquals(1, ret);
         }
         // query
         final String query = "select * from " + tbname1;
@@ -97,9 +99,9 @@ public class InsertSpecialCharacterRestfulTest {
             ResultSet rs = pstmt.executeQuery();
             rs.next();
             long timestamp = rs.getTimestamp(1).getTime();
-            Assert.assertEquals(now, timestamp);
+            assertEquals(now, timestamp);
             String f1 = new String(rs.getBytes(2));
-            Assert.assertEquals(special_character_str_3, f1);
+            assertEquals(special_character_str_3, f1);
             String f2 = rs.getString(3);
             Assert.assertNull(f2);
         }
@@ -114,7 +116,7 @@ public class InsertSpecialCharacterRestfulTest {
             pstmt.setTimestamp(1, new Timestamp(now));
             pstmt.setBytes(2, special_character_str_4.getBytes());
             int ret = pstmt.executeUpdate();
-            Assert.assertEquals(1, ret);
+            assertEquals(1, ret);
         }
         // query
         final String query = "select * from " + tbname1;
@@ -122,9 +124,9 @@ public class InsertSpecialCharacterRestfulTest {
             ResultSet rs = stmt.executeQuery(query);
             rs.next();
             long timestamp = rs.getTimestamp(1).getTime();
-            Assert.assertEquals(now, timestamp);
+            assertEquals(now, timestamp);
             String f1 = new String(rs.getBytes(2));
-            Assert.assertEquals(special_character_str_4, f1);
+            assertEquals(special_character_str_4, f1);
             String f2 = rs.getString(3);
             Assert.assertNull(f2);
         }
@@ -139,7 +141,7 @@ public class InsertSpecialCharacterRestfulTest {
             pstmt.setTimestamp(1, new Timestamp(now));
             pstmt.setBytes(2, special_character_str_5.getBytes());
             int ret = pstmt.executeUpdate();
-            Assert.assertEquals(1, ret);
+            assertEquals(1, ret);
         }
         // query
         final String query = "select * from " + tbname1;
@@ -147,9 +149,9 @@ public class InsertSpecialCharacterRestfulTest {
             ResultSet rs = stmt.executeQuery(query);
             rs.next();
             long timestamp = rs.getTimestamp(1).getTime();
-            Assert.assertEquals(now, timestamp);
+            assertEquals(now, timestamp);
             String f1 = new String(rs.getBytes(2));
-            Assert.assertEquals(special_character_str_5, f1);
+            assertEquals(special_character_str_5, f1);
             String f2 = rs.getString(3);
             Assert.assertNull(f2);
         }
@@ -166,7 +168,7 @@ public class InsertSpecialCharacterRestfulTest {
             pstmt.setTimestamp(3, new Timestamp(now));
             pstmt.setBytes(4, special_character_str_4.getBytes());
             int ret = pstmt.executeUpdate();
-            Assert.assertEquals(1, ret);
+            assertEquals(1, ret);
         }
         // query t1
         final String query = "select * from t1";
@@ -174,9 +176,9 @@ public class InsertSpecialCharacterRestfulTest {
             ResultSet rs = stmt.executeQuery(query);
             rs.next();
             long timestamp = rs.getTimestamp(1).getTime();
-            Assert.assertEquals(now, timestamp);
+            assertEquals(now, timestamp);
             String f1 = new String(rs.getBytes(2));
-            Assert.assertEquals(special_character_str_4, f1);
+            assertEquals(special_character_str_4, f1);
             String f2 = rs.getString(3);
             Assert.assertNull(f2);
         }
@@ -192,7 +194,7 @@ public class InsertSpecialCharacterRestfulTest {
             pstmt.setBytes(2, special_character_str_4.getBytes());
             pstmt.setString(3, special_character_str_4);
             int ret = pstmt.executeUpdate();
-            Assert.assertEquals(1, ret);
+            assertEquals(1, ret);
         }
         // query
         final String query = "select * from " + tbname1;
@@ -200,11 +202,11 @@ public class InsertSpecialCharacterRestfulTest {
             ResultSet rs = stmt.executeQuery(query);
             rs.next();
             long timestamp = rs.getTimestamp(1).getTime();
-            Assert.assertEquals(now, timestamp);
+            assertEquals(now, timestamp);
             String f1 = new String(rs.getBytes(2));
-            Assert.assertEquals(special_character_str_4, f1);
+            assertEquals(special_character_str_4, f1);
             String f2 = rs.getString(3);
-            Assert.assertEquals(special_character_str_4, f2);
+            assertEquals(special_character_str_4, f2);
         }
     }
 
@@ -219,7 +221,7 @@ public class InsertSpecialCharacterRestfulTest {
             pstmt.setTimestamp(3, new Timestamp(now));
             pstmt.setBytes(4, special_character_str_5.getBytes());
             int ret = pstmt.executeUpdate();
-            Assert.assertEquals(1, ret);
+            assertEquals(1, ret);
         }
     }
 
@@ -242,7 +244,7 @@ public class InsertSpecialCharacterRestfulTest {
             pstmt.setString(11, special_character_str_5);
 
             int ret = pstmt.executeUpdate();
-            Assert.assertEquals(2, ret);
+            assertEquals(2, ret);
         }
         // query t1
         String query = "select * from t?";
@@ -252,9 +254,9 @@ public class InsertSpecialCharacterRestfulTest {
             ResultSet rs = pstmt.executeQuery();
             rs.next();
             long timestamp = rs.getTimestamp(1).getTime();
-            Assert.assertEquals(now, timestamp);
+            assertEquals(now, timestamp);
             String f1 = new String(rs.getBytes(2));
-            Assert.assertEquals(special_character_str_5, f1);
+            assertEquals(special_character_str_5, f1);
             String f2 = rs.getString(3);
             Assert.assertNull(f2);
         }
@@ -264,11 +266,11 @@ public class InsertSpecialCharacterRestfulTest {
             ResultSet rs = stmt.executeQuery(query);
             rs.next();
             long timestamp = rs.getTimestamp(1).getTime();
-            Assert.assertEquals(now, timestamp);
+            assertEquals(now, timestamp);
             byte[] f1 = rs.getBytes(2);
             Assert.assertNull(f1);
             String f2 = new String(rs.getBytes(3));
-            Assert.assertEquals(special_character_str_5, f2);
+            assertEquals(special_character_str_5, f2);
         }
     }
 
@@ -292,7 +294,7 @@ public class InsertSpecialCharacterRestfulTest {
             pstmt.setString(11, special_character_str_5);
 
             int ret = pstmt.executeUpdate();
-            Assert.assertEquals(2, ret);
+            assertEquals(2, ret);
         }
         //query t1
         String query = "select * from ?.t? where ts < ? and ts >= ? and f1 is not null";
@@ -305,9 +307,9 @@ public class InsertSpecialCharacterRestfulTest {
             ResultSet rs = pstmt.executeQuery();
             rs.next();
             long timestamp = rs.getTimestamp(1).getTime();
-            Assert.assertEquals(now, timestamp);
+            assertEquals(now, timestamp);
             String f1 = new String(rs.getBytes(2));
-            Assert.assertEquals(special_character_str_5, f1);
+            assertEquals(special_character_str_5, f1);
             byte[] f2 = rs.getBytes(3);
             Assert.assertNull(f2);
         }
@@ -321,11 +323,11 @@ public class InsertSpecialCharacterRestfulTest {
             ResultSet rs = pstmt.executeQuery();
             rs.next();
             long timestamp = rs.getTimestamp(1).getTime();
-            Assert.assertEquals(now, timestamp);
+            assertEquals(now, timestamp);
             byte[] f1 = rs.getBytes(2);
             Assert.assertNull(f1);
             String f2 = new String(rs.getBytes(3));
-            Assert.assertEquals(special_character_str_5, f2);
+            assertEquals(special_character_str_5, f2);
         }
     }
 
@@ -341,7 +343,7 @@ public class InsertSpecialCharacterRestfulTest {
             pstmt.setBytes(3, specialCharacterStr.getBytes());
 
             int ret = pstmt.executeUpdate();
-            Assert.assertEquals(1, ret);
+            assertEquals(1, ret);
         }
     }
 
@@ -354,7 +356,7 @@ public class InsertSpecialCharacterRestfulTest {
             pstmt.setTimestamp(1, new Timestamp(now));
             pstmt.setString(2, special_character_str_4);
             int ret = pstmt.executeUpdate();
-            Assert.assertEquals(1, ret);
+            assertEquals(1, ret);
         }
         // query
         final String query = "select * from " + tbname1;
@@ -362,11 +364,11 @@ public class InsertSpecialCharacterRestfulTest {
             ResultSet rs = stmt.executeQuery(query);
             rs.next();
             long timestamp = rs.getTimestamp(1).getTime();
-            Assert.assertEquals(now, timestamp);
+            assertEquals(now, timestamp);
             String f1 = new String(rs.getBytes(2));
-            Assert.assertEquals("HelloTDengine", f1);
+            assertEquals("HelloTDengine", f1);
             String f2 = rs.getString(3);
-            Assert.assertEquals(special_character_str_4, f2);
+            assertEquals(special_character_str_4, f2);
         }
     }
 
@@ -403,5 +405,4 @@ public class InsertSpecialCharacterRestfulTest {
             conn.close();
         }
     }
-
 }

@@ -7,7 +7,7 @@ import com.taosdata.jdbc.TSDBErrorNumbers;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-
+@Deprecated
 public class RestfulDatabaseMetaData extends AbstractDatabaseMetaData {
 
     private final String url;

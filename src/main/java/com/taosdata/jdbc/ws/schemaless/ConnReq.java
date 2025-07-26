@@ -1,10 +1,14 @@
 package com.taosdata.jdbc.ws.schemaless;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.taosdata.jdbc.ws.entity.Payload;
 
 public class ConnReq extends Payload {
+    @JsonProperty("user")
     private String user;
+    @JsonProperty("password")
     private String password;
+    @JsonProperty("db")
     private String db;
 
     public String getUser() {

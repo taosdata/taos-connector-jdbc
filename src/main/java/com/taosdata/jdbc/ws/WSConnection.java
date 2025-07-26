@@ -33,8 +33,8 @@ public class WSConnection extends AbstractConnection {
     private final ConnectionParam param;
     private final AtomicLong insertId = new AtomicLong(0);
 
-    public WSConnection(String url, Properties properties, Transport transport, ConnectionParam param) {
-        super(properties);
+    public WSConnection(String url, Properties properties, Transport transport, ConnectionParam param, String serverVersion) {
+        super(properties, serverVersion);
         this.transport = transport;
         this.database = param.getDatabase();
         this.param = param;
@@ -115,13 +115,17 @@ public class WSConnection extends AbstractConnection {
                         prepareResp);
             } else {
                 if ("line".equalsIgnoreCase(param.getPbsMode())){
-                    return new WSRowPreparedStatement(transport,
-                        param,
-                        database,
-                        this,
-                        sql,
-                        idGenerator.getAndIncrement(),
-                        prepareResp);
+                    if (super.supportLineBind) {
+                        return new WSRowPreparedStatement(transport,
+                                param,
+                                database,
+                                this,
+                                sql,
+                                idGenerator.getAndIncrement(),
+                                prepareResp);
+                    } else {
+                        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_LINE_BIND_MODE_UNSUPPORTED_IN_SERVER);
+                    }
                 }
                 return new TSWSPreparedStatement(transport,
                         param,

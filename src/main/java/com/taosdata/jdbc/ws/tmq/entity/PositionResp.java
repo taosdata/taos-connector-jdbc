@@ -1,9 +1,12 @@
 package com.taosdata.jdbc.ws.tmq.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.taosdata.jdbc.ws.entity.CommonResp;
 
 public class PositionResp extends CommonResp {
+    @JsonProperty("timing")
     private long timing;
+    @JsonProperty("position")
     private long[] position;
 
     public long getTiming() {

@@ -4,9 +4,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.taosdata.jdbc.ws.entity.Payload;
 
 public class SeekReq extends Payload {
+    @JsonProperty("topic")
     private String topic;
     @JsonProperty("vgroup_id")
     private int vgId;
+    @JsonProperty("offset")
     private long offset;
 
     public String getTopic() {
