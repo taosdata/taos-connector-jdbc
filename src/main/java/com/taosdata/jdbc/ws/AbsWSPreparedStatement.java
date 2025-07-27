@@ -482,6 +482,15 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
     public void setBytes(int parameterIndex, byte[] x) throws SQLException {
         colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_BINARY, parameterIndex));
     }
+
+    public void setVarbinary(int parameterIndex, byte[] x) throws SQLException {
+        setBytes(parameterIndex, x);
+    }
+
+    public void setGeometry(int parameterIndex, byte[] x) throws SQLException {
+        setBytes(parameterIndex, x);
+    }
+
     @Override
     public void setDate(int parameterIndex, Date x) throws SQLException {
         if (x == null) {
