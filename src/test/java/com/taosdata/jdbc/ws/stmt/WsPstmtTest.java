@@ -1,11 +1,9 @@
 package com.taosdata.jdbc.ws.stmt;
 
+import com.taosdata.jdbc.common.TDBlob;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.TSWSPreparedStatement;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.CompositeByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.util.ResourceLeakDetector;
 import org.junit.*;
 import org.junit.runners.MethodSorters;
@@ -190,65 +188,18 @@ public class WsPstmtTest {
         pstmt.setNClob(1, null, 0);
     }
 
-    @Test (expected = SQLException.class)
-    public void test104_SetBlob() throws SQLException {
-        pstmt.setBlob(1, new Blob() {
-            @Override
-            public long length() throws SQLException {
-                return 0;
-            }
-
-            @Override
-            public byte[] getBytes(long pos, int length) throws SQLException {
-                return new byte[0];
-            }
-
-            @Override
-            public InputStream getBinaryStream() throws SQLException {
-                return null;
-            }
-
-            @Override
-            public long position(byte[] pattern, long start) throws SQLException {
-                return 0;
-            }
-
-            @Override
-            public long position(Blob pattern, long start) throws SQLException {
-                return 0;
-            }
-
-            @Override
-            public int setBytes(long pos, byte[] bytes) throws SQLException {
-                return 0;
-            }
-
-            @Override
-            public int setBytes(long pos, byte[] bytes, int offset, int len) throws SQLException {
-                return 0;
-            }
-
-            @Override
-            public OutputStream setBinaryStream(long pos) throws SQLException {
-                return null;
-            }
-
-            @Override
-            public void truncate(long len) throws SQLException {
-
-            }
-
-            @Override
-            public void free() throws SQLException {
-
-            }
-
-            @Override
-            public InputStream getBinaryStream(long pos, long length) throws SQLException {
-                return null;
-            }
-        });
+    @Test
+    public void test104_SetBlobOK() throws SQLException {
+        TestUtils.runInMain();
+        pstmt.setBlob(1, new TDBlob(new byte[]{1, 2, 3, 4, 5}, true));
     }
+
+    @Test (expected = SQLException.class)
+    public void test104_SetBlobErr() throws SQLException {
+        TestUtils.runIn336();
+        pstmt.setBlob(1, new TDBlob(new byte[]{1, 2, 3, 4, 5}, true));
+    }
+
     @Test (expected = SQLException.class)
     public void test105_SetBlob2() throws SQLException {
         pstmt.setBlob(1, null, 0);

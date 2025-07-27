@@ -6,17 +6,15 @@ import com.taosdata.jdbc.utils.UInt64Deserializer;
 import com.taosdata.jdbc.ws.entity.CommonResp;
 
 public class FetchResp extends CommonResp {
-
     @JsonProperty("message_id")
     @JsonDeserialize(using = UInt64Deserializer.class)
     private long messageId;
+    @JsonProperty("completed")
     private boolean completed;
-
     @JsonProperty("table_name")
     private String tableName;
-
+    @JsonProperty("rows")
     private int rows;
-
     @JsonProperty("fields_count")
     private int fieldsCount;
 
@@ -29,6 +27,7 @@ public class FetchResp extends CommonResp {
     @JsonProperty("fields_lengths")
     private long[] fieldsLengths;
 
+    @JsonProperty("precision")
     private int precision;
 
 

@@ -5,7 +5,6 @@ import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
-import java.math.BigInteger;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -998,8 +997,15 @@ public class TSWSPreparedStatementTest {
         pstmt_insert.setRef(1, null);
     }
 
-    @Test(expected = SQLFeatureNotSupportedException.class)
+    @Test(expected = SQLException.class)
+    public void setBlobErr() throws SQLException {
+        TestUtils.runIn336();
+        pstmt_insert.setBlob(1, (Blob) null);
+    }
+
+    @Test
     public void setBlob() throws SQLException {
+        TestUtils.runInMain();
         pstmt_insert.setBlob(1, (Blob) null);
     }
 

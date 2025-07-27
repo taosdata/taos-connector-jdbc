@@ -1,5 +1,6 @@
 package com.taosdata.jdbc;
 
+import com.taosdata.jdbc.common.TDBlob;
 import com.taosdata.jdbc.utils.DataTypeConverUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.Utils;
@@ -209,6 +210,7 @@ public class TSDBResultSetBlockData {
                 }
                 case TSDB_DATA_TYPE_BINARY:
                 case TSDB_DATA_TYPE_JSON:
+                case TSDB_DATA_TYPE_BLOB:
                 case TSDB_DATA_TYPE_VARBINARY:
                 case TSDB_DATA_TYPE_GEOMETRY:{
                     length = numOfRows * 4;
@@ -223,7 +225,13 @@ public class TSDBResultSetBlockData {
                             continue;
                         }
                         buffer.position(start + offset.get(m));
-                        int len = buffer.getShort() & 0xFFFF;
+                        int len;
+                        if (type != TSDB_DATA_TYPE_BLOB) {
+                            len = buffer.getShort() & 0xFFFF;
+
+                        } else {
+                            len = buffer.getInt();
+                        }
                         byte[] tmp = new byte[len];
                         buffer.get(tmp);
                         col.add(tmp);
@@ -417,6 +425,9 @@ public class TSDBResultSetBlockData {
             case TSDB_DATA_TYPE_VARBINARY:
             case TSDB_DATA_TYPE_GEOMETRY:{
                 return source;
+            }
+            case TSDB_DATA_TYPE_BLOB:{
+                return new TDBlob((byte[]) source, true);
             }
             case TSDB_DATA_TYPE_UTINYINT: {
                 byte val = (byte) source;

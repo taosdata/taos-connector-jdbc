@@ -10,6 +10,7 @@ import com.taosdata.jdbc.utils.UInt64Deserializer;
 public class QueryResp extends CommonResp {
 
     @JsonDeserialize(using = UInt64Deserializer.class)
+    @JsonProperty("id")
     private long id;
 
     @JsonProperty("is_update")
@@ -34,7 +35,7 @@ public class QueryResp extends CommonResp {
     private int[] fieldsPrecisions;
     @JsonProperty("fields_scales")
     private int[] fieldsScales;
-
+    @JsonProperty("precision")
     private int precision;
 
     public long getId() {

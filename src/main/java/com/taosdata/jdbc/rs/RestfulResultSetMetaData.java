@@ -1,17 +1,15 @@
 package com.taosdata.jdbc.rs;
 
 import com.taosdata.jdbc.TSDBConstants;
-import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.WrapperImpl;
 import com.taosdata.jdbc.enums.DataType;
 
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.Collections;
 import java.util.List;
-
+@Deprecated
 public class RestfulResultSetMetaData extends WrapperImpl implements ResultSetMetaData {
 
     private String tableName = "";
@@ -106,23 +104,33 @@ public class RestfulResultSetMetaData extends WrapperImpl implements ResultSetMe
 
     @Override
     public int getPrecision(int column) throws SQLException {
-        int type = this.fields.get(column - 1).type;
+        int type = this.fields.get(column - 1).taos_type;
         switch (type) {
-            case Types.FLOAT:
-                return 5;
-            case Types.DOUBLE:
-                return 9;
-            case Types.BINARY:
-            case Types.NCHAR:
+            case TSDBConstants.TSDB_DATA_TYPE_BINARY:
+            case TSDBConstants.TSDB_DATA_TYPE_NCHAR:
+            case TSDBConstants.TSDB_DATA_TYPE_VARBINARY:
+            case TSDBConstants.TSDB_DATA_TYPE_GEOMETRY:
+            case TSDBConstants.TSDB_DATA_TYPE_BLOB:
+            case TSDBConstants.TSDB_DATA_TYPE_JSON:
                 return this.fields.get(column - 1).length;
+            case TSDBConstants.TSDB_DATA_TYPE_DECIMAL64:
+            case TSDBConstants.TSDB_DATA_TYPE_DECIMAL128:
+                return this.fields.get(column - 1).precision;
             default:
-                return 0;
+                return DataType.convertTaosType2DataType(type).getSize();
         }
     }
 
     @Override
     public int getScale(int column) throws SQLException {
-        return 0;
+        int type = this.fields.get(column - 1).taos_type;
+        switch (type) {
+            case TSDBConstants.TSDB_DATA_TYPE_DECIMAL64:
+            case TSDBConstants.TSDB_DATA_TYPE_DECIMAL128:
+                return this.fields.get(column - 1).scale;
+            default:
+                return 0;
+        }
     }
 
     @Override

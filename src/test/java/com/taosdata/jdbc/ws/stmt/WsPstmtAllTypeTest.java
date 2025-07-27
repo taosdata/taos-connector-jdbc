@@ -146,7 +146,7 @@ public class WsPstmtAllTypeTest {
     @Test
     public void testExecuteCriticalValue() throws SQLException {
         String sql = "insert into " + db_name + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        PreparedStatement statement = connection.prepareStatement(sql);
+        TSWSPreparedStatement statement = connection.prepareStatement(sql).unwrap(TSWSPreparedStatement.class);
         statement.setTimestamp(1, new Timestamp(0));
         statement.setByte(2, (byte) 127);
         statement.setShort(3, (short) 32767);
@@ -158,8 +158,8 @@ public class WsPstmtAllTypeTest {
         statement.setString(9, "ABC");
         statement.setNString(10, "涛思数据");
         statement.setString(11, "陶");
-        statement.setBytes(12, expectedVarBinary);
-        statement.setBytes(13, expectedGeometry);
+        statement.setVarbinary(12, expectedVarBinary);
+        statement.setGeometry(13, expectedGeometry);
         statement.setShort(14, TSDBConstants.MAX_UNSIGNED_BYTE);
         statement.setInt(15, TSDBConstants.MAX_UNSIGNED_SHORT);
         statement.setLong(16, TSDBConstants.MAX_UNSIGNED_INT);

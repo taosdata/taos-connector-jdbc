@@ -9,7 +9,6 @@ import org.junit.*;
 import java.math.BigInteger;
 import java.sql.*;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.Properties;
 
 public class WsPstmtLineModeAllTypeTest {
@@ -23,6 +22,7 @@ public class WsPstmtLineModeAllTypeTest {
     static String testStr = "20160601";
     static byte[] expectedVarBinary = StringUtils.hexToBytes(testStr);
     static byte[] expectedGeometry = StringUtils.hexToBytes("0101000000000000000000F03F0000000000000040");
+
 
     @Test
     public void testExecuteUpdate() throws SQLException {
@@ -542,6 +542,7 @@ public class WsPstmtLineModeAllTypeTest {
 
     @BeforeClass
     public static void setUp() {
+        TestUtils.runInMain();
         ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
     }
 

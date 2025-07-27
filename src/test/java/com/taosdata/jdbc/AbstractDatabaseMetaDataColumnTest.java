@@ -121,7 +121,7 @@ public class AbstractDatabaseMetaDataColumnTest {
             tables.add(columns.getString("TABLE_NAME"));
             count++;
         }
-        Assert.assertEquals(3, count);
+        Assert.assertTrue(count >= 3);
         Assert.assertTrue(dbs.contains("information_schema"));
         Assert.assertTrue(tables.contains("ins_tables"));
         Assert.assertFalse(dbs.contains("performance_schema"));

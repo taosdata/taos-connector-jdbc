@@ -907,6 +907,7 @@ public class TSDBDatabaseMetaDataTest {
 
     @Test
     public void getPrimaryKeys() throws SQLException {
+        Assert.assertNotNull(metaData.getPrimaryKeys("", "", ""));
         ResultSet rs = metaData.getPrimaryKeys(db_name, "", "dn1");
         ResultSetMetaData meta = rs.getMetaData();
         rs.next();

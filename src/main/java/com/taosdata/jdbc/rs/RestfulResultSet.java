@@ -31,7 +31,7 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
+@Deprecated
 public class RestfulResultSet extends AbstractResultSet {
 
     public static DateTimeFormatter rfc3339Parser = new DateTimeFormatterBuilder()
@@ -111,7 +111,7 @@ public class RestfulResultSet extends AbstractResultSet {
             int col_type = type.getJdbcTypeValue();
             int col_length = col.get(2).asInt();
             columnNames.add(col_name);
-            columns.add(new Field(col_name, col_type, col_length, "", type.getTaosTypeValue(), 0));
+            columns.add(new Field(col_name, col_type, col_length, "", type.getTaosTypeValue(), 0, 0));
         }
     }
 
@@ -203,14 +203,16 @@ public class RestfulResultSet extends AbstractResultSet {
         String note;
         int taos_type;
         int scale;
+        int precision;
 
-        public Field(String name, int type, int length, String note, int taos_type, int scale) {
+        public Field(String name, int type, int length, String note, int taos_type, int scale, int precision) {
             this.name = name;
             this.type = type;
             this.length = length;
             this.note = note;
             this.taos_type = taos_type;
             this.scale = scale;
+            this.precision = precision;
         }
 
         public int getTaosType() {
@@ -220,6 +222,9 @@ public class RestfulResultSet extends AbstractResultSet {
 
         public int getScale() {
             return scale;
+        }
+        public int getPrecision() {
+            return precision;
         }
     }
 

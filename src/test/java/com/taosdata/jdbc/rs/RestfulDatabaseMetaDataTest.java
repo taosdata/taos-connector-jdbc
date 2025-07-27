@@ -815,6 +815,8 @@ public class RestfulDatabaseMetaDataTest {
 
     @Test
     public void getPrimaryKeys() throws SQLException {
+        Assert.assertNotNull(metaData.getPrimaryKeys("", "", ""));
+
         ResultSet rs = metaData.getPrimaryKeys(dbName, "", "dn1");
         ResultSetMetaData meta = rs.getMetaData();
         rs.next();

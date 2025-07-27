@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.utils;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
@@ -43,22 +44,28 @@ public class JsonUtilTest {
 
     // 测试类
     static class TestKnownPropertyClass {
+        @JsonProperty("knownProperty")
         public String knownProperty;
     }
 
     static class TestClassWithDate {
+        @JsonProperty("date")
         public java.util.Date date;
     }
 
     static class TestClassWithArray {
+        @JsonProperty("values")
         public String[] values;
     }
 
     static class TestClassWithJavaTime {
+        @JsonProperty("localDateTime")
         public java.time.LocalDateTime localDateTime;
     }
     static class TestNullPropertyClass {
+        @JsonProperty("name")
         public String name;
+        @JsonProperty("age")
         public Integer age;
     }
 }

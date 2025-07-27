@@ -15,7 +15,7 @@ public class AbstractConnectionTest {
 
     @Before
     public void setUp() {
-        connection = new AbstractConnection(new Properties()) {
+        connection = new AbstractConnection(new Properties(), TSDBConstants.UNKNOWN_VERSION) {
             @Override
             public Statement createStatement() throws SQLException {
                 return null; // Mock implementation

@@ -152,4 +152,11 @@ public class WSStatement extends AbstractStatement {
     public boolean isClosed() throws SQLException {
         return closed.get();
     }
+
+    protected void checkBlobSupport() throws SQLException{
+        AbstractConnection con = (AbstractConnection) getConnection();
+        if (!con.isSupportBlob()){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_BLOB_UNSUPPORTED_IN_SERVER);
+        }
+    }
 }

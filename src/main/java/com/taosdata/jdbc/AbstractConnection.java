@@ -2,6 +2,7 @@ package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
+import com.taosdata.jdbc.utils.VersionUtil;
 
 import java.sql.*;
 import java.util.*;
@@ -17,13 +18,22 @@ public abstract class AbstractConnection extends WrapperImpl implements Connecti
     protected volatile boolean isClosed;
     protected volatile String catalog;
     protected final Properties clientInfoProps = new Properties();
+    protected final boolean supportBlob;
+    protected final boolean supportLineBind;
 
-    protected AbstractConnection(Properties properties) {
+    protected final String serverVersion;
+
+    protected AbstractConnection(Properties properties, String version) {
         Set<String> propNames = properties.stringPropertyNames();
         for (String propName : propNames) {
             clientInfoProps.setProperty(propName, properties.getProperty(propName));
         }
+        serverVersion = version;
+        supportBlob = VersionUtil.surpportBlob(serverVersion);
+        supportLineBind = supportBlob;
     }
+
+    public boolean isSupportBlob(){return supportBlob;}
     public void unregisterStatement(Long stmtId) {
         this.statementsMap.remove(stmtId);
     }

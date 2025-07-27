@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.ws.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.ReqId;
 
@@ -9,13 +10,19 @@ import com.taosdata.jdbc.utils.ReqId;
 
 public class ConnectReq extends Payload {
 
+    @JsonProperty("user")
     private String user;
+    @JsonProperty("password")
     private String password;
+    @JsonProperty("db")
     private String db;
+    @JsonProperty("mode")
     private Integer mode;
-
+    @JsonProperty("tz")
     private String tz;
+    @JsonProperty("app")
     private String app;
+    @JsonProperty("ip")
     private String ip;
 
     public String getUser() {

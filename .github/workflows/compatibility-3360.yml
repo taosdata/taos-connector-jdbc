@@ -66,6 +66,7 @@ jobs:
         working-directory: jdbc-workspace
         env:
           TDENGINE_CLOUD_URL: ${{ secrets.TDENGINE_CLOUD_URL }}
+          TD_3360_TEST: 'true'
         run: mvn -B clean verify --file pom.xml
 
 
