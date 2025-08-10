@@ -92,6 +92,8 @@ public abstract class AbstractDriver implements Driver {
                 Utils.retainByteBuf(byteBuf);
                 FetchBlockNewResp fetchBlockResp = new FetchBlockNewResp(byteBuf);
                 remove.getFuture().complete(fetchBlockResp);
+            } else {
+
             }
         });
         Transport transport = new Transport(WSFunction.WS, param, inFlightRequest);

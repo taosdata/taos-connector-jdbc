@@ -13,11 +13,6 @@ import io.netty.buffer.PooledByteBufAllocator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
-import java.security.cert.X509Certificate;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
@@ -152,6 +147,57 @@ public class Transport implements AutoCloseable {
     }
 
     public Response send(String action, long reqId, long resultId, long type, byte[] rawData, byte[] rawData2) throws SQLException {
+        if (isClosed()){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
+        }
+
+        int totalLength = 24 + rawData.length + rawData2.length;
+        ByteBuf buffer = PooledByteBufAllocator.DEFAULT.directBuffer(totalLength);
+
+        buffer.writeLongLE(reqId);
+        buffer.writeLongLE(resultId);
+        buffer.writeLongLE(type);
+        buffer.writeBytes(rawData);
+        buffer.writeBytes(rawData2);
+
+        Response response;
+        CompletableFuture<Response> completableFuture = new CompletableFuture<>();
+        try {
+            inFlightRequest.put(new FutureResponse(action, reqId, completableFuture));
+        } catch (InterruptedException | TimeoutException e) {
+            throw new SQLException(e);
+        }
+
+        try {
+            Utils.retainByteBuf(buffer);
+            clientArr.get(currentNodeIndex).send(buffer);
+        } catch (WebsocketNotConnectedException e) {
+            tmqRethrowConnectionCloseException();
+            reconnect();
+            try {
+                Utils.retainByteBuf(buffer);
+                clientArr.get(currentNodeIndex).send(buffer);
+            }catch (Exception ex){
+                inFlightRequest.remove(action, reqId);
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());
+            }
+        } finally {
+            Utils.releaseByteBuf(buffer);
+        }
+
+        String reqString = "action:" + action + ", reqId:" + reqId + ", resultId:" + resultId + ", actionType" + type;
+        CompletableFuture<Response> responseFuture = CompletableFutureTimeout.orTimeout(completableFuture, timeout, TimeUnit.MILLISECONDS, reqString);
+        try {
+            response = responseFuture.get();
+            handleErrInMasterSlaveMode(response);
+        } catch (InterruptedException | ExecutionException e) {
+            inFlightRequest.remove(action, reqId);
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_QUERY_TIMEOUT, e.getMessage());
+        }
+        return response;
+    }
+
+    public Response sendFetchBlock(String action, long reqId, long resultId, long type, byte[] rawData, byte[] rawData2) throws SQLException {
         if (isClosed()){
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
         }

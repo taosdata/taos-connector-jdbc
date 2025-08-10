@@ -5,70 +5,39 @@ import com.taosdata.jdbc.BlockData;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.enums.DataType;
+import com.taosdata.jdbc.enums.FetchState;
 import com.taosdata.jdbc.rs.RestfulResultSet;
 import com.taosdata.jdbc.rs.RestfulResultSetMetaData;
-import com.taosdata.jdbc.ws.entity.*;
+import com.taosdata.jdbc.ws.entity.Action;
+import com.taosdata.jdbc.ws.entity.Code;
+import com.taosdata.jdbc.ws.entity.FetchBlockNewResp;
+import com.taosdata.jdbc.ws.entity.QueryResp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.*;
 
-public abstract class AbstractWSResultSet extends AbstractResultSet {
-    private static final Logger log = LoggerFactory.getLogger(AbstractWSResultSet.class);
+public abstract class FetchBlockData extends AbstractResultSet {
+    private static final Logger log = LoggerFactory.getLogger(FetchBlockData.class);
 
-    protected final Statement statement;
     protected final Transport transport;
     protected final long queryId;
     protected final long reqId;
 
     protected volatile boolean isClosed;
-    private boolean isCompleted = false;
-    // meta
-    protected final ResultSetMetaData metaData;
-    protected final List<RestfulResultSet.Field> fields = new ArrayList<>();
-    protected final List<String> columnNames;
-    // data
-    protected List<List<Object>> result = new ArrayList<>();
-
-    protected int numOfRows = 0;
-    protected int rowIndex = 0;
     private static final int CACHE_SIZE = 5;
     BlockingQueue<BlockData> blockingQueueOut = new LinkedBlockingQueue<>(CACHE_SIZE);
-    ThreadPoolExecutor backFetchExecutor;
     ForkJoinPool dataHandleExecutor = getForkJoinPool();
+    FetchState fetchState = FetchState.PAUSED;
 
-    private int fetchBlockNum = 0;
-    protected AbstractWSResultSet(Statement statement, Transport transport,
-                               QueryResp response, String database) throws SQLException {
-        this.statement = statement;
+    protected FetchBlockData(Statement statement, Transport transport,
+                             QueryResp response, String database) throws SQLException {
         this.transport = transport;
         this.queryId = response.getId();
         this.reqId = response.getReqId();
-        columnNames = Arrays.asList(response.getFieldsNames());
-        for (int i = 0; i < response.getFieldsCount(); i++) {
-            String colName = response.getFieldsNames()[i];
-            int taosType = response.getFieldsTypes()[i];
-            int jdbcType = DataType.convertTaosType2DataType(taosType).getJdbcTypeValue();
-            int length = response.getFieldsLengths()[i];
-            int scale = 0;
-            int precision = 0;
-
-            if (response.getFieldsScales() != null) {
-                scale = response.getFieldsScales()[i];
-            }
-            if (response.getFieldsPrecisions() != null) {
-                precision = response.getFieldsPrecisions()[i];
-            }
-            fields.add(new RestfulResultSet.Field(colName, jdbcType, length, "", taosType, scale, precision));
-        }
-        this.metaData = new RestfulResultSetMetaData(database, fields, transport.getConnectionParam().isVarcharAsString());
-        this.timestampPrecision = response.getPrecision();
     }
 
     private void startBackendFetch(){
@@ -117,18 +86,6 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
                 }
             }
         });
-    }
-
-    private boolean forward() {
-        if (this.rowIndex > this.numOfRows) {
-            return false;
-        }
-
-        return ((++this.rowIndex) < this.numOfRows);
-    }
-
-    public void reset() {
-        this.rowIndex = 0;
     }
 
     @Override
@@ -193,45 +150,4 @@ public abstract class AbstractWSResultSet extends AbstractResultSet {
         return true;
     }
 
-    @Override
-    public void close() throws SQLException {
-        synchronized (this) {
-            if (!this.isClosed) {
-                this.isClosed = true;
-
-                // wait backFetchExecutor to finish
-                if (backFetchExecutor != null) {
-                    while (backFetchExecutor.getActiveCount() != 0) {
-                        try {
-                            Thread.sleep(1);
-                        } catch (InterruptedException ignored) {
-                            Thread.currentThread().interrupt();
-                        }
-                    }
-                    if (!backFetchExecutor.isShutdown()) {
-                        backFetchExecutor.shutdown();
-                    }
-                }
-
-                if (!isCompleted) {
-                    FetchReq closeReq = new FetchReq();
-                    closeReq.setReqId(queryId);
-                    closeReq.setId(queryId);
-                    transport.sendWithoutResponse(new Request(Action.FREE_RESULT.getAction(), closeReq));
-                }
-            }
-        }
-    }
-
-    @Override
-    public ResultSetMetaData getMetaData() throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);
-        return this.metaData;
-    }
-
-    @Override
-    public boolean isClosed() throws SQLException {
-        return isClosed;
-    }
 }
