@@ -77,5 +77,4 @@ public class TSDBDatabaseMetaData extends AbstractDatabaseMetaData {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
         return super.getSuperTables(catalog, schemaPattern, tableNamePattern, conn);
     }
-
 }
