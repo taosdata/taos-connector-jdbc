@@ -553,8 +553,6 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
         return null;
     }
 
-    public abstract ResultSet getTables(String catalog, String schemaPattern, String tableNamePattern, String[] types) throws SQLException;
-
     private List<ColumnMetaData> buildGetTablesColumnMetaDataList() {
         List<ColumnMetaData> columnMetaDataList = new ArrayList<>();
         columnMetaDataList.add(buildTableCatalogMeta(1));          // 1. TABLE_CAT
@@ -720,8 +718,6 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
         return getEmptyResultSet();
     }
 
-    public abstract ResultSet getCatalogs() throws SQLException;
-
     private List<ColumnMetaData> buildTableTypesColumnMetadataList() {
         List<ColumnMetaData> columnMetaDataList = new ArrayList<>();
         columnMetaDataList.add(buildTableTypeMeta(1));
@@ -729,6 +725,11 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
     }
 
     public ResultSet getTableTypes() throws SQLException {
+        Connection connection = getConnection();
+        if (connection == null || connection.isClosed()) {
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
+        }
+
         DatabaseMetaDataResultSet resultSet = new DatabaseMetaDataResultSet();
         // set up ColumnMetaDataList
         resultSet.setColumnMetaDataList(buildTableTypesColumnMetadataList());
@@ -744,8 +745,6 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
         resultSet.setRowDataList(rowDataList);
         return resultSet;
     }
-
-    public abstract ResultSet getColumns(String catalog, String schemaPattern, String tableNamePattern, String columnNamePattern) throws SQLException;
 
     private Map<String, String> getCatalogMate(Connection connection, String catalog) throws SQLException {
         Map<String, String> result = new HashMap<>();
@@ -1382,8 +1381,6 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
         return getEmptyResultSet();
     }
 
-    public abstract ResultSet getPrimaryKeys(String catalog, String schema, String table) throws SQLException;
-
     public ResultSet getImportedKeys(String catalog, String schema, String table) throws SQLException {
         return getEmptyResultSet();
     }
@@ -1477,9 +1474,6 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
     public ResultSet getSuperTypes(String catalog, String schemaPattern, String typeNamePattern) throws SQLException {
         return getEmptyResultSet();
     }
-
-    public abstract ResultSet getSuperTables(String catalog, String schemaPattern, String tableNamePattern) throws SQLException;
-
     public ResultSet getAttributes(String catalog, String schemaPattern, String typeNamePattern, String attributeNamePattern) throws SQLException {
         return getEmptyResultSet();
     }
@@ -1709,5 +1703,47 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
 
     private String generateDescribeSql(String dbName, String tableName) throws SQLException {
         return "describe " + dbName + "." + getIdentifierQuoteString() + tableName + getIdentifierQuoteString();
+    }
+
+
+    @Override
+    public ResultSet getTables(String catalog, String schemaPattern, String tableNamePattern, String[] types) throws SQLException {
+        Connection connection = getConnection();
+        if (connection == null || connection.isClosed()) {
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
+        }
+        return getTables(catalog, schemaPattern, tableNamePattern, types, connection);
+    }
+
+    @Override
+    public ResultSet getCatalogs() throws SQLException {
+        Connection connection = getConnection();
+        if (connection == null || connection.isClosed())
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
+        return getCatalogs(connection);
+    }
+
+    @Override
+    public ResultSet getColumns(String catalog, String schemaPattern, String tableNamePattern, String columnNamePattern) throws SQLException {
+        Connection connection = getConnection();
+        if (connection == null || connection.isClosed())
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
+        return getColumns(catalog, schemaPattern, tableNamePattern, columnNamePattern, connection);
+    }
+
+    @Override
+    public ResultSet getPrimaryKeys(String catalog, String schema, String table) throws SQLException {
+        Connection connection = getConnection();
+        if (connection == null || connection.isClosed())
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
+        return getPrimaryKeys(catalog, schema, table, connection);
+    }
+
+    @Override
+    public ResultSet getSuperTables(String catalog, String schemaPattern, String tableNamePattern) throws SQLException {
+        Connection connection = getConnection();
+        if (connection == null || connection.isClosed())
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
+        return getSuperTables(catalog, schemaPattern, tableNamePattern, connection);
     }
 }

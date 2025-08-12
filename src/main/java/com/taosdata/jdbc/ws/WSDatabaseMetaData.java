@@ -1,17 +1,17 @@
-package com.taosdata.jdbc.rs;
+package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.AbstractDatabaseMetaData;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-@Deprecated
-public class RestfulDatabaseMetaData extends AbstractDatabaseMetaData {
+
+public class WSDatabaseMetaData extends AbstractDatabaseMetaData {
 
     private final String url;
     private final String userName;
     private final Connection connection;
 
-    public RestfulDatabaseMetaData(String url, String userName, Connection connection) {
+    public WSDatabaseMetaData(String url, String userName, Connection connection) {
         this.url = url;
         this.userName = userName;
         this.connection = connection;
@@ -29,7 +29,11 @@ public class RestfulDatabaseMetaData extends AbstractDatabaseMetaData {
 
     @Override
     public String getDriverName() throws SQLException {
-        return RestfulDriver.class.getName();
+        return WebSocketDriver.class.getName();
+    }
+    @Override
+    public boolean supportsBatchUpdates() throws SQLException {
+        return true;
     }
 
     @Override
