@@ -93,7 +93,15 @@ public class WSConsumer<V> implements Consumer<V> {
                     + "), message: " + response.getMessage());
         }
 
-        VersionUtil.checkVersion(response.getVersion(), transport);
+        String version = response.getVersion();
+        if (version == null) {
+            version = VersionUtil.getVersion(transport);
+        }
+        if (!VersionUtil.checkVersion(version)) {
+            transport.close();
+            throw new SQLException("The version of the server is not supported, please upgrade to at least " + MIN_SUPPORT_VERSION);
+        }
+
         this.topics = topics;
     }
 

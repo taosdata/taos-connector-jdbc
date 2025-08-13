@@ -1,11 +1,11 @@
 package com.taosdata.jdbc.utils;
 
+import org.junit.Assume;
+
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Random;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class TestUtils {
@@ -28,5 +28,16 @@ public class TestUtils {
                 Thread.sleep(1000);
             }
         }
+    }
+
+
+    public static void runIn336(){
+        String env = System.getenv("TD_3360_TEST");
+        Assume.assumeTrue("true".equals(env));
+    }
+
+    public static void runInMain(){
+        String env = System.getenv("TD_3360_TEST");
+        Assume.assumeFalse("true".equals(env));
     }
 }

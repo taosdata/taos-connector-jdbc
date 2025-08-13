@@ -20,7 +20,7 @@ public class TSDBConnection extends AbstractConnection {
     private final TSDBDatabaseMetaData databaseMetaData;
 
     public TSDBConnection(Properties info, TSDBDatabaseMetaData meta) throws SQLException {
-        super(info);
+        super(info, TSDBConstants.UNKNOWN_VERSION);
         this.databaseMetaData = meta;
         connect(info.getProperty(TSDBDriver.PROPERTY_KEY_HOST),
                 Integer.parseInt(info.getProperty(TSDBDriver.PROPERTY_KEY_PORT, "0")),

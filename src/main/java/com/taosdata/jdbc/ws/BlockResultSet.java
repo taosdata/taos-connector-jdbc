@@ -3,9 +3,11 @@ package com.taosdata.jdbc.ws;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
+import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.TaosGlobalConfig;
+import com.taosdata.jdbc.common.TDBlob;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.utils.DataTypeConverUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
@@ -282,9 +284,22 @@ public class BlockResultSet extends AbstractWSResultSet {
 
         if (value instanceof Instant){
             return DateTimeUtils.getTimestamp((Instant) value, zoneId);
+        } else if (fields.get(columnIndex - 1).getTaosType() == TSDB_DATA_TYPE_BLOB) {
+            return new TDBlob((byte[]) value, true);
         } else {
             return value;
         }
+    }
+
+    @Override
+    public Blob getBlob(int columnIndex) throws SQLException {
+        Object value = getObjectInternal(columnIndex);
+
+        if (value == null) {
+            return null;
+        }
+
+        return new TDBlob((byte[]) value, true);
     }
 
     @Override
@@ -328,6 +343,8 @@ public class BlockResultSet extends AbstractWSResultSet {
                 } else if (type == ZonedDateTime.class && value instanceof Instant) {
                     Instant instant = (Instant) value;
                     return type.cast(DateTimeUtils.getZonedDateTime(instant, zoneId));
+                } else if (type == Blob.class && value instanceof byte[]) {
+                   return type.cast(new TDBlob((byte[]) value, true));
                 } else {
                     throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_TYPE_CONVERT_EXCEPTION, "Cannot convert " + value.getClass() + " to " + type);
                 }

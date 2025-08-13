@@ -344,10 +344,8 @@ public class ConnectionParam {
         try {
             ZoneId zoneId = ZoneId.of(connectionParam.getTz());
             ZoneId defaultZoneId = ZoneId.systemDefault();
-            if (!StringUtils.isEmpty(connectionParam.getTz()) && defaultZoneId.equals(zoneId)){
-                //  for performance, if the time zone is the same as the system default time zone, we ignore it
-                connectionParam.setTz("");
-            } else {
+            if (!defaultZoneId.equals(zoneId)){
+                //  Only set the time zone if it differs from the system default
                 connectionParam.setZoneId(zoneId);
             }
         } catch (DateTimeException e) {

@@ -38,6 +38,10 @@ public class TSDBErrorNumbers {
     public static final int ERROR_RESTFUL_CLIENT_QUERY_EXCEPTION = 0x231f;
     public static final int ERROR_TYPE_CONVERT_EXCEPTION = 0x2320;
     public static final int ERROR_VERSION_INCOPMATIABLE = 0x2321;
+    public static final int ERROR_RESOURCE_FREEED = 0x2322;
+
+    public static final int ERROR_BLOB_UNSUPPORTED_IN_SERVER = 0x2323;
+    public static final int ERROR_LINE_BIND_MODE_UNSUPPORTED_IN_SERVER = 0x2324;
 
     public static final int ERROR_UNKNOWN = 0x2350;    //unknown error
 
@@ -98,6 +102,12 @@ public class TSDBErrorNumbers {
         errorNumbers.add(ERROR_CONNECTION_TIMEOUT);
         errorNumbers.add(ERROR_QUERY_TIMEOUT);
         errorNumbers.add(ERROR_RESTFUL_CLIENT_QUERY_EXCEPTION);
+
+        errorNumbers.add(ERROR_TYPE_CONVERT_EXCEPTION);
+        errorNumbers.add(ERROR_VERSION_INCOPMATIABLE);
+        errorNumbers.add(ERROR_RESOURCE_FREEED);
+        errorNumbers.add(ERROR_BLOB_UNSUPPORTED_IN_SERVER);
+        errorNumbers.add(ERROR_LINE_BIND_MODE_UNSUPPORTED_IN_SERVER);
 
         errorNumbers.add(ERROR_RESTFul_Client_Protocol_Exception);
 

@@ -1,14 +1,15 @@
 package com.taosdata.jdbc.ws;
 
-import com.taosdata.jdbc.*;
+import com.taosdata.jdbc.AbstractConnection;
+import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.TSDBError;
+import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.rs.ConnectionParam;
-import com.taosdata.jdbc.rs.RestfulDatabaseMetaData;
 import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.ws.entity.*;
-import com.taosdata.jdbc.ws.entity.CommonResp;
 import com.taosdata.jdbc.ws.schemaless.InsertReq;
 import com.taosdata.jdbc.ws.schemaless.SchemalessAction;
 import com.taosdata.jdbc.ws.stmt2.entity.Field;
@@ -33,12 +34,12 @@ public class WSConnection extends AbstractConnection {
     private final ConnectionParam param;
     private final AtomicLong insertId = new AtomicLong(0);
 
-    public WSConnection(String url, Properties properties, Transport transport, ConnectionParam param) {
-        super(properties);
+    public WSConnection(String url, Properties properties, Transport transport, ConnectionParam param, String serverVersion) {
+        super(properties, serverVersion);
         this.transport = transport;
         this.database = param.getDatabase();
         this.param = param;
-        this.metaData = new RestfulDatabaseMetaData(url, properties.getProperty(TSDBDriver.PROPERTY_KEY_USER), this);
+        this.metaData = new WSDatabaseMetaData(url, properties.getProperty(TSDBDriver.PROPERTY_KEY_USER), this);
     }
 
     @Override
@@ -115,13 +116,17 @@ public class WSConnection extends AbstractConnection {
                         prepareResp);
             } else {
                 if ("line".equalsIgnoreCase(param.getPbsMode())){
-                    return new WSRowPreparedStatement(transport,
-                        param,
-                        database,
-                        this,
-                        sql,
-                        idGenerator.getAndIncrement(),
-                        prepareResp);
+                    if (super.supportLineBind) {
+                        return new WSRowPreparedStatement(transport,
+                                param,
+                                database,
+                                this,
+                                sql,
+                                idGenerator.getAndIncrement(),
+                                prepareResp);
+                    } else {
+                        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_LINE_BIND_MODE_UNSUPPORTED_IN_SERVER);
+                    }
                 }
                 return new TSWSPreparedStatement(transport,
                         param,

@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 import java.net.URL;
 import java.sql.*;
 import java.util.Calendar;
-
+@Deprecated
 public class RestfulPreparedStatement extends RestfulStatement implements PreparedStatement {
 
     private final ParameterMetaData parameterMetaData;

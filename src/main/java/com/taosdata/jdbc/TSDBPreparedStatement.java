@@ -609,6 +609,11 @@ public class TSDBPreparedStatement extends TSDBStatement implements TaosPrepareS
         setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_GEOMETRY, size);
     }
 
+    @Override
+    public void setBlob(int columnIndex, List<Blob> list, int size) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD, "Blob type is not supported in native parameter binding");
+    }
+
     // note: expand the required space for each NChar character
     @Override
     public void setNString(int columnIndex, List<String> list, int size) throws SQLException {

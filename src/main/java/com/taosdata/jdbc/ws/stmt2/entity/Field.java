@@ -3,11 +3,15 @@ package com.taosdata.jdbc.ws.stmt2.entity;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class Field {
+    @JsonProperty("name")
     private String name;
     @JsonProperty("field_type")
     private byte fieldType;
+    @JsonProperty("precision")
     private byte precision;
+    @JsonProperty("scale")
     private byte scale;
+    @JsonProperty("bytes")
     private int bytes;
 
     @JsonProperty("bind_type")
