@@ -102,7 +102,13 @@ public class TSDBResultSet extends AbstractResultSet {
 
             code = this.blockData.returnCode;
         } else {
-            code = this.jniConnector.fetchBlock(this.resultSetPointer, this.blockData);
+            TSDBResultSetBlockData tsdbResultSetBlockData = new TSDBResultSetBlockData(this.columnMetaDataList, this.columnMetaDataList.size(), timestampPrecision);
+
+            code = this.jniConnector.fetchBlock(this.resultSetPointer, tsdbResultSetBlockData);
+            this.blockData = tsdbResultSetBlockData;
+            if (code == JNI_SUCCESS) {
+                this.blockData.doSetByteArray();
+            }
             this.blockData.reset();
         }
 

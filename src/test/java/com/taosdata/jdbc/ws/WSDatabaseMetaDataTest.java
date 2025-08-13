@@ -1,7 +1,6 @@
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
-import com.taosdata.jdbc.rs.RestfulDatabaseMetaData;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
@@ -17,7 +16,7 @@ public class WSDatabaseMetaDataTest {
     private static final String host = "127.0.0.1";
     private static String url;
     private static Connection connection;
-    private static RestfulDatabaseMetaData metaData;
+    private static WSDatabaseMetaData metaData;
     private static final String dbName = TestUtils.camelToSnake(WSDatabaseMetaDataTest.class);
 
     @Test
@@ -47,7 +46,10 @@ public class WSDatabaseMetaDataTest {
         }
     }
 
-
+    @Test
+    public void supportsBatchUpdates() throws SQLException {
+        Assert.assertTrue(metaData.supportsBatchUpdates());
+    }
     @Test
     public void testShowTables() throws SQLException {
 
@@ -57,6 +59,8 @@ public class WSDatabaseMetaDataTest {
             System.out.println(resultSet.getString(1));
         }
     }
+
+
 
 
     @BeforeClass
@@ -79,7 +83,7 @@ public class WSDatabaseMetaDataTest {
         stmt.execute("create table `dn` (ts TIMESTAMP,cpu_taosd FLOAT,cpu_system FLOAT,cpu_cores INT,mem_taosd FLOAT,mem_system FLOAT,mem_total INT,disk_used FLOAT,disk_total INT,band_speed FLOAT,io_read FLOAT,io_write FLOAT,req_http INT,req_select INT,req_insert INT) TAGS (dnodeid INT,fqdn BINARY(128))");
         stmt.execute("insert into dn1 using dn tags(1,'a') (ts) values(now)");
 
-        metaData = connection.getMetaData().unwrap(RestfulDatabaseMetaData.class);
+        metaData = connection.getMetaData().unwrap(WSDatabaseMetaData.class);
     }
 
     @AfterClass

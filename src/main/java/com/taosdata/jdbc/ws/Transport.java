@@ -46,6 +46,12 @@ public class Transport implements AutoCloseable {
     public static final byte[] EMPTY_BYTE_ARRAY = new byte[0];
 
     private int currentNodeIndex = 0;
+
+    protected Transport() {
+        this.inFlightRequest = null;
+        this.connectionParam = null;
+        this.wsFunction = null;
+    }
     public Transport(WSFunction function,
                      ConnectionParam param,
                      InFlightRequest inFlightRequest) throws SQLException {
@@ -197,55 +203,36 @@ public class Transport implements AutoCloseable {
         return response;
     }
 
-    public Response sendFetchBlock(String action, long reqId, long resultId, long type, byte[] rawData, byte[] rawData2) throws SQLException {
+    public void sendFetchBlockAsync(long reqId,
+                                    long resultId) throws SQLException {
+        final byte[] version = {1, 0};
+
         if (isClosed()){
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
         }
 
-        int totalLength = 24 + rawData.length + rawData2.length;
+        int totalLength = 26;
         ByteBuf buffer = PooledByteBufAllocator.DEFAULT.directBuffer(totalLength);
 
         buffer.writeLongLE(reqId);
         buffer.writeLongLE(resultId);
-        buffer.writeLongLE(type);
-        buffer.writeBytes(rawData);
-        buffer.writeBytes(rawData2);
-
-        Response response;
-        CompletableFuture<Response> completableFuture = new CompletableFuture<>();
-        try {
-            inFlightRequest.put(new FutureResponse(action, reqId, completableFuture));
-        } catch (InterruptedException | TimeoutException e) {
-            throw new SQLException(e);
-        }
+        buffer.writeLongLE(7); // fetch block action type
+        buffer.writeBytes(version);
 
         try {
             Utils.retainByteBuf(buffer);
             clientArr.get(currentNodeIndex).send(buffer);
         } catch (WebsocketNotConnectedException e) {
-            tmqRethrowConnectionCloseException();
             reconnect();
             try {
                 Utils.retainByteBuf(buffer);
                 clientArr.get(currentNodeIndex).send(buffer);
             }catch (Exception ex){
-                inFlightRequest.remove(action, reqId);
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());
             }
         } finally {
             Utils.releaseByteBuf(buffer);
         }
-
-        String reqString = "action:" + action + ", reqId:" + reqId + ", resultId:" + resultId + ", actionType" + type;
-        CompletableFuture<Response> responseFuture = CompletableFutureTimeout.orTimeout(completableFuture, timeout, TimeUnit.MILLISECONDS, reqString);
-        try {
-            response = responseFuture.get();
-            handleErrInMasterSlaveMode(response);
-        } catch (InterruptedException | ExecutionException e) {
-            inFlightRequest.remove(action, reqId);
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_QUERY_TIMEOUT, e.getMessage());
-        }
-        return response;
     }
 
     public Response send(String action, long reqId, ByteBuf buffer) throws SQLException {

@@ -1,9 +1,9 @@
 package com.taosdata.jdbc.enums;
 
 public enum FetchState {
-    PAUSED(1),
+    STOPPED(1),
     FETCHING(2),
-    COMPLETED(3)
+    FINISHED_ERROR(3),
     ;
     private final long state;
 

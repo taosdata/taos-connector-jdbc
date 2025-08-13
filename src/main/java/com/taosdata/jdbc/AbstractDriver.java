@@ -7,10 +7,7 @@ import com.fasterxml.jackson.databind.ObjectReader;
 import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.*;
-import com.taosdata.jdbc.ws.FutureResponse;
-import com.taosdata.jdbc.ws.InFlightRequest;
-import com.taosdata.jdbc.ws.Transport;
-import com.taosdata.jdbc.ws.WSConnection;
+import com.taosdata.jdbc.ws.*;
 import com.taosdata.jdbc.ws.entity.*;
 import org.slf4j.LoggerFactory;
 
@@ -87,13 +84,26 @@ public abstract class AbstractDriver implements Driver {
             long id = byteBuf.readLongLE();
             byteBuf.readerIndex(8);
 
-            FutureResponse remove = inFlightRequest.remove(Action.FETCH_BLOCK_NEW.getAction(), id);
-            if (null != remove) {
+            // only neet to handle fetch block new response
+            FetchBlockData fetchBlockData = FetchDataUtil.getFetchMap().get(id);
+            if (null != fetchBlockData) {
                 Utils.retainByteBuf(byteBuf);
-                FetchBlockNewResp fetchBlockResp = new FetchBlockNewResp(byteBuf);
-                remove.getFuture().complete(fetchBlockResp);
-            } else {
+                byte[] bytes = new byte[byteBuf.readableBytes()];
+                byteBuf.getBytes(byteBuf.readerIndex(), bytes);
 
+                FetchBlockNewResp fetchBlockResp = new FetchBlockNewResp(byteBuf);
+                try {
+                    fetchBlockData.handleReceiveBlockData(fetchBlockResp);
+                } catch (InterruptedException e) {
+                    log.error("Error handling fetch block data", e);
+                    Thread.currentThread().interrupt();
+                    Utils.releaseByteBuf(byteBuf);
+                } catch (Exception e) {
+                    Utils.releaseByteBuf(byteBuf);
+                    log.error("Unexpected error handling fetch block data, id: {}", id, e);
+                }
+            } else {
+                log.warn("Received fetch block new response, but no fetch data found for id: {}", id);
             }
         });
         Transport transport = new Transport(WSFunction.WS, param, inFlightRequest);
