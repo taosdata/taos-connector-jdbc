@@ -3,17 +3,10 @@ package com.taosdata.jdbc.utils;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
-import com.taosdata.jdbc.TSDBError;
-import com.taosdata.jdbc.TSDBErrorNumbers;
-import com.taosdata.jdbc.rs.ConnectionParam;
-import com.taosdata.jdbc.ws.entity.ConnectReq;
-import com.taosdata.jdbc.ws.tmq.WSConsumer;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.ResourceLeakDetector;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,17 +16,10 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
-import java.time.format.DateTimeParseException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -49,35 +35,34 @@ public class Utils {
     private Utils() {}
 
     public static String escapeSingleQuota(String origin) {
-        Matcher m = ptn.matcher(origin);
+        int length = origin.length();
+        boolean singleQuoteFound = false;
         StringBuilder sb = new StringBuilder();
-        int end = 0;
-        while (m.find()) {
-            end = m.end();
-            String seg = origin.substring(m.start(), end);
-            int len = seg.length();
-            if (len == 1) {
-                if ('\'' == seg.charAt(0)) {
+        for (int i = 0; i < length; i++) {
+            char chr = origin.charAt(i);
+            if (chr == '\\') {
+                if (singleQuoteFound) {
+                    sb.append(chr);
+                }
+                if (i < length - 1 && origin.charAt(i + 1) == '\'') {
+                    i++;
+                    if (singleQuoteFound) {
+                        sb.append('\'');
+                    }
+                }
+            } else if (chr == '\'') {
+                if (!singleQuoteFound) {
+                    singleQuoteFound = true;
+                    sb.append(origin, 0, i);
                     sb.append("\\'");
                 } else {
-                    sb.append(seg);
-                }
-            } else { // len > 1
-                sb.append(seg, 0, seg.length() - 2);
-                char lastcSec = seg.charAt(seg.length() - 2);
-                if (lastcSec == '\\') {
-                    sb.append("\\'");
-                } else {
-                    sb.append(lastcSec);
                     sb.append("\\'");
                 }
+            } else if (singleQuoteFound) {
+                sb.append(chr);
             }
         }
-
-        if (end < origin.length()) {
-            sb.append(origin.substring(end));
-        }
-        return sb.toString();
+        return singleQuoteFound ? sb.toString() : origin;
     }
 
     public static String getNativeSql(String rawSql, Object[] parameters) {
