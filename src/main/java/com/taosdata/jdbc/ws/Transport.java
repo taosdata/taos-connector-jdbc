@@ -13,11 +13,6 @@ import io.netty.buffer.PooledByteBufAllocator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
-import java.security.cert.X509Certificate;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
@@ -51,6 +46,12 @@ public class Transport implements AutoCloseable {
     public static final byte[] EMPTY_BYTE_ARRAY = new byte[0];
 
     private int currentNodeIndex = 0;
+
+    protected Transport() {
+        this.inFlightRequest = null;
+        this.connectionParam = null;
+        this.wsFunction = null;
+    }
     public Transport(WSFunction function,
                      ConnectionParam param,
                      InFlightRequest inFlightRequest) throws SQLException {
@@ -200,6 +201,38 @@ public class Transport implements AutoCloseable {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_QUERY_TIMEOUT, e.getMessage());
         }
         return response;
+    }
+
+    public void sendFetchBlockAsync(long reqId,
+                                    long resultId) throws SQLException {
+        final byte[] version = {1, 0};
+
+        if (isClosed()){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
+        }
+
+        int totalLength = 26;
+        ByteBuf buffer = PooledByteBufAllocator.DEFAULT.directBuffer(totalLength);
+
+        buffer.writeLongLE(reqId);
+        buffer.writeLongLE(resultId);
+        buffer.writeLongLE(7); // fetch block action type
+        buffer.writeBytes(version);
+
+        try {
+            Utils.retainByteBuf(buffer);
+            clientArr.get(currentNodeIndex).send(buffer);
+        } catch (WebsocketNotConnectedException e) {
+            reconnect();
+            try {
+                Utils.retainByteBuf(buffer);
+                clientArr.get(currentNodeIndex).send(buffer);
+            }catch (Exception ex){
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());
+            }
+        } finally {
+            Utils.releaseByteBuf(buffer);
+        }
     }
 
     public Response send(String action, long reqId, ByteBuf buffer) throws SQLException {
