@@ -28,7 +28,6 @@ import java.util.stream.IntStream;
 public class Utils {
     private static final Logger log = LoggerFactory.getLogger(Utils.class);
     private static final ForkJoinPool forkJoinPool = new ForkJoinPool();
-    private static final Pattern ptn = Pattern.compile(".*?'");
 
     private static EventLoopGroup eventLoopGroup = null;
 

@@ -74,6 +74,13 @@ public class UtilsTest {
         news = Utils.escapeSingleQuota(s);
         // then
         Assert.assertEquals("\\'\\'\\'a\\\\'\\'\\\\'b\\'\\'\\'c\\'\\'\\\\'", news);
+
+        // given
+        s = "\\'\\'\\'a'''b'''c\\'\\'\\'";
+        // when
+        news = Utils.escapeSingleQuota(s);
+        // then
+        Assert.assertEquals("\\'\\'\\'a\\'\\'\\'b\\'\\'\\'c\\'\\'\\'", news);
     }
 
     @Test
