@@ -5,14 +5,63 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [unreleased]
+## [3.7.3] - 2025-08-20
 
-**Full Changelog**: [3.6.3...](https://github.com/taosdata/taos-connector-jdbc/compare/3.6.3...)
+**Full Changelog**: [3.7.2...3.7.3](https://github.com/taosdata/taos-connector-jdbc/compare/3.7.2...3.7.3)
+
+### Performance
+
+
+- Improve native query performance (#274) ([68df9e5](https://github.com/taosdata/taos-connector-jdbc/commit/68df9e56174e087406f79213f5c8364e5e436332))
+
+
+## [3.7.2] - 2025-08-12
+
+**Full Changelog**: [3.7.1...3.7.2](https://github.com/taosdata/taos-connector-jdbc/compare/3.7.1...3.7.2)
+
+### Bug Fixes
+
+
+- Fix spring jdbc template perf bug (#273) ([180ba59](https://github.com/taosdata/taos-connector-jdbc/commit/180ba59e0aa7793a85db8d1cc332722f324b0b9d))
+
+
+## [3.7.1] - 2025-07-27
+
+**Full Changelog**: [3.7.0...3.7.1](https://github.com/taosdata/taos-connector-jdbc/compare/3.7.0...3.7.1)
+
+### Bug Fixes
+
+
+- Set varbinary/geometry compatibility issue (#271) ([157c4ec](https://github.com/taosdata/taos-connector-jdbc/commit/157c4ec13057e867a64dfcd5ec52e014ad4db912))
+
+
+## [3.7.0] - 2025-07-26
+
+**Full Changelog**: [3.6.3...3.7.0](https://github.com/taosdata/taos-connector-jdbc/compare/3.6.3...3.7.0)
+
+### Bug Fixes
+
+
+- Deadlock when binding a wrong type in efficient writing (#252) ([7684a5c](https://github.com/taosdata/taos-connector-jdbc/commit/7684a5c6005fa330a4800bda2124f27150a18779))
+- GetPrimaryKeys return null (#260) ([3ecc754](https://github.com/taosdata/taos-connector-jdbc/commit/3ecc75459078f5ed3bbdde29ccfaa1cf4306b938))
+- Set timezone 'Asia/Shanghai' bug (#261) ([8e5b840](https://github.com/taosdata/taos-connector-jdbc/commit/8e5b84084afaa4f9d937bce46e3ddf2d4032c3b9))
+- Deploy pom slf4j dependency ([52e0961](https://github.com/taosdata/taos-connector-jdbc/commit/52e0961b97d3cba102479b33ad0bd8bf6fbf1989))
+
 
 ### Documentation
 
 
-- Add change log file ([a958eee](https://github.com/taosdata/taos-connector-jdbc/commit/a958eeebff8eaa69c41b3e7c2578e59cbb6ef765))
+- Add change log file (#251) ([3f1fdad](https://github.com/taosdata/taos-connector-jdbc/commit/3f1fdadad9d946b5ca21f29a9b35bda8dd84534a))
+
+
+### Features
+
+
+- Replace websocket lib to netty, support stmt line bind mode. (#253) ([c84fd78](https://github.com/taosdata/taos-connector-jdbc/commit/c84fd78d647780d54b35b0f123bf062b95ea5803))
+- Support ipv6 (#254) ([2f56e61](https://github.com/taosdata/taos-connector-jdbc/commit/2f56e615c782d5bfe4d4ea316cd051d1cff8fde7))
+- Supports varchar as string on websocket connections (#255) ([816e782](https://github.com/taosdata/taos-connector-jdbc/commit/816e782ed85825bcb216c51888291014862bfffe))
+- Supports version compatibility checks for TDengine (#256) ([7c405cd](https://github.com/taosdata/taos-connector-jdbc/commit/7c405cd35ae848c17dde05bcfbe0668824cc32f7))
+- Support blob data type (#259) ([bb47387](https://github.com/taosdata/taos-connector-jdbc/commit/bb47387dcc7a2c5a60838bf7b9e5bab97e974c41))
 
 
 ## [3.6.3] - 2025-05-19
