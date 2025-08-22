@@ -1,6 +1,5 @@
 package com.taosdata.jdbc.utils;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.taosdata.jdbc.TSDBConstants;
 import org.junit.Assert;
 import org.junit.Test;
@@ -21,18 +20,67 @@ public class UtilsTest {
         Assert.assertEquals("\\'\\'\\'\\'\\'a\\'", news);
 
         // given
-        s = "'''''a\\'";
+        s = "abc";
         // when
         news = Utils.escapeSingleQuota(s);
         // then
-        Assert.assertEquals("\\'\\'\\'\\'\\'a\\'", news);
+        Assert.assertEquals("abc", news);
 
         // given
-        s = "'''''a\\'";
+        s = "\\a\\\\b\\\\c\\\\\\";
         // when
         news = Utils.escapeSingleQuota(s);
         // then
-        Assert.assertEquals("\\'\\'\\'\\'\\'a\\'", news);
+        Assert.assertEquals("\\a\\\\b\\\\c\\\\\\", news);
+
+        // given
+        s = "abc'";
+        // when
+        news = Utils.escapeSingleQuota(s);
+        // then
+        Assert.assertEquals("abc\\'", news);
+
+        // given
+        s = "a'bc";
+        // when
+        news = Utils.escapeSingleQuota(s);
+        // then
+        Assert.assertEquals("a\\'bc", news);
+
+        // given
+        s = "'abc";
+        // when
+        news = Utils.escapeSingleQuota(s);
+        // then
+        Assert.assertEquals("\\'abc", news);
+
+        // given
+        s = "'''a'''b'''c'''";
+        // when
+        news = Utils.escapeSingleQuota(s);
+        // then
+        Assert.assertEquals("\\'\\'\\'a\\'\\'\\'b\\'\\'\\'c\\'\\'\\'", news);
+
+        // given
+        s = "'''a\\'\\'\\'b'''c\\'\\'\\'";
+        // when
+        news = Utils.escapeSingleQuota(s);
+        // then
+        Assert.assertEquals("\\'\\'\\'a\\'\\'\\'b\\'\\'\\'c\\'\\'\\'", news);
+
+        // given
+        s = "'''a\\\\'\\'\\\\'b'''c\\'\\'\\\\'";
+        // when
+        news = Utils.escapeSingleQuota(s);
+        // then
+        Assert.assertEquals("\\'\\'\\'a\\\\'\\'\\\\'b\\'\\'\\'c\\'\\'\\\\'", news);
+
+        // given
+        s = "\\'\\'\\'a'''b'''c\\'\\'\\'";
+        // when
+        news = Utils.escapeSingleQuota(s);
+        // then
+        Assert.assertEquals("\\'\\'\\'a\\'\\'\\'b\\'\\'\\'c\\'\\'\\'", news);
     }
 
     @Test
