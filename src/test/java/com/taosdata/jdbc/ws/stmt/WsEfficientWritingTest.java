@@ -1,6 +1,5 @@
 package com.taosdata.jdbc.ws.stmt;
 
-import com.taosdata.jdbc.GeometryTest;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.utils.Utils;
@@ -149,7 +148,7 @@ public class WsEfficientWritingTest {
                 }
 
                 int affectedRows = pstmt.executeUpdate();
-                Assert.assertEquals(affectedRows, numOfSubTable);
+                Assert.assertEquals(numOfSubTable, affectedRows);
             }
         }
 
