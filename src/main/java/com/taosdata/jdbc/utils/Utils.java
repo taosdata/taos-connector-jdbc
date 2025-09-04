@@ -268,4 +268,30 @@ public class Utils {
                     byteBuf.refCnt());
         }
     }
+
+    public static String unescapeUnicode(String input) {
+        StringBuilder builder = new StringBuilder();
+        int i = 0;
+        while (i < input.length()) {
+            if (i < input.length() - 5 &&
+                    input.charAt(i) == '\\' &&
+                    input.charAt(i + 1) == 'u') {
+                // extract 4 hex code
+                String hexCode = input.substring(i + 2, i + 6);
+                try {
+                    int codePoint = Integer.parseInt(hexCode, 16);
+                    builder.append((char) codePoint);
+                    i += 6;  // skip past the unicode escape sequence
+                } catch (NumberFormatException e) {
+                    // invalid hex code, treat as normal characters
+                    builder.append(input.charAt(i));
+                    i++;
+                }
+            } else {
+                builder.append(input.charAt(i));
+                i++;
+            }
+        }
+        return builder.toString();
+    }
 }

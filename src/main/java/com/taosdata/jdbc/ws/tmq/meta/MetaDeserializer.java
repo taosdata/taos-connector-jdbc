@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
+import com.taosdata.jdbc.utils.Utils;
 
 import java.io.IOException;
 
@@ -56,6 +57,12 @@ public class MetaDeserializer extends StdDeserializer<Meta> {
         if (MetaType.ALTER.toString().equalsIgnoreCase(type)) {
             return mapper.treeToValue(node, MetaAlterTable.class);
         }
+        if (MetaType.DELETE.toString().equalsIgnoreCase(type)) {
+            MetaDeleteData meta = mapper.treeToValue(node, MetaDeleteData.class);
+            meta.setSql(Utils.unescapeUnicode(meta.getSql()));
+            return meta;
+        }
+
         throw new IllegalArgumentException("Unsupported combination of 'type' and 'tableType' values: type=" + type + ", tableType=" + tableType);
     }
 }
