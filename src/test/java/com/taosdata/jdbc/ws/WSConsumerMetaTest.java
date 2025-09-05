@@ -83,7 +83,6 @@ public class WSConsumerMetaTest {
     }
 
     @Test
-    @Ignore
     public void testAutoCreateChildTable() throws Exception {
         String topic = topics[0];
         // create topic
