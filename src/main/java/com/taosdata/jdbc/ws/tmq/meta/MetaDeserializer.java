@@ -36,33 +36,42 @@ public class MetaDeserializer extends StdDeserializer<Meta> {
     }
 
     private Meta getMetaBasedOnTableType(ObjectCodec mapper, JsonNode node, String type, String tableType) throws JsonProcessingException {
-        if (MetaType.CREATE.toString().equalsIgnoreCase(type)) {
-            if (TableType.SUPER.toString().equalsIgnoreCase(tableType)) {
+        MetaType metaType = MetaType.fromString(type);
+        TableType tblType = TableType.fromString(tableType);
+
+        switch (metaType) {
+            case CREATE:
+                return createMeta(mapper, node, tblType);
+            case DROP:
+                return dropMeta(mapper, node, tblType);
+            case ALTER:
+                return mapper.treeToValue(node, MetaAlterTable.class);
+            case DELETE:
+                MetaDeleteData meta = mapper.treeToValue(node, MetaDeleteData.class);
+                meta.setSql(Utils.unescapeUnicode(meta.getSql()));
+                return meta;
+            default:
+                throw new IllegalArgumentException("Unsupported MetaType: " + metaType);
+        }
+    }
+
+    private Meta createMeta(ObjectCodec mapper, JsonNode node, TableType tableType) throws JsonProcessingException {
+        switch (tableType) {
+            case SUPER:
                 return mapper.treeToValue(node, MetaCreateSuperTable.class);
-            } else if (TableType.NORMAL.toString().equalsIgnoreCase(tableType)) {
+            case NORMAL:
                 return mapper.treeToValue(node, MetaCreateNormalTable.class);
-            } else if (TableType.CHILD.toString().equalsIgnoreCase(tableType)) {
+            case CHILD:
                 return mapper.treeToValue(node, MetaCreateChildTable.class);
-            }
+            default:
+                throw new IllegalArgumentException("Unsupported TableType for CREATE: " + tableType);
         }
-
-        if (MetaType.DROP.toString().equalsIgnoreCase(type)) {
-            if (TableType.SUPER.toString().equalsIgnoreCase(tableType)) {
-                return mapper.treeToValue(node, MetaDropSuperTable.class);
-            } else {
-                return mapper.treeToValue(node, MetaDropTable.class);
-            }
+    }
+    private Meta dropMeta(ObjectCodec mapper, JsonNode node, TableType tableType) throws JsonProcessingException {
+        if (tableType == TableType.SUPER) {
+            return mapper.treeToValue(node, MetaDropSuperTable.class);
+        } else {
+            return mapper.treeToValue(node, MetaDropTable.class);
         }
-
-        if (MetaType.ALTER.toString().equalsIgnoreCase(type)) {
-            return mapper.treeToValue(node, MetaAlterTable.class);
-        }
-        if (MetaType.DELETE.toString().equalsIgnoreCase(type)) {
-            MetaDeleteData meta = mapper.treeToValue(node, MetaDeleteData.class);
-            meta.setSql(Utils.unescapeUnicode(meta.getSql()));
-            return meta;
-        }
-
-        throw new IllegalArgumentException("Unsupported combination of 'type' and 'tableType' values: type=" + type + ", tableType=" + tableType);
     }
 }
