@@ -228,7 +228,9 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
 
             try {
                 ewBackendThreadInfo.getWriteQueue().put(map);
-            } catch (InterruptedException ignored) {
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new SQLException("Interrupted while adding batch", e);
             }
 
             triggerSerializeIfNeeded(ewBackendThreadInfo, stmtInfo, param.getBatchSizeByRow());
@@ -301,13 +303,13 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
     }
 
     static class WSEWSerializationTask extends RecursiveAction {
-        final ArrayBlockingQueue<Map<Integer, Column>> writeQueue;
-        final ArrayBlockingQueue<EWRawBlock> serialQueue;
+        final transient ArrayBlockingQueue<Map<Integer, Column>> writeQueue;
+        final transient ArrayBlockingQueue<EWRawBlock> serialQueue;
         final int batchSize;
 
-        private TableInfo tableInfo = TableInfo.getEmptyTableInfo();
+        private transient TableInfo tableInfo = TableInfo.getEmptyTableInfo();
         private final HashMap<ByteBuffer, TableInfo> tableInfoMap = new HashMap<>();
-        private final StmtInfo stmtInfo;
+        private final transient StmtInfo stmtInfo;
         private final AtomicBoolean running;
         private final boolean isProgressive;
 
@@ -516,6 +518,7 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
+                    break;
                 } catch (SQLException e) {
                     lastError = e;
                     log.error("Error in write data to server, stmt id: {}, req id: {}" +
@@ -546,9 +549,13 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
 
         private void writeBlockWithRetry(ByteBuf rawBlock) throws SQLException {
             Utils.retainByteBuf(rawBlock);
-            writeBlockWithRetryInner(rawBlock);
-            Utils.releaseByteBuf(rawBlock);
+            try {
+                writeBlockWithRetryInner(rawBlock);
+            } finally {
+                Utils.releaseByteBuf(rawBlock);
+            }
         }
+
         private void writeBlockWithRetryInner(ByteBuf orgRawBlock) throws SQLException {
             ByteBuf rawBlock = orgRawBlock.duplicate();
             int originalReaderIndex = orgRawBlock.readerIndex();

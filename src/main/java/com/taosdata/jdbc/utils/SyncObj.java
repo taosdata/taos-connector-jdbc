@@ -11,7 +11,7 @@ public class SyncObj {
     public void signal() {
         lock.lock();
         try {
-            condition.signal();
+            condition.signalAll();
         } finally {
             lock.unlock();
         }
