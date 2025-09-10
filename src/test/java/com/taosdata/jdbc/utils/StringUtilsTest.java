@@ -75,8 +75,7 @@ public class StringUtilsTest {
         defaults.setProperty("password", "taosdata");
 
         Properties result = StringUtils.parseUrl("jdbc:TAOS://127.0.0.1:6030/db?charset=UTF-8", defaults, true);
-        Assert.assertEquals("127.0.0.1", result.getProperty("host"));
-        Assert.assertEquals("6030", result.getProperty("port"));
+        Assert.assertEquals("127.0.0.1:6030", result.getProperty("endpoints"));
         Assert.assertEquals("db", result.getProperty("dbname"));
         Assert.assertEquals("UTF-8", result.getProperty("charset"));
     }
@@ -84,8 +83,7 @@ public class StringUtilsTest {
     public void parseUrlHandlesUrlWithoutParameters() throws SQLException {
         Properties defaults = new Properties();
         Properties result = StringUtils.parseUrl("jdbc:TAOS://127.0.0.1:6030/db", defaults, true);
-        Assert.assertEquals("127.0.0.1", result.getProperty("host"));
-        Assert.assertEquals("6030", result.getProperty("port"));
+        Assert.assertEquals("127.0.0.1:6030", result.getProperty("endpoints"));
         Assert.assertEquals("db", result.getProperty("dbname"));
         Assert.assertNull(result.getProperty("charset"));
     }
@@ -94,16 +92,14 @@ public class StringUtilsTest {
     public void parseUrlIpv6Native() throws SQLException {
         Properties defaults = new Properties();
         Properties result = StringUtils.parseUrl("jdbc:TAOS://[fe80::1%eth0]:6030/db", defaults, true);
-        Assert.assertEquals("fe80::1%25eth0", result.getProperty("host"));
-        Assert.assertEquals("6030", result.getProperty("port"));
+        Assert.assertEquals("[fe80::1%eth0]:6030", result.getProperty("endpoints"));
         Assert.assertEquals("db", result.getProperty("dbname"));
     }
     @Test
     public void parseUrlIpv6Ws() throws SQLException {
         Properties defaults = new Properties();
-        Properties result = StringUtils.parseUrl("jdbc:TAOS-WS://[fe80::1%eth0]:6030/db", defaults, false);
-        Assert.assertEquals("[fe80::1%25eth0]", result.getProperty("host"));
-        Assert.assertEquals("6030", result.getProperty("port"));
+        Properties result = StringUtils.parseUrl("jdbc:TAOS-WS://[fe80::1%eth0]:6041/db", defaults, false);
+        Assert.assertEquals("[fe80::1%eth0]:6041", result.getProperty("endpoints"));
         Assert.assertEquals("db", result.getProperty("dbname"));
     }
 

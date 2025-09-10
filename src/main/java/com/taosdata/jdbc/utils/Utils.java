@@ -3,6 +3,7 @@ package com.taosdata.jdbc.utils;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
+import com.taosdata.jdbc.common.Endpoint;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -16,9 +17,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ForkJoinPool;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -293,5 +292,19 @@ public class Utils {
             }
         }
         return builder.toString();
+    }
+
+    public static List<Endpoint> getEndpoints(String host, String port){
+        List<Endpoint> endpoints = new ArrayList<>();
+        boolean isIpv6 = host != null && host.startsWith("[");
+
+        Endpoint endpoint;
+        if (port == null) {
+            endpoint = new Endpoint(host, 0, isIpv6);
+        } else {
+            endpoint = new Endpoint(host, Integer.parseInt(port), isIpv6);
+        }
+        endpoints.add(endpoint);
+        return endpoints;
     }
 }

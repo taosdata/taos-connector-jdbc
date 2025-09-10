@@ -20,6 +20,7 @@ public class ConsumerParam {
         knownKeys.add(TSDBDriver.PROPERTY_KEY_PASSWORD);
         knownKeys.add(TSDBDriver.PROPERTY_KEY_HOST);
         knownKeys.add(TSDBDriver.PROPERTY_KEY_PORT);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_ENDPOINTS);
         knownKeys.add(TSDBDriver.PROPERTY_KEY_TOKEN);
         knownKeys.add(TSDBDriver.PROPERTY_KEY_PRODUCT_NAME);
         knownKeys.add(TSDBDriver.PROPERTY_KEY_DBNAME);

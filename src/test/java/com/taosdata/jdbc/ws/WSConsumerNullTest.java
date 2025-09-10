@@ -24,7 +24,7 @@ public class WSConsumerNullTest {
     private static final String superTable = "tmq_type";
     private static Connection connection;
     private static Statement statement;
-    private static String[] topics = {"topic_ws_bean_type"};
+    private static String[] topics = {"topic_" + dbName};
 
     @Test
     public void testWSBeanObject() throws Exception {

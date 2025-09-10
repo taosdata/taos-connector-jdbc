@@ -15,10 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT;
@@ -28,13 +25,14 @@ import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT;
  */
 public class Transport implements AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(Transport.class);
+    private static final boolean isTest = "test".equalsIgnoreCase(System.getProperty("ENV_TAOS_JDBC_TEST"));
 
     public static final int DEFAULT_MESSAGE_WAIT_TIMEOUT = 60_000;
 
     public static final int TSDB_CODE_RPC_NETWORK_UNAVAIL = 0x0B;
     public static final int TSDB_CODE_RPC_SOMENODE_NOT_CONNECTED = 0x20;
 
-    private AtomicInteger reconnectCount = new AtomicInteger(0);
+    private final AtomicInteger reconnectCount = new AtomicInteger(0);
 
     private final ArrayList<WSClient> clientArr = new ArrayList<>();
     private final InFlightRequest inFlightRequest;
@@ -45,7 +43,7 @@ public class Transport implements AutoCloseable {
     private final WSFunction wsFunction;
     public static final byte[] EMPTY_BYTE_ARRAY = new byte[0];
 
-    private int currentNodeIndex = 0;
+    private int currentNodeIndex;
 
     protected Transport() {
         this.inFlightRequest = null;
@@ -55,12 +53,19 @@ public class Transport implements AutoCloseable {
     public Transport(WSFunction function,
                      ConnectionParam param,
                      InFlightRequest inFlightRequest) throws SQLException {
-        WSClient master = WSClient.getInstance(param, function, this);
+        // master slave mode
         WSClient slave = WSClient.getSlaveInstance(param, function, this);
-
-        this.clientArr.add(master);
         if (slave != null){
+            WSClient master = WSClient.getInstance(param, 0, function, this);
+            this.clientArr.add(master);
             this.clientArr.add(slave);
+            currentNodeIndex = 0;
+        } else {
+            for (int i = 0; i < param.getEndpoints().size(); i++){
+                WSClient client = WSClient.getInstance(param, i, function, this);
+                this.clientArr.add(client);
+            }
+            currentNodeIndex = getRandomClientIndex();
         }
 
         this.inFlightRequest = inFlightRequest;
@@ -369,7 +374,7 @@ public class Transport implements AutoCloseable {
     }
 
     public void checkConnection(int connectTimeout) throws SQLException {
-        if (WSConnection.g_FirstConnection && clientArr.size() > 1) {
+        if (WSConnection.g_FirstConnection.compareAndSet(true, false) && !StringUtils.isEmpty(connectionParam.getSlaveClusterHost())) {
             // test all nodes, if connection failed, throw exception
             for (WSClient wsClient : clientArr){
                 if (!wsClient.connectBlocking()) {
@@ -388,12 +393,18 @@ public class Transport implements AutoCloseable {
                 }
             }
         } else {
-            if (!clientArr.get(currentNodeIndex).connectBlocking()) {
-                close();
-                throw TSDBError.createSQLException(ERROR_CONNECTION_TIMEOUT,
-                        "can't create connection with server within: " + connectTimeout + " milliseconds");
+            // test all nodes, until one node connected success
+            for (int i = 0; i < clientArr.size(); i++){
+                currentNodeIndex = currentNodeIndex % clientArr.size();
+                if (clientArr.get(currentNodeIndex).connectBlocking()) {
+                    log.debug("connect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri.toString()));
+                    return;
+                }
+                currentNodeIndex = (currentNodeIndex + 1) % clientArr.size();
             }
-            log.debug("connect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri.toString()));
+            close();
+            throw TSDBError.createSQLException(ERROR_CONNECTION_TIMEOUT,
+                    "can't create connection with any server within: " + connectTimeout + " milliseconds");
         }
     }
 
@@ -463,6 +474,12 @@ public class Transport implements AutoCloseable {
         return clientArr.get(currentNodeIndex).isOpen();
     }
 
+    private int getRandomClientIndex(){
+        if (isTest) {
+            return 0;
+        }
+        return ThreadLocalRandom.current().nextInt(clientArr.size());
+    }
     public final ConnectionParam getConnectionParam() {
         return connectionParam;
     }

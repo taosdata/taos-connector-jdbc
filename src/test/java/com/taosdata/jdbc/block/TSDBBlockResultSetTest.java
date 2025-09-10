@@ -6,6 +6,7 @@ import com.google.common.primitives.Shorts;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.TSDBResultSet;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -26,6 +27,7 @@ public class TSDBBlockResultSetTest {
     private static Connection conn;
     private static Statement stmt;
     private static ResultSet rs;
+    private static final String dbname = TestUtils.camelToSnake(TSDBBlockResultSetTest.class);
 
     @Test
     public void wasNull() throws SQLException {
@@ -665,12 +667,12 @@ public class TSDBBlockResultSetTest {
         }
         conn = DriverManager.getConnection(url, properties);
         stmt = conn.createStatement();
-        stmt.execute("create database if not exists restful_test");
-        stmt.execute("use restful_test");
+        stmt.execute("create database if not exists " + dbname);
+        stmt.execute("use " + dbname);
         stmt.execute("drop table if exists weather");
         stmt.execute("create table if not exists weather(f1 timestamp, f2 int, f3 bigint, f4 float, f5 double, f6 binary(64), f7 smallint, f8 tinyint, f9 bool, f10 nchar(64))");
-        stmt.execute("insert into restful_test.weather values('2021-01-01 00:00:00.000', 1, 100, 3.1415, 3.1415926, 'abc', 10, 10, true, '涛思数据')");
-        rs = stmt.executeQuery("select * from restful_test.weather");
+        stmt.execute("insert into weather values('2021-01-01 00:00:00.000', 1, 100, 3.1415, 3.1415926, 'abc', 10, 10, true, '涛思数据')");
+        rs = stmt.executeQuery("select * from weather");
         rs.next();
     }
 
@@ -683,7 +685,7 @@ public class TSDBBlockResultSetTest {
                 stmt.close();
             if (conn != null) {
                 Statement statement = conn.createStatement();
-                statement.execute("drop database if exists restful_test");
+                statement.execute("drop database if exists " + dbname);
                 statement.close();
                 conn.close();
             }

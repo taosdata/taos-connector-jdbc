@@ -22,12 +22,8 @@ public class RestfulConnectionParamTest {
     @Test
     public void testSettersAndGetters() {
         // Test host
-        connectionParam.setHost("newHost");
-        assertEquals("newHost", connectionParam.getHost());
-
-        // Test port
-        connectionParam.setPort("9090");
-        assertEquals("9090", connectionParam.getPort());
+        connectionParam.setEndpoints(null);
+        assertEquals(null, connectionParam.getEndpoints());
 
         // Test database
         connectionParam.setDatabase("testDB");

@@ -23,11 +23,12 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class WSConnection extends AbstractConnection {
 
-    public static boolean g_FirstConnection = true;
+    public static final AtomicBoolean g_FirstConnection = new AtomicBoolean(true);
     private final Transport transport;
     private final DatabaseMetaData metaData;
     private String database;

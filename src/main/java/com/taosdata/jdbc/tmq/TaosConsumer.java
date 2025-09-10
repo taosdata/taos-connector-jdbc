@@ -1,10 +1,10 @@
 package com.taosdata.jdbc.tmq;
 
-import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.common.Consumer;
 import com.taosdata.jdbc.common.ConsumerManager;
+import com.taosdata.jdbc.common.Endpoint;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.Utils;
 
@@ -38,12 +38,12 @@ public class TaosConsumer<V> implements AutoCloseable {
 
         String servers = properties.getProperty(TMQConstants.BOOTSTRAP_SERVERS);
         if (!StringUtils.isEmpty(servers)) {
-            Properties tempProp = StringUtils.parseHostPort(servers, false);
-            if (!StringUtils.isEmpty(tempProp.getProperty(TSDBDriver.PROPERTY_KEY_HOST))) {
-                properties.setProperty(TMQConstants.CONNECT_IP, tempProp.getProperty(TSDBDriver.PROPERTY_KEY_HOST));
+            List<Endpoint> endpoints = StringUtils.parseEndpoints(servers, false);
+            if (!StringUtils.isEmpty(endpoints.get(0).getHost())) {
+                properties.setProperty(TMQConstants.CONNECT_IP, endpoints.get(0).getHost());
             }
-            if (!StringUtils.isEmpty(tempProp.getProperty(TSDBDriver.PROPERTY_KEY_PORT))) {
-                properties.setProperty(TMQConstants.CONNECT_PORT, tempProp.getProperty(TSDBDriver.PROPERTY_KEY_PORT));
+            if (endpoints.get(0).getPort() > 0) {
+                properties.setProperty(TMQConstants.CONNECT_PORT, String.valueOf(endpoints.get(0).getPort()));
             }
         }
 

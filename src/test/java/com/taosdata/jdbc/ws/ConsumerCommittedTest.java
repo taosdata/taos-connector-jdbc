@@ -3,6 +3,7 @@ package com.taosdata.jdbc.ws;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -24,12 +25,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class ConsumerCommittedTest {
     private static final String host = "127.0.0.1";
-    private static final String dbName = "ws_tmq_test_committed";
+    private static final String dbName = TestUtils.camelToSnake(ConsumerCommittedTest.class);
     private static final String superTable = "st";
     private static Connection connection;
     private static Statement statement;
     private static ScheduledExecutorService scheduledExecutorService;
-    private static final String topic = "topic_tmq_commit";
+    private static final String topic = "topic_" + dbName;
 
     @Test
     public void testJNI() throws Exception {

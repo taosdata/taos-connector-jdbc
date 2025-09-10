@@ -22,7 +22,7 @@ public class WSConsumerMetaTest {
     private static final String superTableJson = "st_json";
     private static Connection connection;
     private static Statement statement;
-    private static String[] topics = {"topic_ws_map", "topic_db", "topic_json"};
+    private static String[] topics = {"topic_ws_map" + dbName, "topic_db" + dbName, "topic_json" + dbName};
 
     @Test
     public void testCreateChildTable() throws Exception {
