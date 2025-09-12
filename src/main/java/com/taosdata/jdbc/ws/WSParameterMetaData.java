@@ -37,7 +37,7 @@ public class WSParameterMetaData extends AbstractParameterMetaData {
         if (!isInsert) {
             return ParameterMetaData.parameterNullable;
         }
-        if (param < 1 && param >= colTypeList.size())
+        if (param < 1 || param > colTypeList.size())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_PARAMETER_INDEX_OUT_RANGE);
 
         if (fields.get(param - 1).getBindType() == FieldBindType.TAOS_FIELD_TBNAME.getValue()) {
@@ -49,7 +49,7 @@ public class WSParameterMetaData extends AbstractParameterMetaData {
 
     @Override
     public boolean isSigned(int param) throws SQLException {
-        if (param < 1 && param >= colTypeList.size())
+        if (param < 1 || param > colTypeList.size())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_PARAMETER_INDEX_OUT_RANGE);
 
         if (!isInsert){
@@ -68,7 +68,7 @@ public class WSParameterMetaData extends AbstractParameterMetaData {
 
     @Override
     public int getPrecision(int param) throws SQLException {
-        if (param < 1 && param >= colTypeList.size())
+        if (param < 1 || param > colTypeList.size())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_PARAMETER_INDEX_OUT_RANGE);
 
         if (!isInsert){
@@ -80,7 +80,7 @@ public class WSParameterMetaData extends AbstractParameterMetaData {
 
     @Override
     public int getScale(int param) throws SQLException {
-        if (param < 1 && param >= colTypeList.size())
+        if (param < 1 || param > colTypeList.size())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_PARAMETER_INDEX_OUT_RANGE);
 
         if (!isInsert){
@@ -92,7 +92,7 @@ public class WSParameterMetaData extends AbstractParameterMetaData {
 
     @Override
     public int getParameterType(int param) throws SQLException {
-        if (param < 1 && param >= colTypeList.size())
+        if (param < 1 || param > colTypeList.size())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_PARAMETER_INDEX_OUT_RANGE);
 
         if (!isInsert){
@@ -105,7 +105,7 @@ public class WSParameterMetaData extends AbstractParameterMetaData {
 
     @Override
     public String getParameterTypeName(int param) throws SQLException {
-        if (param < 1 && param >= colTypeList.size())
+        if (param < 1 || param > colTypeList.size())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_PARAMETER_INDEX_OUT_RANGE);
 
         if (!isInsert){
@@ -118,7 +118,7 @@ public class WSParameterMetaData extends AbstractParameterMetaData {
 
     @Override
     public String getParameterClassName(int param) throws SQLException {
-        if (param < 1 && param >= colTypeList.size())
+        if (param < 1 || param > colTypeList.size())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_PARAMETER_INDEX_OUT_RANGE);
 
         if (!isInsert){
@@ -131,7 +131,7 @@ public class WSParameterMetaData extends AbstractParameterMetaData {
 
     @Override
     public int getParameterMode(int param) throws SQLException {
-        if (param < 1 && param >= colTypeList.size())
+        if (param < 1 || param > colTypeList.size())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_PARAMETER_INDEX_OUT_RANGE);
 
         return ParameterMetaData.parameterModeIn;

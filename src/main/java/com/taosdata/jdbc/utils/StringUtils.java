@@ -89,6 +89,8 @@ public class StringUtils {
                 if (lastColon != -1) {
                     host = endpointStr.substring(0, lastColon);
                     port = endpointStr.substring(lastColon + 1);
+                } else {
+                    host = endpointStr;
                 }
                 result.add(new Endpoint(host, Integer.parseInt(port), false));
             }
