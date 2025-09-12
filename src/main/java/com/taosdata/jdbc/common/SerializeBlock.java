@@ -4,6 +4,7 @@ import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.Utils;
+import com.taosdata.jdbc.ws.stmt2.entity.StmtInfo;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 
@@ -434,6 +435,16 @@ public class SerializeBlock {
         }
     }
 
+    public static ByteBuf getStmt2BindBlock(HashMap<ByteBuffer, TableInfo> tableInfoMap,
+                                            StmtInfo stmtInfo) throws SQLException {
+        return getStmt2BindBlock(stmtInfo.getReqId(),
+                stmtInfo.getStmtId(),
+                tableInfoMap,
+                stmtInfo.getToBeBindTableNameIndex(),
+                stmtInfo.getToBeBindTagCount(),
+                stmtInfo.getToBeBindColCount(),
+                stmtInfo.getPrecision());
+    }
     public static ByteBuf getStmt2BindBlock(long reqId,
                                            long stmtId,
                                            HashMap<ByteBuffer, TableInfo> tableInfoMap,

@@ -103,7 +103,8 @@ public abstract class AbstractDriver implements Driver {
                     log.error("Unexpected error handling fetch block data, id: {}", id, e);
                 }
             } else {
-                log.warn("Received fetch block new response, but no fetch data found for id: {}", id);
+                // for the connection pool test sql will not fetch all data, we ignore this case log.
+                log.trace("Received fetch block new response, but no fetch data found for id: {}", id);
             }
         });
         Transport transport = new Transport(WSFunction.WS, param, inFlightRequest);
