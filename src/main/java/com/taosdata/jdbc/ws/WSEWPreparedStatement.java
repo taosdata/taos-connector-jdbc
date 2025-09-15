@@ -1,20 +1,24 @@
 package com.taosdata.jdbc.ws;
 
-import com.taosdata.jdbc.*;
+import com.taosdata.jdbc.AbstractConnection;
+import com.taosdata.jdbc.TSDBError;
+import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.common.*;
 import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.utils.SyncObj;
 import com.taosdata.jdbc.utils.Utils;
-import com.taosdata.jdbc.ws.entity.*;
+import com.taosdata.jdbc.ws.entity.Code;
+import com.taosdata.jdbc.ws.entity.CommonResp;
 import com.taosdata.jdbc.ws.stmt2.entity.*;
-import com.taosdata.jdbc.ws.stmt2.entity.RequestFactory;
 import io.netty.buffer.ByteBuf;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
-import java.sql.*;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -35,11 +39,9 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
     private final SyncObj syncObj = new SyncObj();
     private static final ForkJoinPool serializeExecutor = Utils.getForkJoinPool();
     private int addBatchCounts = 0;
-    private final StmtInfo stmtInfo;
 
     public WSEWPreparedStatement(Transport transport, ConnectionParam param, String database, AbstractConnection connection, String sql, Long instanceId, Stmt2PrepareResp prepareResp) throws SQLException {
         super(transport, param, database, connection, sql, instanceId, prepareResp);
-        stmtInfo = new StmtInfo(0, 0, toBeBindTableNameIndex, toBeBindTagCount, toBeBindColCount, precision, fields, sql);
         copyData = param.isCopyData();
         writeThreadNum = param.getBackendWriteThreadNum();
 
@@ -55,9 +57,8 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
         for (int i = 0; i < writeThreadNum; i++){
             WorkerThread workerThread = new WorkerThread(
                     backendThreadInfoList.get(i),
-                    stmtInfo,
-                    transport,
-                    param,
+                    new StmtInfo(prepareResp, sql),
+                    new PstmtConInfo(transport, param, database, connection, instanceId),
                     closed,
                     remainingUnprocessedRows,
                     batchInsertedRows,
@@ -65,10 +66,7 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
                     syncObj
                     );
             workerThreadList.add(workerThread);
-           res = workerThread.initStmt();
-           if (res.getCode() != Code.SUCCESS.getCode()){
-               break;
-           }
+            workerThread.initStmt(true);
         }
 
         if (res != null && res.getCode() != Code.SUCCESS.getCode()){
@@ -105,13 +103,13 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
         if (isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
 
-        if (isInsert){
+        if (stmtInfo.isInsert()){
             executeUpdate();
         } else {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "Only support insert.");
         }
 
-        return !isInsert;
+        return !stmtInfo.isInsert();
     }
     @Override
     public ResultSet executeQuery() throws SQLException {
@@ -137,6 +135,7 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
         if (lastError != null) {
             throw new SQLException("InsertedRows: " + totalRowsInserted + ", ErrorInfo: " + lastError.getMessage(), "", TSDBErrorNumbers.ERROR_FW_WRITE_ERROR);
         }
+
         return totalRowsInserted;
     }
 
@@ -151,8 +150,8 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
     }
 
     private void checkDataLength(Map<Integer, Column> map) throws SQLException {
-        for (int i = 0; i < fields.size(); i++){
-            Field field = fields.get(i);
+        for (int i = 0; i < stmtInfo.getFields().size(); i++){
+            Field field = stmtInfo.getFields().get(i);
             Column column = map.get(i + 1);
             if (DataLengthCfg.getDataLength(column.getType()) == null && field.getBindType() != FieldBindType.TAOS_FIELD_TBNAME.getValue()){
                 if (column.getData() instanceof byte[]){
@@ -201,7 +200,7 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
     }
     @Override
     public void addBatch() throws SQLException {
-        if (colOrderedMap.size() == fields.size()){
+        if (colOrderedMap.size() == stmtInfo.getFields().size()){
             // jdbc standard bind api
             Map<Integer, Column> map = copyMap(colOrderedMap);
 
@@ -210,7 +209,7 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
             }
 
             int hashCode;
-            Object o = map.get(toBeBindTableNameIndex + 1).getData();
+            Object o = map.get(stmtInfo.getToBeBindTableNameIndex() + 1).getData();
             if (o instanceof String){
                 hashCode = o.hashCode();
             } else if (o instanceof byte[]){
@@ -377,7 +376,7 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
         }
         @Override
         protected void compute() {
-            Exception lastError = null;
+            SQLException lastError = null;
             while (writeQueue.size() >= batchSize && serialQueue.remainingCapacity() > 0) {
                 for (int i = 0; i < batchSize; i++) {
                     try {
@@ -401,15 +400,22 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
                 }
 
                 try {
+                    long reqId = ReqId.getReqID();
                     ByteBuf rawBlock = SerializeBlock.getStmt2BindBlock(
                             tableInfoMap,
-                            stmtInfo);
+                            stmtInfo,
+                            reqId);
                     putEWRawBlock(new EWRawBlock(rawBlock, batchSize, lastError));
                     log.trace("buffer allocated: {}", Integer.toHexString(System.identityHashCode(rawBlock)));
-                } catch (Exception e) {
+                } catch (SQLException e) {
                     lastError = e;
                     putEWRawBlock(new EWRawBlock(null, batchSize, lastError));
-                    log.error("Error in serialize data to block, stmt id: {}, req id: {}", stmtInfo.getStmtId(), stmtInfo.getReqId(), e);
+                    log.error("Error in serialize data to block, stmt id: {}", stmtInfo.getStmtId(), e);
+                    break;
+                } catch (Exception e) {
+                    lastError = new SQLException("Error in serialize data to block, stmt id: " + stmtInfo.getStmtId(), e);
+                    putEWRawBlock(new EWRawBlock(null, batchSize, lastError));
+                    log.error("Error in serialize data to block, stmt id: {}", stmtInfo.getStmtId(), e);
                     break;
                 } finally {
                     tableInfo = TableInfo.getEmptyTableInfo();
@@ -423,69 +429,36 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
         }
     }
 
-    static class WorkerThread implements Runnable {
+    static class WorkerThread extends WSRetryableStmt implements Runnable {
         private static final org.slf4j.Logger log = LoggerFactory.getLogger(WorkerThread.class);
         private final EWBackendThreadInfo backendThreadInfo;
-        private final StmtInfo stmtInfo;
-        private long reqId;
-        private long stmtId = 0;
-        private int reconnectCount = 0;
-        private final Transport transport;
-        private final ConnectionParam connectionParam;
         private final AtomicBoolean isClosed;
         private final AtomicInteger remainingUnprocessedRows;
-        private final AtomicInteger batchInsertedRows;
         private final AtomicInteger flushIn;
         private final SyncObj syncObj;
-        private Exception lastError;
 
         public WorkerThread(EWBackendThreadInfo backendThreadInfo,
                             StmtInfo stmtInfo,
-                            Transport transport,
-                            ConnectionParam param,
+                            PstmtConInfo conInfo,
                             AtomicBoolean isClosed,
                             AtomicInteger remainingUnprocessedRows,
                             AtomicInteger batchInsertedRows,
                             AtomicInteger flushIn,
                             SyncObj syncObj) {
+            super(conInfo.getConnection(),
+                    conInfo.getParam(),
+                    conInfo.getDatabase(),
+                    conInfo.getTransport(),
+                    conInfo.getInstanceId(),
+                    stmtInfo,
+                    batchInsertedRows);
             this.backendThreadInfo = backendThreadInfo;
             this.stmtInfo = stmtInfo;
-            this.transport = transport;
-            this.connectionParam = param;
             this.isClosed = isClosed;
             this.remainingUnprocessedRows = remainingUnprocessedRows;
-            this.batchInsertedRows = batchInsertedRows;
             this.flushIn = flushIn;
             this.syncObj = syncObj;
         }
-
-        public CommonResp initStmt() throws SQLException {
-            long tmpReqID = ReqId.getReqID();
-            Request request = RequestFactory.generateInit(reqId, true, true);
-            Stmt2Resp resp = (Stmt2Resp) transport.send(request);
-            if (Code.SUCCESS.getCode() != resp.getCode()) {
-                return resp;
-            }
-            long tmpStmtId = resp.getStmtId();
-            this.reqId = tmpReqID;
-            this.stmtId = tmpStmtId;
-
-            Request prepare = RequestFactory.generatePrepare(stmtId, reqId, stmtInfo.getSql());
-            Stmt2PrepareResp prepareResp = (Stmt2PrepareResp) transport.send(prepare);
-            if (Code.SUCCESS.getCode() != prepareResp.getCode()) {
-                return resp;
-            }
-
-            return prepareResp;
-        }
-
-        public void releaseStmt() throws SQLException {
-            if (stmtId != 0 && transport.isConnected()){
-                Request close = RequestFactory.generateClose(stmtId, reqId);
-                transport.send(close);
-            }
-        }
-
         @Override
         public void run() {
             int flushInLocal = 0;
@@ -506,7 +479,7 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
 
                     ewRawBlock = serialQueue.poll(50, TimeUnit.MILLISECONDS);
                     if (ewRawBlock == null) {
-                        triggerSerializeProgressive(backendThreadInfo, stmtInfo, connectionParam.getBatchSizeByRow());
+                        triggerSerializeProgressive(backendThreadInfo, stmtInfo, param.getBatchSizeByRow());
                         continue;
                     }
 
@@ -514,17 +487,16 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
                     lastError = ewRawBlock.getLastError();
                     if (lastError == null) {
                         writeBlockWithRetry(ewRawBlock.getByteBuf());
-                        triggerSerializeIfNeeded(backendThreadInfo, stmtInfo, connectionParam.getBatchSizeByRow());
+                        triggerSerializeIfNeeded(backendThreadInfo, stmtInfo, param.getBatchSizeByRow());
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     break;
                 } catch (SQLException e) {
                     lastError = e;
-                    log.error("Error in write data to server, stmt id: {}, req id: {}" +
+                    log.error("Error in write data to server, stmt id: {}" +
                                     "rows: {}, code: {}, msg: {}",
-                            stmtId,
-                            reqId,
+                            stmtInfo.getStmtId(),
                             rowCount, e.getErrorCode(), e.getMessage());
                 } finally {
                     if (rowCount > 0) {
@@ -536,95 +508,6 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
             syncObj.signal();
         }
 
-        private void modifyStmtIdAndReqId(ByteBuf rawBlock, long stmtId, long reqId) {
-            int originalWriterIndex = rawBlock.writerIndex();
-            try {
-                rawBlock.writerIndex(0);
-                rawBlock.writeLongLE(reqId);
-                rawBlock.writeLongLE(stmtId);
-            } finally {
-                rawBlock.writerIndex(originalWriterIndex);
-            }
-        }
-
-        private void writeBlockWithRetry(ByteBuf rawBlock) throws SQLException {
-            Utils.retainByteBuf(rawBlock);
-            try {
-                writeBlockWithRetryInner(rawBlock);
-            } finally {
-                Utils.releaseByteBuf(rawBlock);
-            }
-        }
-
-        private void writeBlockWithRetryInner(ByteBuf orgRawBlock) throws SQLException {
-            ByteBuf rawBlock = orgRawBlock.duplicate();
-            int originalReaderIndex = orgRawBlock.readerIndex();
-            int originalWriterIndex = orgRawBlock.writerIndex();
-            for (int i = 0; i < connectionParam.getRetryTimes(); i++) {
-                if (i > 0) {
-                    rawBlock = orgRawBlock.copy();
-                    rawBlock.readerIndex(originalReaderIndex);
-                    rawBlock.writerIndex(originalWriterIndex);
-                }
-                try{
-                    reqId = ReqId.getReqID();
-                    // modify stmt id
-                    modifyStmtIdAndReqId(rawBlock, stmtId, reqId);
-
-                    // bind
-                    Stmt2Resp bindResp = (Stmt2Resp) transport.send(Action.STMT2_BIND.getAction(),
-                            reqId, rawBlock);
-                    if (Code.SUCCESS.getCode() != bindResp.getCode()) {
-                        throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
-                    }
-
-                    // execute
-                    Request request = RequestFactory.generateExec(stmtId, reqId);
-                    Stmt2ExecResp resp = (Stmt2ExecResp) transport.send(request);
-                    if (Code.SUCCESS.getCode() != resp.getCode()) {
-                        throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
-                    }
-
-                    int affectedRows = resp.getAffected();
-                    batchInsertedRows.addAndGet(affectedRows);
-                    return;
-                } catch (SQLException e) {
-                    if (i == connectionParam.getRetryTimes() - 1) {
-                        lastError = e;
-                    }
-                    log.error("Error in writeBlockWithRetry, stmt id: {}, req id: {}" +
-                                    "retry times: {}, code: {}, msg: {}",
-                            stmtId,
-                            reqId,
-                            i,
-                            e.getErrorCode(), e.getMessage());
-
-                    // check if connection is reestablished, if so, need to reinit stmt obj and retry
-                    int realReconnectCount = transport.getReconnectCount();
-                    if (reconnectCount != realReconnectCount) {
-                        log.error("connection reestablished, need to init stmt obj");
-
-                        reconnectCount = realReconnectCount;
-                        initStmt();
-                        continue;
-                    }
-
-                    // retry timeout without waiting
-                    if (e.getErrorCode() == TSDBErrorNumbers.ERROR_QUERY_TIMEOUT){
-                        continue;
-                    }
-
-                    // network issue, retry with waiting
-                    if (e.getErrorCode() == TSDBErrorNumbers.ERROR_CONNECTION_CLOSED
-                    || e.getErrorCode() == TSDBErrorNumbers.ERROR_RESTFul_Client_IOException) {
-                        continue;
-                    }
-                    break;
-                } finally {
-                    log.trace("buffer {}, refCnt: {}", Integer.toHexString(System.identityHashCode(rawBlock)), rawBlock.refCnt());
-                }
-            }
-        }
         public Exception getAndClearLastError() {
             Exception tmp = lastError;
             lastError = null;

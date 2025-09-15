@@ -83,14 +83,14 @@ public class Transport implements AutoCloseable {
         this.timeout = timeout;
     }
 
-    private void reconnect() throws SQLException {
+    private void reconnect(boolean isTmq) throws SQLException {
         synchronized (this) {
             if (isConnected()){
                 return;
             }
 
             for (int i = 0; i < clientArr.size() && this.connectionParam.isEnableAutoConnect(); i++) {
-                boolean reconnected = reconnectCurNode();
+                boolean reconnected = reconnectCurNode(isTmq);
                 if (reconnected) {
                     reconnectCount.incrementAndGet();
                     log.debug("reconnect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri.toString()));
@@ -115,6 +115,9 @@ public class Transport implements AutoCloseable {
     }
     @SuppressWarnings("all")
     public Response send(Request request) throws SQLException {
+        return send(request, true);
+    }
+    public Response send(Request request, boolean reSend) throws SQLException {
         if (isClosed()){
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
         }
@@ -133,8 +136,12 @@ public class Transport implements AutoCloseable {
             clientArr.get(currentNodeIndex).send(reqString);
         } catch (WebsocketNotConnectedException e) {
             tmqRethrowConnectionCloseException();
-            reconnect();
+            reconnect(false);
             try {
+                if (!reSend){
+                    inFlightRequest.remove(request.getAction(), request.id());
+                    return null;
+                }
                 clientArr.get(currentNodeIndex).send(reqString);
             }catch (Exception ex){
                 inFlightRequest.remove(request.getAction(), request.id());
@@ -184,7 +191,7 @@ public class Transport implements AutoCloseable {
             clientArr.get(currentNodeIndex).send(buffer);
         } catch (WebsocketNotConnectedException e) {
             tmqRethrowConnectionCloseException();
-            reconnect();
+            reconnect(false);
             try {
                 Utils.retainByteBuf(buffer);
                 clientArr.get(currentNodeIndex).send(buffer);
@@ -228,7 +235,7 @@ public class Transport implements AutoCloseable {
             Utils.retainByteBuf(buffer);
             clientArr.get(currentNodeIndex).send(buffer);
         } catch (WebsocketNotConnectedException e) {
-            reconnect();
+            reconnect(false);
             try {
                 Utils.retainByteBuf(buffer);
                 clientArr.get(currentNodeIndex).send(buffer);
@@ -240,7 +247,7 @@ public class Transport implements AutoCloseable {
         }
     }
 
-    public Response send(String action, long reqId, ByteBuf buffer) throws SQLException {
+    public Response send(String action, long reqId, ByteBuf buffer, boolean resend) throws SQLException {
         if (isClosed()){
             Utils.releaseByteBuf(buffer);
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
@@ -259,13 +266,19 @@ public class Transport implements AutoCloseable {
             clientArr.get(currentNodeIndex).send(buffer);
         } catch (WebsocketNotConnectedException e) {
             tmqRethrowConnectionCloseException();
-            reconnect();
+            reconnect(false);
             try {
                 Utils.retainByteBuf(buffer);
+                if (!resend){
+                    inFlightRequest.remove(action, reqId);
+                    return null;
+                }
                 clientArr.get(currentNodeIndex).send(buffer);
             }catch (Exception ex){
                 inFlightRequest.remove(action, reqId);
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());
+            } finally {
+                Utils.releaseByteBuf(buffer);
             }
         } finally {
             Utils.releaseByteBuf(buffer);
@@ -334,7 +347,7 @@ public class Transport implements AutoCloseable {
             clientArr.get(currentNodeIndex).send(request.toString());
         } catch (WebsocketNotConnectedException e) {
             tmqRethrowConnectionCloseException();
-            reconnect();
+            reconnect(false);
             try {
                 clientArr.get(currentNodeIndex).send(request.toString());
             }catch (Exception ex){
@@ -424,30 +437,20 @@ public class Transport implements AutoCloseable {
         }
     }
 
-    public boolean doReconnectCurNode() throws SQLException {
-        boolean reconnected = false;
-        for (int retryTimes = 0; retryTimes < connectionParam.getReconnectRetryCount(); retryTimes++) {
-            try {
-                reconnected = clientArr.get(currentNodeIndex).reconnectBlocking();
-                if (reconnected) {
-                    break;
-                }
-                Thread.sleep(connectionParam.getReconnectIntervalMs());
-            } catch (Exception e) {
-                log.error("try connect remote server failed!", e);
-            }
-        }
-        return reconnected;
+    public void reconnectTmq() throws SQLException {
+        reconnect(true);
     }
-
-    public boolean reconnectCurNode() throws SQLException {
+    private boolean reconnectCurNode(boolean isTmq) throws SQLException {
         for (int retryTimes = 0; retryTimes < connectionParam.getReconnectRetryCount(); retryTimes++) {
             try {
                 boolean reconnected = clientArr.get(currentNodeIndex).reconnectBlocking();
                 if (reconnected) {
+                    if (isTmq){
+                        // tmq do not send connect req
+                        return true;
+                    }
                     // send con msgs
                     ConnectReq connectReq = new ConnectReq(connectionParam);
-
                     ConnectResp auth;
                     auth = (ConnectResp) sendWithoutRetry(new Request(Action.CONN.getAction(), connectReq));
 

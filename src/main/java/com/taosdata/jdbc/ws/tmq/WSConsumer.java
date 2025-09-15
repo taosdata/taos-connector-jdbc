@@ -125,13 +125,9 @@ public class WSConsumer<V> implements Consumer<V> {
     }
 
     private boolean handleReconnect() throws SQLException {
-        if (transport.doReconnectCurNode()){
-            subscribe(this.topics);
-            return true;
-        } else {
-            transport.close();
-            return false;
-        }
+        transport.reconnectTmq();
+        subscribe(this.topics);
+        return true;
     }
 
     private ConsumerRecords<V> getMeta(PollResp pollResp) throws SQLException{

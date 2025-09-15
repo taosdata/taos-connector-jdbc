@@ -6,10 +6,10 @@ import com.taosdata.jdbc.common.ColumnInfo;
 import com.taosdata.jdbc.common.SerializeBlock;
 import com.taosdata.jdbc.common.TableInfo;
 import com.taosdata.jdbc.enums.FieldBindType;
-import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.BlobUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
+import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.ws.entity.Action;
 import com.taosdata.jdbc.ws.entity.Code;
 import com.taosdata.jdbc.ws.entity.Request;
@@ -25,28 +25,19 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.sql.Date;
 import java.sql.*;
-import java.time.*;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
 
-public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareStatement {
+public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepareStatement {
     private static final List<Object> nullTag = Collections.singletonList(null);
-
-    protected final ConnectionParam param;
-    private long reqId;
-    private long stmtId;
-    private final String rawSql;
     protected int queryTimeout = 0;
-    protected int precision = TimestampPrecision.MS;
-    protected int toBeBindTableNameIndex = -1;
-    protected int toBeBindColCount = 0;
-    protected int toBeBindTagCount = 0;
-    protected List<Field> fields;
-    protected ArrayList<Integer> tagTypeList = new ArrayList<>();
-    protected ArrayList<Integer> colTypeList = new ArrayList<>();
-    protected boolean isInsert = false;
     protected final Map<Integer, Column> colOrderedMap = new HashMap<>();
     private final PriorityQueue<ColumnInfo> tag = new PriorityQueue<>();
     private final PriorityQueue<ColumnInfo> colListQueue = new PriorityQueue<>();
@@ -59,9 +50,7 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
                                   AbstractConnection connection,
                                   String sql,
                                   Long instanceId) {
-        super(transport, database, connection, instanceId, param.getZoneId());
-        this.rawSql = sql;
-        this.param = param;
+        super(connection, param, database, transport, instanceId, new StmtInfo(sql), new AtomicInteger());
     }
 
     public AbsWSPreparedStatement(Transport transport,
@@ -71,36 +60,7 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
                                   String sql,
                                   Long instanceId,
                                   Stmt2PrepareResp prepareResp) {
-        super(transport, database, connection, instanceId, param.getZoneId());
-        this.rawSql = sql;
-        this.param = param;
-
-        reqId = prepareResp.getReqId();
-        stmtId = prepareResp.getStmtId();
-        isInsert = prepareResp.isInsert();
-        if (isInsert){
-            fields = prepareResp.getFields();
-            if (!fields.isEmpty()){
-                precision = fields.get(0).getPrecision();
-            }
-            for (int i = 0; i < fields.size(); i++){
-                Field field = fields.get(i);
-                if (field.getBindType() == FieldBindType.TAOS_FIELD_TBNAME.getValue()){
-                    toBeBindTableNameIndex = i;
-                }
-                if (field.getBindType() == FieldBindType.TAOS_FIELD_TAG.getValue()){
-                    toBeBindTagCount++;
-                    tagTypeList.add((int) field.getFieldType());
-                }
-                if (field.getBindType() == FieldBindType.TAOS_FIELD_COL.getValue()){
-                    toBeBindColCount++;
-                    colTypeList.add((int) field.getFieldType());
-                }
-            }
-        } else if (prepareResp.getFieldsCount() > 0){
-            toBeBindColCount = prepareResp.getFieldsCount();
-        }
-
+        super(connection, param, database, transport, instanceId, new StmtInfo(prepareResp, sql), new AtomicInteger());
         this.tableInfo = TableInfo.getEmptyTableInfo();
     }
 
@@ -125,17 +85,17 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
         if (isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
 
-        if (isInsert){
+        if (stmtInfo.isInsert()){
             executeUpdate();
         } else {
             executeQuery();
         }
 
-        return !isInsert;
+        return !stmtInfo.isInsert();
     }
     @Override
     public ResultSet executeQuery() throws SQLException {
-        if (this.isInsert){
+        if (this.stmtInfo.isInsert()){
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "The query SQL must be prepared.");
         }
 
@@ -145,7 +105,7 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
 
         // only support jdbc standard bind api
         if (colOrderedMap.isEmpty()){
-            return executeQuery(this.rawSql);
+            return executeQuery(this.stmtInfo.getSql());
         }
 
         onlyBindCol();
@@ -155,7 +115,8 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
 
         this.executeBatchImpl();
 
-        Request request = RequestFactory.generateUseResult(stmtId, reqId);
+        long reqId = ReqId.getReqID();
+        Request request = RequestFactory.generateUseResult(stmtInfo.getStmtId(), reqId);
         ResultResp resp = (ResultResp) transport.send(request);
         if (Code.SUCCESS.getCode() != resp.getCode()) {
             throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
@@ -168,15 +129,15 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
 
     @Override
     public int executeUpdate() throws SQLException {
-        if (!this.isInsert){
+        if (!this.stmtInfo.isInsert()){
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "The insert SQL must be prepared.");
         }
 
-        if (fields.isEmpty()){
-            return this.executeUpdate(this.rawSql);
+        if (stmtInfo.getFields().isEmpty()){
+            return this.executeUpdate(this.stmtInfo.getSql());
         }
 
-        if (colOrderedMap.size() == fields.size()){
+        if (colOrderedMap.size() == stmtInfo.getFields().size()){
             // bind all
             bindAllColWithStdApi();
         } else{
@@ -691,10 +652,10 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
     private void bindAllColWithStdApi() throws SQLException {
         if (isTableInfoEmpty()) {
             // first time, bind all
-            bindAllToTableInfo(fields, colOrderedMap, tableInfo);
+            bindAllToTableInfo(stmtInfo.getFields(), colOrderedMap, tableInfo);
         } else {
-            if (toBeBindTableNameIndex >= 0) {
-                Object tbname = colOrderedMap.get(toBeBindTableNameIndex + 1).getData();
+            if (stmtInfo.getToBeBindTableNameIndex() >= 0) {
+                Object tbname = colOrderedMap.get(stmtInfo.getToBeBindTableNameIndex() + 1).getData();
                 ByteBuffer tempTableName;
                 if (tbname instanceof String){
                     tempTableName = ByteBuffer.wrap(((String)tbname).getBytes());
@@ -715,7 +676,7 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
                     // different table, flush tableInfo and create a new one
                     tableInfoMap.put(tableInfo.getTableName(), tableInfo);
                     tableInfo = TableInfo.getEmptyTableInfo();
-                    bindAllToTableInfo(fields, colOrderedMap, tableInfo);
+                    bindAllToTableInfo(stmtInfo.getFields(), colOrderedMap, tableInfo);
                 }
             } else {
                 // must same table
@@ -732,8 +693,8 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
                 list.add(col.getData());
 
                 int type = col.getType();
-                if (isInsert){
-                    type = colTypeList.get(col.getIndex() - 1);
+                if (stmtInfo.isInsert()){
+                    type = stmtInfo.getColTypeList().get(col.getIndex() - 1);
                 }
                 tableInfo.getDataList().add(new ColumnInfo(entry.getKey(), list, type));
             }
@@ -749,13 +710,13 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
             return;
         }
 
-        if (isInsert && tag.size() != toBeBindTagCount){
+        if (stmtInfo.isInsert() && tag.size() != stmtInfo.getToBeBindTagCount()){
             throw new SQLException("tag size is not equal to toBeBindTagCount");
         }
         while (!tag.isEmpty()) {
             ColumnInfo columnInfo = tag.poll();
-            if (isInsert && columnInfo.getType() != tagTypeList.get(columnInfo.getIndex())){
-                tableInfo.getTagInfo().add(new ColumnInfo(columnInfo.getIndex(), columnInfo.getDataList(), tagTypeList.get(columnInfo.getIndex())));
+            if (stmtInfo.isInsert() && columnInfo.getType() != stmtInfo.getTagTypeList().get(columnInfo.getIndex())){
+                tableInfo.getTagInfo().add(new ColumnInfo(columnInfo.getIndex(), columnInfo.getDataList(), stmtInfo.getTagTypeList().get(columnInfo.getIndex())));
             } else {
                 tableInfo.getTagInfo().add(columnInfo);
             }
@@ -765,7 +726,7 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
     @Override
     // Only support batch insert
     public void addBatch() throws SQLException {
-        if (colOrderedMap.size() == fields.size()){
+        if (colOrderedMap.size() == stmtInfo.getFields().size()){
             // jdbc standard bind api
             bindAllColWithStdApi();
             return;
@@ -798,8 +759,9 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
     @Override
     public void close() throws SQLException {
         if (!isClosed()) {
-            if (transport.isConnected() && stmtId != 0) {
-                Request close = RequestFactory.generateClose(stmtId, reqId);
+            if (transport.isConnected() && stmtInfo.getStmtId() != 0) {
+                long reqId = ReqId.getReqID();
+                Request close = RequestFactory.generateClose(stmtInfo.getStmtId(), reqId);
                 transport.send(close);
             }
             super.close();
@@ -1066,8 +1028,8 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
 
     public <T> void setValueImpl(int columnIndex, List<T> list, int type, int bytes) throws SQLException {
         List<Object> listObject = new ArrayList<>(list);
-        if (isInsert){
-            type = colTypeList.get(columnIndex);
+        if (stmtInfo.isInsert()){
+            type = stmtInfo.getColTypeList().get(columnIndex);
         }
         ColumnInfo p = new ColumnInfo(columnIndex, listObject, type);
         colListQueue.add(p);
@@ -1081,8 +1043,8 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
 
         while (!tag.isEmpty()){
             ColumnInfo columnInfo = tag.poll();
-            if (isInsert && columnInfo.getType() != tagTypeList.get(columnInfo.getIndex())){
-                tableInfo.getTagInfo().add(new ColumnInfo(columnInfo.getIndex(), columnInfo.getDataList(), tagTypeList.get(columnInfo.getIndex())));
+            if (stmtInfo.isInsert() && columnInfo.getType() != stmtInfo.getTagTypeList().get(columnInfo.getIndex())){
+                tableInfo.getTagInfo().add(new ColumnInfo(columnInfo.getIndex(), columnInfo.getDataList(), stmtInfo.getTagTypeList().get(columnInfo.getIndex())));
             } else {
                 tableInfo.getTagInfo().add(columnInfo);
             }
@@ -1090,8 +1052,8 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
         }
         while (!colListQueue.isEmpty()) {
             ColumnInfo columnInfo = colListQueue.poll();
-            if (isInsert && columnInfo.getType() != colTypeList.get(columnInfo.getIndex())){
-                tableInfo.getDataList().add(new ColumnInfo(columnInfo.getIndex(), columnInfo.getDataList(), colTypeList.get(columnInfo.getIndex())));
+            if (stmtInfo.isInsert() && columnInfo.getType() != stmtInfo.getColTypeList().get(columnInfo.getIndex())){
+                tableInfo.getDataList().add(new ColumnInfo(columnInfo.getIndex(), columnInfo.getDataList(), stmtInfo.getColTypeList().get(columnInfo.getIndex())));
             } else {
                 tableInfo.getDataList().add(columnInfo);
             }
@@ -1116,21 +1078,23 @@ public class AbsWSPreparedStatement extends WSStatement implements TaosPrepareSt
         }
 
         ByteBuf rawBlock;
+        long reqId = ReqId.getReqID();
         try {
-            rawBlock = SerializeBlock.getStmt2BindBlock(reqId, stmtId, tableInfoMap, toBeBindTableNameIndex, toBeBindTagCount, toBeBindColCount, precision);
+            rawBlock = SerializeBlock.getStmt2BindBlock(tableInfoMap, stmtInfo, reqId);
         } finally {
             this.clearParameters();
         }
 
         // bind
         Stmt2Resp bindResp = (Stmt2Resp) transport.send(Action.STMT2_BIND.getAction(),
-                reqId, rawBlock);
+                reqId, rawBlock, false);
         if (Code.SUCCESS.getCode() != bindResp.getCode()) {
             throw TSDBError.createSQLException(bindResp.getCode(), "(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
         }
 
         // execute
-        Request request = RequestFactory.generateExec(stmtId, reqId);
+        reqId = ReqId.getReqID();
+        Request request = RequestFactory.generateExec(stmtInfo.getStmtId(), reqId);
         Stmt2ExecResp resp = (Stmt2ExecResp) transport.send(request);
         if (Code.SUCCESS.getCode() != resp.getCode()) {
             throw TSDBError.createSQLException(resp.getCode(), "(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
