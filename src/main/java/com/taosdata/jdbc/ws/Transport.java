@@ -83,14 +83,14 @@ public class Transport implements AutoCloseable {
         this.timeout = timeout;
     }
 
-    private void reconnect() throws SQLException {
+    private void reconnect(boolean isTmq) throws SQLException {
         synchronized (this) {
             if (isConnected()){
                 return;
             }
 
             for (int i = 0; i < clientArr.size() && this.connectionParam.isEnableAutoConnect(); i++) {
-                boolean reconnected = reconnectCurNode();
+                boolean reconnected = reconnectCurNode(isTmq);
                 if (reconnected) {
                     reconnectCount.incrementAndGet();
                     log.debug("reconnect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri.toString()));
@@ -133,7 +133,7 @@ public class Transport implements AutoCloseable {
             clientArr.get(currentNodeIndex).send(reqString);
         } catch (WebsocketNotConnectedException e) {
             tmqRethrowConnectionCloseException();
-            reconnect();
+            reconnect(false);
             try {
                 clientArr.get(currentNodeIndex).send(reqString);
             }catch (Exception ex){
@@ -184,7 +184,7 @@ public class Transport implements AutoCloseable {
             clientArr.get(currentNodeIndex).send(buffer);
         } catch (WebsocketNotConnectedException e) {
             tmqRethrowConnectionCloseException();
-            reconnect();
+            reconnect(false);
             try {
                 Utils.retainByteBuf(buffer);
                 clientArr.get(currentNodeIndex).send(buffer);
@@ -228,7 +228,7 @@ public class Transport implements AutoCloseable {
             Utils.retainByteBuf(buffer);
             clientArr.get(currentNodeIndex).send(buffer);
         } catch (WebsocketNotConnectedException e) {
-            reconnect();
+            reconnect(false);
             try {
                 Utils.retainByteBuf(buffer);
                 clientArr.get(currentNodeIndex).send(buffer);
@@ -259,7 +259,7 @@ public class Transport implements AutoCloseable {
             clientArr.get(currentNodeIndex).send(buffer);
         } catch (WebsocketNotConnectedException e) {
             tmqRethrowConnectionCloseException();
-            reconnect();
+            reconnect(false);
             try {
                 Utils.retainByteBuf(buffer);
                 clientArr.get(currentNodeIndex).send(buffer);
@@ -334,7 +334,7 @@ public class Transport implements AutoCloseable {
             clientArr.get(currentNodeIndex).send(request.toString());
         } catch (WebsocketNotConnectedException e) {
             tmqRethrowConnectionCloseException();
-            reconnect();
+            reconnect(false);
             try {
                 clientArr.get(currentNodeIndex).send(request.toString());
             }catch (Exception ex){
@@ -424,27 +424,18 @@ public class Transport implements AutoCloseable {
         }
     }
 
-    public boolean doReconnectCurNode() throws SQLException {
-        boolean reconnected = false;
-        for (int retryTimes = 0; retryTimes < connectionParam.getReconnectRetryCount(); retryTimes++) {
-            try {
-                reconnected = clientArr.get(currentNodeIndex).reconnectBlocking();
-                if (reconnected) {
-                    break;
-                }
-                Thread.sleep(connectionParam.getReconnectIntervalMs());
-            } catch (Exception e) {
-                log.error("try connect remote server failed!", e);
-            }
-        }
-        return reconnected;
+    public void reconnectTmq() throws SQLException {
+        reconnect(true);
     }
-
-    public boolean reconnectCurNode() throws SQLException {
+    private boolean reconnectCurNode(boolean isTmq) throws SQLException {
         for (int retryTimes = 0; retryTimes < connectionParam.getReconnectRetryCount(); retryTimes++) {
             try {
                 boolean reconnected = clientArr.get(currentNodeIndex).reconnectBlocking();
                 if (reconnected) {
+                    if (isTmq){
+                        // tmq do not send connect req
+                        return true;
+                    }
                     // send con msgs
                     ConnectReq connectReq = new ConnectReq(connectionParam);
 

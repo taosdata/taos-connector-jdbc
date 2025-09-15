@@ -147,8 +147,30 @@ public class WSLoadBlanceTest {
         }
     }
 
+    @Description("query")
+    @Test
+    public void queryIpv6() throws Exception  {
+        Properties properties = new Properties();
+        String url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
+        if (url == null) {
+            url = "jdbc:TAOS-WS://[::1]:6042,[::1]:6041/?user=root&password=taosdata";
+        } else {
+            url += "?user=root&password=taosdata";
+        }
+
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_INTERVAL_MS, "2000");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_RETRY_COUNT, "3");
+
+        try (Connection connection = DriverManager.getConnection(url, properties);
+             Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery("select 1")) {
+        }
+    }
+
     @BeforeClass
     static public void before() throws SQLException, InterruptedException, IOException, URISyntaxException {
+        TestUtils.runInMain();
         System.setProperty("ENV_TAOS_JDBC_TEST", "test");
         String url;
         url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
