@@ -7,11 +7,16 @@ import java.util.concurrent.*;
 public class TaosAdapterMock {
     private final String targetHost;
     private final int targetPort;
-    private final int listenPort;
+    private int listenPort;
     private volatile boolean isRunning = false;
     private ServerSocket serverSocket;
     private ExecutorService executor;
     private final ConcurrentHashMap<Socket, Boolean> activeConnections = new ConcurrentHashMap<>();
+
+    public TaosAdapterMock() {
+        this.targetHost = "localhost";
+        this.targetPort = 6041;
+    }
 
     public TaosAdapterMock(int listenPort) {
         this.targetHost = "localhost";
@@ -19,12 +24,21 @@ public class TaosAdapterMock {
         this.listenPort = listenPort;
     }
 
+    public int getListenPort() {
+        return listenPort;
+    }
+
     public synchronized void start() throws IOException {
         if (isRunning) {
             throw new IllegalStateException("Service is already running");
         }
 
-        serverSocket = new ServerSocket(listenPort);
+        serverSocket = new ServerSocket();
+        serverSocket.bind(new java.net.InetSocketAddress(listenPort));
+        if (listenPort == 0){
+            listenPort = serverSocket.getLocalPort();
+        }
+
         executor = Executors.newCachedThreadPool();
         isRunning = true;
 

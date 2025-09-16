@@ -251,7 +251,7 @@ public class WSClient implements AutoCloseable {
     public void closeBlocking() {
         this.close();
     }
-    public static WSClient getInstance(ConnectionParam params, WSFunction function, Transport transport) throws SQLException {
+    public static WSClient getInstance(ConnectionParam params, int endpointIndex, WSFunction function, Transport transport) throws SQLException {
         if (Strings.isNullOrEmpty(function.getFunction())) {
             throw new SQLException("websocket url error");
         }
@@ -260,15 +260,15 @@ public class WSClient implements AutoCloseable {
             protocol = "wss";
         }
         String port = "";
-        if (null != params.getPort()) {
-            port = ":" + params.getPort();
+        if (params.getEndpoints().get(endpointIndex).getPort() != 0) {
+            port = ":" + params.getEndpoints().get(endpointIndex).getPort();
         }
 
         String wsFunction = "/ws";
         if (function.equals(WSFunction.TMQ)){
             wsFunction = "/rest/tmq";
         }
-        String loginUrl = protocol + "://" + params.getHost() + port + wsFunction;
+        String loginUrl = protocol + "://" + params.getEndpoints().get(endpointIndex).getHost() + port + wsFunction;
 
         if (null != params.getCloudToken()) {
             loginUrl = loginUrl + "?token=" + params.getCloudToken();

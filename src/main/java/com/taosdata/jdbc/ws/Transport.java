@@ -15,10 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT;
@@ -28,13 +25,14 @@ import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT;
  */
 public class Transport implements AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(Transport.class);
+    private static final boolean isTest = "test".equalsIgnoreCase(System.getProperty("ENV_TAOS_JDBC_TEST"));
 
     public static final int DEFAULT_MESSAGE_WAIT_TIMEOUT = 60_000;
 
     public static final int TSDB_CODE_RPC_NETWORK_UNAVAIL = 0x0B;
     public static final int TSDB_CODE_RPC_SOMENODE_NOT_CONNECTED = 0x20;
 
-    private AtomicInteger reconnectCount = new AtomicInteger(0);
+    private final AtomicInteger reconnectCount = new AtomicInteger(0);
 
     private final ArrayList<WSClient> clientArr = new ArrayList<>();
     private final InFlightRequest inFlightRequest;
@@ -45,7 +43,7 @@ public class Transport implements AutoCloseable {
     private final WSFunction wsFunction;
     public static final byte[] EMPTY_BYTE_ARRAY = new byte[0];
 
-    private int currentNodeIndex = 0;
+    private int currentNodeIndex;
 
     protected Transport() {
         this.inFlightRequest = null;
@@ -55,12 +53,19 @@ public class Transport implements AutoCloseable {
     public Transport(WSFunction function,
                      ConnectionParam param,
                      InFlightRequest inFlightRequest) throws SQLException {
-        WSClient master = WSClient.getInstance(param, function, this);
+        // master slave mode
         WSClient slave = WSClient.getSlaveInstance(param, function, this);
-
-        this.clientArr.add(master);
         if (slave != null){
+            WSClient master = WSClient.getInstance(param, 0, function, this);
+            this.clientArr.add(master);
             this.clientArr.add(slave);
+            currentNodeIndex = 0;
+        } else {
+            for (int i = 0; i < param.getEndpoints().size(); i++){
+                WSClient client = WSClient.getInstance(param, i, function, this);
+                this.clientArr.add(client);
+            }
+            currentNodeIndex = getRandomClientIndex();
         }
 
         this.inFlightRequest = inFlightRequest;
@@ -78,14 +83,14 @@ public class Transport implements AutoCloseable {
         this.timeout = timeout;
     }
 
-    private void reconnect() throws SQLException {
+    private void reconnect(boolean isTmq) throws SQLException {
         synchronized (this) {
             if (isConnected()){
                 return;
             }
 
             for (int i = 0; i < clientArr.size() && this.connectionParam.isEnableAutoConnect(); i++) {
-                boolean reconnected = reconnectCurNode();
+                boolean reconnected = reconnectCurNode(isTmq);
                 if (reconnected) {
                     reconnectCount.incrementAndGet();
                     log.debug("reconnect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri.toString()));
@@ -128,7 +133,7 @@ public class Transport implements AutoCloseable {
             clientArr.get(currentNodeIndex).send(reqString);
         } catch (WebsocketNotConnectedException e) {
             tmqRethrowConnectionCloseException();
-            reconnect();
+            reconnect(false);
             try {
                 clientArr.get(currentNodeIndex).send(reqString);
             }catch (Exception ex){
@@ -179,7 +184,7 @@ public class Transport implements AutoCloseable {
             clientArr.get(currentNodeIndex).send(buffer);
         } catch (WebsocketNotConnectedException e) {
             tmqRethrowConnectionCloseException();
-            reconnect();
+            reconnect(false);
             try {
                 Utils.retainByteBuf(buffer);
                 clientArr.get(currentNodeIndex).send(buffer);
@@ -223,7 +228,7 @@ public class Transport implements AutoCloseable {
             Utils.retainByteBuf(buffer);
             clientArr.get(currentNodeIndex).send(buffer);
         } catch (WebsocketNotConnectedException e) {
-            reconnect();
+            reconnect(false);
             try {
                 Utils.retainByteBuf(buffer);
                 clientArr.get(currentNodeIndex).send(buffer);
@@ -254,7 +259,7 @@ public class Transport implements AutoCloseable {
             clientArr.get(currentNodeIndex).send(buffer);
         } catch (WebsocketNotConnectedException e) {
             tmqRethrowConnectionCloseException();
-            reconnect();
+            reconnect(false);
             try {
                 Utils.retainByteBuf(buffer);
                 clientArr.get(currentNodeIndex).send(buffer);
@@ -329,7 +334,7 @@ public class Transport implements AutoCloseable {
             clientArr.get(currentNodeIndex).send(request.toString());
         } catch (WebsocketNotConnectedException e) {
             tmqRethrowConnectionCloseException();
-            reconnect();
+            reconnect(false);
             try {
                 clientArr.get(currentNodeIndex).send(request.toString());
             }catch (Exception ex){
@@ -369,7 +374,7 @@ public class Transport implements AutoCloseable {
     }
 
     public void checkConnection(int connectTimeout) throws SQLException {
-        if (WSConnection.g_FirstConnection && clientArr.size() > 1) {
+        if (WSConnection.g_FirstConnection.compareAndSet(true, false) && !StringUtils.isEmpty(connectionParam.getSlaveClusterHost())) {
             // test all nodes, if connection failed, throw exception
             for (WSClient wsClient : clientArr){
                 if (!wsClient.connectBlocking()) {
@@ -388,12 +393,18 @@ public class Transport implements AutoCloseable {
                 }
             }
         } else {
-            if (!clientArr.get(currentNodeIndex).connectBlocking()) {
-                close();
-                throw TSDBError.createSQLException(ERROR_CONNECTION_TIMEOUT,
-                        "can't create connection with server within: " + connectTimeout + " milliseconds");
+            // test all nodes, until one node connected success
+            for (int i = 0; i < clientArr.size(); i++){
+                currentNodeIndex = currentNodeIndex % clientArr.size();
+                if (clientArr.get(currentNodeIndex).connectBlocking()) {
+                    log.debug("connect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri.toString()));
+                    return;
+                }
+                currentNodeIndex = (currentNodeIndex + 1) % clientArr.size();
             }
-            log.debug("connect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri.toString()));
+            close();
+            throw TSDBError.createSQLException(ERROR_CONNECTION_TIMEOUT,
+                    "can't create connection with any server within: " + connectTimeout + " milliseconds");
         }
     }
 
@@ -413,27 +424,18 @@ public class Transport implements AutoCloseable {
         }
     }
 
-    public boolean doReconnectCurNode() throws SQLException {
-        boolean reconnected = false;
-        for (int retryTimes = 0; retryTimes < connectionParam.getReconnectRetryCount(); retryTimes++) {
-            try {
-                reconnected = clientArr.get(currentNodeIndex).reconnectBlocking();
-                if (reconnected) {
-                    break;
-                }
-                Thread.sleep(connectionParam.getReconnectIntervalMs());
-            } catch (Exception e) {
-                log.error("try connect remote server failed!", e);
-            }
-        }
-        return reconnected;
+    public void reconnectTmq() throws SQLException {
+        reconnect(true);
     }
-
-    public boolean reconnectCurNode() throws SQLException {
+    private boolean reconnectCurNode(boolean isTmq) throws SQLException {
         for (int retryTimes = 0; retryTimes < connectionParam.getReconnectRetryCount(); retryTimes++) {
             try {
                 boolean reconnected = clientArr.get(currentNodeIndex).reconnectBlocking();
                 if (reconnected) {
+                    if (isTmq){
+                        // tmq do not send connect req
+                        return true;
+                    }
                     // send con msgs
                     ConnectReq connectReq = new ConnectReq(connectionParam);
 
@@ -463,6 +465,12 @@ public class Transport implements AutoCloseable {
         return clientArr.get(currentNodeIndex).isOpen();
     }
 
+    private int getRandomClientIndex(){
+        if (isTest) {
+            return 0;
+        }
+        return ThreadLocalRandom.current().nextInt(clientArr.size());
+    }
     public final ConnectionParam getConnectionParam() {
         return connectionParam;
     }

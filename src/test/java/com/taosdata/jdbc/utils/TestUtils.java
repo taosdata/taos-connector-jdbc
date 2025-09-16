@@ -16,16 +16,18 @@ public class TestUtils {
         return temp +  counter.incrementAndGet();
     }
 
-    public static void waitTransactionDone(Connection connection) throws SQLException, InterruptedException{
+    public static void waitTransactionDone(Connection connection) {
         while (true) {
-            try (Statement statement = connection.createStatement()){
-                ResultSet resultSet = statement.executeQuery("show transactions");
+            try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("show transactions")){
                 if (resultSet.next()) {
                     continue;
                 }
                 break;
             } catch (SQLException e) {
-                Thread.sleep(1000);
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ex) {
+                }
             }
         }
     }

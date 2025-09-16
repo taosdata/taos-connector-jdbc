@@ -12,10 +12,14 @@ import com.taosdata.jdbc.rs.RestfulDriver;
 import com.taosdata.jdbc.utils.HttpClientPoolUtil;
 import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.StringUtils;
+import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.FutureResponse;
 import com.taosdata.jdbc.ws.InFlightRequest;
 import com.taosdata.jdbc.ws.Transport;
-import com.taosdata.jdbc.ws.entity.*;
+import com.taosdata.jdbc.ws.entity.Code;
+import com.taosdata.jdbc.ws.entity.CommonResp;
+import com.taosdata.jdbc.ws.entity.Request;
+import com.taosdata.jdbc.ws.entity.Response;
 import com.taosdata.jdbc.ws.schemaless.ConnReq;
 import com.taosdata.jdbc.ws.schemaless.InsertReq;
 import com.taosdata.jdbc.ws.schemaless.SchemalessAction;
@@ -118,7 +122,7 @@ public class SchemalessWriter implements AutoCloseable {
             properties.setProperty(TSDBDriver.PROPERTY_KEY_USE_SSL, String.valueOf(useSSL));
         ConnectionParam param = ConnectionParam.getParam(properties);
 
-        this.init(param.getHost(), param.getPort(), param.getUser(), param.getPassword(), param.getDatabase(), param.getCloudToken(), t, param.isUseSsl());
+        this.init(param.getEndpoints().get(0).getHost(), String.valueOf(param.getEndpoints().get(0).getPort()), param.getUser(), param.getPassword(), param.getDatabase(), param.getCloudToken(), t, param.isUseSsl());
     }
 
     public SchemalessWriter(String host, String port, String cloudToken, String dbName, Boolean useSSL) throws SQLException {
@@ -144,7 +148,7 @@ public class SchemalessWriter implements AutoCloseable {
             this.type = ConnectionType.WS;
             int timeout = Integer.parseInt(HttpClientPoolUtil.DEFAULT_SOCKET_TIMEOUT);
             int connectTime = Integer.parseInt(HttpClientPoolUtil.DEFAULT_CONNECT_TIMEOUT);
-            ConnectionParam param = new ConnectionParam.Builder(host, port)
+            ConnectionParam param = new ConnectionParam.Builder(Utils.getEndpoints(host, port))
                     .setUserAndPassword(user, password)
                     .setDatabase(dbName)
                     .setCloudToken(cloudToken)

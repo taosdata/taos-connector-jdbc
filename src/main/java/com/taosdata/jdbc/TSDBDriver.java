@@ -4,7 +4,6 @@ import com.taosdata.jdbc.utils.StringUtils;
 
 import java.sql.*;
 import java.util.Properties;
-import java.util.StringTokenizer;
 import java.util.logging.Logger;
 
 /**
@@ -47,6 +46,11 @@ public class TSDBDriver extends AbstractDriver {
      * passed to the driver.
      */
     public static final String PROPERTY_KEY_PORT = "port";
+    /**
+     * Key used to retrieve the endpoints value from the properties instance passed
+     * to the driver.
+     */
+    public static final String PROPERTY_KEY_ENDPOINTS = "endpoints";
     /**
      * Key used to retrieve the database value from the properties instance passed
      * to the driver.

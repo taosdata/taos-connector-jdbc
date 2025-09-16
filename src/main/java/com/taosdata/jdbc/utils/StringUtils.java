@@ -3,8 +3,11 @@ package com.taosdata.jdbc.utils;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
+import com.taosdata.jdbc.common.Endpoint;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 import java.util.StringTokenizer;
 
@@ -34,60 +37,67 @@ public class StringUtils {
         return true;
     }
 
-    public static Properties parseHostPort(String hostPortDb, boolean isNative) throws SQLException {
-        Properties properties = new Properties();
+    public static List<Endpoint> parseEndpoints(String endpointsFullStr, boolean isNative) throws SQLException {
+        if (StringUtils.isEmpty(endpointsFullStr)) {
+            List<Endpoint> result = new ArrayList<>(1);
+            Endpoint endpoint = new Endpoint("localhost", 0, false);
+            result.add(endpoint);
+            return result;
+        }
 
-        // parse host and port
-        String host = hostPortDb;
-        String port = null;
+        String[] endpoints = endpointsFullStr.split(",");
+        List<Endpoint> result = new ArrayList<>(endpoints.length);
 
-        // ipv6 address
-        if (hostPortDb.startsWith("[")) {
-            int endBracket = hostPortDb.indexOf(']');
-            if (endBracket != -1) {
-                // extract host
-                if (isNative){
-                    host = hostPortDb.substring(1, endBracket);
+        for (int i = 0; i < endpoints.length; i++) {
+            // parse host and port
+            String endpointStr = endpoints[i];
+            String host = "localhost";
+            String port = "0";
+
+            // ipv6 address
+            if (endpointStr.startsWith("[")) {
+                int endBracket = endpointStr.indexOf(']');
+                if (endBracket != -1) {
+                    // extract host
+                    if (isNative) {
+                        host = endpointStr.substring(1, endBracket);
+                    } else {
+                        host = endpointStr.substring(0, endBracket + 1);
+                    }
+
+                    // if have port
+                    if (endBracket + 1 < endpointStr.length() &&
+                            endpointStr.charAt(endBracket + 1) == ':') {
+                        port = endpointStr.substring(endBracket + 2);
+                    }
                 } else {
-                    host = hostPortDb.substring(0, endBracket + 1);
+                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "Invalid IPv6 address: " + endpointStr);
                 }
 
-                // if have port
-                if (endBracket + 1 < hostPortDb.length() &&
-                        hostPortDb.charAt(endBracket + 1) == ':') {
-                    port = hostPortDb.substring(endBracket + 2);
+                // handle Scope Identifier like fe80::1%eth0
+                if (host.contains("%")) {
+                    host = host.replace("%", "%25");
                 }
-            } else {
-                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "Invalid IPv6 address: " + hostPortDb);
+
+                result.add(new Endpoint(host, Integer.parseInt(port), true));
+            }
+            // ipv4 address or hostname
+            else {
+                // find last ':'
+                int lastColon = endpointStr.lastIndexOf(':');
+
+                if (lastColon != -1) {
+                    host = endpointStr.substring(0, lastColon);
+                    port = endpointStr.substring(lastColon + 1);
+                } else {
+                    host = endpointStr;
+                }
+                result.add(new Endpoint(host, Integer.parseInt(port), false));
             }
         }
-        // ipv4 address or hostname
-        else {
-            // find last ':'
-            int lastColon = hostPortDb.lastIndexOf(':');
 
-            if (lastColon != -1) {
-                host = hostPortDb.substring(0, lastColon);
-                port = hostPortDb.substring(lastColon + 1);
-            }
-        }
-
-        // handle Scope Identifier like fe80::1%eth0
-        if (host.contains("%")) {
-            host = host.replace("%", "%25");
-        }
-
-        // set property
-        if (!host.trim().isEmpty()) {
-            properties.setProperty(TSDBDriver.PROPERTY_KEY_HOST, host);
-        }
-        if (port != null && !port.trim().isEmpty()) {
-            properties.setProperty(TSDBDriver.PROPERTY_KEY_PORT, port);
-        }
-
-        return properties;
+        return result;
     }
-
     public static Properties parseUrl(String url, Properties defaults, boolean isNative) throws SQLException {
         Properties urlProps = (defaults != null) ? defaults : new Properties();
         if (StringUtils.isEmpty(url)) {
@@ -133,10 +143,7 @@ public class StringUtils {
             hostPortDb = hostPortDb.substring(0, dbStart);
         }
 
-        // parse host and port
-        Properties hostPortProps = parseHostPort(hostPortDb, isNative);
-        urlProps.putAll(hostPortProps);
-
+        urlProps.setProperty(TSDBDriver.PROPERTY_KEY_ENDPOINTS, hostPortDb);
         return urlProps;
     }
 

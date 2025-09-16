@@ -24,7 +24,7 @@ public class ConsumerWithDiffType336Test {
     private static final String superTable = "tmq_type";
     private static Connection connection;
     private static Statement statement;
-    private static String[] topics = {"topic_ws_bean_diff_type"};
+    private static String[] topics = {"topic_" + dbName};
     private static byte[] expectedBinary = new byte[]{0x39, 0x38, 0x66, 0x34, 0x36, 0x33};
     private void insertOneRow() throws SQLException {
         statement.executeUpdate("insert into " + dbName + ".ct0 values(now, 1, 100, 2.2, 2.3, '1', 12, 2, true, '一', 'POINT(1 1)', '\\x0101', 1.2234, now, 255, 65535, 4294967295, 18446744073709551615, -12345678901234567890123.4567890000, 12345678.901234)");
