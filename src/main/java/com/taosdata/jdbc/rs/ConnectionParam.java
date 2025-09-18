@@ -358,7 +358,7 @@ public class ConnectionParam {
             boolean isIpv6 = host != null && host.startsWith("[") && host.endsWith("]");
             endpoints.add(new Endpoint(host, port == null ? 0 : Integer.parseInt(port), isIpv6));
         } else {
-            endpoints = StringUtils.parseEndpoints(endpointStr, false);
+            endpoints = StringUtils.parseEndpoints(endpointStr);
         }
 
         String database = properties.containsKey(TSDBDriver.PROPERTY_KEY_DBNAME)

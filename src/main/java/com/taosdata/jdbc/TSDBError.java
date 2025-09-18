@@ -10,6 +10,7 @@ import java.util.concurrent.TimeoutException;
 
 public class TSDBError {
     private static final Map<Integer, String> TSDBErrorMap = new HashMap<>();
+    private TSDBError(){};
 
     static {
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "connection already closed");
@@ -70,11 +71,15 @@ public class TSDBError {
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_CONSUMER_CREATE_ERROR, "consumer create error");
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_SEEK_OFFSET, "seek offset must not be a negative number");
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_TMQ_VGROUP_NOT_FOUND, "vGroup not found in result set");
+
+        // websocket
+        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_FW_WRITE_ERROR, "fast writer write error");
+        TSDBErrorMap.put(TSDBErrorNumbers.ERROR_WS_MSG_NEED_RESEND, "the msg need resend after reconnect");
     }
 
     public static SQLException createSQLException(int errorCode) {
         String message;
-        if (TSDBErrorNumbers.contains(errorCode))
+        if (TSDBErrorMap.containsKey(errorCode))
             message = TSDBErrorMap.get(errorCode);
         else
             message = TSDBErrorMap.get(TSDBErrorNumbers.ERROR_UNKNOWN);
@@ -119,7 +124,7 @@ public class TSDBError {
 
     public static IllegalArgumentException createIllegalArgumentException(int errorCode) {
         String message;
-        if (TSDBErrorNumbers.contains(errorCode))
+        if (TSDBErrorMap.containsKey(errorCode))
             message = TSDBErrorMap.get(errorCode);
         else
             message = TSDBErrorMap.get(TSDBErrorNumbers.ERROR_UNKNOWN);
@@ -129,7 +134,7 @@ public class TSDBError {
 
     public static RuntimeException createRuntimeException(int errorCode) {
         String message;
-        if (TSDBErrorNumbers.contains(errorCode))
+        if (TSDBErrorMap.containsKey(errorCode))
             message = TSDBErrorMap.get(errorCode);
         else
             message = TSDBErrorMap.get(TSDBErrorNumbers.ERROR_UNKNOWN);
@@ -143,7 +148,7 @@ public class TSDBError {
 
     public static IllegalStateException createIllegalStateException(int errorCode) {
         String message;
-        if (TSDBErrorNumbers.contains(errorCode))
+        if (TSDBErrorMap.containsKey(errorCode))
             message = TSDBErrorMap.get(errorCode);
         else
             message = TSDBErrorMap.get(TSDBErrorNumbers.ERROR_UNKNOWN);

@@ -4,6 +4,7 @@ import com.taosdata.jdbc.AbstractConnection;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.ReqId;
+import com.taosdata.jdbc.utils.StmtUtils;
 import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.entity.Action;
 import com.taosdata.jdbc.ws.entity.Code;
@@ -19,10 +20,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class WSRetryableStmt extends WSStatement {
     private static final Logger log = LoggerFactory.getLogger(WSRetryableStmt.class);
 
+    // Operation type constants
+    private static final int OPERATION_TYPE_WRITE = 1;
+    private static final int OPERATION_TYPE_QUERY = 2;
+
     protected final ConnectionParam param;
     protected StmtInfo stmtInfo;
     protected volatile SQLException lastError = null;
     protected final AtomicInteger batchInsertedRows;
+
     public WSRetryableStmt(AbstractConnection connection,
                            ConnectionParam param,
                            String database,
@@ -37,32 +43,9 @@ public class WSRetryableStmt extends WSStatement {
     }
 
     public void initStmt(boolean retry) throws SQLException {
-        long tmpReqID = ReqId.getReqID();
-        Request request = RequestFactory.generateInit(tmpReqID, true, true);
-        Stmt2Resp resp = (Stmt2Resp) transport.send(request);
-        if (Code.SUCCESS.getCode() != resp.getCode()) {
-            throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
-        }
-        long tmpStmtId = resp.getStmtId();
-        stmtInfo.setStmtId(tmpStmtId);
-
-        tmpReqID = ReqId.getReqID();
-        Request prepare = RequestFactory.generatePrepare(tmpStmtId, tmpReqID, stmtInfo.getSql());
-        long localReconnectCount = transport.getReconnectCount();
-
-        Stmt2PrepareResp prepareResp = (Stmt2PrepareResp) transport.send(prepare, false);
-        if (localReconnectCount != transport.getReconnectCount() && retry) {
-            // after reconnect, need reprepare
-            initStmt(false);
-            return;
-        }
-
-        if (Code.SUCCESS.getCode() != prepareResp.getCode()) {
-            throw new SQLException("(0x" + Integer.toHexString(prepareResp.getCode()) + "):" + prepareResp.getMessage());
-        }
+        Stmt2PrepareResp prepareResp = StmtUtils.initStmtWithRetry(transport, stmtInfo.getSql(), param);
+        stmtInfo.setStmtId(prepareResp.getStmtId());
     }
-
-
 
     private void modifyStmtIdAndReqId(ByteBuf rawBlock, long stmtId, long reqId) {
         int originalWriterIndex = rawBlock.writerIndex();
@@ -78,94 +61,155 @@ public class WSRetryableStmt extends WSStatement {
     public void writeBlockWithRetry(ByteBuf rawBlock) throws SQLException {
         Utils.retainByteBuf(rawBlock);
         try {
-            writeBlockWithRetryInner(rawBlock);
+            executeWithRetry(rawBlock, OPERATION_TYPE_WRITE, param.isEnableAutoConnect());
         } finally {
             Utils.releaseByteBuf(rawBlock);
         }
     }
 
-    private void writeBlockWithRetryInner(ByteBuf orgRawBlock) throws SQLException {
+    public void writeBlockWithRetrySync(ByteBuf rawBlock) throws SQLException {
+        Utils.retainByteBuf(rawBlock);
+        try {
+            executeWithRetry(rawBlock, OPERATION_TYPE_WRITE, param.isEnableAutoConnect());
+            if (lastError != null) {
+                SQLException e = lastError;
+                lastError = null;
+                throw e;
+            }
+        } finally {
+            Utils.releaseByteBuf(rawBlock);
+        }
+    }
+
+    public ResultResp queryWithRetry(ByteBuf rawBlock) throws SQLException {
+        Utils.retainByteBuf(rawBlock);
+        try {
+            ResultResp resultResp = (ResultResp) executeWithRetry(rawBlock, OPERATION_TYPE_QUERY, param.isEnableAutoConnect());
+            if (lastError != null) {
+                SQLException e = lastError;
+                lastError = null;
+                throw e;
+            }
+            return resultResp;
+        } finally {
+            Utils.releaseByteBuf(rawBlock);
+        }
+    }
+
+    private Object executeWithRetry(ByteBuf orgRawBlock, int operationType, boolean isRetry) throws SQLException {
         ByteBuf rawBlock = orgRawBlock.duplicate();
         int originalReaderIndex = orgRawBlock.readerIndex();
         int originalWriterIndex = orgRawBlock.writerIndex();
-        for (int i = 0; i < param.getRetryTimes(); i++) {
+
+        int retryCount = 1;
+        if (isRetry) {
+            retryCount = param.getRetryTimes();
+        }
+        for (int i = 0; i < retryCount; i++) {
             if (i > 0) {
                 rawBlock = orgRawBlock.copy();
                 rawBlock.readerIndex(originalReaderIndex);
                 rawBlock.writerIndex(originalWriterIndex);
             }
+
             long reqId = ReqId.getReqID();
             long reconnectCount = transport.getReconnectCount();
-            try{
-                // modify stmt id
+
+            try {
                 modifyStmtIdAndReqId(rawBlock, stmtInfo.getStmtId(), reqId);
 
-                // bind
+                // Execute bind operation
                 Stmt2Resp bindResp = (Stmt2Resp) transport.send(Action.STMT2_BIND.getAction(),
                         reqId, rawBlock, false);
-                if (bindResp == null){
-                    throw new SQLException("reconnect, need to resend bind msg");
-                }
                 if (Code.SUCCESS.getCode() != bindResp.getCode()) {
                     throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
                 }
 
-                // execute
+                // Execute operation
                 reqId = ReqId.getReqID();
                 Request request = RequestFactory.generateExec(stmtInfo.getStmtId(), reqId);
                 Stmt2ExecResp resp = (Stmt2ExecResp) transport.send(request);
-                if (resp == null){
-                    throw new SQLException("reconnect, need to resend execute msg");
-                }
-
                 if (Code.SUCCESS.getCode() != resp.getCode()) {
                     throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
                 }
 
-                int affectedRows = resp.getAffected();
-                batchInsertedRows.addAndGet(affectedRows);
-                return;
-            } catch (SQLException e) {
-                if (i == param.getRetryTimes() - 1) {
-                    lastError = e;
+                // Process result based on operation type
+                if (operationType == OPERATION_TYPE_WRITE) {
+                    int affectedRows = resp.getAffected();
+                    batchInsertedRows.addAndGet(affectedRows);
+                    return affectedRows;
+                } else if (operationType == OPERATION_TYPE_QUERY) {
+                    // Get query result
+                    reqId = ReqId.getReqID();
+                    request = RequestFactory.generateUseResult(stmtInfo.getStmtId(), reqId);
+                    ResultResp useResultResp = (ResultResp) transport.send(request, false);
+                    if (Code.SUCCESS.getCode() != resp.getCode()) {
+                        throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
+                    }
+                    return useResultResp;
+                } else {
+                    throw new IllegalArgumentException("Unknown operation type: " + operationType);
                 }
-                log.error("Error in writeBlockWithRetry, stmt id: {}, req id: {}" +
-                                "retry times: {}, code: {}, msg: {}",
-                        stmtInfo.getStmtId(),
-                        reqId,
-                        i,
-                        e.getErrorCode(), e.getMessage());
+            } catch (SQLException e) {
+                // Handle exception based on operation type
+                boolean shouldContinue = handleException(e, i, reconnectCount, operationType);
+                if (!shouldContinue) {
+                    lastError = e;
+                    break;
+                }
 
-                // check if connection is reestablished, if so, need to reinit stmt obj and retry
+                // Check if connection is reestablished, if so need to reinitialize stmt object
                 int realReconnectCount = transport.getReconnectCount();
                 if (reconnectCount != realReconnectCount) {
                     log.error("connection reestablished, need to init stmt obj");
-
                     initStmt(false);
-                    continue;
                 }
-
-                // retry timeout without waiting
-                if (e.getErrorCode() == TSDBErrorNumbers.ERROR_QUERY_TIMEOUT){
-                    continue;
-                }
-
-                // network issue, retry with waiting
-                if (e.getErrorCode() == TSDBErrorNumbers.ERROR_CONNECTION_CLOSED
-                        || e.getErrorCode() == TSDBErrorNumbers.ERROR_RESTFul_Client_IOException) {
-                    continue;
-                }
-
-                lastError = e;
-                break;
             } finally {
                 log.trace("buffer {}, refCnt: {}", Integer.toHexString(System.identityHashCode(rawBlock)), rawBlock.refCnt());
             }
         }
+
+        return null;
+    }
+
+    private boolean handleException(SQLException e, int retryCount, long reconnectCount, int operationType) {
+        String operationName = (operationType == OPERATION_TYPE_WRITE) ? "writeBlockWithRetry" : "queryWithRetry";
+
+        if (retryCount == param.getRetryTimes() - 1) {
+            lastError = e;
+            return false; // Exception will be thrown externally
+        }
+
+        log.error("Error in {}, stmt id: {}, retry times: {}, code: {}, msg: {}",
+                operationName, stmtInfo.getStmtId(), retryCount, e.getErrorCode(), e.getMessage());
+
+        // Check if retry is needed
+        return shouldRetry(e, reconnectCount);
+    }
+
+    private boolean shouldRetry(SQLException e, long reconnectCount) {
+        // Check if connection is reestablished
+        int realReconnectCount = transport.getReconnectCount();
+        if (reconnectCount != realReconnectCount) {
+            return true;
+        }
+
+        // Timeout error, retry immediately without waiting
+        if (e.getErrorCode() == TSDBErrorNumbers.ERROR_QUERY_TIMEOUT) {
+            return true;
+        }
+
+        // Network issue, retry after waiting
+        if (e.getErrorCode() == TSDBErrorNumbers.ERROR_CONNECTION_CLOSED ||
+                e.getErrorCode() == TSDBErrorNumbers.ERROR_RESTFul_Client_IOException) {
+            return true;
+        }
+
+        return false;
     }
 
     public void releaseStmt() throws SQLException {
-        if (stmtInfo.getStmtId() != 0 && transport.isConnected()){
+        if (stmtInfo.getStmtId() != 0 && transport.isConnected()) {
             long reqId = ReqId.getReqID();
             Request close = RequestFactory.generateClose(stmtInfo.getStmtId(), reqId);
             transport.send(close);

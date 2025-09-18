@@ -10,8 +10,6 @@ import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.BlobUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.ReqId;
-import com.taosdata.jdbc.ws.entity.Action;
-import com.taosdata.jdbc.ws.entity.Code;
 import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.stmt2.entity.*;
 import io.netty.buffer.ByteBuf;
@@ -113,14 +111,7 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
             tableInfoMap.put(tableInfo.getTableName(), tableInfo);
         }
 
-        this.executeBatchImpl();
-
-        long reqId = ReqId.getReqID();
-        Request request = RequestFactory.generateUseResult(stmtInfo.getStmtId(), reqId);
-        ResultResp resp = (ResultResp) transport.send(request);
-        if (Code.SUCCESS.getCode() != resp.getCode()) {
-            throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
-        }
+        ResultResp resp = this.executeQueryImpl();
 
         this.resultSet = new BlockResultSet(this, this.transport, resp, this.database, this.zoneId);
         this.affectedRows = -1;
@@ -151,7 +142,7 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
         }
 
         tableInfoMap.put(tableInfo.getTableName(), tableInfo);
-        return executeBatchImpl();
+        return executeInsertImpl();
     }
 
     public void setTagSqlTypeNull(int index, int type) throws SQLException {
@@ -749,7 +740,7 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
             tableInfoMap.put(tableInfo.getTableName(), tableInfo);
         }
 
-        int affected = executeBatchImpl();
+        int affected = executeInsertImpl();
         int[] ints = new int[affected];
         for (int i = 0, len = ints.length; i < len; i++)
             ints[i] = SUCCESS_NO_INFO;
@@ -1072,7 +1063,7 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
     }
 
 
-    private int executeBatchImpl() throws SQLException {
+    private int executeInsertImpl() throws SQLException {
         if (tableInfoMap.isEmpty()) {
             throw new SQLException("batch data is empty");
         }
@@ -1085,27 +1076,30 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
             this.clearParameters();
         }
 
-        // bind
-        Stmt2Resp bindResp = (Stmt2Resp) transport.send(Action.STMT2_BIND.getAction(),
-                reqId, rawBlock, false);
-        if (Code.SUCCESS.getCode() != bindResp.getCode()) {
-            throw TSDBError.createSQLException(bindResp.getCode(), "(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
-        }
-
-        // execute
-        reqId = ReqId.getReqID();
-        Request request = RequestFactory.generateExec(stmtInfo.getStmtId(), reqId);
-        Stmt2ExecResp resp = (Stmt2ExecResp) transport.send(request);
-        if (Code.SUCCESS.getCode() != resp.getCode()) {
-            throw TSDBError.createSQLException(resp.getCode(), "(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
-        }
-
-        this.affectedRows = resp.getAffected();
+        writeBlockWithRetrySync(rawBlock);
+        this.affectedRows = batchInsertedRows.getAndSet(0);
         return this.affectedRows;
     }
+    private ResultResp executeQueryImpl() throws SQLException {
+        if (tableInfoMap.isEmpty()) {
+            throw new SQLException("batch data is empty");
+        }
+
+        ByteBuf rawBlock;
+        long reqId = ReqId.getReqID();
+        try {
+            rawBlock = SerializeBlock.getStmt2BindBlock(tableInfoMap, stmtInfo, reqId);
+        } finally {
+            this.clearParameters();
+        }
+
+        return queryWithRetry(rawBlock);
+    }
+
+
     @Override
     public void columnDataExecuteBatch() throws SQLException {
-        executeBatchImpl();
+        executeInsertImpl();
     }
 
     public void columnDataCloseBatch() throws SQLException {

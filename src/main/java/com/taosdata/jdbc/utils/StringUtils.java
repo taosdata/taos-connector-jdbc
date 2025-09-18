@@ -37,7 +37,7 @@ public class StringUtils {
         return true;
     }
 
-    public static List<Endpoint> parseEndpoints(String endpointsFullStr, boolean isNative) throws SQLException {
+    public static List<Endpoint> parseEndpoints(String endpointsFullStr) throws SQLException {
         if (StringUtils.isEmpty(endpointsFullStr)) {
             List<Endpoint> result = new ArrayList<>(1);
             Endpoint endpoint = new Endpoint("localhost", 0, false);
@@ -59,11 +59,7 @@ public class StringUtils {
                 int endBracket = endpointStr.indexOf(']');
                 if (endBracket != -1) {
                     // extract host
-                    if (isNative) {
-                        host = endpointStr.substring(1, endBracket);
-                    } else {
-                        host = endpointStr.substring(0, endBracket + 1);
-                    }
+                    host = endpointStr.substring(0, endBracket + 1);
 
                     // if have port
                     if (endBracket + 1 < endpointStr.length() &&
@@ -88,7 +84,10 @@ public class StringUtils {
 
                 if (lastColon != -1) {
                     host = endpointStr.substring(0, lastColon);
-                    port = endpointStr.substring(lastColon + 1);
+                    String portStr = endpointStr.substring(lastColon + 1);
+                    if (!StringUtils.isEmpty(portStr)){
+                        port = portStr;
+                    }
                 } else {
                     host = endpointStr;
                 }
@@ -98,7 +97,7 @@ public class StringUtils {
 
         return result;
     }
-    public static Properties parseUrl(String url, Properties defaults, boolean isNative) throws SQLException {
+    public static Properties parseUrl(String url, Properties defaults) throws SQLException {
         Properties urlProps = (defaults != null) ? defaults : new Properties();
         if (StringUtils.isEmpty(url)) {
             return urlProps;
@@ -144,6 +143,19 @@ public class StringUtils {
         }
 
         urlProps.setProperty(TSDBDriver.PROPERTY_KEY_ENDPOINTS, hostPortDb);
+
+        if (!StringUtils.isEmpty(hostPortDb)) {
+            List<Endpoint> endpoints = parseEndpoints(hostPortDb);
+            if (endpoints.size() == 1) {
+                Endpoint endpoint = endpoints.get(0);
+                if (!StringUtils.isEmpty(endpoint.getHost())){
+                    urlProps.setProperty(TSDBDriver.PROPERTY_KEY_HOST, endpoint.getHost());
+                }
+                if (endpoint.getPort() > 0) {
+                    urlProps.setProperty(TSDBDriver.PROPERTY_KEY_PORT, String.valueOf(endpoint.getPort()));
+                }
+            }
+        }
         return urlProps;
     }
 

@@ -1,10 +1,15 @@
 package com.taosdata.jdbc.ws;
 
+import com.taosdata.jdbc.utils.StringUtils;
+
 import java.io.*;
 import java.net.*;
 import java.util.concurrent.*;
 
 public class TaosAdapterMock {
+    private String cmd = "";
+    private int downInCmdCount = 0;
+
     private final String targetHost;
     private final int targetPort;
     private int listenPort;
@@ -16,6 +21,13 @@ public class TaosAdapterMock {
     public TaosAdapterMock() {
         this.targetHost = "localhost";
         this.targetPort = 6041;
+    }
+
+    public TaosAdapterMock(String cmd, int downInCmdCount) {
+        this.targetHost = "localhost";
+        this.targetPort = 6041;
+        this.cmd = cmd;
+        this.downInCmdCount = downInCmdCount;
     }
 
     public TaosAdapterMock(int listenPort) {
@@ -50,7 +62,7 @@ public class TaosAdapterMock {
                 try {
                     Socket clientSocket = serverSocket.accept();
                     activeConnections.put(clientSocket, true);
-                    executor.execute(new ClientHandler(clientSocket));
+                    executor.execute(new ClientHandler(clientSocket, cmd, downInCmdCount));
                 } catch (SocketException e) {
                     // exception in normal stop
                 } catch (IOException e) {
@@ -89,9 +101,13 @@ public class TaosAdapterMock {
 
     private class ClientHandler implements Runnable {
         private final Socket clientSocket;
+        private final String cmd;
+        private int downInCmdCount;
 
-        ClientHandler(Socket clientSocket) {
+        ClientHandler(Socket clientSocket, String cmd, int downInCmdCount) {
             this.clientSocket = clientSocket;
+            this.cmd = cmd;
+            this.downInCmdCount = downInCmdCount;
         }
 
         @Override
@@ -131,11 +147,25 @@ public class TaosAdapterMock {
 
             try {
                 while ((bytesRead = input.read(buffer)) != -1) {
+                    if (!StringUtils.isEmpty(cmd) && direction.equalsIgnoreCase("target->client") && bytesRead >= cmd.length()) {
+                        String readStr = new String(buffer, 0, bytesRead);
+                        if (readStr.contains(cmd)) {
+                            downInCmdCount--;
+                        }
+                        if (downInCmdCount == 0) {
+                            System.out.printf("Simulating server down after command '%s'%n", cmd);
+                            stop();
+                            throw new IOException("Simulated server down");
+                        }
+                    }
+
                     output.write(buffer, 0, bytesRead);
                     output.flush();
                 }
             } catch (IOException e) {
-                if (!isRunning) return; // ignore if service is stopped
+                if (!isRunning) {
+                    return; // ignore if service is stopped
+                }
                 System.err.printf("[%s] Forward error: %s%n", direction, e.getMessage());
             }
         }

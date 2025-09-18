@@ -8,14 +8,12 @@ import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.rs.ConnectionParam;
-import com.taosdata.jdbc.utils.ReqId;
+import com.taosdata.jdbc.utils.StmtUtils;
 import com.taosdata.jdbc.ws.entity.*;
 import com.taosdata.jdbc.ws.schemaless.InsertReq;
 import com.taosdata.jdbc.ws.schemaless.SchemalessAction;
 import com.taosdata.jdbc.ws.stmt2.entity.Field;
-import com.taosdata.jdbc.ws.stmt2.entity.RequestFactory;
 import com.taosdata.jdbc.ws.stmt2.entity.Stmt2PrepareResp;
-import com.taosdata.jdbc.ws.stmt2.entity.Stmt2Resp;
 
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
@@ -56,31 +54,6 @@ public class WSConnection extends AbstractConnection {
         return statement;
     }
 
-    private Stmt2PrepareResp getStmt2PrepareResp(String sql, boolean retry) throws SQLException {
-        long reqId = ReqId.getReqID();
-        Request request = com.taosdata.jdbc.ws.stmt2.entity.RequestFactory.generateInit(reqId, true, true);
-        Stmt2Resp resp = (Stmt2Resp) transport.send(request);
-        if (Code.SUCCESS.getCode() != resp.getCode()) {
-            throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
-        }
-        long stmtId = resp.getStmtId();
-        long localReconnectCount = transport.getReconnectCount();
-        Request prepare = RequestFactory.generatePrepare(stmtId, reqId, sql);
-        Stmt2PrepareResp prepareResp = (Stmt2PrepareResp) transport.send(prepare, false);
-
-        if (localReconnectCount != transport.getReconnectCount() && retry) {
-           // after reconnect, need reprepare
-            return getStmt2PrepareResp(sql, false);
-        }
-
-        if (Code.SUCCESS.getCode() != prepareResp.getCode()) {
-            Request close = RequestFactory.generateClose(stmtId, reqId);
-            transport.sendWithoutResponse(close);
-            throw new SQLException("(0x" + Integer.toHexString(prepareResp.getCode()) + "):" + prepareResp.getMessage());
-        }
-        return prepareResp;
-    }
-
     @Override
     public PreparedStatement prepareStatement(String sql) throws SQLException {
         if (isClosed())
@@ -106,7 +79,7 @@ public class WSConnection extends AbstractConnection {
         }
 
         if (transport != null && !transport.isClosed()) {
-            Stmt2PrepareResp prepareResp = getStmt2PrepareResp(sql, param.isEnableAutoConnect());
+            Stmt2PrepareResp prepareResp = StmtUtils.initStmtWithRetry(transport, sql, param);
 
             boolean isInsert = prepareResp.isInsert();
             boolean isSuperTable = false;

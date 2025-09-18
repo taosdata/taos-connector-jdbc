@@ -10,8 +10,6 @@ import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.BlobUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.ReqId;
-import com.taosdata.jdbc.ws.entity.Action;
-import com.taosdata.jdbc.ws.entity.Code;
 import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.stmt2.entity.*;
 import io.netty.buffer.ByteBuf;
@@ -116,20 +114,6 @@ public class WSRowPreparedStatement extends WSRetryableStmt implements PreparedS
 
         return !stmtInfo.isInsert();
     }
-
-    private ResultResp useResultWithRetry(boolean retry) throws SQLException {
-        long reqId = ReqId.getReqID();
-        Request request = RequestFactory.generateUseResult(stmtInfo.getStmtId(), reqId);
-        long localReconnectCount = transport.getReconnectCount();
-        ResultResp resp = (ResultResp) transport.send(request);
-        if (localReconnectCount != transport.getReconnectCount()){
-
-        }
-        if (Code.SUCCESS.getCode() != resp.getCode()) {
-            throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
-        }
-        return resp;
-    }
     @Override
     public ResultSet executeQuery() throws SQLException {
         if (stmtInfo.isInsert()){
@@ -137,8 +121,7 @@ public class WSRowPreparedStatement extends WSRetryableStmt implements PreparedS
         }
 
         addBatch();
-        executeBatchImpl();
-        ResultResp resp = useResultWithRetry(param.isEnableAutoConnect());
+        ResultResp resp = executeQueryImpl();
 
         this.resultSet = new BlockResultSet(this, this.transport, resp, this.database, this.zoneId);
         this.affectedRows = -1;
@@ -156,7 +139,7 @@ public class WSRowPreparedStatement extends WSRetryableStmt implements PreparedS
         }
 
         addBatch();
-        return executeBatchImpl();
+        return executeInsertImpl();
     }
     public void setNullByTSDBType(int parameterIndex, int type) throws SQLException {
         switch (type) {
@@ -712,7 +695,7 @@ public class WSRowPreparedStatement extends WSRetryableStmt implements PreparedS
     }
     @Override
     public int[] executeBatch() throws SQLException {
-        int affected = executeBatchImpl();
+        int affected = executeInsertImpl();
         int[] ints = new int[affected];
         for (int i = 0, len = ints.length; i < len; i++) {
             ints[i] = SUCCESS_NO_INFO;
@@ -931,9 +914,8 @@ public class WSRowPreparedStatement extends WSRetryableStmt implements PreparedS
             colsBuf.stopWrite();
         }
     }
-    private int executeBatchImpl() throws SQLException {
-        buffersStopWrite();
 
+    private CompositeByteBuf getRawBlock(){
         int totalTableNameSize = tableNamesBuf.getBuffer().capacity();
         int totalTagSize = tagsBuf.getBuffer().capacity();
         int totalColSize = colsBuf.getBuffer().capacity();
@@ -1032,27 +1014,35 @@ public class WSRowPreparedStatement extends WSRetryableStmt implements PreparedS
 //        System.out.println(sb);
 //        System.exit(0);
 
+        return rawBlock;
+    }
+    private int executeInsertImpl() throws SQLException {
+        buffersStopWrite();
+
+        CompositeByteBuf rawBlock = getRawBlock();
+
         try {
             this.affectedRows = 0;
-            // bind
-            Stmt2Resp bindResp = (Stmt2Resp) transport.send(Action.STMT2_BIND.getAction(),
-                    reqId, rawBlock, false);
-            if (Code.SUCCESS.getCode() != bindResp.getCode()) {
-                throw TSDBError.createSQLException(bindResp.getCode(), "(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
-            }
-
-            // execute
-            Request request = RequestFactory.generateExec(stmtInfo.getStmtId(), reqId);
-            Stmt2ExecResp resp = (Stmt2ExecResp) transport.send(request, false);
-            if (Code.SUCCESS.getCode() != resp.getCode()) {
-                throw TSDBError.createSQLException(resp.getCode(), "(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
-            }
-            this.affectedRows = resp.getAffected();
+            writeBlockWithRetrySync(rawBlock);
+            this.affectedRows = batchInsertedRows.getAndSet(0);
         } finally {
             initBuffers();
             totalTableCount = 0;
         }
 
         return this.affectedRows;
+    }
+
+    private ResultResp executeQueryImpl() throws SQLException {
+        buffersStopWrite();
+
+        CompositeByteBuf rawBlock = getRawBlock();
+
+        try {
+            return queryWithRetry(rawBlock);
+        } finally {
+            initBuffers();
+            totalTableCount = 0;
+        }
     }
 }

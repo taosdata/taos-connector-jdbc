@@ -140,7 +140,7 @@ public class Transport implements AutoCloseable {
             try {
                 if (!reSend){
                     inFlightRequest.remove(request.getAction(), request.id());
-                    return null;
+                    throw new SQLException("reconnect, need to resend " + request.getAction() + " msg");
                 }
                 clientArr.get(currentNodeIndex).send(reqString);
             }catch (Exception ex){
@@ -236,12 +236,7 @@ public class Transport implements AutoCloseable {
             clientArr.get(currentNodeIndex).send(buffer);
         } catch (WebsocketNotConnectedException e) {
             reconnect(false);
-            try {
-                Utils.retainByteBuf(buffer);
-                clientArr.get(currentNodeIndex).send(buffer);
-            }catch (Exception ex){
-                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());
-            }
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED, "Websocket reconnected, but the result set is closed");
         } finally {
             Utils.releaseByteBuf(buffer);
         }
@@ -271,7 +266,7 @@ public class Transport implements AutoCloseable {
                 Utils.retainByteBuf(buffer);
                 if (!resend){
                     inFlightRequest.remove(action, reqId);
-                    return null;
+                    throw new SQLException("reconnect, need to resend " + action + " msg");
                 }
                 clientArr.get(currentNodeIndex).send(buffer);
             }catch (Exception ex){

@@ -32,7 +32,7 @@ public class WebSocketDriver extends AbstractDriver {
         if (!acceptsURL(url))
             return null;
 
-        Properties props = StringUtils.parseUrl(url, info, false);
+        Properties props = StringUtils.parseUrl(url, info);
         ConnectionParam param = ConnectionParam.getParamWs(props);
         return getWSConnection(url, param, props);
     }
@@ -50,7 +50,7 @@ public class WebSocketDriver extends AbstractDriver {
             info = new Properties();
         }
         if (acceptsURL(url)) {
-            info = StringUtils.parseUrl(url, info, false);
+            info = StringUtils.parseUrl(url, info);
         }
         return getPropertyInfo(info);
     }
