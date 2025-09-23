@@ -4,25 +4,19 @@ import com.taosdata.jdbc.AbstractConnection;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.common.AutoExpandingBuffer;
-import com.taosdata.jdbc.common.TDBlob;
 import com.taosdata.jdbc.common.TableInfo;
 import com.taosdata.jdbc.enums.FieldBindType;
-import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.BlobUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
-import com.taosdata.jdbc.utils.Utils;
-import com.taosdata.jdbc.ws.entity.Action;
-import com.taosdata.jdbc.ws.entity.Code;
+import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.stmt2.entity.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -34,23 +28,13 @@ import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
 
-public class WSRowPreparedStatement extends WSStatement implements PreparedStatement{
+public class WSRowPreparedStatement extends WSRetryableStmt implements PreparedStatement{
     protected final ConnectionParam param;
-    private long reqId;
-    private long stmtId;
-    private final String rawSql;
     protected int queryTimeout = 0;
-    protected int precision = TimestampPrecision.MS;
-    protected int toBeBindTableNameIndex = -1;
-    protected int toBeBindColCount = 0;
-    protected int toBeBindTagCount = 0;
-    protected List<Field> fields;
-    protected ArrayList<Byte> colTypeList = new ArrayList<>();
-    protected boolean isInsert = false;
     private TableInfo tableInfo;
     private AutoExpandingBuffer tableNameLensBuf;
     private AutoExpandingBuffer tableNamesBuf;
@@ -87,42 +71,16 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
                                   String sql,
                                   Long instanceId,
                                   Stmt2PrepareResp prepareResp) {
-        super(transport, database, connection, instanceId, param.getZoneId());
-        this.rawSql = sql;
+        super(connection, param, database, transport, instanceId, new StmtInfo(prepareResp, sql), new AtomicInteger());
         this.param = param;
-
-        reqId = prepareResp.getReqId();
-        stmtId = prepareResp.getStmtId();
-        isInsert = prepareResp.isInsert();
-        if (isInsert){
-            fields = prepareResp.getFields();
-            if (!fields.isEmpty()){
-                precision = fields.get(0).getPrecision();
-            }
-            for (int i = 0; i < fields.size(); i++){
-                Field field = fields.get(i);
-                if (field.getBindType() == FieldBindType.TAOS_FIELD_TBNAME.getValue()){
-                    toBeBindTableNameIndex = i;
-                }
-                if (field.getBindType() == FieldBindType.TAOS_FIELD_TAG.getValue()){
-                    toBeBindTagCount++;
-                }
-                if (field.getBindType() == FieldBindType.TAOS_FIELD_COL.getValue()){
-                    toBeBindColCount++;
-                }
+        if (stmtInfo.isInsert()){
+            ArrayList<Byte> colTypeList = new ArrayList<>();
+            for (int i = 0; i < stmtInfo.getFields().size(); i++){
+                Field field = stmtInfo.getFields().get(i);
                 colTypeList.add(field.getFieldType());
             }
-        } else if (prepareResp.getFieldsCount() > 0){
-            toBeBindColCount = prepareResp.getFieldsCount();
-            fields = new ArrayList<>();
-            for (int i = 0; i < toBeBindColCount; i++){
-                colTypeList.add((byte)-1);
-                Field field = new Field();
-                field.setBindType((byte) FieldBindType.TAOS_FIELD_COL.getValue());
-                fields.add(field);
-            }
+            stmtInfo.setColTypeList(colTypeList);
         }
-
         this.tableInfo = TableInfo.getEmptyTableInfo();
         initBuffers();
     }
@@ -148,27 +106,22 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
         if (isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
 
-        if (isInsert){
+        if (stmtInfo.isInsert()){
             executeUpdate();
         } else {
             executeQuery();
         }
 
-        return !isInsert;
+        return !stmtInfo.isInsert();
     }
     @Override
     public ResultSet executeQuery() throws SQLException {
-        if (this.isInsert){
+        if (stmtInfo.isInsert()){
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "The query SQL must be prepared.");
         }
 
         addBatch();
-        executeBatchImpl();
-        Request request = RequestFactory.generateUseResult(stmtId, reqId);
-        ResultResp resp = (ResultResp) transport.send(request);
-        if (Code.SUCCESS.getCode() != resp.getCode()) {
-            throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
-        }
+        ResultResp resp = executeQueryImpl();
 
         this.resultSet = new BlockResultSet(this, this.transport, resp, this.database, this.zoneId);
         this.affectedRows = -1;
@@ -177,16 +130,16 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
 
     @Override
     public int executeUpdate() throws SQLException {
-        if (!this.isInsert){
+        if (!stmtInfo.isInsert()){
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "The insert SQL must be prepared.");
         }
 
-        if (fields.isEmpty()){
-            return this.executeUpdate(this.rawSql);
+        if (stmtInfo.getFields().isEmpty()){
+            return this.executeUpdate(stmtInfo.getSql());
         }
 
         addBatch();
-        return executeBatchImpl();
+        return executeInsertImpl();
     }
     public void setNullByTSDBType(int parameterIndex, int type) throws SQLException {
         switch (type) {
@@ -268,7 +221,7 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
             case Types.VARCHAR:
             case Types.BLOB:
             case Types.VARBINARY:
-                fieldType = fields.get(parameterIndex - 1).getFieldType();
+                fieldType = stmtInfo.getFields().get(parameterIndex - 1).getFieldType();
                 if (fieldType > 0){
                     seStringInner(parameterIndex, null, true, fieldType);
                 } else {
@@ -276,7 +229,7 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
                 }
                 break;
             case Types.NCHAR:
-                fieldType = fields.get(parameterIndex - 1).getFieldType();
+                fieldType = stmtInfo.getFields().get(parameterIndex - 1).getFieldType();
                 if (fieldType > 0){
                     seStringInner(parameterIndex, null, true, fieldType);
                 } else {
@@ -285,7 +238,7 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
                 break;
             // json
             case Types.OTHER:
-                fieldType = fields.get(parameterIndex - 1).getFieldType();
+                fieldType = stmtInfo.getFields().get(parameterIndex - 1).getFieldType();
                 if (fieldType > 0){
                     seStringInner(parameterIndex, null, true, fieldType);
                 } else {
@@ -298,7 +251,7 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
     }
 
     private void setBooleanInner(int parameterIndex, boolean x, boolean isNull) throws SQLException {
-        byte bindType = fields.get(parameterIndex - 1).getBindType();
+        byte bindType = stmtInfo.getFields().get(parameterIndex - 1).getBindType();
         if (bindType == FieldBindType.TAOS_FIELD_COL.getValue()) {
             curTableColTotalLen += colsBuf.serializeBool(x, isNull);
         } else if (bindType == FieldBindType.TAOS_FIELD_TAG.getValue()) {
@@ -312,7 +265,7 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
     }
 
     private void setByteInner(int parameterIndex, byte x, boolean isNull, byte type) throws SQLException {
-        byte bindType = fields.get(parameterIndex - 1).getBindType();
+        byte bindType = stmtInfo.getFields().get(parameterIndex - 1).getBindType();
         if (bindType == FieldBindType.TAOS_FIELD_COL.getValue()) {
             curTableColTotalLen += colsBuf.serializeByte(x, isNull, type);
         } else if (bindType == FieldBindType.TAOS_FIELD_TAG.getValue()) {
@@ -326,7 +279,7 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
     }
 
     private void setShortInner(int parameterIndex, short x, boolean isNull, byte type) throws SQLException {
-        byte bindType = fields.get(parameterIndex - 1).getBindType();
+        byte bindType = stmtInfo.getFields().get(parameterIndex - 1).getBindType();
         if (bindType == FieldBindType.TAOS_FIELD_COL.getValue()) {
             curTableColTotalLen += colsBuf.serializeShort(x, isNull, type);
         } else if (bindType == FieldBindType.TAOS_FIELD_TAG.getValue()) {
@@ -336,7 +289,7 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
 
     @Override
     public void setShort(int parameterIndex, short x) throws SQLException {
-        if (colTypeList.get(parameterIndex - 1) == TSDB_DATA_TYPE_UTINYINT){
+        if (stmtInfo.getColTypeList().get(parameterIndex - 1) == TSDB_DATA_TYPE_UTINYINT){
             if (x < 0 || x > MAX_UNSIGNED_BYTE){
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "utinyint value is out of range");
             }
@@ -347,7 +300,7 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
     }
 
     private void setIntInner(int parameterIndex, int x, boolean isNull, byte type) throws SQLException {
-        byte bindType = fields.get(parameterIndex - 1).getBindType();
+        byte bindType = stmtInfo.getFields().get(parameterIndex - 1).getBindType();
         if (bindType == FieldBindType.TAOS_FIELD_COL.getValue()) {
             curTableColTotalLen += colsBuf.serializeInt(x, isNull, type);
         } else if (bindType == FieldBindType.TAOS_FIELD_TAG.getValue()) {
@@ -357,7 +310,7 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
 
     @Override
     public void setInt(int parameterIndex, int x) throws SQLException {
-        if (colTypeList.get(parameterIndex - 1) == TSDB_DATA_TYPE_USMALLINT){
+        if (stmtInfo.getColTypeList().get(parameterIndex - 1) == TSDB_DATA_TYPE_USMALLINT){
             if (x < 0 || x > MAX_UNSIGNED_SHORT){
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "usmallint value is out of range");
             }
@@ -368,7 +321,7 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
     }
 
     private void setLongInner(int parameterIndex, long x, boolean isNull, byte type) throws SQLException {
-        byte bindType = fields.get(parameterIndex - 1).getBindType();
+        byte bindType = stmtInfo.getFields().get(parameterIndex - 1).getBindType();
         if (bindType == FieldBindType.TAOS_FIELD_COL.getValue()) {
             curTableColTotalLen += colsBuf.serializeLong(x, isNull, type);
         } else if (bindType == FieldBindType.TAOS_FIELD_TAG.getValue()) {
@@ -378,7 +331,7 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
 
     @Override
     public void setLong(int parameterIndex, long x) throws SQLException {
-        if (colTypeList.get(parameterIndex - 1) == TSDB_DATA_TYPE_UINT){
+        if (stmtInfo.getColTypeList().get(parameterIndex - 1) == TSDB_DATA_TYPE_UINT){
             if (x < 0 || x > MAX_UNSIGNED_INT){
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "uint value is out of range");
             }
@@ -389,7 +342,7 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
     }
 
     private void setFloatInner(int parameterIndex, float x, boolean isNull) throws SQLException {
-        byte bindType = fields.get(parameterIndex - 1).getBindType();
+        byte bindType = stmtInfo.getFields().get(parameterIndex - 1).getBindType();
         if (bindType == FieldBindType.TAOS_FIELD_COL.getValue()) {
             curTableColTotalLen += colsBuf.serializeFloat(x, isNull);
         } else if (bindType == FieldBindType.TAOS_FIELD_TAG.getValue()) {
@@ -403,7 +356,7 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
     }
 
     private void setDoubleInner(int parameterIndex, double x, boolean isNull) throws SQLException {
-        byte bindType = fields.get(parameterIndex - 1).getBindType();
+        byte bindType = stmtInfo.getFields().get(parameterIndex - 1).getBindType();
         if (bindType == FieldBindType.TAOS_FIELD_COL.getValue()) {
             curTableColTotalLen += colsBuf.serializeDouble(x, isNull);
         } else if (bindType == FieldBindType.TAOS_FIELD_TAG.getValue()) {
@@ -421,7 +374,7 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
     }
 
     private void seStringInner(int parameterIndex, String x, boolean isNull, byte type) throws SQLException {
-        byte bindType = fields.get(parameterIndex - 1).getBindType();
+        byte bindType = stmtInfo.getFields().get(parameterIndex - 1).getBindType();
         if (bindType == FieldBindType.TAOS_FIELD_COL.getValue()) {
             curTableColTotalLen += colsBuf.serializeString(x, isNull, type);
         } else if (bindType == FieldBindType.TAOS_FIELD_TAG.getValue()) {
@@ -437,7 +390,7 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
     }
 
     private void setBytesInner(int parameterIndex, byte[] x, boolean isNull, byte type) throws SQLException {
-        byte bindType = fields.get(parameterIndex - 1).getBindType();
+        byte bindType = stmtInfo.getFields().get(parameterIndex - 1).getBindType();
         if (bindType == FieldBindType.TAOS_FIELD_COL.getValue()) {
             curTableColTotalLen += colsBuf.serializeBytes(x, isNull, type);
         } else if (bindType == FieldBindType.TAOS_FIELD_TAG.getValue()) {
@@ -453,7 +406,7 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
     }
 
     private byte getTSDBType(int parameterIndex, byte defaultType){
-        byte type = colTypeList.get(parameterIndex - 1);
+        byte type = stmtInfo.getColTypeList().get(parameterIndex - 1).byteValue();
         if (type >= 0){
             return type;
         }
@@ -494,10 +447,10 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
     }
 
     private void setTimestampInner(int parameterIndex, long x, boolean isNull) throws SQLException {
-        if (fields.get(parameterIndex - 1).getBindType() == FieldBindType.TAOS_FIELD_COL.getValue()){
+        if (stmtInfo.getFields().get(parameterIndex - 1).getBindType() == FieldBindType.TAOS_FIELD_COL.getValue()){
             int totalLen = colsBuf.serializeTimeStamp(x, isNull);
             curTableColTotalLen += totalLen;
-        } else if (fields.get(parameterIndex - 1).getBindType() == FieldBindType.TAOS_FIELD_TAG.getValue()){
+        } else if (stmtInfo.getFields().get(parameterIndex - 1).getBindType() == FieldBindType.TAOS_FIELD_TAG.getValue()){
             int totalLen = tagsBuf.serializeTimeStamp(x, isNull);
             curTableTagTotalLen += totalLen;
         }
@@ -510,7 +463,7 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
             return;
         }
 
-        long ts = DateTimeUtils.toLong(DateTimeUtils.toInstant(x, this.zoneId), precision);
+        long ts = DateTimeUtils.toLong(DateTimeUtils.toInstant(x, this.zoneId), stmtInfo.getPrecision());
         setTimestampInner(parameterIndex, ts, false);
     }
 
@@ -617,17 +570,17 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
                     } else {
                         ZonedDateTime zonedDateTime = ((LocalDateTime) x).atZone(zoneId);
                         Instant instant = zonedDateTime.toInstant();
-                        long ts = DateTimeUtils.toLong(instant, precision);
+                        long ts = DateTimeUtils.toLong(instant, stmtInfo.getPrecision());
                         setTimestampInner(parameterIndex, ts, false);
                     }
                 } else if (x instanceof Instant) {
-                    long ts = DateTimeUtils.toLong((Instant) x, precision);
+                    long ts = DateTimeUtils.toLong((Instant) x, stmtInfo.getPrecision());
                     setTimestampInner(parameterIndex, ts, false);
                 } else if (x instanceof ZonedDateTime) {
-                    long ts = DateTimeUtils.toLong((ZonedDateTime) x, precision);
+                    long ts = DateTimeUtils.toLong((ZonedDateTime) x, stmtInfo.getPrecision());
                     setTimestampInner(parameterIndex, ts, false);
                 } else if (x instanceof OffsetDateTime) {
-                    long ts = DateTimeUtils.toLong((OffsetDateTime) x, precision);
+                    long ts = DateTimeUtils.toLong((OffsetDateTime) x, stmtInfo.getPrecision());
                     setTimestampInner(parameterIndex, ts, false);
                 } else {
                     throw new SQLException("Invalid type for timestamp: " + x.getClass().getName());
@@ -663,7 +616,7 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
     @Override
     public void setObject(int parameterIndex, Object x) throws SQLException {
         if (x == null){
-            byte fieldType = fields.get(parameterIndex - 1).getFieldType();
+            byte fieldType = stmtInfo.getFields().get(parameterIndex - 1).getFieldType();
             if (fieldType >= 0){
                 setNullByTSDBType(parameterIndex, fieldType);
             } else {
@@ -742,7 +695,7 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
     }
     @Override
     public int[] executeBatch() throws SQLException {
-        int affected = executeBatchImpl();
+        int affected = executeInsertImpl();
         int[] ints = new int[affected];
         for (int i = 0, len = ints.length; i < len; i++) {
             ints[i] = SUCCESS_NO_INFO;
@@ -754,8 +707,9 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
     @Override
     public void close() throws SQLException {
         if (!isClosed()) {
-            if (transport.isConnected() && stmtId != 0) {
-                Request close = RequestFactory.generateClose(stmtId, reqId);
+            if (transport.isConnected() && stmtInfo.getStmtId() != 0) {
+                long reqId = ReqId.getReqID();
+                Request close = RequestFactory.generateClose(stmtInfo.getStmtId(), reqId);
                 transport.send(close);
             }
             super.close();
@@ -775,7 +729,7 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
         if (isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
 
-        return new WSParameterMetaData(isInsert, fields, colTypeList);
+        return new WSParameterMetaData(stmtInfo.isInsert(), stmtInfo.getFields(), stmtInfo.getColTypeList());
     }
 
     @Override
@@ -960,28 +914,28 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
             colsBuf.stopWrite();
         }
     }
-    private int executeBatchImpl() throws SQLException {
-        buffersStopWrite();
 
+    private CompositeByteBuf getRawBlock(){
         int totalTableNameSize = tableNamesBuf.getBuffer().capacity();
         int totalTagSize = tagsBuf.getBuffer().capacity();
         int totalColSize = colsBuf.getBuffer().capacity();
         int totalSize = totalTableNameSize + totalTagSize + totalColSize;
 
-        int toBebindTableNameCount = toBeBindTableNameIndex >= 0 ? 1 : 0;
+        int toBebindTableNameCount = stmtInfo.getToBeBindTableNameIndex() >= 0 ? 1 : 0;
 
         totalSize += totalTableCount * (
                 toBebindTableNameCount * Short.BYTES
-                        + (toBeBindTagCount > 0 ? 1 : 0) * Integer.BYTES
-                        + (toBeBindColCount > 0 ? 1 : 0) * Integer.BYTES);
+                        + (stmtInfo.getToBeBindTagCount() > 0 ? 1 : 0) * Integer.BYTES
+                        + (stmtInfo.getToBeBindColCount() > 0 ? 1 : 0) * Integer.BYTES);
 
         ByteBuf headBuf = PooledByteBufAllocator.DEFAULT.directBuffer(58);
 
         //************ header *****************
         // ReqId
+        long reqId = ReqId.getReqID();
         headBuf.writeLongLE(reqId);
         // stmtId
-        headBuf.writeLongLE(stmtId);
+        headBuf.writeLongLE(stmtInfo.getStmtId());
         // actionId
         headBuf.writeLongLE(9L);
         // version
@@ -995,9 +949,9 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
         // tableCount
         headBuf.writeIntLE(totalTableCount);
         // TagCount
-        headBuf.writeIntLE(toBeBindTagCount);
+        headBuf.writeIntLE(stmtInfo.getToBeBindTagCount());
         // ColCount
-        headBuf.writeIntLE(toBeBindColCount);
+        headBuf.writeIntLE(stmtInfo.getToBeBindColCount());
 
         // tableNameOffset
         if (toBebindTableNameCount > 0){
@@ -1007,7 +961,7 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
         }
 
         // tagOffset
-        if (toBeBindTagCount > 0){
+        if (stmtInfo.getToBeBindTagCount() > 0){
             if (toBebindTableNameCount > 0){
                 headBuf.writeIntLE(28 + totalTableNameSize + Short.BYTES * totalTableCount);
             } else {
@@ -1018,13 +972,13 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
         }
 
         // colOffset
-        if (toBeBindColCount > 0){
+        if (stmtInfo.getToBeBindColCount() > 0){
             int skipSize = 0;
             if (toBebindTableNameCount > 0){
                 skipSize += totalTableNameSize + Short.BYTES * totalTableCount;
             }
 
-            if (toBeBindTagCount > 0){
+            if (stmtInfo.getToBeBindTagCount() > 0){
                 skipSize += totalTagSize + Integer.BYTES * totalTableCount;
             }
             headBuf.writeIntLE(28 + skipSize);
@@ -1041,12 +995,12 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
             rawBlock.addComponent(true, tableNamesBuf.getBuffer());
         }
 
-        if (toBeBindTagCount > 0){
+        if (stmtInfo.getToBeBindTagCount() > 0){
             rawBlock.addComponent(true, tagLensBuf.getBuffer());
             rawBlock.addComponent(true, tagsBuf.getBuffer());
         }
 
-        if (toBeBindColCount > 0){
+        if (stmtInfo.getToBeBindColCount() > 0){
             rawBlock.addComponent(true, colLensBuf.getBuffer());
             rawBlock.addComponent(true, colsBuf.getBuffer());
         }
@@ -1060,27 +1014,35 @@ public class WSRowPreparedStatement extends WSStatement implements PreparedState
 //        System.out.println(sb);
 //        System.exit(0);
 
+        return rawBlock;
+    }
+    private int executeInsertImpl() throws SQLException {
+        buffersStopWrite();
+
+        CompositeByteBuf rawBlock = getRawBlock();
+
         try {
             this.affectedRows = 0;
-            // bind
-            Stmt2Resp bindResp = (Stmt2Resp) transport.send(Action.STMT2_BIND.getAction(),
-                    reqId, rawBlock);
-            if (Code.SUCCESS.getCode() != bindResp.getCode()) {
-                throw TSDBError.createSQLException(bindResp.getCode(), "(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
-            }
-
-            // execute
-            Request request = RequestFactory.generateExec(stmtId, reqId);
-            Stmt2ExecResp resp = (Stmt2ExecResp) transport.send(request);
-            if (Code.SUCCESS.getCode() != resp.getCode()) {
-                throw TSDBError.createSQLException(resp.getCode(), "(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
-            }
-            this.affectedRows = resp.getAffected();
+            writeBlockWithRetrySync(rawBlock);
+            this.affectedRows = batchInsertedRows.getAndSet(0);
         } finally {
             initBuffers();
             totalTableCount = 0;
         }
 
         return this.affectedRows;
+    }
+
+    private ResultResp executeQueryImpl() throws SQLException {
+        buffersStopWrite();
+
+        CompositeByteBuf rawBlock = getRawBlock();
+
+        try {
+            return queryWithRetry(rawBlock);
+        } finally {
+            initBuffers();
+            totalTableCount = 0;
+        }
     }
 }

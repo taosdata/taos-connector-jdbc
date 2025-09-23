@@ -38,7 +38,7 @@ public class RestfulDriver extends AbstractDriver {
         if (!acceptsURL(url))
             return null;
 
-        Properties props = StringUtils.parseUrl(url, info, false);
+        Properties props = StringUtils.parseUrl(url, info);
         String batchLoad = info.getProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD);
         if (Boolean.parseBoolean(batchLoad)) {
             ConnectionParam param = ConnectionParam.getParamWs(props);
@@ -77,7 +77,7 @@ public class RestfulDriver extends AbstractDriver {
             info = new Properties();
         }
         if (acceptsURL(url)) {
-            info = StringUtils.parseUrl(url, info, false);
+            info = StringUtils.parseUrl(url, info);
         }
         return getPropertyInfo(info);
     }

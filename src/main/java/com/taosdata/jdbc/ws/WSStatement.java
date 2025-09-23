@@ -90,8 +90,6 @@ public class WSStatement extends AbstractStatement {
                 reqId, 0, 6, result, sqlBytes);
 
         QueryResp queryResp = (QueryResp) response;
-//        BinQueryNewResp binQueryNewResp = (BinQueryNewResp) response;
-//        QueryResp queryResp = binQueryNewResp.getQueryResp();
         if (Code.SUCCESS.getCode() != queryResp.getCode()) {
             throw TSDBError.createSQLException(queryResp.getCode(), queryResp.getMessage());
         }

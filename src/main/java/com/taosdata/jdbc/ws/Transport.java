@@ -115,6 +115,9 @@ public class Transport implements AutoCloseable {
     }
     @SuppressWarnings("all")
     public Response send(Request request) throws SQLException {
+        return send(request, true);
+    }
+    public Response send(Request request, boolean reSend) throws SQLException {
         if (isClosed()){
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
         }
@@ -135,6 +138,10 @@ public class Transport implements AutoCloseable {
             tmqRethrowConnectionCloseException();
             reconnect(false);
             try {
+                if (!reSend){
+                    inFlightRequest.remove(request.getAction(), request.id());
+                    throw new SQLException("reconnect, need to resend " + request.getAction() + " msg");
+                }
                 clientArr.get(currentNodeIndex).send(reqString);
             }catch (Exception ex){
                 inFlightRequest.remove(request.getAction(), request.id());
@@ -229,18 +236,13 @@ public class Transport implements AutoCloseable {
             clientArr.get(currentNodeIndex).send(buffer);
         } catch (WebsocketNotConnectedException e) {
             reconnect(false);
-            try {
-                Utils.retainByteBuf(buffer);
-                clientArr.get(currentNodeIndex).send(buffer);
-            }catch (Exception ex){
-                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());
-            }
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED, "Websocket reconnected, but the result set is closed");
         } finally {
             Utils.releaseByteBuf(buffer);
         }
     }
 
-    public Response send(String action, long reqId, ByteBuf buffer) throws SQLException {
+    public Response send(String action, long reqId, ByteBuf buffer, boolean resend) throws SQLException {
         if (isClosed()){
             Utils.releaseByteBuf(buffer);
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
@@ -262,10 +264,16 @@ public class Transport implements AutoCloseable {
             reconnect(false);
             try {
                 Utils.retainByteBuf(buffer);
+                if (!resend){
+                    inFlightRequest.remove(action, reqId);
+                    throw new SQLException("reconnect, need to resend " + action + " msg");
+                }
                 clientArr.get(currentNodeIndex).send(buffer);
             }catch (Exception ex){
                 inFlightRequest.remove(action, reqId);
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());
+            } finally {
+                Utils.releaseByteBuf(buffer);
             }
         } finally {
             Utils.releaseByteBuf(buffer);
@@ -438,7 +446,6 @@ public class Transport implements AutoCloseable {
                     }
                     // send con msgs
                     ConnectReq connectReq = new ConnectReq(connectionParam);
-
                     ConnectResp auth;
                     auth = (ConnectResp) sendWithoutRetry(new Request(Action.CONN.getAction(), connectReq));
 

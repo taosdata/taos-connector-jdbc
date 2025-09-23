@@ -102,10 +102,10 @@ public class SchemalessWriter implements AutoCloseable {
 
         if (url.startsWith(TSDBDriver.URL_PREFIX)) {
             t = "jni";
-            properties = StringUtils.parseUrl(url, null, true);
+            properties = StringUtils.parseUrl(url, null);
         } else if (url.startsWith(RestfulDriver.URL_PREFIX)) {
             t = "ws";
-            properties = StringUtils.parseUrl(url, null, false);
+            properties = StringUtils.parseUrl(url, null);
         } else {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "unknown url：" + url);
         }

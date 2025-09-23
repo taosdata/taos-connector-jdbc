@@ -81,7 +81,7 @@ public class ConsumerParam {
     public ConsumerParam(Properties properties) throws SQLException {
         if (null != properties.getProperty(TMQConstants.CONNECT_URL)) {
             String url = properties.getProperty(TMQConstants.CONNECT_URL);
-            StringUtils.parseUrl(url, properties, false);
+            StringUtils.parseUrl(url, properties);
         }
         if (null != properties.getProperty(TMQConstants.CONNECT_USER))
             properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, properties.getProperty(TMQConstants.CONNECT_USER));

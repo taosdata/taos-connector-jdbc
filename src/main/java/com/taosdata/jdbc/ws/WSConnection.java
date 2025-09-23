@@ -8,14 +8,12 @@ import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.rs.ConnectionParam;
-import com.taosdata.jdbc.utils.ReqId;
+import com.taosdata.jdbc.utils.StmtUtils;
 import com.taosdata.jdbc.ws.entity.*;
 import com.taosdata.jdbc.ws.schemaless.InsertReq;
 import com.taosdata.jdbc.ws.schemaless.SchemalessAction;
 import com.taosdata.jdbc.ws.stmt2.entity.Field;
-import com.taosdata.jdbc.ws.stmt2.entity.RequestFactory;
 import com.taosdata.jdbc.ws.stmt2.entity.Stmt2PrepareResp;
-import com.taosdata.jdbc.ws.stmt2.entity.Stmt2Resp;
 
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
@@ -81,20 +79,7 @@ public class WSConnection extends AbstractConnection {
         }
 
         if (transport != null && !transport.isClosed()) {
-            long reqId = ReqId.getReqID();
-            Request request = com.taosdata.jdbc.ws.stmt2.entity.RequestFactory.generateInit(reqId, true, true);
-            Stmt2Resp resp = (Stmt2Resp) transport.send(request);
-            if (Code.SUCCESS.getCode() != resp.getCode()) {
-                throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
-            }
-            long stmtId = resp.getStmtId();
-            Request prepare = RequestFactory.generatePrepare(stmtId, reqId, sql);
-            Stmt2PrepareResp prepareResp = (Stmt2PrepareResp) transport.send(prepare);
-            if (Code.SUCCESS.getCode() != prepareResp.getCode()) {
-                Request close = RequestFactory.generateClose(stmtId, reqId);
-                transport.sendWithoutResponse(close);
-                throw new SQLException("(0x" + Integer.toHexString(prepareResp.getCode()) + "):" + prepareResp.getMessage());
-            }
+            Stmt2PrepareResp prepareResp = StmtUtils.initStmtWithRetry(transport, sql, param);
 
             boolean isInsert = prepareResp.isInsert();
             boolean isSuperTable = false;

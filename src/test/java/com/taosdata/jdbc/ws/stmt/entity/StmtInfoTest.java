@@ -13,7 +13,6 @@ import static org.junit.Assert.*;
 public class StmtInfoTest {
 
     private StmtInfo stmtInfo;
-    private final long reqId = 1L;
     private final long stmtId = 2L;
     private final int toBeBindTableNameIndex = 3;
     private final int toBeBindTagCount = 4;
@@ -25,20 +24,19 @@ public class StmtInfoTest {
     @Before
     public void setUp() {
         stmtInfo = new StmtInfo(
-                reqId,
-                stmtId,
-                toBeBindTableNameIndex,
-                toBeBindTagCount,
-                toBeBindColCount,
-                precision,
-                fields,
                 sql
         );
+
+        stmtInfo.setStmtId(stmtId);
+        stmtInfo.setToBeBindTableNameIndex(toBeBindTableNameIndex);
+        stmtInfo.setToBeBindTagCount(toBeBindTagCount);
+        stmtInfo.setToBeBindColCount(toBeBindColCount);
+        stmtInfo.setPrecision(precision);
+        stmtInfo.setFields(fields);
     }
 
     @Test
     public void testConstructorAndGetters() {
-        assertEquals(reqId, stmtInfo.getReqId());
         assertEquals(stmtId, stmtInfo.getStmtId());
         assertEquals(toBeBindTableNameIndex, stmtInfo.getToBeBindTableNameIndex());
         assertEquals(toBeBindTagCount, stmtInfo.getToBeBindTagCount());
@@ -47,14 +45,6 @@ public class StmtInfoTest {
         assertEquals(fields, stmtInfo.getFields());
         assertEquals(sql, stmtInfo.getSql());
     }
-
-    @Test
-    public void testSetReqId() {
-        long newReqId = 10L;
-        stmtInfo.setReqId(newReqId);
-        assertEquals(newReqId, stmtInfo.getReqId());
-    }
-
     @Test
     public void testSetStmtId() {
         long newStmtId = 20L;
@@ -105,13 +95,6 @@ public class StmtInfoTest {
     @Test
     public void testDefaultStmtIdValue() {
         StmtInfo newStmtInfo = new StmtInfo(
-                1L,
-                0,
-                3,
-                4,
-                5,
-                6,
-                fields,
                 sql
         );
         assertEquals(0, newStmtInfo.getStmtId());
@@ -124,14 +107,12 @@ public class StmtInfoTest {
 
     @Test
     public void testNegativeValues() {
-        stmtInfo.setReqId(-1L);
         stmtInfo.setStmtId(-2L);
         stmtInfo.setToBeBindTableNameIndex(-3);
         stmtInfo.setToBeBindTagCount(-4);
         stmtInfo.setToBeBindColCount(-5);
         stmtInfo.setPrecision(-6);
 
-        assertEquals(-1L, stmtInfo.getReqId());
         assertEquals(-2L, stmtInfo.getStmtId());
         assertEquals(-3, stmtInfo.getToBeBindTableNameIndex());
         assertEquals(-4, stmtInfo.getToBeBindTagCount());
@@ -141,14 +122,12 @@ public class StmtInfoTest {
 
     @Test
     public void testZeroValues() {
-        stmtInfo.setReqId(0L);
         stmtInfo.setStmtId(0L);
         stmtInfo.setToBeBindTableNameIndex(0);
         stmtInfo.setToBeBindTagCount(0);
         stmtInfo.setToBeBindColCount(0);
         stmtInfo.setPrecision(0);
 
-        assertEquals(0L, stmtInfo.getReqId());
         assertEquals(0L, stmtInfo.getStmtId());
         assertEquals(0, stmtInfo.getToBeBindTableNameIndex());
         assertEquals(0, stmtInfo.getToBeBindTagCount());

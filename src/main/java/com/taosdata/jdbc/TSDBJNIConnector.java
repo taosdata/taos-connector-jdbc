@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.utils.JsonUtil;
+import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.TaosInfo;
 
 import java.io.UnsupportedEncodingException;
@@ -184,6 +185,10 @@ public class TSDBJNIConnector {
         if (this.taos != TSDBConstants.JNI_NULL_POINTER) {
             closeConnection();
             this.taos = TSDBConstants.JNI_NULL_POINTER;
+        }
+
+        if (!StringUtils.isEmpty(host) && host.contains("[")) {
+            host = host.replace("[", "").replace("]", "");
         }
 
         this.taos = this.connectImp(host, port, dbName, user, password);

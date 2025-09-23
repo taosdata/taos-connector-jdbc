@@ -1,40 +1,60 @@
 package com.taosdata.jdbc.ws.stmt2.entity;
 
+import com.taosdata.jdbc.enums.FieldBindType;
+
+import java.util.ArrayList;
 import java.util.List;
 
 public class StmtInfo {
-    private long reqId;
     private long stmtId = 0;
-    private int toBeBindTableNameIndex;
+    private int toBeBindTableNameIndex = -1;
     private int toBeBindTagCount;
     private int toBeBindColCount;
     private int precision;
-    private final List<Field> fields;
+    private List<Field> fields;
     private final String sql;
-    public StmtInfo(long reqId,
-                    long stmtId,
-                    int toBeBindTableNameIndex,
-                    int toBeBindTagCount,
-                    int toBeBindColCount,
-                    int precision,
-                    List<Field> fields,
-                    String sql) {
-        this.reqId = reqId;
-        this.stmtId = stmtId;
-        this.toBeBindTableNameIndex = toBeBindTableNameIndex;
-        this.toBeBindTagCount = toBeBindTagCount;
-        this.toBeBindColCount = toBeBindColCount;
-        this.precision = precision;
-        this.fields = fields;
+
+    protected ArrayList<Byte> tagTypeList = new ArrayList<>();
+    protected ArrayList<Byte> colTypeList = new ArrayList<>();
+    protected boolean isInsert = false;
+    public StmtInfo(String sql) {
         this.sql = sql;
     }
+    public StmtInfo(Stmt2PrepareResp prepareResp, String sql) {
+        this.stmtId = prepareResp.getStmtId();
+        this.sql = sql;
 
-    public long getReqId() {
-        return reqId;
-    }
+        isInsert = prepareResp.isInsert();
+        if (isInsert){
+            fields = prepareResp.getFields();
+            if (!fields.isEmpty()){
+                precision = fields.get(0).getPrecision();
+            }
+            for (int i = 0; i < fields.size(); i++){
+                Field field = fields.get(i);
+                if (field.getBindType() == FieldBindType.TAOS_FIELD_TBNAME.getValue()){
+                    toBeBindTableNameIndex = i;
+                }
+                if (field.getBindType() == FieldBindType.TAOS_FIELD_TAG.getValue()){
+                    toBeBindTagCount++;
+                    tagTypeList.add(field.getFieldType());
+                }
+                if (field.getBindType() == FieldBindType.TAOS_FIELD_COL.getValue()){
+                    toBeBindColCount++;
+                    colTypeList.add(field.getFieldType());
+                }
+            }
+        } else if (prepareResp.getFieldsCount() > 0){
+            toBeBindColCount = prepareResp.getFieldsCount();
 
-    public void setReqId(long reqId) {
-        this.reqId = reqId;
+            fields = new ArrayList<>();
+            for (int i = 0; i < toBeBindColCount; i++){
+                colTypeList.add((byte)-1);
+                Field field = new Field();
+                field.setBindType((byte) FieldBindType.TAOS_FIELD_COL.getValue());
+                fields.add(field);
+            }
+        }
     }
 
     public long getStmtId() {
@@ -79,8 +99,26 @@ public class StmtInfo {
     public List<Field> getFields() {
         return fields;
     }
+    public void setFields(List<Field> fields) {
+        this.fields = fields;
+    }
 
     public String getSql() {
         return sql;
+    }
+
+    public ArrayList<Byte> getTagTypeList() {
+        return tagTypeList;
+    }
+
+    public ArrayList<Byte> getColTypeList() {
+        return colTypeList;
+    }
+    public void setColTypeList(ArrayList<Byte> colTypeList) {
+        this.colTypeList = colTypeList;
+    }
+
+    public boolean isInsert() {
+        return isInsert;
     }
 }

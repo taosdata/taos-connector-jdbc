@@ -417,8 +417,6 @@ public class WsEfficientWritingTest {
             statement.execute("drop database if exists " + db_name);
         }
         connection.close();
-
-
     }
 
     @BeforeClass

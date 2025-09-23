@@ -436,8 +436,9 @@ public class SerializeBlock {
     }
 
     public static ByteBuf getStmt2BindBlock(HashMap<ByteBuffer, TableInfo> tableInfoMap,
-                                            StmtInfo stmtInfo) throws SQLException {
-        return getStmt2BindBlock(stmtInfo.getReqId(),
+                                            StmtInfo stmtInfo,
+                                            long reqId) throws SQLException {
+        return getStmt2BindBlock(reqId,
                 stmtInfo.getStmtId(),
                 tableInfoMap,
                 stmtInfo.getToBeBindTableNameIndex(),
