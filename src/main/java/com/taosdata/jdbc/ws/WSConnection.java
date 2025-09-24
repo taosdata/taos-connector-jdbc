@@ -79,7 +79,7 @@ public class WSConnection extends AbstractConnection {
         }
 
         if (transport != null && !transport.isClosed()) {
-            Stmt2PrepareResp prepareResp = StmtUtils.initStmtWithRetry(transport, sql, param);
+            Stmt2PrepareResp prepareResp = StmtUtils.initStmtWithRetry(transport, sql, param.getRetryTimes());
 
             boolean isInsert = prepareResp.isInsert();
             boolean isSuperTable = false;

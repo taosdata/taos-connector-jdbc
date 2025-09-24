@@ -58,12 +58,12 @@ public class WsPstmtReconnectFetchTest {
             pstmt.setTimestamp(1, Timestamp.valueOf("2018-10-03 14:38:00"));
             pstmt.setTimestamp(2, Timestamp.valueOf("2018-10-03 14:39:00"));
 
-            ResultSet rs = pstmt.executeQuery();
-            mockB.stop();
-            while (rs.next()) {
-                resultCount++;
+            try (ResultSet rs = pstmt.executeQuery()){
+                mockB.stop();
+                while (rs.next()) {
+                    resultCount++;
+                }
             }
-            rs.close();
         }
         Assert.assertTrue(resultCount > 0);
     }

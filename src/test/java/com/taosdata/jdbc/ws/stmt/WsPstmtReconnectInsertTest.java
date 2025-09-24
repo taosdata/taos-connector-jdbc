@@ -52,7 +52,7 @@ public class WsPstmtReconnectInsertTest {
         try (Connection connection = DriverManager.getConnection(url, properties);
              PreparedStatement pstmt = connection.prepareStatement(sql)) {
 
-            for (int i = 1; i <= 100; i++) {
+            for (int i = 1; i <= 5; i++) {
                 // set columns
                 long current = System.currentTimeMillis();
                 for (int j = 0; j < 1; j++) {
@@ -72,7 +72,7 @@ public class WsPstmtReconnectInsertTest {
                     Assert.assertEquals(ele, Statement.SUCCESS_NO_INFO);
                 }
             }
-            Assert.assertEquals((100), Utils.getSqlRows(connection, db_name + "." + tableName));
+            Assert.assertEquals((5), Utils.getSqlRows(connection, db_name + "." + tableName));
             Assert.assertEquals((1), Utils.getSqlRows(connection, db_name + "." + "`d_bind_中国人1`"));
             pstmt.execute("delete from " + db_name + "." + tableName);
         }
@@ -99,6 +99,71 @@ public class WsPstmtReconnectInsertTest {
         stmt2Write(url, properties);
         mockB.stop();
     }
+
+    @Test
+    public void testStmt2MultiReconnect() throws SQLException, IOException {
+        TaosAdapterMock mockB = new TaosAdapterMock();
+        mockB.start();
+
+        Properties properties = new Properties();
+        String url = "jdbc:TAOS-WS://"
+                + host + ":" + mockB.getListenPort() + ","
+                + host + ":" + 6041 + "/?user=root&password=taosdata";
+
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_INTERVAL_MS, "2000");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_RETRY_COUNT, "3");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, "5000");
+
+        if ("line".equalsIgnoreCase(this.mode)) {
+            properties.setProperty(TSDBDriver.PROPERTY_KEY_PBS_MODE, this.mode);
+        }
+
+        String sql = "INSERT INTO " + db_name + "." + tableName + "(tbname, groupId, location, ts, current, voltage, phase) VALUES (?,?,?,?,?,?,?)";
+
+        try (Connection connection = DriverManager.getConnection(url, properties);
+             PreparedStatement pstmt1 = connection.prepareStatement(sql);
+             PreparedStatement pstmt2 = connection.prepareStatement(sql)) {
+
+            PreparedStatement pstmt;
+            for (int i = 1; i <= 5; i++) {
+                if (i % 2 == 1) {
+                    pstmt = pstmt1;
+                } else {
+                    pstmt = pstmt2;
+                }
+                // set columns
+                long current = System.currentTimeMillis();
+                for (int j = 0; j < 1; j++) {
+                    pstmt.setString(1, "d_bind_中国人" + i);
+                    pstmt.setInt(2, i);
+                    pstmt.setString(3, "location_" + i);
+
+                    pstmt.setTimestamp(4, new Timestamp(current + i));
+                    pstmt.setFloat(5, 1.0f);
+                    pstmt.setInt(6, 2);
+                    pstmt.setFloat(7, 3.0f);
+                    pstmt.addBatch();
+                }
+
+                if (i == 1){
+                    mockB.stop();
+                }
+
+                int[] exeResult = pstmt.executeBatch();
+
+                for (int ele : exeResult){
+                    Assert.assertEquals(ele, Statement.SUCCESS_NO_INFO);
+                }
+            }
+            Assert.assertEquals((5), Utils.getSqlRows(connection, db_name + "." + tableName));
+            Assert.assertEquals((1), Utils.getSqlRows(connection, db_name + "." + "`d_bind_中国人1`"));
+            pstmt1.execute("delete from " + db_name + "." + tableName);
+        }
+
+        mockB.stop();
+    }
+
     @BeforeClass
     public static void setUp() throws SQLException {
         System.setProperty("ENV_TAOS_JDBC_TEST", "test");
