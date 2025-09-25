@@ -109,6 +109,7 @@ public class TSDBDriver extends AbstractDriver {
      */
     public static final String PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT = "messageWaitTimeout";
 
+    public static final String PROPERTY_KEY_WS_KEEP_ALIVE_SECONDS = "wsKeepAlive";
     /**
      * connect mode
      */
@@ -133,7 +134,9 @@ public class TSDBDriver extends AbstractDriver {
     public static final String PROPERTY_KEY_APP_IP = "app_ip";
     public static final String PROPERTY_KEY_APP_NAME = "app_name";
 
-    // for efficient writing
+    /**
+     * for efficient writing
+     */
     public static final String PROPERTY_KEY_COPY_DATA = "copyData";
     public static final String PROPERTY_KEY_BATCH_SIZE_BY_ROW = "batchSizeByRow";
     public static final String PROPERTY_KEY_CACHE_SIZE_BY_ROW = "cacheSizeByRow";
@@ -142,7 +145,9 @@ public class TSDBDriver extends AbstractDriver {
     public static final String PROPERTY_KEY_RETRY_TIMES = "retryTimes";
     public static final String PROPERTY_KEY_ASYNC_WRITE = "asyncWrite";
 
-    // for stmt bind mode
+    /**
+     * for stmt bind mode
+     */
     public static final String PROPERTY_KEY_PBS_MODE = "pbsMode";
 
     /**

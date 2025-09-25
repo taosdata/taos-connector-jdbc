@@ -53,6 +53,7 @@ public class ConnectionParam {
     private int retryTimes;
     private String asyncWrite;
     private String pbsMode;
+    private int wsKeepAlive;
 
     private Consumer<String> textMessageHandler;
     private Consumer<ByteBuf> binaryMessageHandler;
@@ -90,6 +91,7 @@ public class ConnectionParam {
         this.textMessageHandler = builder.textMessageHandler;
         this.binaryMessageHandler = builder.binaryMessageHandler;
         this.pbsMode = builder.pbsMode;
+        this.wsKeepAlive = builder.wsKeepAlive;
     }
 
     public void setEndpoints(List<Endpoint> endpoints) {
@@ -206,6 +208,10 @@ public class ConnectionParam {
     public void setPbsMode(String pbsMode) {
         this.pbsMode = pbsMode;
     }
+    public void setWsKeepAlive(int wsKeepAlive) {
+        this.wsKeepAlive = wsKeepAlive;
+    }
+
     public List<Endpoint> getEndpoints() {
         return endpoints;
     }
@@ -306,7 +312,9 @@ public class ConnectionParam {
     public String getPbsMode() {
         return pbsMode;
     }
-
+    public int getWsKeepAlive() {
+        return wsKeepAlive;
+    }
     public Consumer<String> getTextMessageHandler() {
         return textMessageHandler;
     }
@@ -482,6 +490,11 @@ public class ConnectionParam {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "PROPERTY_KEY_PBS_MODE only support line");
         }
 
+        int wsKeepAlive = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_WS_KEEP_ALIVE_SECONDS, "300"));
+        if (wsKeepAlive <= 0){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_WS_KEEP_ALIVE_SECONDS");
+        }
+
         return new Builder(endpoints)
                 .setDatabase(database)
                 .setCloudToken(cloudToken)
@@ -510,6 +523,7 @@ public class ConnectionParam {
                 .setRetryTimes(retryTimes)
                 .setAsyncWrite(asyncWrite)
                 .setPbsMode(pbsMode)
+                .setWsKeepAlive(wsKeepAlive)
                 .build();
     }
 
@@ -545,6 +559,7 @@ public class ConnectionParam {
         private int retryTimes;
         private String asyncWrite;
         private String pbsMode;
+        private int wsKeepAlive;
 
         private Consumer<String> textMessageHandler;
         private Consumer<ByteBuf> binaryMessageHandler;
@@ -684,6 +699,12 @@ public class ConnectionParam {
             this.pbsMode = pbsMode;
             return this;
         }
+
+        public Builder setWsKeepAlive(int wsKeepAlive) {
+            this.wsKeepAlive = wsKeepAlive;
+            return this;
+        }
+
         public Builder setTextMessageHandler(Consumer<String> textMessageHandler) {
             this.textMessageHandler = textMessageHandler;
             return this;
