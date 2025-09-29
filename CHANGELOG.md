@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.7.5] - 2025-09-29
+
+**Full Changelog**: [3.7.4...3.7.5](https://github.com/taosdata/taos-connector-jdbc/compare/3.7.4...3.7.5)
+
+### Features
+
+
+- JDBC URL supports multiple endpoints (#279) ([fe1090d](https://github.com/taosdata/taos-connector-jdbc/commit/fe1090dd42afb78d5f7558d879896afc4a699f3b))
+- Stmt supports reconnection (#280) ([87f27e8](https://github.com/taosdata/taos-connector-jdbc/commit/87f27e8214b84db827bbd3a75d1c2a5f85c131d0))
+
+
+### Performance
+
+
+- Improve writing efficiency in efficient writing mode by serializing data with a separate thread (#278) ([bf8e615](https://github.com/taosdata/taos-connector-jdbc/commit/bf8e615bf4f6328efc96aebc1c84cbcdabf8a994))
+- Improve isValid performace (#281) ([67edba7](https://github.com/taosdata/taos-connector-jdbc/commit/67edba7b608115cd92a2bbd2107a295535ba714f))
+
+
 ## [3.7.4] - 2025-09-05
 
 **Full Changelog**: [3.7.3...3.7.4](https://github.com/taosdata/taos-connector-jdbc/compare/3.7.3...3.7.4)
@@ -14,12 +32,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Stop using regex pattern to escape single quota (#275) ([c4b41ff](https://github.com/taosdata/taos-connector-jdbc/commit/c4b41ff34c63f9c3f61edc5c63ea2225e0dfbcc9))
 - Supports delete meta subscription (#277) ([13e51e0](https://github.com/taosdata/taos-connector-jdbc/commit/13e51e0dba6419ea0747268ff305cc3df2a05b8a))
-
-
-### Performance
-
-
-- Improve writing efficiency in efficient writing mode by serializing data with a separate thread ([6203a36](https://github.com/taosdata/taos-connector-jdbc/commit/6203a363ee1c83a4f6356087eef681bad2e169af))
 
 
 ## [3.7.3] - 2025-08-20
