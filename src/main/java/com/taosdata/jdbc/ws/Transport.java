@@ -271,7 +271,7 @@ public class Transport implements AutoCloseable {
                 clientArr.get(currentNodeIndex).send(buffer);
             }catch (Exception ex){
                 inFlightRequest.remove(action, reqId);
-                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, ex.getMessage());
             } finally {
                 Utils.releaseByteBuf(buffer);
             }
@@ -357,17 +357,6 @@ public class Transport implements AutoCloseable {
 
     public boolean isConnectionLost() {
         return clientArr.get(currentNodeIndex).isClosed();
-    }
-
-    public void disconnectAndReconnect() throws SQLException {
-        try {
-            clientArr.get(currentNodeIndex).closeBlocking();
-            if (!clientArr.get(currentNodeIndex).reconnectBlockingWithoutRetry()){
-                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, "websocket reconnect failed!");
-            }
-        } catch (Exception e) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());
-        }
     }
     @Override
     public synchronized void close() {

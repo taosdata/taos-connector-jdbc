@@ -66,7 +66,7 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
                     syncObj
                     );
             workerThreadList.add(workerThread);
-            workerThread.initStmt(true);
+            workerThread.initStmt(param.getRetryTimes());
         }
 
         if (res != null && res.getCode() != Code.SUCCESS.getCode()){

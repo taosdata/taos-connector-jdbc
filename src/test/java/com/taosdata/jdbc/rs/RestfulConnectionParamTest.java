@@ -132,6 +132,10 @@ public class RestfulConnectionParamTest {
         // Test pbsMode
         connectionParam.setPbsMode("line");
         assertEquals("line", connectionParam.getPbsMode());
+
+        // Test pbsMode
+        connectionParam.setWsKeepAlive(300);
+        assertEquals(300, connectionParam.getWsKeepAlive());
     }
     @Test(expected = SQLException.class)
     public void testInvalidConnectModeNegative() throws SQLException {
@@ -224,5 +228,10 @@ public class RestfulConnectionParamTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_APP_IP, "invalid_ip");
         ConnectionParam.getParam(properties);
     }
-
+    @Test(expected = SQLException.class)
+    public void testInvalidWsKeepAlive() throws SQLException {
+        Properties properties = new Properties();
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_WS_KEEP_ALIVE_SECONDS, "-1");
+        ConnectionParam.getParam(properties);
+    }
 }

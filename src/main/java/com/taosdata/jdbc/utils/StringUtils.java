@@ -226,4 +226,30 @@ public class StringUtils {
         }
         return url;
     }
+
+    public static String retainHostPortPart(String jdbcUrl) {
+        if (jdbcUrl == null || jdbcUrl.isEmpty()) {
+            return jdbcUrl;
+        }
+
+        // Step 1: Remove all parameters after the question mark
+        String urlWithoutParams = getBasicUrl(jdbcUrl);
+
+        // Step 2: Find the position of "//" (protocol separator)
+        int doubleSlashIndex = urlWithoutParams.indexOf("//");
+        if (doubleSlashIndex == -1) {
+            // No "//" in URL (e.g., jdbc:TAOS:/), return as is
+            return urlWithoutParams;
+        }
+
+        // Step 3: Search for the first "/" after "//" (database name separator)
+        int dbSeparatorIndex = urlWithoutParams.indexOf('/', doubleSlashIndex + 2); // +2 to skip "//"
+        if (dbSeparatorIndex == -1) {
+            // No database name separator found, return full URL without parameters
+            return urlWithoutParams;
+        }
+
+        // Step 4: Extract part before the database separator
+        return urlWithoutParams.substring(0, dbSeparatorIndex);
+    }
 }

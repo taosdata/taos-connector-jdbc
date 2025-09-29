@@ -2,7 +2,6 @@ package com.taosdata.jdbc.utils;
 
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
-import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.ws.Transport;
 import com.taosdata.jdbc.ws.entity.Code;
 import com.taosdata.jdbc.ws.entity.Request;
@@ -17,9 +16,8 @@ import java.sql.SQLException;
 public class StmtUtils {
     private static final Logger log = LoggerFactory.getLogger(StmtUtils.class);
     private StmtUtils() {}
-    public static Stmt2PrepareResp initStmtWithRetry(Transport transport, String sql, ConnectionParam param) throws SQLException {
+    public static Stmt2PrepareResp initStmtWithRetry(Transport transport, String sql, int retryTimes) throws SQLException {
         SQLException lastError = TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN);
-        int retryTimes = param.isEnableAutoConnect() ? param.getRetryTimes() : 1;
         for (int i = 0; i < retryTimes; i++) {
             long reqId = ReqId.getReqID();
             long stmtId = 0;

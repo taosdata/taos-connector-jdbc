@@ -28,6 +28,7 @@ public class WSRetryableStmt extends WSStatement {
     protected StmtInfo stmtInfo;
     protected volatile SQLException lastError = null;
     protected final AtomicInteger batchInsertedRows;
+    private long reconnectCount;
 
     public WSRetryableStmt(AbstractConnection connection,
                            ConnectionParam param,
@@ -40,10 +41,11 @@ public class WSRetryableStmt extends WSStatement {
         this.param = param;
         this.stmtInfo = stmtInfo;
         this.batchInsertedRows = batchInsertedRows;
+        this.reconnectCount = transport.getReconnectCount();
     }
 
-    public void initStmt(boolean retry) throws SQLException {
-        Stmt2PrepareResp prepareResp = StmtUtils.initStmtWithRetry(transport, stmtInfo.getSql(), param);
+    public void initStmt(int retryTimes) throws SQLException {
+        Stmt2PrepareResp prepareResp = StmtUtils.initStmtWithRetry(transport, stmtInfo.getSql(), retryTimes);
         stmtInfo.setStmtId(prepareResp.getStmtId());
     }
 
@@ -113,9 +115,12 @@ public class WSRetryableStmt extends WSStatement {
             }
 
             long reqId = ReqId.getReqID();
-            long reconnectCount = transport.getReconnectCount();
-
             try {
+                if (reconnectCount != transport.getReconnectCount() && param.isEnableAutoConnect()) {
+                    initStmt(1);
+                    reconnectCount = transport.getReconnectCount();
+                }
+
                 modifyStmtIdAndReqId(rawBlock, stmtInfo.getStmtId(), reqId);
 
                 // Execute bind operation
@@ -128,7 +133,7 @@ public class WSRetryableStmt extends WSStatement {
                 // Execute operation
                 reqId = ReqId.getReqID();
                 Request request = RequestFactory.generateExec(stmtInfo.getStmtId(), reqId);
-                Stmt2ExecResp resp = (Stmt2ExecResp) transport.send(request);
+                Stmt2ExecResp resp = (Stmt2ExecResp) transport.send(request, false);
                 if (Code.SUCCESS.getCode() != resp.getCode()) {
                     throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
                 }
@@ -159,10 +164,10 @@ public class WSRetryableStmt extends WSStatement {
                 }
 
                 // Check if connection is reestablished, if so need to reinitialize stmt object
-                int realReconnectCount = transport.getReconnectCount();
-                if (reconnectCount != realReconnectCount) {
+                if (reconnectCount != transport.getReconnectCount()) {
                     log.error("connection reestablished, need to init stmt obj");
-                    initStmt(false);
+                    initStmt(1);
+                    reconnectCount = transport.getReconnectCount();
                 }
             } finally {
                 log.trace("buffer {}, refCnt: {}", Integer.toHexString(System.identityHashCode(rawBlock)), rawBlock.refCnt());
