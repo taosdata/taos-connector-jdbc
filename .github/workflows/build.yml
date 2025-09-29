@@ -47,13 +47,29 @@ jobs:
 
       - name: Restore TDengine debug directory cache
         uses: actions/cache/restore@v4
-        id: restore-cache
+        id: cache-debug-dir
         with:
           path: TDengine/debug
           key: ${{ runner.os }}-tdengine-debug-${{ env.CACHE_VERSION }}-${{ steps.tdengine-info.outputs.branch }}-${{ steps.tdengine-info.outputs.commit_id }}
           restore-keys: |
             ${{ runner.os }}-tdengine-debug-${{ env.CACHE_VERSION }}-${{ steps.tdengine-info.outputs.branch }}-
             ${{ runner.os }}-tdengine-debug-${{ env.CACHE_VERSION }}-
+
+      - name: Debug cache hit status
+        run: |
+          echo "Cache hit: ${{ steps.cache-debug-dir.outputs.cache-hit }}"
+          echo "Cache key: ${{ steps.cache-debug-dir.outputs.cache-primary-key }}"
+
+      - name: Check if debug directory exists and is valid
+        id: check-debug-dir
+        run: |
+          if [ -d "TDengine/debug" ] && [ -f "TDengine/debug/CMakeCache.txt" ]; then
+            echo "Debug directory exists and appears valid"
+            echo "is_debug_valid=true" >> $GITHUB_OUTPUT
+          else
+            echo "Debug directory missing or invalid"
+            echo "is_debug_valid=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Install build dependencies
         if: steps.cache-debug-dir.outputs.cache-hit != 'true'
