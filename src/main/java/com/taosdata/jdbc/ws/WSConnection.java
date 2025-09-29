@@ -15,6 +15,8 @@ import com.taosdata.jdbc.ws.schemaless.InsertReq;
 import com.taosdata.jdbc.ws.schemaless.SchemalessAction;
 import com.taosdata.jdbc.ws.stmt2.entity.Field;
 import com.taosdata.jdbc.ws.stmt2.entity.Stmt2PrepareResp;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.*;
 import java.util.Map;
@@ -24,7 +26,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class WSConnection extends AbstractConnection {
-
+    private static final Logger log = LoggerFactory.getLogger(WSConnection.class);
     public static final AtomicBoolean g_FirstConnection = new AtomicBoolean(true);
     private final Transport transport;
     private final DatabaseMetaData metaData;
@@ -233,6 +235,7 @@ public class WSConnection extends AbstractConnection {
                 return status != 0;
             } catch (SQLException e) {
                 conCheckInfoMap.put(jdbcUrl, new ConCheckInfo(System.currentTimeMillis(), false));
+                log.error("check connection failed", e);
                 return false;
             } finally {
                 if (resultSet != null) {
