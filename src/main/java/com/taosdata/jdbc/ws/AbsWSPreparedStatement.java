@@ -321,7 +321,7 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
 
     @Override
     public void setTagNString(int index, String value) {
-        tag.add(new ColumnInfo(index, Collections.singletonList(value), TSDB_DATA_TYPE_NCHAR));
+        tag.add(new ColumnInfo(index, Collections.singletonList(value.getBytes(StandardCharsets.UTF_8)), TSDB_DATA_TYPE_NCHAR));
     }
 
     @Override
@@ -572,7 +572,7 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
         } else if (x instanceof Float) {
             setFloat(parameterIndex, (Float) x);
         } else if (x instanceof String) {
-            setNString(parameterIndex, (String) x);
+            setBytes(parameterIndex, ((String) x).getBytes(StandardCharsets.UTF_8));
         } else if (x instanceof byte[]) {
             setBytes(parameterIndex, (byte[]) x);
         } else if (x instanceof Double) {
@@ -619,7 +619,7 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
                     tableInfo.setTableName(ByteBuffer.wrap((byte[]) colOrderedMap.get(index + 1).getData()));
                 }
                 if (colOrderedMap.get(index + 1).getData() instanceof String){
-                    tableInfo.setTableName(ByteBuffer.wrap(((String) colOrderedMap.get(index + 1).getData()).getBytes()));
+                    tableInfo.setTableName(ByteBuffer.wrap(((String) colOrderedMap.get(index + 1).getData()).getBytes(StandardCharsets.UTF_8)));
                 }
             } else if (fields.get(index).getBindType() == FieldBindType.TAOS_FIELD_TAG.getValue()) {
                 LinkedList<Object> list = new LinkedList<>();
@@ -649,7 +649,7 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
                 Object tbname = colOrderedMap.get(stmtInfo.getToBeBindTableNameIndex() + 1).getData();
                 ByteBuffer tempTableName;
                 if (tbname instanceof String){
-                    tempTableName = ByteBuffer.wrap(((String)tbname).getBytes());
+                    tempTableName = ByteBuffer.wrap(((String)tbname).getBytes(StandardCharsets.UTF_8));
                 } else if (tbname instanceof byte[]){
                     tempTableName = ByteBuffer.wrap((byte[]) tbname);
                 } else {
@@ -785,7 +785,7 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
                 list.add(col.getData());
             });
         }
-        return new TSDBParameterMetaData(list.toArray(new Object[0]));
+        return new WSParameterMetaData(stmtInfo.isInsert(), stmtInfo.getFields(), stmtInfo.getColTypeList());
     }
 
     @Override
@@ -856,7 +856,11 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
 
     @Override
     public void setNString(int parameterIndex, String value) throws SQLException {
-        colOrderedMap.put(parameterIndex, new Column(value, TSDB_DATA_TYPE_NCHAR, parameterIndex));
+        if (value == null) {
+            setNull(parameterIndex, Types.NCHAR);
+            return;
+        }
+        colOrderedMap.put(parameterIndex, new Column(value.getBytes(StandardCharsets.UTF_8), TSDB_DATA_TYPE_NCHAR, parameterIndex));
     }
 
     @Override
@@ -1014,7 +1018,13 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
     // note: expand the required space for each NChar character
     @Override
     public void setNString(int columnIndex, List<String> list, int size) throws SQLException {
-        setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_NCHAR, size * Integer.BYTES);
+        List<byte[]> collect = list.stream().map(x -> {
+            if (x == null) {
+                return null;
+            }
+            return x.getBytes(StandardCharsets.UTF_8);
+        }).collect(Collectors.toList());
+        setValueImpl(columnIndex, collect, TSDBConstants.TSDB_DATA_TYPE_NCHAR, size * Integer.BYTES);
     }
 
     public <T> void setValueImpl(int columnIndex, List<T> list, int type, int bytes) throws SQLException {
@@ -1108,6 +1118,6 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
 
     @Override
     public void setTableName(String name) throws SQLException {
-        this.tableInfo.setTableName(ByteBuffer.wrap(name.getBytes()));
+        this.tableInfo.setTableName(ByteBuffer.wrap(name.getBytes(StandardCharsets.UTF_8)));
     }
 }

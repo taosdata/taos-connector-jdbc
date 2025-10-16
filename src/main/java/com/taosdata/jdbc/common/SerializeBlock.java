@@ -114,17 +114,11 @@ public class SerializeBlock {
                     case TSDB_DATA_TYPE_JSON:
                     case TSDB_DATA_TYPE_BLOB:
                     case TSDB_DATA_TYPE_VARBINARY:
-                    case TSDB_DATA_TYPE_GEOMETRY:{
+                    case TSDB_DATA_TYPE_GEOMETRY:
+                    case TSDB_DATA_TYPE_NCHAR:{
                         byte[] v = (byte[]) o;
                         buf.writeIntLE(v.length);
                         bufferLength += v.length;
-                        break;
-                    }
-                    case TSDB_DATA_TYPE_NCHAR: {
-                        String v = (String) o;
-                        int len = v.getBytes().length;
-                        buf.writeIntLE(len);
-                        bufferLength += len;
                         break;
                     }
                     default:
@@ -337,21 +331,12 @@ public class SerializeBlock {
             case TSDB_DATA_TYPE_BINARY:
             case TSDB_DATA_TYPE_BLOB:
             case TSDB_DATA_TYPE_VARBINARY:
-            case TSDB_DATA_TYPE_GEOMETRY:{
+            case TSDB_DATA_TYPE_GEOMETRY:
+            case TSDB_DATA_TYPE_NCHAR: {
                 for (Object o: objectList){
                     if (o != null) {
                         byte[] v = (byte[]) o;
                         serializeByteArray(buf, v);
-                    }
-                }
-                break;
-            }
-            case TSDB_DATA_TYPE_NCHAR: {
-                for (Object o: objectList){
-                    if (o != null) {
-                        String v = (String) o;
-                        byte[] bytes = v.getBytes();
-                        serializeByteArray(buf, bytes);
                     }
                 }
                 break;
@@ -408,23 +393,13 @@ public class SerializeBlock {
             case TSDB_DATA_TYPE_BINARY:
             case TSDB_DATA_TYPE_BLOB:
             case TSDB_DATA_TYPE_VARBINARY:
-            case TSDB_DATA_TYPE_GEOMETRY:{
+            case TSDB_DATA_TYPE_GEOMETRY:
+            case TSDB_DATA_TYPE_NCHAR:{
                 int totalLength = 0;
                 for (Object o : column.getDataList()) {
                     if (o != null) {
                         byte[] v = (byte[]) o;
                         totalLength += v.length;
-                    }
-                }
-                // TotalLength(4) + Type (4) + Num(4) + IsNull(1) * size + haveLength(1) + BufferLength(4) + 4 * v.length + totalLength
-                return 17 + (5 * column.getDataList().size()) + totalLength;
-            }
-            case TSDB_DATA_TYPE_NCHAR: {
-                int totalLength = 0;
-                for (Object o : column.getDataList()) {
-                    if (o != null) {
-                        String v = (String) o;
-                        totalLength += v.getBytes().length;
                     }
                 }
                 // TotalLength(4) + Type (4) + Num(4) + IsNull(1) * size + haveLength(1) + BufferLength(4) + 4 * v.length + totalLength

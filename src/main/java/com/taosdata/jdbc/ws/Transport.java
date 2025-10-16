@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -61,11 +62,14 @@ public class Transport implements AutoCloseable {
             this.clientArr.add(slave);
             currentNodeIndex = 0;
         } else {
+            if (!isTest) {
+                Collections.shuffle(param.getEndpoints());
+            }
             for (int i = 0; i < param.getEndpoints().size(); i++){
                 WSClient client = WSClient.getInstance(param, i, function, this);
                 this.clientArr.add(client);
             }
-            currentNodeIndex = getRandomClientIndex();
+            currentNodeIndex = 0;
         }
 
         this.inFlightRequest = inFlightRequest;
@@ -459,13 +463,6 @@ public class Transport implements AutoCloseable {
 
     public boolean isConnected() {
         return clientArr.get(currentNodeIndex).isOpen();
-    }
-
-    private int getRandomClientIndex(){
-        if (isTest) {
-            return 0;
-        }
-        return ThreadLocalRandom.current().nextInt(clientArr.size());
     }
     public final ConnectionParam getConnectionParam() {
         return connectionParam;
