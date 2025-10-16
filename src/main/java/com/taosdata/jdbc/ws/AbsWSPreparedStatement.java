@@ -1024,7 +1024,7 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
             }
             return x.getBytes(StandardCharsets.UTF_8);
         }).collect(Collectors.toList());
-        setValueImpl(columnIndex, collect, TSDBConstants.TSDB_DATA_TYPE_NCHAR, size * Integer.BYTES);
+        setValueImpl(columnIndex, collect, TSDBConstants.TSDB_DATA_TYPE_NCHAR, size);
     }
 
     public <T> void setValueImpl(int columnIndex, List<T> list, int type, int bytes) throws SQLException {

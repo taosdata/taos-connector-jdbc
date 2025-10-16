@@ -8,7 +8,6 @@ import com.taosdata.jdbc.ws.stmt2.entity.StmtInfo;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 
-import java.io.ByteArrayOutputStream;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.sql.SQLException;
@@ -23,48 +22,6 @@ import static com.taosdata.jdbc.TSDBConstants.*;
 
 public class SerializeBlock {
     private SerializeBlock() {
-    }
-
-    private static int bitMapLen(int n) {
-        return ((n) + ((1 << 3) - 1)) >> 3;
-    }
-
-    private static int bitPos(int n) {
-        return n & ((1 << 3) - 1);
-    }
-
-    private static int charOffset(int n) {
-        return n >> 3;
-    }
-
-    private static byte bmSetNull(byte c, int n) {
-        return (byte) (c + (1 << (7 - bitPos(n))));
-    }
-
-    private static void handleBoolean(ByteArrayOutputStream buf, Object o){
-        boolean v = (Boolean) o;
-        if (v) {
-            buf.write(1);
-        }else {
-            buf.write(0);
-        }
-    }
-    private static void SerializeInt(byte[] buf, int offset, int v){
-        buf[offset] = (byte) (v & 0xFF);
-        buf[offset + 1] = (byte) ((v >> 8) & 0xFF);
-        buf[offset + 2] = (byte) ((v >> 16) & 0xFF);
-        buf[offset + 3] = (byte) ((v >> 24) & 0xFF);
-    }
-
-    private static void SerializeLong(byte[] buf, int offset, long v){
-        buf[offset] = (byte) (v & 0xFF);
-        buf[offset + 1] = (byte) ((v >> 8) & 0xFF);
-        buf[offset + 2] = (byte) ((v >> 16) & 0xFF);
-        buf[offset + 3] = (byte) ((v >> 24) & 0xFF);
-        buf[offset + 4] = (byte) ((v >> 32) & 0xFF);
-        buf[offset + 5] = (byte) ((v >> 40) & 0xFF);
-        buf[offset + 6] = (byte) ((v >> 48) & 0xFF);
-        buf[offset + 7] = (byte) ((v >> 56) & 0xFF);
     }
     private static void SerializeShort(ByteBuf buf, short v){
         buf.writeShortLE(v);
@@ -590,37 +547,5 @@ public class SerializeBlock {
             Utils.releaseByteBuf(buf);
             throw e;
         }
-    }
-
-    // little endian
-    public static byte[] shortToBytes(int v) {
-        byte[] result = new byte[2];
-        result[0] = (byte) (v & 0xFF);
-        result[1] = (byte) ((v >> 8) & 0xFF);
-        return result;
-    }
-
-    // little endian
-    public static byte[] intToBytes(int v) {
-        byte[] result = new byte[4];
-        result[0] = (byte) (v & 0xFF);
-        result[1] = (byte) ((v >> 8) & 0xFF);
-        result[2] = (byte) ((v >> 16) & 0xFF);
-        result[3] = (byte) ((v >> 24) & 0xFF);
-        return result;
-    }
-
-    // little endian
-    public static byte[] longToBytes(long v) {
-        byte[] result = new byte[8];
-        result[0] = (byte) (v & 0xFF);
-        result[1] = (byte) ((v >> 8) & 0xFF);
-        result[2] = (byte) ((v >> 16) & 0xFF);
-        result[3] = (byte) ((v >> 24) & 0xFF);
-        result[4] = (byte) ((v >> 32) & 0xFF);
-        result[5] = (byte) ((v >> 40) & 0xFF);
-        result[6] = (byte) ((v >> 48) & 0xFF);
-        result[7] = (byte) ((v >> 56) & 0xFF);
-        return result;
     }
 }
