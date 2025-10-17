@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.7.6] - 2025-10-17
+
+**Full Changelog**: [3.7.5...3.7.6](https://github.com/taosdata/taos-connector-jdbc/compare/3.7.5...3.7.6)
+
+### Features
+
+
+- Improve stmt setObject and loadbalance (#284) ([84721c5](https://github.com/taosdata/taos-connector-jdbc/commit/84721c585c1863d2da9e127b248b0c383b39c318))
+
+
 ## [3.7.5] - 2025-09-29
 
 **Full Changelog**: [3.7.4...3.7.5](https://github.com/taosdata/taos-connector-jdbc/compare/3.7.4...3.7.5)
