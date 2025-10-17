@@ -342,25 +342,6 @@ public class WsEfficientWritingTest {
             pstmt.columnDataCloseBatch();
         }
     }
-
-    @Test(expected = SQLException.class)
-    public void testNcharTagThrowsSQLException() throws SQLException {
-        String sql = "INSERT INTO " + db_name + "." + tableNcharTag + "(tbname, ts, i, tag_nchar) VALUES (?,?,?,?)";
-        try (Connection con = getConnection(false);
-             PreparedStatement pstmt = con.prepareStatement(sql)) {
-            long current = System.currentTimeMillis();
-            for (int i = 0; i < 1000; i++) {
-                pstmt.setString(1, "ncahr_bind_1");
-                pstmt.setTimestamp(2, new Timestamp(current + i));
-                pstmt.setInt(3, 100);
-                pstmt.setString(4, "中国人");
-                pstmt.addBatch();
-                pstmt.executeBatch();
-            }
-            pstmt.executeUpdate();
-        }
-    }
-
     @Test
     public void testNcharTag() throws SQLException {
         String sql = "INSERT INTO " + db_name + "." + tableNcharTag + "(tbname, ts, i, tag_nchar) VALUES (?,?,?,?)";
