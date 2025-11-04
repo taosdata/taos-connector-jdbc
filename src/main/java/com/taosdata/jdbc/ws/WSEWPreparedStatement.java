@@ -16,6 +16,7 @@ import io.netty.buffer.ByteBuf;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -332,7 +333,7 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
                 Object tbname = colOrderedMap.get(stmtInfo.getToBeBindTableNameIndex() + 1).getData();
                 ByteBuffer tempTableName;
                 if (tbname instanceof String){
-                    tempTableName = ByteBuffer.wrap(((String)tbname).getBytes());
+                    tempTableName = ByteBuffer.wrap(((String)tbname).getBytes(StandardCharsets.UTF_8));
                 } else if (tbname instanceof byte[]){
                     tempTableName = ByteBuffer.wrap((byte[]) tbname);
                 } else {

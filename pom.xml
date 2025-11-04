@@ -35,6 +35,7 @@
         <product.name>TDengine</product.name>
         <product.version>3.0.0.0</product.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <sonar.organization>taosdata</sonar.organization>
         <java.version>1.8</java.version>
         <maven-compiler-plugin.version>3.6.0</maven-compiler-plugin.version>
         <jackson.version>2.20.0</jackson.version>

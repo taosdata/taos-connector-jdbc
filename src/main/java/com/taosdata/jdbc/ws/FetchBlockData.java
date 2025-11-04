@@ -65,7 +65,7 @@ public class FetchBlockData {
             blockData.setCompleted(true);
             blockData.doneWithNoData();
             blockingQueue.put(blockData);
-            FetchDataUtil.getFetchMap().remove(queryId);
+            FetchDataUtil.getFetchMap().remove(reqId);
             return;
         }
 
