@@ -97,6 +97,7 @@ public class TSDBResultSet extends AbstractResultSet {
                 this.blockData = blockingQueueOut.take();
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
+                throw new SQLException("Thread was interrupted while waiting for data", e);
             }
             this.blockData.waitTillOK();
 
