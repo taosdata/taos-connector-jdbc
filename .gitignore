@@ -6,3 +6,4 @@ target
 htmlReport/
 src/test/java/com/taosdata/jdbc/manual/
 src/test/resources/logback.xml
+cleanup_branches.sh

@@ -36,7 +36,7 @@ import java.sql.SQLException;
 public class WSClient implements AutoCloseable {
 
     private static final Logger log = LoggerFactory.getLogger(WSClient.class);
-    Transport transport;
+
 
     public final URI serverUri;
 
@@ -54,9 +54,8 @@ public class WSClient implements AutoCloseable {
      *
      * @param serverUri connection url
      */
-    public WSClient(URI serverUri, Transport transport, ConnectionParam connectionParam) {
-        this.transport = transport;
-        this.serverUri = serverUri;
+    public WSClient(URI serverUri, ConnectionParam connectionParam) {
+       this.serverUri = serverUri;
         this.connectionParam = connectionParam;
         this.channel = null;
 
@@ -181,6 +180,9 @@ public class WSClient implements AutoCloseable {
     }
 
     public boolean isOpen() {
+        if (channel == null) {
+            return false;
+        }
         return channel.isActive();
     }
 
@@ -251,7 +253,7 @@ public class WSClient implements AutoCloseable {
     public void closeBlocking() {
         this.close();
     }
-    public static WSClient getInstance(ConnectionParam params, int endpointIndex, WSFunction function, Transport transport) throws SQLException {
+    public static WSClient getInstance(ConnectionParam params, int endpointIndex, WSFunction function) throws SQLException {
         if (Strings.isNullOrEmpty(function.getFunction())) {
             throw new SQLException("websocket url error");
         }
@@ -280,9 +282,9 @@ public class WSClient implements AutoCloseable {
         } catch (URISyntaxException e) {
             throw new SQLException("Websocket url parse error: " + loginUrl, e);
         }
-        return new WSClient(urlPath, transport, params);
+        return new WSClient(urlPath, params);
     }
-    public static WSClient getSlaveInstance(ConnectionParam params, WSFunction function, Transport transport) throws SQLException {
+    public static WSClient getSlaveInstance(ConnectionParam params, WSFunction function) throws SQLException {
         if (StringUtils.isEmpty(params.getSlaveClusterHost()) || StringUtils.isEmpty(params.getSlaveClusterHost())){
             return null;
         }
@@ -310,6 +312,6 @@ public class WSClient implements AutoCloseable {
         } catch (URISyntaxException e) {
             throw new SQLException("Slave cluster websocket url parse error: " + loginUrl, e);
         }
-        return new WSClient(urlPath, transport, params);
+        return new WSClient(urlPath, params);
     }
 }

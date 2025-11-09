@@ -71,6 +71,13 @@ jobs:
           TDENGINE_CLOUD_URL: ${{ secrets.TDENGINE_CLOUD_URL }}
           TD_3360_TEST: 'true'
         run: mvn -B clean verify --file pom.xml
-
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: service-logs
+          path: |
+            /var/log/taos/**/*
+          retention-days: 7
 
 

@@ -1,4 +1,4 @@
-package com.taosdata.jdbc.ws;
+package com.taosdata.jdbc.ws.loadbalance;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.TSDBErrorNumbers;
@@ -7,6 +7,7 @@ import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
+import com.taosdata.jdbc.ws.TaosAdapterMock;
 import org.junit.*;
 import org.junit.runner.RunWith;
 
@@ -19,10 +20,10 @@ import java.util.Properties;
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "websocket master slave test", author = "yjshe", version = "3.2.11")
 @FixMethodOrder
-public class WSLoadBlanceTest {
+public class WSLoadBalanceTest {
     private static final String host = "127.0.0.1";
     private static final int portA = 6041;
-    private static final String db_name = TestUtils.camelToSnake(WSLoadBlanceTest.class);
+    private static final String db_name = TestUtils.camelToSnake(WSLoadBalanceTest.class);
     private static final String tableName = "meters";
     static  private Connection connection;
     @Description("query")

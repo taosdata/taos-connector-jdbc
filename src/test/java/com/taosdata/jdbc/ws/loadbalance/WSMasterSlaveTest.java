@@ -1,4 +1,4 @@
-package com.taosdata.jdbc.ws;
+package com.taosdata.jdbc.ws.loadbalance;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.annotation.CatalogRunner;
@@ -7,6 +7,7 @@ import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
+import com.taosdata.jdbc.ws.TaosAdapterMock;
 import org.junit.*;
 import org.junit.runner.RunWith;
 

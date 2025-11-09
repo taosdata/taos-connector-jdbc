@@ -39,7 +39,7 @@ public class ConnectionParam {
     private boolean enableAutoConnect;
 
     private String slaveClusterHost;
-    private String slaveClusterPort;
+    private int slaveClusterPort;
     private int reconnectIntervalMs;
     private int reconnectRetryCount;
     private boolean disableSslCertValidation;
@@ -153,7 +153,7 @@ public class ConnectionParam {
         this.slaveClusterHost = slaveClusterHost;
     }
 
-    public void setSlaveClusterPort(String slaveClusterPort) {
+    public void setSlaveClusterPort(int slaveClusterPort) {
         this.slaveClusterPort = slaveClusterPort;
     }
 
@@ -258,7 +258,7 @@ public class ConnectionParam {
     public String getSlaveClusterHost() {
         return slaveClusterHost;
     }
-    public String getSlaveClusterPort() {
+    public int getSlaveClusterPort() {
         return slaveClusterPort;
     }
     public int getReconnectIntervalMs() {
@@ -421,10 +421,17 @@ public class ConnectionParam {
         boolean varcharAsString = Boolean.parseBoolean(properties.getProperty(TSDBDriver.PROPERTY_KEY_VARCHAR_AS_STRING, "false"));
 
         String slaveClusterHost = properties.getProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_HOST, "");
-        String slaveClusterPort = properties.getProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_PORT, "");
+        int slaveClusterPort = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_PORT, "6041"));
+        if (slaveClusterPort <= 0){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "slave port must be positive integer");
+        }
 
-        if (!StringUtils.isEmpty(slaveClusterHost) && endpoints.size() > 1){
+        if (!StringUtils.isEmpty(slaveClusterHost) && endpoints.size() != 1){
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "load balancing and slave cluster can not be set at the same time");
+        }
+
+        if (!StringUtils.isEmpty(slaveClusterHost)) {
+            endpoints.add(new Endpoint(slaveClusterHost, slaveClusterPort, slaveClusterHost.startsWith("[") && slaveClusterHost.endsWith("]")));
         }
 
         int reconnectIntervalMs  = Integer
@@ -544,7 +551,7 @@ public class ConnectionParam {
         private boolean enableCompression;
         private boolean enableAutoReconnect;
         private String slaveClusterHost;
-        private String slaveClusterPort;
+        private int slaveClusterPort;
         private int reconnectIntervalMs;
         private int reconnectRetryCount;
         private boolean disableSslCertValidation;
@@ -631,7 +638,7 @@ public class ConnectionParam {
             return this;
         }
 
-        public Builder setSlaveClusterPort(String slaveClusterPort) {
+        public Builder setSlaveClusterPort(int slaveClusterPort) {
             this.slaveClusterPort = slaveClusterPort;
             return this;
         }

@@ -74,8 +74,8 @@ public class RestfulConnectionParamTest {
         assertEquals("slaveHost", connectionParam.getSlaveClusterHost());
 
         // Test slaveClusterPort
-        connectionParam.setSlaveClusterPort("8081");
-        assertEquals("8081", connectionParam.getSlaveClusterPort());
+        connectionParam.setSlaveClusterPort(8081);
+        assertEquals(8081, connectionParam.getSlaveClusterPort());
 
         // Test reconnectIntervalMs
         connectionParam.setReconnectIntervalMs(2000);

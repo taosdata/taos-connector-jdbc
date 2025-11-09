@@ -62,7 +62,7 @@ public abstract class AbstractDriver implements Driver {
                 log.error("Error serializing ConnectionParam", e);
             }
         }
-        InFlightRequest inFlightRequest = new InFlightRequest(param.getRequestTimeout(), param.getMaxRequest());
+        InFlightRequest inFlightRequest = new InFlightRequest(param.getMaxRequest());
         param.setTextMessageHandler(message -> {
             try {
                 log.trace("received message: {}", message);

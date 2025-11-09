@@ -156,7 +156,7 @@ public class SchemalessWriter implements AutoCloseable {
                     .setRequestTimeout(timeout)
                     .setUseSsl(useSSL)
                     .build();
-            InFlightRequest inFlightRequest = new InFlightRequest(timeout, 20);
+            InFlightRequest inFlightRequest = new InFlightRequest(20);
             param.setTextMessageHandler(message -> {
                 try {
                     JsonNode jsonObject = JsonUtil.getObjectReader().readTree(message);

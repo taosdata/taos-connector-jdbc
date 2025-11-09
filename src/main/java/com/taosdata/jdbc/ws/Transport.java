@@ -2,9 +2,11 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
+import com.taosdata.jdbc.common.Endpoint;
 import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.CompletableFutureTimeout;
+import com.taosdata.jdbc.utils.RebalanceUtil;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.entity.*;
@@ -15,8 +17,10 @@ import org.slf4j.LoggerFactory;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.concurrent.*;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT;
@@ -54,27 +58,29 @@ public class Transport implements AutoCloseable {
     public Transport(WSFunction function,
                      ConnectionParam param,
                      InFlightRequest inFlightRequest) throws SQLException {
+        this.connectionParam = param;
+        this.wsFunction = function;
+
         // master slave mode
-        WSClient slave = WSClient.getSlaveInstance(param, function, this);
+        WSClient slave = WSClient.getSlaveInstance(param, function);
         if (slave != null){
-            WSClient master = WSClient.getInstance(param, 0, function, this);
+            WSClient master = WSClient.getInstance(param, 0, function);
             this.clientArr.add(master);
             this.clientArr.add(slave);
+            RebalanceUtil.newCluster(param.getEndpoints());
             currentNodeIndex = 0;
         } else {
-            if (!isTest) {
-                Collections.shuffle(param.getEndpoints());
-            }
             for (int i = 0; i < param.getEndpoints().size(); i++){
-                WSClient client = WSClient.getInstance(param, i, function, this);
+                WSClient client = WSClient.getInstance(param, i, function);
                 this.clientArr.add(client);
+
+                RebalanceUtil.newCluster(param.getEndpoints());
             }
             currentNodeIndex = 0;
         }
 
         this.inFlightRequest = inFlightRequest;
-        this.connectionParam = param;
-        this.wsFunction = function;
+
 
         setTimeout(param.getRequestTimeout());
     }
@@ -93,17 +99,31 @@ public class Transport implements AutoCloseable {
                 return;
             }
 
-            for (int i = 0; i < clientArr.size() && this.connectionParam.isEnableAutoConnect(); i++) {
-                boolean reconnected = reconnectCurNode(isTmq);
-                if (reconnected) {
+            // first try reconnect current node
+            boolean reconnected = reconnectCurNode(isTmq);
+            if (reconnected) {
+                reconnectCount.incrementAndGet();
+                log.debug("reconnect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri.toString()));
+                return;
+            } else {
+                RebalanceUtil.endpointDown(connectionParam.getEndpoints().get(currentNodeIndex));
+                RebalanceUtil.closeConnection(connectionParam.getEndpoints().get(currentNodeIndex));
+            }
+
+            List<Endpoint> endpoints = connectionParam.getEndpoints();
+            int[] indexes = RebalanceUtil.getConnectCountsAsc(endpoints);
+            for (int currentIndex : indexes) {
+                if (!RebalanceUtil.getEndpointInfo(endpoints.get(currentIndex)).isOnline()) {
+                    continue;
+                }
+                currentNodeIndex = currentIndex;
+                if (reconnectCurNode(isTmq)){
                     reconnectCount.incrementAndGet();
+                    RebalanceUtil.endpintUp(connectionParam.getEndpoints().get(currentNodeIndex));
+                    RebalanceUtil.newConnection(connectionParam.getEndpoints().get(currentNodeIndex));
                     log.debug("reconnect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri.toString()));
                     return;
                 }
-
-                log.debug("reconnect failed to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri.toString()));
-
-                currentNodeIndex = (currentNodeIndex + 1) % clientArr.size();
             }
 
             close();
@@ -130,11 +150,7 @@ public class Transport implements AutoCloseable {
         CompletableFuture<Response> completableFuture = new CompletableFuture<>();
         String reqString = request.toString();
 
-        try {
-            inFlightRequest.put(new FutureResponse(request.getAction(), request.id(), completableFuture));
-        } catch (InterruptedException | TimeoutException e) {
-            throw new SQLException(e);
-        }
+        inFlightRequest.put(new FutureResponse(request.getAction(), request.id(), completableFuture));
 
         try {
             clientArr.get(currentNodeIndex).send(reqString);
@@ -184,11 +200,7 @@ public class Transport implements AutoCloseable {
 
         Response response;
         CompletableFuture<Response> completableFuture = new CompletableFuture<>();
-        try {
-            inFlightRequest.put(new FutureResponse(action, reqId, completableFuture));
-        } catch (InterruptedException | TimeoutException e) {
-            throw new SQLException(e);
-        }
+        inFlightRequest.put(new FutureResponse(action, reqId, completableFuture));
 
         try {
             Utils.retainByteBuf(buffer);
@@ -254,11 +266,7 @@ public class Transport implements AutoCloseable {
 
         Response response;
         CompletableFuture<Response> completableFuture = new CompletableFuture<>();
-        try {
-            inFlightRequest.put(new FutureResponse(action, reqId, completableFuture));
-        } catch (InterruptedException | TimeoutException e) {
-            throw new SQLException(e);
-        }
+        inFlightRequest.put(new FutureResponse(action, reqId, completableFuture));
 
         try {
             Utils.retainByteBuf(buffer);
@@ -295,7 +303,7 @@ public class Transport implements AutoCloseable {
         return response;
     }
 
-    private void handleErrInMasterSlaveMode(Response response) throws InterruptedException{
+    private void handleErrInMasterSlaveMode(Response response){
         if (clientArr.size() > 1 && response instanceof CommonResp){
             CommonResp commonResp = (CommonResp) response;
             if (TSDB_CODE_RPC_NETWORK_UNAVAIL == commonResp.getCode() || TSDB_CODE_RPC_SOMENODE_NOT_CONNECTED == commonResp.getCode()) {
@@ -313,11 +321,8 @@ public class Transport implements AutoCloseable {
         CompletableFuture<Response> completableFuture = new CompletableFuture<>();
         String reqString = request.toString();
 
-        try {
-            inFlightRequest.put(new FutureResponse(request.getAction(), request.id(), completableFuture));
-        } catch (InterruptedException | TimeoutException e) {
-            throw new SQLException(e);
-        }
+        inFlightRequest.put(new FutureResponse(request.getAction(), request.id(), completableFuture));
+
 
         try {
             clientArr.get(currentNodeIndex).send(reqString);
@@ -369,6 +374,10 @@ public class Transport implements AutoCloseable {
         }
         closed = true;
         inFlightRequest.close();
+
+        if (isConnected()) {
+            RebalanceUtil.closeConnection(connectionParam.getEndpoints().get(currentNodeIndex));
+        }
         for (WSClient wsClient : clientArr){
             wsClient.close();
         }
@@ -377,13 +386,16 @@ public class Transport implements AutoCloseable {
     public void checkConnection(int connectTimeout) throws SQLException {
         if (WSConnection.g_FirstConnection.compareAndSet(true, false) && !StringUtils.isEmpty(connectionParam.getSlaveClusterHost())) {
             // test all nodes, if connection failed, throw exception
-            for (WSClient wsClient : clientArr){
-                if (!wsClient.connectBlocking()) {
+            for (int i = 0; i < clientArr.size(); i++){
+                if (!clientArr.get(i).connectBlocking()) {
+                    RebalanceUtil.endpointDown(connectionParam.getEndpoints().get(i));
+
                     close();
                     throw TSDBError.createSQLException(ERROR_CONNECTION_TIMEOUT,
-                            "can't create connection with server " + wsClient.serverUri.toString() + " within: " + connectTimeout + " milliseconds");
+                            "can't create connection with server " + clientArr.get(i).serverUri.toString() + " within: " + connectTimeout + " milliseconds");
                 }
-                log.debug("connect success to {}", StringUtils.getBasicUrl(wsClient.serverUri.toString()));
+                log.debug("connect success to {}", StringUtils.getBasicUrl(clientArr.get(i).serverUri.toString()));
+                RebalanceUtil.endpintUp(connectionParam.getEndpoints().get(i));
             }
 
             // disconnect all nodes except current node
@@ -394,19 +406,40 @@ public class Transport implements AutoCloseable {
                 }
             }
         } else {
-            // test all nodes, until one node connected success
-            for (int i = 0; i < clientArr.size(); i++){
-                currentNodeIndex = currentNodeIndex % clientArr.size();
-                if (clientArr.get(currentNodeIndex).connectBlocking()) {
-                    log.debug("connect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri.toString()));
-                    return;
-                }
-                currentNodeIndex = (currentNodeIndex + 1) % clientArr.size();
+            if (connectWithMinimumCount()) {
+                return;
             }
             close();
             throw TSDBError.createSQLException(ERROR_CONNECTION_TIMEOUT,
                     "can't create connection with any server within: " + connectTimeout + " milliseconds");
         }
+    }
+
+    private boolean connectWithMinimumCount() {
+        // find the minimum connection endpoint
+        List<Endpoint> endpoints = connectionParam.getEndpoints();
+        int[] indexes = RebalanceUtil.getConnectCountsAsc(endpoints);
+        for (int currentIndex : indexes) {
+            if (!RebalanceUtil.getEndpointInfo(endpoints.get(currentIndex)).isOnline()) {
+                continue;
+            }
+
+            currentNodeIndex = currentIndex;
+            RebalanceUtil.newConnection(endpoints.get(currentNodeIndex));
+            if (clientArr.get(currentNodeIndex).connectBlocking()) {
+                if (log.isDebugEnabled()) {
+                    log.debug("connect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri.toString()));
+                }
+                return true;
+            } else {
+                if (log.isErrorEnabled()) {
+                    log.error("connect failed to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri.toString()));
+                }
+                RebalanceUtil.endpointDown(endpoints.get(currentNodeIndex));
+                RebalanceUtil.closeConnection(endpoints.get(currentNodeIndex));
+            }
+        }
+        return false;
     }
 
     public void shutdown() {

@@ -1,28 +1,26 @@
 package com.taosdata.jdbc.ws;
 
+import com.taosdata.jdbc.TSDBError;
+import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.ws.entity.Action;
 import com.taosdata.jdbc.ws.schemaless.SchemalessAction;
 import com.taosdata.jdbc.ws.tmq.ConsumerAction;
 
-import java.util.HashMap;
+import java.sql.SQLException;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Unfinished execution
  */
 public class InFlightRequest {
-    private final int timeout;
-    private final Semaphore semaphore;
-    private final Map<String, ConcurrentHashMap<Long, FutureResponse>> futureMap = new HashMap<>();
+    private final AtomicInteger currentConcurrentNum;
+    private final Map<String, ConcurrentHashMap<Long, FutureResponse>> futureMap = new ConcurrentHashMap<>();
 
-    public InFlightRequest(int timeout, int concurrentNum) {
-        this.timeout = timeout;
-        this.semaphore = new Semaphore(concurrentNum);
+    public InFlightRequest(int concurrentNum) {
+        this.currentConcurrentNum = new AtomicInteger(concurrentNum);
         for (Action value : Action.values()) {
             String action = value.getAction();
             futureMap.put(action, new ConcurrentHashMap<>());
@@ -37,11 +35,12 @@ public class InFlightRequest {
         }
     }
 
-    public void put(FutureResponse rf) throws InterruptedException, TimeoutException {
-        if (semaphore.tryAcquire(timeout, TimeUnit.MILLISECONDS)) {
+    public void put(FutureResponse rf) throws SQLException {
+        if (currentConcurrentNum.get() > 0) {
+            currentConcurrentNum.decrementAndGet();
             futureMap.get(rf.getAction()).put(rf.getId(), rf);
         } else {
-            throw new TimeoutException("websocket connection reached the max number of concurrent requests");
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT, "websocket connection reached the max number of concurrent requests");
         }
     }
 
@@ -55,13 +54,13 @@ public class InFlightRequest {
             }
             FutureResponse future = futureMap.get(action).remove(id);
             if (null != future) {
-                semaphore.release();
+                currentConcurrentNum.incrementAndGet();
             }
             return future;
         }
         FutureResponse future = futureMap.get(action).remove(id);
         if (null != future) {
-            semaphore.release();
+            currentConcurrentNum.incrementAndGet();
         }
         return future;
     }
