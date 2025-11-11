@@ -105,7 +105,7 @@ public class RestfulResultSet extends AbstractResultSet {
         columns.clear();
         for (int colIndex = 0; colIndex < columnMeta.size(); colIndex++) {
             JsonNode col = columnMeta.get(colIndex);
-            String col_name = col.get(0).asText();
+            String col_name = col.get(0).asText().toLowerCase();
             String typeName = col.get(1).asText();
             DataType type = DataType.getDataType(typeName);
             int col_type = type.getJdbcTypeValue();
@@ -494,7 +494,7 @@ public class RestfulResultSet extends AbstractResultSet {
         if (isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);
 
-        int columnIndex = columnNames.indexOf(columnLabel);
+        int columnIndex = columnNames.indexOf(columnLabel == null ? null : columnLabel.toLowerCase());
         if (columnIndex == -1)
             throw new SQLException("cannot find Column in resultSet");
         return columnIndex + 1;
