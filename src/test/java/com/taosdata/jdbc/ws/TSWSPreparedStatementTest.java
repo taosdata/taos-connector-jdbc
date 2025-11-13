@@ -1053,7 +1053,7 @@ public class TSWSPreparedStatementTest {
         Assert.assertEquals(Types.SMALLINT, parameterMetaData.getParameterType(6));
         Assert.assertEquals(Types.TINYINT, parameterMetaData.getParameterType(7));
         Assert.assertEquals(Types.BOOLEAN, parameterMetaData.getParameterType(8));
-        Assert.assertEquals(Types.BINARY, parameterMetaData.getParameterType(9));
+        Assert.assertEquals(Types.VARCHAR, parameterMetaData.getParameterType(9));
         Assert.assertEquals(Types.NCHAR, parameterMetaData.getParameterType(10));
 
         Assert.assertEquals("TIMESTAMP", parameterMetaData.getParameterTypeName(1));

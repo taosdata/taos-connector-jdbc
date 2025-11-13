@@ -1,5 +1,6 @@
-name: build
-
+name: build-3360
+permissions:
+  contents: read
 on:
   push:
     branches:

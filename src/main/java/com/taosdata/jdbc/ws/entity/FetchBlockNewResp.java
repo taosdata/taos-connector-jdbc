@@ -37,7 +37,7 @@ public class FetchBlockNewResp extends Response {
         buffer.readLongLE(); // resultId
         isCompleted = buffer.readByte() != 0;
 
-        if (isCompleted){
+        if (isCompleted || code != Code.SUCCESS.getCode()){
             ReferenceCountUtil.safeRelease(buffer);
         }
     }

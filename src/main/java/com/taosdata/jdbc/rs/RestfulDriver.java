@@ -38,7 +38,7 @@ public class RestfulDriver extends AbstractDriver {
         if (!acceptsURL(url))
             return null;
 
-        Properties props = StringUtils.parseUrl(url, info, false);
+        Properties props = StringUtils.parseUrl(url, info);
         String batchLoad = info.getProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD);
         if (Boolean.parseBoolean(batchLoad)) {
             ConnectionParam param = ConnectionParam.getParamWs(props);
@@ -54,7 +54,7 @@ public class RestfulDriver extends AbstractDriver {
                     (param.getUser() + ":" + param.getPassword()).getBytes(StandardCharsets.UTF_8));
         }
 
-        RestfulConnection conn = new RestfulConnection(param.getHost(), param.getPort(), props, param.getDatabase(),
+        RestfulConnection conn = new RestfulConnection(param.getEndpoints().get(0).getHost(), String.valueOf(param.getEndpoints().get(0).getPort()), props, param.getDatabase(),
                 url, auth, param.isUseSsl(), param.getCloudToken(), param.getTz());
         if (param.getDatabase() != null && !param.getDatabase().trim().replaceAll("\\s", "").isEmpty()) {
             try (Statement stmt = conn.createStatement()) {
@@ -77,7 +77,7 @@ public class RestfulDriver extends AbstractDriver {
             info = new Properties();
         }
         if (acceptsURL(url)) {
-            info = StringUtils.parseUrl(url, info, false);
+            info = StringUtils.parseUrl(url, info);
         }
         return getPropertyInfo(info);
     }

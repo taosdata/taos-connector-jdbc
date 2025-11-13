@@ -20,6 +20,7 @@ public class ConsumerParam {
         knownKeys.add(TSDBDriver.PROPERTY_KEY_PASSWORD);
         knownKeys.add(TSDBDriver.PROPERTY_KEY_HOST);
         knownKeys.add(TSDBDriver.PROPERTY_KEY_PORT);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_ENDPOINTS);
         knownKeys.add(TSDBDriver.PROPERTY_KEY_TOKEN);
         knownKeys.add(TSDBDriver.PROPERTY_KEY_PRODUCT_NAME);
         knownKeys.add(TSDBDriver.PROPERTY_KEY_DBNAME);
@@ -80,7 +81,7 @@ public class ConsumerParam {
     public ConsumerParam(Properties properties) throws SQLException {
         if (null != properties.getProperty(TMQConstants.CONNECT_URL)) {
             String url = properties.getProperty(TMQConstants.CONNECT_URL);
-            StringUtils.parseUrl(url, properties, false);
+            StringUtils.parseUrl(url, properties);
         }
         if (null != properties.getProperty(TMQConstants.CONNECT_USER))
             properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, properties.getProperty(TMQConstants.CONNECT_USER));

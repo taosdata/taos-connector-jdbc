@@ -4,10 +4,10 @@ import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.Utils;
+import com.taosdata.jdbc.ws.stmt2.entity.StmtInfo;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 
-import java.io.ByteArrayOutputStream;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.sql.SQLException;
@@ -22,48 +22,6 @@ import static com.taosdata.jdbc.TSDBConstants.*;
 
 public class SerializeBlock {
     private SerializeBlock() {
-    }
-
-    private static int bitMapLen(int n) {
-        return ((n) + ((1 << 3) - 1)) >> 3;
-    }
-
-    private static int bitPos(int n) {
-        return n & ((1 << 3) - 1);
-    }
-
-    private static int charOffset(int n) {
-        return n >> 3;
-    }
-
-    private static byte bmSetNull(byte c, int n) {
-        return (byte) (c + (1 << (7 - bitPos(n))));
-    }
-
-    private static void handleBoolean(ByteArrayOutputStream buf, Object o){
-        boolean v = (Boolean) o;
-        if (v) {
-            buf.write(1);
-        }else {
-            buf.write(0);
-        }
-    }
-    private static void SerializeInt(byte[] buf, int offset, int v){
-        buf[offset] = (byte) (v & 0xFF);
-        buf[offset + 1] = (byte) ((v >> 8) & 0xFF);
-        buf[offset + 2] = (byte) ((v >> 16) & 0xFF);
-        buf[offset + 3] = (byte) ((v >> 24) & 0xFF);
-    }
-
-    private static void SerializeLong(byte[] buf, int offset, long v){
-        buf[offset] = (byte) (v & 0xFF);
-        buf[offset + 1] = (byte) ((v >> 8) & 0xFF);
-        buf[offset + 2] = (byte) ((v >> 16) & 0xFF);
-        buf[offset + 3] = (byte) ((v >> 24) & 0xFF);
-        buf[offset + 4] = (byte) ((v >> 32) & 0xFF);
-        buf[offset + 5] = (byte) ((v >> 40) & 0xFF);
-        buf[offset + 6] = (byte) ((v >> 48) & 0xFF);
-        buf[offset + 7] = (byte) ((v >> 56) & 0xFF);
     }
     private static void SerializeShort(ByteBuf buf, short v){
         buf.writeShortLE(v);
@@ -113,17 +71,11 @@ public class SerializeBlock {
                     case TSDB_DATA_TYPE_JSON:
                     case TSDB_DATA_TYPE_BLOB:
                     case TSDB_DATA_TYPE_VARBINARY:
-                    case TSDB_DATA_TYPE_GEOMETRY:{
+                    case TSDB_DATA_TYPE_GEOMETRY:
+                    case TSDB_DATA_TYPE_NCHAR:{
                         byte[] v = (byte[]) o;
                         buf.writeIntLE(v.length);
                         bufferLength += v.length;
-                        break;
-                    }
-                    case TSDB_DATA_TYPE_NCHAR: {
-                        String v = (String) o;
-                        int len = v.getBytes().length;
-                        buf.writeIntLE(len);
-                        bufferLength += len;
                         break;
                     }
                     default:
@@ -336,21 +288,12 @@ public class SerializeBlock {
             case TSDB_DATA_TYPE_BINARY:
             case TSDB_DATA_TYPE_BLOB:
             case TSDB_DATA_TYPE_VARBINARY:
-            case TSDB_DATA_TYPE_GEOMETRY:{
+            case TSDB_DATA_TYPE_GEOMETRY:
+            case TSDB_DATA_TYPE_NCHAR: {
                 for (Object o: objectList){
                     if (o != null) {
                         byte[] v = (byte[]) o;
                         serializeByteArray(buf, v);
-                    }
-                }
-                break;
-            }
-            case TSDB_DATA_TYPE_NCHAR: {
-                for (Object o: objectList){
-                    if (o != null) {
-                        String v = (String) o;
-                        byte[] bytes = v.getBytes();
-                        serializeByteArray(buf, bytes);
                     }
                 }
                 break;
@@ -407,7 +350,8 @@ public class SerializeBlock {
             case TSDB_DATA_TYPE_BINARY:
             case TSDB_DATA_TYPE_BLOB:
             case TSDB_DATA_TYPE_VARBINARY:
-            case TSDB_DATA_TYPE_GEOMETRY:{
+            case TSDB_DATA_TYPE_GEOMETRY:
+            case TSDB_DATA_TYPE_NCHAR:{
                 int totalLength = 0;
                 for (Object o : column.getDataList()) {
                     if (o != null) {
@@ -418,22 +362,22 @@ public class SerializeBlock {
                 // TotalLength(4) + Type (4) + Num(4) + IsNull(1) * size + haveLength(1) + BufferLength(4) + 4 * v.length + totalLength
                 return 17 + (5 * column.getDataList().size()) + totalLength;
             }
-            case TSDB_DATA_TYPE_NCHAR: {
-                int totalLength = 0;
-                for (Object o : column.getDataList()) {
-                    if (o != null) {
-                        String v = (String) o;
-                        totalLength += v.getBytes().length;
-                    }
-                }
-                // TotalLength(4) + Type (4) + Num(4) + IsNull(1) * size + haveLength(1) + BufferLength(4) + 4 * v.length + totalLength
-                return 17 + (5 * column.getDataList().size()) + totalLength;
-            }
             default:
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "unsupported data type : " + column.getType());
         }
     }
 
+    public static ByteBuf getStmt2BindBlock(HashMap<ByteBuffer, TableInfo> tableInfoMap,
+                                            StmtInfo stmtInfo,
+                                            long reqId) throws SQLException {
+        return getStmt2BindBlock(reqId,
+                stmtInfo.getStmtId(),
+                tableInfoMap,
+                stmtInfo.getToBeBindTableNameIndex(),
+                stmtInfo.getToBeBindTagCount(),
+                stmtInfo.getToBeBindColCount(),
+                stmtInfo.getPrecision());
+    }
     public static ByteBuf getStmt2BindBlock(long reqId,
                                            long stmtId,
                                            HashMap<ByteBuffer, TableInfo> tableInfoMap,
@@ -603,37 +547,5 @@ public class SerializeBlock {
             Utils.releaseByteBuf(buf);
             throw e;
         }
-    }
-
-    // little endian
-    public static byte[] shortToBytes(int v) {
-        byte[] result = new byte[2];
-        result[0] = (byte) (v & 0xFF);
-        result[1] = (byte) ((v >> 8) & 0xFF);
-        return result;
-    }
-
-    // little endian
-    public static byte[] intToBytes(int v) {
-        byte[] result = new byte[4];
-        result[0] = (byte) (v & 0xFF);
-        result[1] = (byte) ((v >> 8) & 0xFF);
-        result[2] = (byte) ((v >> 16) & 0xFF);
-        result[3] = (byte) ((v >> 24) & 0xFF);
-        return result;
-    }
-
-    // little endian
-    public static byte[] longToBytes(long v) {
-        byte[] result = new byte[8];
-        result[0] = (byte) (v & 0xFF);
-        result[1] = (byte) ((v >> 8) & 0xFF);
-        result[2] = (byte) ((v >> 16) & 0xFF);
-        result[3] = (byte) ((v >> 24) & 0xFF);
-        result[4] = (byte) ((v >> 32) & 0xFF);
-        result[5] = (byte) ((v >> 40) & 0xFF);
-        result[6] = (byte) ((v >> 48) & 0xFF);
-        result[7] = (byte) ((v >> 56) & 0xFF);
-        return result;
     }
 }

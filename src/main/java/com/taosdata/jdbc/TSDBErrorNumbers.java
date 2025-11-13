@@ -1,8 +1,5 @@
 package com.taosdata.jdbc;
 
-import java.util.HashSet;
-import java.util.Set;
-
 public class TSDBErrorNumbers {
 
     public static final int ERROR_CONNECTION_CLOSED = 0x2301;   // connection already closed
@@ -69,73 +66,5 @@ public class TSDBErrorNumbers {
 
 
     public static final int ERROR_FW_WRITE_ERROR = 0x2390; // fast writer write error
-
-    private static final Set<Integer> errorNumbers = new HashSet<>();
-
-    static {
-        errorNumbers.add(ERROR_CONNECTION_CLOSED);
-        errorNumbers.add(ERROR_UNSUPPORTED_METHOD);
-        errorNumbers.add(ERROR_INVALID_VARIABLE);
-        errorNumbers.add(ERROR_STATEMENT_CLOSED);
-        errorNumbers.add(ERROR_RESULTSET_CLOSED);
-        errorNumbers.add(ERROR_INVALID_WITH_EXECUTEQUERY);
-        errorNumbers.add(ERROR_INVALID_WITH_EXECUTEUPDATE);
-        errorNumbers.add(ERROR_INVALID_FOR_EXECUTE_QUERY);
-        errorNumbers.add(ERROR_DATABASE_NOT_SPECIFIED_OR_AVAILABLE);
-        errorNumbers.add(ERROR_INVALID_FOR_EXECUTE_UPDATE);
-        errorNumbers.add(ERROR_INVALID_FOR_EXECUTE);
-        errorNumbers.add(ERROR_PARAMETER_INDEX_OUT_RANGE);
-        errorNumbers.add(ERROR_SQLCLIENT_EXCEPTION_ON_CONNECTION_CLOSED);
-        errorNumbers.add(ERROR_UNKNOWN_SQL_TYPE_IN_TDENGINE);
-        errorNumbers.add(ERROR_CANNOT_REGISTER_JNI_DRIVER);
-        errorNumbers.add(ERROR_CANNOT_REGISTER_RESTFUL_DRIVER);
-        errorNumbers.add(ERROR_URL_NOT_SET);
-        errorNumbers.add(ERROR_INVALID_SQL);
-        errorNumbers.add(ERROR_NUMERIC_VALUE_OUT_OF_RANGE);
-        errorNumbers.add(ERROR_UNKNOWN_TAOS_TYPE);
-        errorNumbers.add(ERROR_UNKNOWN_TIMESTAMP_PRECISION);
-        errorNumbers.add(ERROR_RESTFul_Client_IOException);
-        errorNumbers.add(ERROR_USER_IS_REQUIRED);
-        errorNumbers.add(ERROR_PASSWORD_IS_REQUIRED);
-        errorNumbers.add(ERROR_INVALID_JSON_FORMAT);
-        errorNumbers.add(ERROR_HTTP_ENTITY_IS_NULL);
-        errorNumbers.add(ERROR_CONNECTION_TIMEOUT);
-        errorNumbers.add(ERROR_QUERY_TIMEOUT);
-        errorNumbers.add(ERROR_RESTFUL_CLIENT_QUERY_EXCEPTION);
-
-        errorNumbers.add(ERROR_TYPE_CONVERT_EXCEPTION);
-        errorNumbers.add(ERROR_VERSION_INCOPMATIABLE);
-        errorNumbers.add(ERROR_RESOURCE_FREEED);
-        errorNumbers.add(ERROR_BLOB_UNSUPPORTED_IN_SERVER);
-        errorNumbers.add(ERROR_LINE_BIND_MODE_UNSUPPORTED_IN_SERVER);
-
-        errorNumbers.add(ERROR_RESTFul_Client_Protocol_Exception);
-
-        errorNumbers.add(ERROR_SUBSCRIBE_FAILED);
-        errorNumbers.add(ERROR_UNSUPPORTED_ENCODING);
-        errorNumbers.add(ERROR_JNI_TDENGINE_ERROR);
-        errorNumbers.add(ERROR_JNI_CONNECTION_NULL);
-        errorNumbers.add(ERROR_JNI_RESULT_SET_NULL);
-        errorNumbers.add(ERROR_JNI_NUM_OF_FIELDS_0);
-        errorNumbers.add(ERROR_JNI_SQL_NULL);
-        errorNumbers.add(ERROR_JNI_FETCH_END);
-        errorNumbers.add(ERROR_JNI_OUT_OF_MEMORY);
-        errorNumbers.add(ERROR_TMQ_CONF_NULL);
-        errorNumbers.add(ERROR_TMQ_CONF_KEY_NULL);
-        errorNumbers.add(ERROR_TMQ_CONF_VALUE_NULL);
-        errorNumbers.add(ERROR_TMQ_CONF_ERROR);
-        errorNumbers.add(ERROR_TMQ_TOPIC_NULL);
-        errorNumbers.add(ERROR_TMQ_TOPIC_NAME_NULL);
-        errorNumbers.add(ERROR_TMQ_CONSUMER_NULL);
-        errorNumbers.add(ERROR_TMQ_CONSUMER_CREATE_ERROR);
-        errorNumbers.add(ERROR_TMQ_SEEK_OFFSET);
-        errorNumbers.add(ERROR_TMQ_VGROUP_NOT_FOUND);
-    }
-
-    private TSDBErrorNumbers() {
-    }
-
-    public static boolean contains(int errorNumber) {
-        return errorNumbers.contains(errorNumber);
-    }
+    public static final int ERROR_WS_MSG_NEED_RESEND = 0x2391;   // the msg need resend after reconnect
 }

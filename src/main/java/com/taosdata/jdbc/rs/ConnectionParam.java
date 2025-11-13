@@ -1,12 +1,13 @@
 package com.taosdata.jdbc.rs;
 
+import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
+import com.taosdata.jdbc.common.Endpoint;
 import com.taosdata.jdbc.utils.HttpClientPoolUtil;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.Utils;
-import com.taosdata.jdbc.ws.Transport;
 import io.netty.buffer.ByteBuf;
 
 import java.io.UnsupportedEncodingException;
@@ -15,12 +16,13 @@ import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.time.DateTimeException;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 import java.util.function.Consumer;
 
 public class ConnectionParam {
-    private String host;
-    private String port;
+    private List<Endpoint> endpoints;
     private String database;
     private String cloudToken;
     private String user;
@@ -51,14 +53,14 @@ public class ConnectionParam {
     private int retryTimes;
     private String asyncWrite;
     private String pbsMode;
+    private int wsKeepAlive;
 
     private Consumer<String> textMessageHandler;
     private Consumer<ByteBuf> binaryMessageHandler;
     static public final int CONNECT_MODE_BI = 1;
 
     private ConnectionParam(Builder builder) {
-        this.host = builder.host;
-        this.port = builder.port;
+        this.endpoints = builder.endpoints;
         this.database = builder.database;
         this.cloudToken = builder.cloudToken;
         this.user = builder.user;
@@ -89,16 +91,12 @@ public class ConnectionParam {
         this.textMessageHandler = builder.textMessageHandler;
         this.binaryMessageHandler = builder.binaryMessageHandler;
         this.pbsMode = builder.pbsMode;
+        this.wsKeepAlive = builder.wsKeepAlive;
     }
 
-    public void setHost(String host) {
-        this.host = host;
+    public void setEndpoints(List<Endpoint> endpoints) {
+        this.endpoints = endpoints;
     }
-
-    public void setPort(String port) {
-        this.port = port;
-    }
-
     public void setDatabase(String database) {
         this.database = database;
     }
@@ -210,11 +208,12 @@ public class ConnectionParam {
     public void setPbsMode(String pbsMode) {
         this.pbsMode = pbsMode;
     }
-    public String getHost() {
-        return host;
+    public void setWsKeepAlive(int wsKeepAlive) {
+        this.wsKeepAlive = wsKeepAlive;
     }
-    public String getPort() {
-        return port;
+
+    public List<Endpoint> getEndpoints() {
+        return endpoints;
     }
     public String getDatabase() {
         return database;
@@ -313,7 +312,9 @@ public class ConnectionParam {
     public String getPbsMode() {
         return pbsMode;
     }
-
+    public int getWsKeepAlive() {
+        return wsKeepAlive;
+    }
     public Consumer<String> getTextMessageHandler() {
         return textMessageHandler;
     }
@@ -357,6 +358,17 @@ public class ConnectionParam {
     public static ConnectionParam getParam(Properties properties) throws SQLException {
         String host = properties.getProperty(TSDBDriver.PROPERTY_KEY_HOST);
         String port = properties.getProperty(TSDBDriver.PROPERTY_KEY_PORT);
+        String endpointStr = properties.getProperty(TSDBDriver.PROPERTY_KEY_ENDPOINTS);
+        List<Endpoint> endpoints;
+
+        if (host != null || port != null) {
+            endpoints = new ArrayList<>();
+            boolean isIpv6 = host != null && host.startsWith("[") && host.endsWith("]");
+            endpoints.add(new Endpoint(host, port == null ? 0 : Integer.parseInt(port), isIpv6));
+        } else {
+            endpoints = StringUtils.parseEndpoints(endpointStr);
+        }
+
         String database = properties.containsKey(TSDBDriver.PROPERTY_KEY_DBNAME)
                 ? properties.getProperty(TSDBDriver.PROPERTY_KEY_DBNAME)
                 : null;
@@ -399,7 +411,7 @@ public class ConnectionParam {
                 properties.getProperty(TSDBDriver.HTTP_CONNECT_TIMEOUT, HttpClientPoolUtil.DEFAULT_CONNECT_TIMEOUT));
 
         int requestTimeout = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT,
-                String.valueOf(Transport.DEFAULT_MESSAGE_WAIT_TIMEOUT)));
+                String.valueOf(TSDBConstants.DEFAULT_MESSAGE_WAIT_TIMEOUT)));
 
         int connectMode = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_CONNECT_MODE,"0"));
         if (connectMode < 0 || connectMode > 1){
@@ -410,6 +422,10 @@ public class ConnectionParam {
 
         String slaveClusterHost = properties.getProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_HOST, "");
         String slaveClusterPort = properties.getProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_PORT, "");
+
+        if (!StringUtils.isEmpty(slaveClusterHost) && endpoints.size() > 1){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "load balancing and slave cluster can not be set at the same time");
+        }
 
         int reconnectIntervalMs  = Integer
                 .parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_INTERVAL_MS, "2000"));
@@ -474,7 +490,12 @@ public class ConnectionParam {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "PROPERTY_KEY_PBS_MODE only support line");
         }
 
-        return new Builder(host, port)
+        int wsKeepAlive = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_WS_KEEP_ALIVE_SECONDS, "300"));
+        if (wsKeepAlive <= 0){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_WS_KEEP_ALIVE_SECONDS");
+        }
+
+        return new Builder(endpoints)
                 .setDatabase(database)
                 .setCloudToken(cloudToken)
                 .setUserAndPassword(user, password)
@@ -502,12 +523,12 @@ public class ConnectionParam {
                 .setRetryTimes(retryTimes)
                 .setAsyncWrite(asyncWrite)
                 .setPbsMode(pbsMode)
+                .setWsKeepAlive(wsKeepAlive)
                 .build();
     }
 
     public static class Builder {
-        private final String host;
-        private final String port;
+        private final List<Endpoint> endpoints;
         private String database;
         private String cloudToken;
         private String user;
@@ -538,13 +559,13 @@ public class ConnectionParam {
         private int retryTimes;
         private String asyncWrite;
         private String pbsMode;
+        private int wsKeepAlive;
 
         private Consumer<String> textMessageHandler;
         private Consumer<ByteBuf> binaryMessageHandler;
 
-        public Builder(String host, String port) {
-            this.host = host;
-            this.port = port;
+        public Builder(List<Endpoint> endpoints) {
+            this.endpoints = endpoints;
         }
 
         public Builder setDatabase(String database) {
@@ -678,6 +699,12 @@ public class ConnectionParam {
             this.pbsMode = pbsMode;
             return this;
         }
+
+        public Builder setWsKeepAlive(int wsKeepAlive) {
+            this.wsKeepAlive = wsKeepAlive;
+            return this;
+        }
+
         public Builder setTextMessageHandler(Consumer<String> textMessageHandler) {
             this.textMessageHandler = textMessageHandler;
             return this;

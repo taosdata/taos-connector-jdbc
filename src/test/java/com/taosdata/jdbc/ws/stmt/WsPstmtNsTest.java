@@ -146,7 +146,7 @@ public class WsPstmtNsTest {
             statement.execute("drop database if exists " + db_name);
             TestUtils.waitTransactionDone(connection);
 
-        } catch (InterruptedException e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
         connection.close();

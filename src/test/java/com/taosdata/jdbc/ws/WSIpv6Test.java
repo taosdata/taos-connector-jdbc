@@ -2,9 +2,9 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.sql.*;
@@ -15,7 +15,6 @@ import java.util.Properties;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-@Ignore
 public class WSIpv6Test {
     private static final String host = "[::1]";
     private static final int port = 6041;
@@ -60,6 +59,8 @@ public class WSIpv6Test {
 
     @BeforeClass
     public static void beforeClass() throws SQLException {
+        TestUtils.runInMain();
+
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
             url = "jdbc:TAOS-RS://" + host + ":" + port + "/?user=root&password=taosdata";
@@ -78,9 +79,11 @@ public class WSIpv6Test {
 
     @AfterClass
     public static void afterClass() throws SQLException {
-        try(Statement statement = connection.createStatement()) {
-            statement.execute("drop database if exists " + databaseName);
+        if (connection != null){
+            try(Statement statement = connection.createStatement()) {
+                statement.execute("drop database if exists " + databaseName);
+            }
+            connection.close();
         }
-        connection.close();
     }
 }

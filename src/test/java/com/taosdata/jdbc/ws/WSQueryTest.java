@@ -57,6 +57,7 @@ public class WSQueryTest {
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_WS_KEEP_ALIVE_SECONDS, "300");
         connection = DriverManager.getConnection(url, properties);
         Statement statement = connection.createStatement();
         statement.execute("drop database if exists " + db_name);

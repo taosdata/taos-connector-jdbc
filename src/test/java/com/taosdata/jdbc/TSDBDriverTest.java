@@ -61,6 +61,7 @@ public class TSDBDriverTest {
     @Test
     public void testParseURL() throws SQLException {
         TSDBDriver driver = new TSDBDriver();
+        String endpoints = "127.0.0.1:0";
 
         String url = SpecifyAddress.getInstance().getJniWithoutUrl();
         if (url == null) {
@@ -78,8 +79,7 @@ public class TSDBDriverTest {
         }
         Properties config = new Properties();
         Properties actual = driver.parseURL(url, config);
-        assertEquals("failure - host should be " + host, host, actual.get("host"));
-        assertEquals("failure - port should be " + port, port, actual.get("port"));
+        assertEquals("failure - host should be " + endpoints, endpoints, actual.get("endpoints"));
         assertEquals("failure - dbname should be db", "db", actual.get("dbname"));
         assertEquals("failure - user should be root", "root", actual.get("user"));
         assertEquals("failure - password should be taosdata", "taosdata", actual.get("password"));
@@ -99,8 +99,7 @@ public class TSDBDriverTest {
         }
         config = new Properties();
         actual = driver.parseURL(url, config);
-        assertEquals("failure - host should be " + host, host, actual.getProperty("host"));
-        assertEquals("failure - port should be " + port, port, actual.get("port"));
+        assertEquals("failure - host should be " + endpoints, endpoints, actual.getProperty("endpoints"));
         assertNull("failure - dbname should be null", actual.get("dbname"));
 
         url = SpecifyAddress.getInstance().getJniWithoutUrl();
@@ -119,8 +118,7 @@ public class TSDBDriverTest {
         }
         config = new Properties();
         actual = driver.parseURL(url, config);
-        assertEquals("failure - host should be " + host, host, actual.getProperty("host"));
-        assertEquals("failure - port should be " + port, port, actual.get("port"));
+        assertEquals("failure - host should be " + endpoints, endpoints, actual.getProperty("endpoints"));
         assertEquals("failure - dbname should be db", "db", actual.get("dbname"));
 
         url = "jdbc:TAOS://:/?";
@@ -130,8 +128,7 @@ public class TSDBDriverTest {
         actual = driver.parseURL(url, config);
         assertEquals("failure - user should be root", "root", actual.getProperty("user"));
         assertEquals("failure - password should be taosdata", "taosdata", actual.getProperty("password"));
-        assertNull("failure - host should be null", actual.getProperty("host"));
-        assertNull("failure - port should be null", actual.getProperty("port"));
+        assertEquals("failure - password should be :", ":", actual.getProperty("endpoints"));
         assertNull("failure - dbname should be null", actual.getProperty("dbname"));
     }
 
@@ -143,8 +140,7 @@ public class TSDBDriverTest {
         defaults.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
 
         Properties result = driver.parseURL("jdbc:TAOS://[2001:db8::1]:6030/db?charset=UTF-8", defaults);
-        assertEquals("failure - host should be 2001:db8::1", "2001:db8::1", result.getProperty(TSDBDriver.PROPERTY_KEY_HOST));
-        assertEquals("failure - port should be 6030", "6030", result.getProperty(TSDBDriver.PROPERTY_KEY_PORT));
+        assertEquals("failure - host should be 2001:db8::1", "[2001:db8::1]:6030", result.getProperty(TSDBDriver.PROPERTY_KEY_ENDPOINTS));
         assertEquals("failure - dbname should be db", "db", result.getProperty(TSDBDriver.PROPERTY_KEY_DBNAME));
         assertEquals("failure - charset should be UTF-8", "UTF-8", result.getProperty(TSDBDriver.PROPERTY_KEY_CHARSET));
     }
@@ -179,10 +175,8 @@ public class TSDBDriverTest {
         Properties connProps = new Properties();
         DriverPropertyInfo[] propertyInfo = driver.getPropertyInfo(url, connProps);
         for (DriverPropertyInfo info : propertyInfo) {
-            if (info.name.equals(TSDBDriver.PROPERTY_KEY_HOST))
-                assertEquals("failure - host should be " + host, host, info.value);
-            if (info.name.equals(TSDBDriver.PROPERTY_KEY_PORT))
-                assertEquals("failure - port should be " + port, port, info.value);
+            if (info.name.equals(TSDBDriver.PROPERTY_KEY_ENDPOINTS))
+                assertEquals("failure - endpoint should be " + "localhost:6030", "localhost:6030", info.value);
             if (info.name.equals(TSDBDriver.PROPERTY_KEY_DBNAME))
                 assertEquals("failure - dbname should be information_schema", "information_schema", info.value);
             if (info.name.equals(TSDBDriver.PROPERTY_KEY_USER))

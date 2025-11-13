@@ -1,6 +1,5 @@
 package com.taosdata.jdbc.ws.stmt;
 
-import com.taosdata.jdbc.GeometryTest;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.utils.Utils;
@@ -149,7 +148,7 @@ public class WsEfficientWritingTest {
                 }
 
                 int affectedRows = pstmt.executeUpdate();
-                Assert.assertEquals(affectedRows, numOfSubTable);
+                Assert.assertEquals(numOfSubTable, affectedRows);
             }
         }
 
@@ -343,9 +342,8 @@ public class WsEfficientWritingTest {
             pstmt.columnDataCloseBatch();
         }
     }
-
-    @Test(expected = SQLException.class)
-    public void testNcharTagThrowsSQLException() throws SQLException {
+    @Test
+    public void testNcharTag() throws SQLException {
         String sql = "INSERT INTO " + db_name + "." + tableNcharTag + "(tbname, ts, i, tag_nchar) VALUES (?,?,?,?)";
         try (Connection con = getConnection(false);
              PreparedStatement pstmt = con.prepareStatement(sql)) {
@@ -354,7 +352,7 @@ public class WsEfficientWritingTest {
                 pstmt.setString(1, "ncahr_bind_1");
                 pstmt.setTimestamp(2, new Timestamp(current + i));
                 pstmt.setInt(3, 100);
-                pstmt.setString(4, "中国人");
+                pstmt.setNString(4, "中国人");
                 pstmt.addBatch();
                 pstmt.executeBatch();
             }
@@ -418,8 +416,6 @@ public class WsEfficientWritingTest {
             statement.execute("drop database if exists " + db_name);
         }
         connection.close();
-
-
     }
 
     @BeforeClass

@@ -2,6 +2,7 @@ package com.taosdata.jdbc.tmq;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
 import java.sql.Connection;
@@ -18,7 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @FixMethodOrder
 public class TaosConsumerTest {
     private static final String host = "127.0.0.1";
-    private static final String dbName = "tmq_test";
+    private static final String dbName = TestUtils.camelToSnake(TaosConsumerTest.class);
     private static final String superTable = "st";
     private static Connection connection;
     private static Statement statement;
