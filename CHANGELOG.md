@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [unreleased]
+
+**Full Changelog**: [3.7.6...](https://github.com/taosdata/taos-connector-jdbc/compare/3.7.6...)
+
+### Bug Fixes
+
+
+- Load properties issue in windows (#289) ([b6841d7](https://github.com/taosdata/taos-connector-jdbc/commit/b6841d726f9520556ddf069a5e0aea95af3be876))
+
+
 ## [3.7.6] - 2025-10-17
 
 **Full Changelog**: [3.7.5...3.7.6](https://github.com/taosdata/taos-connector-jdbc/compare/3.7.5...3.7.6)

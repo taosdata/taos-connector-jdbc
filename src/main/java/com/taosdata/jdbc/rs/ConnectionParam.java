@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.rs;
 
+import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
@@ -7,7 +8,6 @@ import com.taosdata.jdbc.common.Endpoint;
 import com.taosdata.jdbc.utils.HttpClientPoolUtil;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.Utils;
-import com.taosdata.jdbc.ws.Transport;
 import io.netty.buffer.ByteBuf;
 
 import java.io.UnsupportedEncodingException;
@@ -411,7 +411,7 @@ public class ConnectionParam {
                 properties.getProperty(TSDBDriver.HTTP_CONNECT_TIMEOUT, HttpClientPoolUtil.DEFAULT_CONNECT_TIMEOUT));
 
         int requestTimeout = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT,
-                String.valueOf(Transport.DEFAULT_MESSAGE_WAIT_TIMEOUT)));
+                String.valueOf(TSDBConstants.DEFAULT_MESSAGE_WAIT_TIMEOUT)));
 
         int connectMode = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_CONNECT_MODE,"0"));
         if (connectMode < 0 || connectMode > 1){

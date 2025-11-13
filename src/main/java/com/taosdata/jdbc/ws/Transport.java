@@ -27,17 +27,13 @@ import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT;
 public class Transport implements AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(Transport.class);
     private static final boolean isTest = "test".equalsIgnoreCase(System.getProperty("ENV_TAOS_JDBC_TEST"));
-
-    public static final int DEFAULT_MESSAGE_WAIT_TIMEOUT = 60_000;
-
     public static final int TSDB_CODE_RPC_NETWORK_UNAVAIL = 0x0B;
     public static final int TSDB_CODE_RPC_SOMENODE_NOT_CONNECTED = 0x20;
-
     private final AtomicInteger reconnectCount = new AtomicInteger(0);
 
     private final ArrayList<WSClient> clientArr = new ArrayList<>();
     private final InFlightRequest inFlightRequest;
-    private long timeout;
+    private long defaultTimeout;
     private volatile boolean  closed = false;
 
     private final ConnectionParam connectionParam;
@@ -76,17 +72,8 @@ public class Transport implements AutoCloseable {
         this.connectionParam = param;
         this.wsFunction = function;
 
-        setTimeout(param.getRequestTimeout());
+        defaultTimeout = param.getRequestTimeout();
     }
-    public void setTimeout(long timeout) {
-        if (timeout < 0){
-            timeout = DEFAULT_MESSAGE_WAIT_TIMEOUT;
-        } else if (timeout == 0){
-            timeout = Integer.MAX_VALUE;
-        }
-        this.timeout = timeout;
-    }
-
     private void reconnect(boolean isTmq) throws SQLException {
         synchronized (this) {
             if (isConnected()){
@@ -118,10 +105,14 @@ public class Transport implements AutoCloseable {
         }
     }
     @SuppressWarnings("all")
+
     public Response send(Request request) throws SQLException {
-        return send(request, true);
+        return send(request, true, defaultTimeout);
     }
-    public Response send(Request request, boolean reSend) throws SQLException {
+    public Response send(Request request, long timeout) throws SQLException {
+        return send(request, true, timeout);
+    }
+    public Response send(Request request, boolean reSend, long timeout) throws SQLException {
         if (isClosed()){
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
         }
@@ -164,11 +155,11 @@ public class Transport implements AutoCloseable {
         }
         return response;
     }
-    public Response send(String action, long reqId, long resultId, long type, byte[] rawData) throws SQLException {
-        return send(action, reqId, resultId, type, rawData, EMPTY_BYTE_ARRAY);
+    public Response send(String action, long reqId, long resultId, long type, byte[] rawData, long timeout) throws SQLException {
+        return send(action, reqId, resultId, type, rawData, EMPTY_BYTE_ARRAY, timeout);
     }
 
-    public Response send(String action, long reqId, long resultId, long type, byte[] rawData, byte[] rawData2) throws SQLException {
+    public Response send(String action, long reqId, long resultId, long type, byte[] rawData, byte[] rawData2, long timeout) throws SQLException {
         if (isClosed()){
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
         }
@@ -246,7 +237,7 @@ public class Transport implements AutoCloseable {
         }
     }
 
-    public Response send(String action, long reqId, ByteBuf buffer, boolean resend) throws SQLException {
+    public Response send(String action, long reqId, ByteBuf buffer, boolean resend, long timeout) throws SQLException {
         if (isClosed()){
             Utils.releaseByteBuf(buffer);
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
@@ -304,7 +295,7 @@ public class Transport implements AutoCloseable {
         }
     }
 
-    public Response sendWithoutRetry(Request request) throws SQLException {
+    public Response sendWithoutRetry(Request request, long timeout) throws SQLException {
         if (isClosed()){
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception");
         }
@@ -414,7 +405,7 @@ public class Transport implements AutoCloseable {
         if (inFlightRequest.hasInFlightRequest()) {
             CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
                 try {
-                    TimeUnit.MILLISECONDS.sleep(timeout);
+                    TimeUnit.MILLISECONDS.sleep(defaultTimeout);
                 } catch (InterruptedException e) {
                     // ignore
                 }
@@ -440,7 +431,7 @@ public class Transport implements AutoCloseable {
                     // send con msgs
                     ConnectReq connectReq = new ConnectReq(connectionParam);
                     ConnectResp auth;
-                    auth = (ConnectResp) sendWithoutRetry(new Request(Action.CONN.getAction(), connectReq));
+                    auth = (ConnectResp) sendWithoutRetry(new Request(Action.CONN.getAction(), connectReq), defaultTimeout);
 
                     if (Code.SUCCESS.getCode() == auth.getCode()) {
                         return true;
