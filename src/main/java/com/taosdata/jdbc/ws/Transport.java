@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.ws;
 
+import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.enums.WSFunction;
@@ -33,7 +34,7 @@ public class Transport implements AutoCloseable {
 
     private final ArrayList<WSClient> clientArr = new ArrayList<>();
     private final InFlightRequest inFlightRequest;
-    private long defaultTimeout;
+    private final long defaultTimeout;
     private volatile boolean  closed = false;
 
     private final ConnectionParam connectionParam;
@@ -46,10 +47,13 @@ public class Transport implements AutoCloseable {
         this.inFlightRequest = null;
         this.connectionParam = null;
         this.wsFunction = null;
+        this.defaultTimeout = TSDBConstants.DEFAULT_MESSAGE_WAIT_TIMEOUT;
     }
     public Transport(WSFunction function,
                      ConnectionParam param,
                      InFlightRequest inFlightRequest) throws SQLException {
+        this.defaultTimeout = param.getRequestTimeout();
+
         // master slave mode
         WSClient slave = WSClient.getSlaveInstance(param, function, this);
         if (slave != null){
@@ -71,8 +75,6 @@ public class Transport implements AutoCloseable {
         this.inFlightRequest = inFlightRequest;
         this.connectionParam = param;
         this.wsFunction = function;
-
-        defaultTimeout = param.getRequestTimeout();
     }
     private void reconnect(boolean isTmq) throws SQLException {
         synchronized (this) {
