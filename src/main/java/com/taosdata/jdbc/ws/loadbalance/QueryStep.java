@@ -1,0 +1,73 @@
+package com.taosdata.jdbc.ws.loadbalance;
+
+import com.taosdata.jdbc.utils.CompletableFutureTimeout;
+import com.taosdata.jdbc.utils.ReqId;
+import com.taosdata.jdbc.ws.FutureResponse;
+import com.taosdata.jdbc.ws.entity.*;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
+import org.slf4j.Logger;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+
+class QueryStep implements Step {
+    static Logger log = org.slf4j.LoggerFactory.getLogger(QueryStep.class);
+
+    @Override
+    public CompletableFuture<StepResponse> execute(BgHealthCheck context, StepFlow flow) {
+        // 若已有活跃连接，直接进入下一步
+        if (!context.getWsClient().isOpen()) {
+            return CompletableFuture.completedFuture(new StepResponse(StepEnum.CONNECT, 0)); // 立即返回，等待连接建立
+        }
+
+        String action = Action.BINARY_QUERY.getAction();
+        long reqId = ReqId.getReqID();
+
+        byte[] sqlBytes = "SHOW CLUSTER ALIVE;".getBytes();
+        int totalLength = 30 + sqlBytes.length;
+        ByteBuf buffer = PooledByteBufAllocator.DEFAULT.directBuffer(totalLength);
+
+        buffer.writeLongLE(reqId);
+        buffer.writeLongLE(0L);
+        buffer.writeLongLE(6L);
+        buffer.writeShortLE(1);
+        buffer.writeIntLE(sqlBytes.length);
+        buffer.writeBytes(sqlBytes);
+
+
+        // send query
+        context.getWsClient().send(buffer);
+
+        CompletableFuture<Response> completableFuture = new CompletableFuture<>();
+        try{
+            context.getInFlightRequest().put(new FutureResponse(action, reqId, completableFuture));
+        } catch (Exception e) {
+            return CompletableFuture.completedFuture(new StepResponse(StepEnum.CONNECT, 0));
+        }
+
+        String reqString = "action:" + action + ", reqId:" + reqId + ", resultId:" + 0 + ", actionType:" + 6;
+
+        CompletableFuture<Response> responseFuture = CompletableFutureTimeout.orTimeout(
+                completableFuture, context.getParam().getRequestTimeout(), TimeUnit.MILLISECONDS, reqString);
+
+        return responseFuture
+                // 处理成功的结果（当 Future 正常完成时执行）
+                .thenApply(response -> {
+                    context.getInFlightRequest().remove(action, reqId);
+
+                    QueryResp queryResp = (QueryResp) response;
+                    if (Code.SUCCESS.getCode() == queryResp.getCode()) {
+                        return new StepResponse(StepEnum.FINISH, 0);
+                    } else {
+                        return new StepResponse(StepEnum.CONNECT, 0);
+                    }
+                })
+                // 处理异常（包括超时、业务异常等，当 Future 异常完成时执行）
+                .exceptionally(ex -> {
+
+                    log.info("Connection command failed.", ex);
+                    return new StepResponse(StepEnum.CONNECT, context.getCurrentInterval());
+                });
+    }
+}

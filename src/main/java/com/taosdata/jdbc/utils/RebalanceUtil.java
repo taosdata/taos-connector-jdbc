@@ -3,6 +3,10 @@ package com.taosdata.jdbc.utils;
 import com.taosdata.jdbc.common.Cluster;
 import com.taosdata.jdbc.common.Endpoint;
 import com.taosdata.jdbc.common.EndpointInfo;
+import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.ws.FetchBlockData;
+import com.taosdata.jdbc.ws.InFlightRequest;
+import com.taosdata.jdbc.ws.entity.FetchBlockNewResp;
 
 import java.util.List;
 import java.util.Map;
@@ -10,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class RebalanceUtil {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(RebalanceUtil.class);
     private static final AtomicBoolean g_reblancing = new AtomicBoolean(false);
     private static final Map<Cluster, AtomicBoolean> CLUSTER_MAP = new ConcurrentHashMap<>();
     private static final Map<Endpoint, EndpointInfo> ENDPOINT_MAP = new ConcurrentHashMap<>();
@@ -89,6 +94,39 @@ public class RebalanceUtil {
         }
 
         return indexes;
+    }
+
+    public static void startBackgroundHealthCheck(ConnectionParam original, InFlightRequest inFlightRequest) {
+        ConnectionParam param = ConnectionParam.copyToBuilder(original)
+                .build();
+        param.setBinaryMessageHandler(byteBuf -> {
+            byteBuf.readerIndex(26);
+            long id = byteBuf.readLongLE();
+            byteBuf.readerIndex(8);
+
+            // only neet to handle fetch block new response
+            FetchBlockData fetchBlockData = FetchDataUtil.getFetchMap().get(id);
+            if (null != fetchBlockData) {
+                Utils.retainByteBuf(byteBuf);
+                byte[] bytes = new byte[byteBuf.readableBytes()];
+                byteBuf.getBytes(byteBuf.readerIndex(), bytes);
+
+                FetchBlockNewResp fetchBlockResp = new FetchBlockNewResp(byteBuf);
+                try {
+                    fetchBlockData.handleReceiveBlockData(fetchBlockResp);
+                } catch (InterruptedException e) {
+                    log.error("Error handling fetch block data", e);
+                    Thread.currentThread().interrupt();
+                    Utils.releaseByteBuf(byteBuf);
+                } catch (Exception e) {
+                    Utils.releaseByteBuf(byteBuf);
+                    log.error("Unexpected error handling fetch block data, id: {}", id, e);
+                }
+            } else {
+                // for the connection pool test sql will not fetch all data, we ignore this case log.
+                log.trace("Received fetch block new response, but no fetch data found for id: {}", id);
+            }
+        });
     }
 
 }

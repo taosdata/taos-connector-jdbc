@@ -10,6 +10,7 @@ import com.taosdata.jdbc.utils.RebalanceUtil;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.entity.*;
+import com.taosdata.jdbc.ws.loadbalance.BgHealthCheck;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import org.slf4j.Logger;
@@ -30,10 +31,7 @@ import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT;
  */
 public class Transport implements AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(Transport.class);
-    private static final boolean isTest = "test".equalsIgnoreCase(System.getProperty("ENV_TAOS_JDBC_TEST"));
-
     public static final int DEFAULT_MESSAGE_WAIT_TIMEOUT = 60_000;
-
     public static final int TSDB_CODE_RPC_NETWORK_UNAVAIL = 0x0B;
     public static final int TSDB_CODE_RPC_SOMENODE_NOT_CONNECTED = 0x20;
 
@@ -83,6 +81,10 @@ public class Transport implements AutoCloseable {
 
 
         setTimeout(param.getRequestTimeout());
+
+
+        // 启动后台探活
+        BgHealthCheck bgHealthCheck = new BgHealthCheck(function, param, 0, inFlightRequest);
     }
     public void setTimeout(long timeout) {
         if (timeout < 0){

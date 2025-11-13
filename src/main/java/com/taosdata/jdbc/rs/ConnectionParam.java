@@ -725,4 +725,42 @@ public class ConnectionParam {
             return new ConnectionParam(this);
         }
     }
+
+    public static ConnectionParam.Builder copyToBuilder(ConnectionParam original) {
+        if (original == null) {
+            return null;
+        }
+
+        return new ConnectionParam.Builder(original.getEndpoints()) // we can make sure endpoints will not be modified
+                .setDatabase(original.getDatabase())
+                .setCloudToken(original.getCloudToken())
+                .setUserAndPassword(original.getUser(), original.getPassword())
+                .setTimeZone(original.getTz())
+                .setUseSsl(original.isUseSsl())
+                .setMaxRequest(original.getMaxRequest())
+                .setConnectionTimeout(original.getConnectTimeout())
+                .setRequestTimeout(original.getRequestTimeout())
+                .setConnectMode(original.getConnectMode())
+                .setVarcharAsString(original.isVarcharAsString())
+                .setEnableCompression(original.isEnableCompression())
+                .setSlaveClusterHost(original.getSlaveClusterHost())
+                .setSlaveClusterPort(original.getSlaveClusterPort())
+                .setReconnectIntervalMs(original.getReconnectIntervalMs())
+                .setReconnectRetryCount(original.getReconnectRetryCount())
+                .setEnableAutoReconnect(original.isEnableAutoConnect())
+                .setDisableSslCertValidation(original.isDisableSslCertValidation())
+                .setAppName(original.getAppName())
+                .setAppIp(original.getAppIp())
+                .setCopyData(original.isCopyData())
+                .setBatchSizeByRow(original.getBatchSizeByRow())
+                .setCacheSizeByRow(original.getCacheSizeByRow())
+                .setBackendWriteThreadNum(original.getBackendWriteThreadNum())
+                .setStrictCheck(original.isStrictCheck())
+                .setRetryTimes(original.getRetryTimes())
+                .setAsyncWrite(original.getAsyncWrite())
+                .setPbsMode(original.getPbsMode())
+                .setWsKeepAlive(original.getWsKeepAlive())
+                .setTextMessageHandler(original.getTextMessageHandler())
+                .setBinaryMessageHandler(original.getBinaryMessageHandler());
+    }
 }
