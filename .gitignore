@@ -2,6 +2,7 @@
 target
 .vscode
 .DS_Store
+cleanup_branches.sh
 *.iml
 htmlReport/
 src/test/java/com/taosdata/jdbc/manual/
