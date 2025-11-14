@@ -23,7 +23,7 @@ public class RestfulConnectionParamTest {
     public void testSettersAndGetters() {
         // Test host
         connectionParam.setEndpoints(null);
-        assertEquals(null, connectionParam.getEndpoints());
+        assertNull(connectionParam.getEndpoints());
 
         // Test database
         connectionParam.setDatabase("testDB");

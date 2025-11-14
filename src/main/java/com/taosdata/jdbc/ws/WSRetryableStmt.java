@@ -125,7 +125,7 @@ public class WSRetryableStmt extends WSStatement {
 
                 // Execute bind operation
                 Stmt2Resp bindResp = (Stmt2Resp) transport.send(Action.STMT2_BIND.getAction(),
-                        reqId, rawBlock, false);
+                        reqId, rawBlock, false, this.getQueryTimeoutInMs());
                 if (Code.SUCCESS.getCode() != bindResp.getCode()) {
                     throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
                 }
@@ -133,7 +133,7 @@ public class WSRetryableStmt extends WSStatement {
                 // Execute operation
                 reqId = ReqId.getReqID();
                 Request request = RequestFactory.generateExec(stmtInfo.getStmtId(), reqId);
-                Stmt2ExecResp resp = (Stmt2ExecResp) transport.send(request, false);
+                Stmt2ExecResp resp = (Stmt2ExecResp) transport.send(request, false, this.getQueryTimeoutInMs());
                 if (Code.SUCCESS.getCode() != resp.getCode()) {
                     throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
                 }
@@ -147,7 +147,7 @@ public class WSRetryableStmt extends WSStatement {
                     // Get query result
                     reqId = ReqId.getReqID();
                     request = RequestFactory.generateUseResult(stmtInfo.getStmtId(), reqId);
-                    ResultResp useResultResp = (ResultResp) transport.send(request, false);
+                    ResultResp useResultResp = (ResultResp) transport.send(request, false, this.getQueryTimeoutInMs());
                     if (Code.SUCCESS.getCode() != resp.getCode()) {
                         throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
                     }
@@ -217,7 +217,7 @@ public class WSRetryableStmt extends WSStatement {
         if (stmtInfo.getStmtId() != 0 && transport.isConnected()) {
             long reqId = ReqId.getReqID();
             Request close = RequestFactory.generateClose(stmtInfo.getStmtId(), reqId);
-            transport.send(close);
+            transport.send(close, this.getQueryTimeoutInMs());
         }
     }
 }

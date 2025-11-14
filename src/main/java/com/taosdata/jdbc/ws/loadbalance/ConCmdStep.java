@@ -4,18 +4,21 @@ import com.taosdata.jdbc.utils.CompletableFutureTimeout;
 import com.taosdata.jdbc.ws.FutureResponse;
 import com.taosdata.jdbc.ws.entity.*;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 class ConCmdStep implements Step {
-    static Logger log = org.slf4j.LoggerFactory.getLogger(ConCmdStep.class);
-
+    private final Logger log;
+    public ConCmdStep() {
+        this.log = LoggerFactory.getLogger(ConCmdStep.class);
+    }
     @Override
     public CompletableFuture<StepResponse> execute(BgHealthCheck context, StepFlow flow) {
-        // 若已有活跃连接，直接进入下一步
+        // connection is closed
         if (!context.getWsClient().isOpen()) {
-            return CompletableFuture.completedFuture(new StepResponse(StepEnum.CON_CMD, 0)); // 立即返回，等待连接建立
+            return CompletableFuture.completedFuture(new StepResponse(StepEnum.CONNECT, context.getNextInterval())); // 立即返回，等待连接建立
         }
 
         // send query
@@ -29,7 +32,7 @@ class ConCmdStep implements Step {
         try{
             context.getInFlightRequest().put(new FutureResponse(request.getAction(), request.id(), completableFuture));
         } catch (Exception e) {
-            return CompletableFuture.completedFuture(new StepResponse(StepEnum.CONNECT, 0));
+            return CompletableFuture.completedFuture(new StepResponse(StepEnum.CON_CMD, context.getRecoveryInterval()));
         }
 
         CompletableFuture<Response> responseFuture = CompletableFutureTimeout.orTimeout(
@@ -43,14 +46,15 @@ class ConCmdStep implements Step {
                     if (Code.SUCCESS.getCode() == connectResp.getCode()) {
                         return new StepResponse(StepEnum.QUERTY, 0);
                     } else {
-                        return new StepResponse(StepEnum.CONNECT, 0);
+                        context.cleanUp();
+                        return new StepResponse(StepEnum.CON_CMD, context.getRecoveryInterval());
                     }
                 })
                 // 处理异常（包括超时、业务异常等，当 Future 异常完成时执行）
                 .exceptionally(ex -> {
-
                     log.info("Connection command failed.", ex);
-                    return new StepResponse(StepEnum.CONNECT, context.getCurrentInterval());
+                    context.cleanUp();
+                    return new StepResponse(StepEnum.CON_CMD, context.getRecoveryInterval());
                 });
     }
 }

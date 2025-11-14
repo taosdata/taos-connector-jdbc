@@ -146,6 +146,18 @@ public class TSDBDriver extends AbstractDriver {
     public static final String PROPERTY_KEY_ASYNC_WRITE = "asyncWrite";
 
     /**
+     * for health check
+     */
+    public static final String PROPERTY_KEY_HEALTH_CHECK_INIT_INTERVAL = "healthCheckInitInterval";
+    public static final String PROPERTY_KEY_HEALTH_CHECK_MAX_INTERVAL = "healthCheckMaxInterval";
+    public static final String PROPERTY_KEY_HEALTH_CHECK_CON_TIMEOUT = "healthCheckConTimeout";
+    public static final String PROPERTY_KEY_HEALTH_CHECK_CMD_TIMEOUT = "healthCheckCmdTimeout";
+    public static final String PROPERTY_KEY_HEALTH_CHECK_RECOVERY_COUNT = "healthCheckRecoveryCount";
+    public static final String PROPERTY_KEY_HEALTH_CHECK_RECOVERY_INTERVAL = "healthCheckRecoveryInterval";
+    public static final String PROPERTY_KEY_REBALANCE_THRESHOLD = "rebalanceThreshold";
+    public static final String PROPERTY_KEY_REBALANCE_CON_BASE_COUNT = "rebalanceConBaseCount";
+
+    /**
      * for stmt bind mode
      */
     public static final String PROPERTY_KEY_PBS_MODE = "pbsMode";

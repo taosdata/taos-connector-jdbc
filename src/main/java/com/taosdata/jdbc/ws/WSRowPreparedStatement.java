@@ -34,7 +34,6 @@ import static com.taosdata.jdbc.TSDBConstants.*;
 
 public class WSRowPreparedStatement extends WSRetryableStmt implements PreparedStatement{
     protected final ConnectionParam param;
-    protected int queryTimeout = 0;
     private TableInfo tableInfo;
     private AutoExpandingBuffer tableNameLensBuf;
     private AutoExpandingBuffer tableNamesBuf;
@@ -83,22 +82,6 @@ public class WSRowPreparedStatement extends WSRetryableStmt implements PreparedS
         }
         this.tableInfo = TableInfo.getEmptyTableInfo();
         initBuffers();
-    }
-
-    @Override
-    public int getQueryTimeout() throws SQLException {
-        return queryTimeout;
-    }
-
-    @Override
-    public void setQueryTimeout(int seconds) throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
-        if (seconds < 0)
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE);
-
-        this.queryTimeout = seconds;
-        transport.setTimeout(seconds * 1000L);
     }
 
     @Override
@@ -710,7 +693,7 @@ public class WSRowPreparedStatement extends WSRetryableStmt implements PreparedS
             if (transport.isConnected() && stmtInfo.getStmtId() != 0) {
                 long reqId = ReqId.getReqID();
                 Request close = RequestFactory.generateClose(stmtInfo.getStmtId(), reqId);
-                transport.send(close);
+                transport.send(close, this.getQueryTimeoutInMs());
             }
             super.close();
         }

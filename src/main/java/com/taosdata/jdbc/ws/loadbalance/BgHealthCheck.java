@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.ws.loadbalance;
 
+import com.taosdata.jdbc.common.Endpoint;
 import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.ws.InFlightRequest;
@@ -13,13 +14,17 @@ import java.util.List;
 public class BgHealthCheck {
     static Logger log = org.slf4j.LoggerFactory.getLogger(BgHealthCheck.class);
     private WSClient wsClient; // Reference to the WebSocket client for connection handling
-    private ConnectionParam param;
-    private int endpointIndex;
+    private final ConnectionParam param;
+    private final int endpointIndex;
+    private final Endpoint endpoint;
     private StepFlow flow;
 
-    private int sleepMinMs = 1000;
-    private int sleepMaxMs = 5000;
-    private int currentInterval = sleepMinMs;
+    private final int sleepMinSeconds;
+    private final int sleepMaxSeconds;
+    private int currentInterval = -1;
+    private int recoveryCmdCount = 0;
+    private final int recoveryCmdMaxCount;
+    private final int recoveryInterval;
     private final InFlightRequest inFlightRequest;
 
     public long getResultId() {
@@ -35,7 +40,13 @@ public class BgHealthCheck {
     public BgHealthCheck(WSFunction wsFunction, ConnectionParam param, int index, InFlightRequest inFlightRequest) {
         endpointIndex = index;
         this.param = param;
+        endpoint = param.getEndpoints().get(index);
+        recoveryCmdMaxCount = param.getHealthCheckRecoveryCount();
+        sleepMinSeconds = param.getHealthCheckInitInterval();
+        sleepMaxSeconds = param.getHealthCheckMaxInterval();
+        recoveryInterval = param.getHealthCheckRecoveryInterval();
         this.inFlightRequest = inFlightRequest;
+
         try {
             wsClient = WSClient.getInstance(param, index, wsFunction);
         } catch (Exception e) {
@@ -46,17 +57,22 @@ public class BgHealthCheck {
         // 初始化步骤列表（按执行顺序）
         List<Step> steps = Arrays.asList(
                 new ConnectStep(),
-                new ConCmdStep()
-//                new QueryStep(),
-//                new FetchStep(),
-//                new Fetch2Step()
+                new ConCmdStep(),
+                new QueryStep(),
+                new FetchStep(),
+                new Fetch2Step(),
+                new FreeResultStep()
         );
         this.flow = new StepFlow(steps, this);
+   }
+
+    public void start() {
         this.flow.start();
     }
 
-    public void cleanup() {
-
+    public void cleanUp() {
+        resultId = 0;
+        recoveryCmdCount = 0;
     }
 
     public WSClient getWsClient() {
@@ -70,12 +86,30 @@ public class BgHealthCheck {
     public int getEndpointIndex() {
         return endpointIndex;
     }
-
+    public Endpoint getEndpoint() {
+        return endpoint;
+    }
+    public int getRecoveryInterval() {
+        return recoveryInterval;
+    }
     public InFlightRequest getInFlightRequest() {
         return inFlightRequest;
     }
-
-    public int getCurrentInterval() {
+    public int getNextInterval() {
+        if (currentInterval < 0) {
+            currentInterval = sleepMinSeconds;
+            return currentInterval;
+        }
+        currentInterval = Math.min(currentInterval * 2, sleepMaxSeconds);
         return currentInterval;
     }
+
+    public void addRecoveryCmdCount() {
+        recoveryCmdCount++;
+    }
+
+    public boolean needMoreRetry() {
+        return recoveryCmdCount < recoveryCmdMaxCount;
+    }
+
 }

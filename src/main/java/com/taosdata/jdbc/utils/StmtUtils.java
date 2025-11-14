@@ -30,7 +30,7 @@ public class StmtUtils {
                 }
                 stmtId = resp.getStmtId();
                 Request prepare = RequestFactory.generatePrepare(stmtId, reqId, sql);
-                Stmt2PrepareResp prepareResp = (Stmt2PrepareResp) transport.send(prepare, false);
+                Stmt2PrepareResp prepareResp = (Stmt2PrepareResp) transport.send(prepare, false, transport.getConnectionParam().getRequestTimeout());
 
                 if (Code.SUCCESS.getCode() != prepareResp.getCode()) {
                     Request close = RequestFactory.generateClose(stmtId, reqId);

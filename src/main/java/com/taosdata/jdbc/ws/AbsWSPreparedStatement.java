@@ -35,7 +35,6 @@ import static com.taosdata.jdbc.TSDBConstants.*;
 
 public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepareStatement {
     private static final List<Object> nullTag = Collections.singletonList(null);
-    protected int queryTimeout = 0;
     protected final Map<Integer, Column> colOrderedMap = new HashMap<>();
     private final PriorityQueue<ColumnInfo> tag = new PriorityQueue<>();
     private final PriorityQueue<ColumnInfo> colListQueue = new PriorityQueue<>();
@@ -61,23 +60,6 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
         super(connection, param, database, transport, instanceId, new StmtInfo(prepareResp, sql), new AtomicInteger());
         this.tableInfo = TableInfo.getEmptyTableInfo();
     }
-
-    @Override
-    public int getQueryTimeout() throws SQLException {
-        return queryTimeout;
-    }
-
-    @Override
-    public void setQueryTimeout(int seconds) throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
-        if (seconds < 0)
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE);
-
-        this.queryTimeout = seconds;
-        transport.setTimeout(seconds * 1000L);
-    }
-
     @Override
     public boolean execute() throws SQLException {
         if (isClosed())
@@ -753,7 +735,7 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
             if (transport.isConnected() && stmtInfo.getStmtId() != 0) {
                 long reqId = ReqId.getReqID();
                 Request close = RequestFactory.generateClose(stmtInfo.getStmtId(), reqId);
-                transport.send(close);
+                transport.send(close, this.getQueryTimeoutInMs());
             }
             super.close();
         }

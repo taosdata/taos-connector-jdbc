@@ -16,9 +16,8 @@ class QueryStep implements Step {
 
     @Override
     public CompletableFuture<StepResponse> execute(BgHealthCheck context, StepFlow flow) {
-        // 若已有活跃连接，直接进入下一步
         if (!context.getWsClient().isOpen()) {
-            return CompletableFuture.completedFuture(new StepResponse(StepEnum.CONNECT, 0)); // 立即返回，等待连接建立
+            return CompletableFuture.completedFuture(new StepResponse(StepEnum.CONNECT, context.getNextInterval())); // 立即返回，等待连接建立
         }
 
         String action = Action.BINARY_QUERY.getAction();
@@ -29,7 +28,7 @@ class QueryStep implements Step {
         ByteBuf buffer = PooledByteBufAllocator.DEFAULT.directBuffer(totalLength);
 
         buffer.writeLongLE(reqId);
-        buffer.writeLongLE(0L);
+        buffer.writeLongLE(0L); // result id
         buffer.writeLongLE(6L);
         buffer.writeShortLE(1);
         buffer.writeIntLE(sqlBytes.length);
@@ -58,16 +57,19 @@ class QueryStep implements Step {
 
                     QueryResp queryResp = (QueryResp) response;
                     if (Code.SUCCESS.getCode() == queryResp.getCode()) {
-                        return new StepResponse(StepEnum.FINISH, 0);
+                        context.setResultId(queryResp.getId());
+                        context.addRecoveryCmdCount();
+                        return new StepResponse(StepEnum.FETCH, 0);
                     } else {
-                        return new StepResponse(StepEnum.CONNECT, 0);
+                        context.cleanUp();
+                        return new StepResponse(StepEnum.QUERTY, 0);
                     }
                 })
                 // 处理异常（包括超时、业务异常等，当 Future 异常完成时执行）
                 .exceptionally(ex -> {
-
                     log.info("Connection command failed.", ex);
-                    return new StepResponse(StepEnum.CONNECT, context.getCurrentInterval());
+                    context.cleanUp();
+                    return new StepResponse(StepEnum.QUERTY, context.getRecoveryInterval());
                 });
     }
 }

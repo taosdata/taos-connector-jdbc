@@ -22,7 +22,8 @@ public class WSStatement extends AbstractStatement {
 
     protected AtomicBoolean closed = new AtomicBoolean(false);
     protected ResultSet resultSet;
-    private int queryTimeout = 0;
+    private volatile int queryTimeoutInSeconds;
+    private volatile long queryTimeoutInMs;
     protected final ZoneId zoneId;
     public WSStatement(Transport transport, String database, AbstractConnection connection, Long instanceId, ZoneId zoneId) {
         this.transport = transport;
@@ -31,6 +32,8 @@ public class WSStatement extends AbstractStatement {
         this.instanceId = instanceId;
         this.connection.registerStatement(this.instanceId, this);
         this.zoneId = zoneId;
+        this.queryTimeoutInSeconds = (transport.getConnectionParam().getRequestTimeout() + (1000 - 1)) / 1000;
+        this.queryTimeoutInMs = transport.getConnectionParam().getRequestTimeout();
     }
 
     @Override
@@ -87,7 +90,7 @@ public class WSStatement extends AbstractStatement {
         // write version and sqlLen in little endian byte sequence
         byte[] result = ByteBuffer.allocate(6).order(ByteOrder.LITTLE_ENDIAN).putShort((short)1).putInt(sqlBytes.length).array();
         Response response = transport.send(Action.BINARY_QUERY.getAction(),
-                reqId, 0, 6, result, sqlBytes);
+                reqId, 0, 6, result, sqlBytes, this.getQueryTimeoutInMs());
 
         QueryResp queryResp = (QueryResp) response;
         if (Code.SUCCESS.getCode() != queryResp.getCode()) {
@@ -112,7 +115,11 @@ public class WSStatement extends AbstractStatement {
 
     @Override
     public int getQueryTimeout() throws SQLException {
-        return queryTimeout;
+        return queryTimeoutInSeconds;
+    }
+
+    public long getQueryTimeoutInMs() {
+        return queryTimeoutInMs;
     }
 
     @Override
@@ -122,8 +129,13 @@ public class WSStatement extends AbstractStatement {
         if (seconds < 0)
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE);
 
-        this.queryTimeout = seconds;
-        transport.setTimeout(seconds * 1000L);
+        if (seconds == 0){
+            this.queryTimeoutInSeconds = Integer.MAX_VALUE;
+            this.queryTimeoutInMs = Integer.MAX_VALUE * 1000L;
+            return;
+        }
+        this.queryTimeoutInSeconds = seconds;
+        this.queryTimeoutInMs = seconds * 1000L;
     }
 
     @Override

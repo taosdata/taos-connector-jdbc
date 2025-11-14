@@ -19,8 +19,12 @@ public class EndpointInfo {
         return connectCount.get();
     }
 
-    public void setOnline(boolean online) {
-        this.online.set(online);
+    public void setOnline() {
+        this.online.set(true);
+    }
+
+    public boolean setOffline() {
+        return online.compareAndSet(true, false);
     }
 
     public void incrementConnectCount() {

@@ -3,10 +3,13 @@ package com.taosdata.jdbc.utils;
 import com.taosdata.jdbc.common.Cluster;
 import com.taosdata.jdbc.common.Endpoint;
 import com.taosdata.jdbc.common.EndpointInfo;
+import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.rs.ConnectionParam;
-import com.taosdata.jdbc.ws.FetchBlockData;
+import com.taosdata.jdbc.ws.FutureResponse;
 import com.taosdata.jdbc.ws.InFlightRequest;
-import com.taosdata.jdbc.ws.entity.FetchBlockNewResp;
+import com.taosdata.jdbc.ws.entity.Action;
+import com.taosdata.jdbc.ws.entity.FetchBlockHealthCheckResp;
+import com.taosdata.jdbc.ws.loadbalance.BgHealthCheck;
 
 import java.util.List;
 import java.util.Map;
@@ -28,36 +31,50 @@ public class RebalanceUtil {
         return g_reblancing.get();
     }
 
-    public static void newCluster(List<Endpoint> endpoints){
-        Cluster cluster = new Cluster(endpoints.toArray(new Endpoint[0]));
-        CLUSTER_MAP.putIfAbsent(cluster, new AtomicBoolean(false));
-        for (Endpoint endpoint : endpoints) {
-            ENDPOINT_MAP.putIfAbsent(endpoint, new EndpointInfo());
-            ENDPOINT_CLUSTER_MAP.putIfAbsent(endpoint, cluster);
-        }
+    public static void incrementConnectionCount(Endpoint endpoint) {
+         ENDPOINT_MAP.get(endpoint).incrementConnectCount();
     }
-
-    public static void newConnection(Endpoint endpoint){
-        ENDPOINT_MAP.get(endpoint).incrementConnectCount();
-    }
-    public static void closeConnection(Endpoint endpoint){
+    public static void decrementConnectionCount(Endpoint endpoint) {
         ENDPOINT_MAP.get(endpoint).decrementConnectCount();
     }
 
-    public static synchronized void endpointDown(Endpoint endpoint){
-        ENDPOINT_MAP.get(endpoint).setOnline(false);
+    public static void connected(List<Endpoint> endpoints, int index) {
+        Endpoint endpoint = endpoints.get(index);
+        ENDPOINT_MAP.get(endpoint).setOnline();
+    }
+    public static void disconnected(ConnectionParam original, int index, InFlightRequest inFlightRequest) {
+        disconnectedBySelf(original, index);
 
-        // need to reconnect in background
+        if (ENDPOINT_MAP.get(original.getEndpoints().get(index)).setOffline()) {
+            // only once set to offline
+            startBackgroundHealthCheck(original, index, inFlightRequest);
+        }
+    }
+    public static void disconnectedBySelf(ConnectionParam original, int index) {
+        List<Endpoint> endpoints = original.getEndpoints();
+        Endpoint endpoint = endpoints.get(index);
+
+        ENDPOINT_MAP.get(endpoint).decrementConnectCount();
     }
 
-    public static synchronized void endpintUp(Endpoint endpoint){
-        ENDPOINT_MAP.get(endpoint).setOnline(true);
+    public static void newCluster(List<Endpoint> endpoints){
+        Cluster cluster = new Cluster(endpoints.toArray(new Endpoint[0]));
+        if (null == CLUSTER_MAP.putIfAbsent(cluster, new AtomicBoolean(false))) {
+            // first time to see this cluster, initialize endpoint info
+            for (Endpoint endpoint : endpoints) {
+                ENDPOINT_MAP.putIfAbsent(endpoint, new EndpointInfo());
+                ENDPOINT_CLUSTER_MAP.putIfAbsent(endpoint, cluster);
+            }
+        }
+    }
+    public static synchronized void endpointUp(Endpoint endpoint){
         Cluster cluster = ENDPOINT_CLUSTER_MAP.get(endpoint);
         CLUSTER_MAP.get(cluster).set(true);
         g_reblancing.set(true);
-    }
 
-    public static synchronized void rebalanceDone(Endpoint endpoint){
+        log.info("endpoint: " + endpoint + " is up, start rebalancing");
+    }
+    private static synchronized void rebalanceDone(Endpoint endpoint){
         Cluster cluster = ENDPOINT_CLUSTER_MAP.get(endpoint);
         CLUSTER_MAP.get(cluster).set(false);
 
@@ -96,7 +113,7 @@ public class RebalanceUtil {
         return indexes;
     }
 
-    public static void startBackgroundHealthCheck(ConnectionParam original, InFlightRequest inFlightRequest) {
+    public static void startBackgroundHealthCheck(ConnectionParam original, int index, InFlightRequest inFlightRequest) {
         ConnectionParam param = ConnectionParam.copyToBuilder(original)
                 .build();
         param.setBinaryMessageHandler(byteBuf -> {
@@ -104,29 +121,29 @@ public class RebalanceUtil {
             long id = byteBuf.readLongLE();
             byteBuf.readerIndex(8);
 
-            // only neet to handle fetch block new response
-            FetchBlockData fetchBlockData = FetchDataUtil.getFetchMap().get(id);
-            if (null != fetchBlockData) {
-                Utils.retainByteBuf(byteBuf);
-                byte[] bytes = new byte[byteBuf.readableBytes()];
-                byteBuf.getBytes(byteBuf.readerIndex(), bytes);
+            Utils.retainByteBuf(byteBuf);
+            byte[] bytes = new byte[byteBuf.readableBytes()];
+            byteBuf.getBytes(byteBuf.readerIndex(), bytes);
 
-                FetchBlockNewResp fetchBlockResp = new FetchBlockNewResp(byteBuf);
-                try {
-                    fetchBlockData.handleReceiveBlockData(fetchBlockResp);
-                } catch (InterruptedException e) {
-                    log.error("Error handling fetch block data", e);
-                    Thread.currentThread().interrupt();
-                    Utils.releaseByteBuf(byteBuf);
-                } catch (Exception e) {
-                    Utils.releaseByteBuf(byteBuf);
-                    log.error("Unexpected error handling fetch block data, id: {}", id, e);
+            try {
+                FetchBlockHealthCheckResp resp = new FetchBlockHealthCheckResp(byteBuf);
+                FutureResponse remove = inFlightRequest.remove(Action.FETCH_BLOCK_NEW.getAction(), id);
+                if (null != remove) {
+                    remove.getFuture().complete(resp);
                 }
-            } else {
-                // for the connection pool test sql will not fetch all data, we ignore this case log.
-                log.trace("Received fetch block new response, but no fetch data found for id: {}", id);
+            } catch (Exception e) {
+                Utils.releaseByteBuf(byteBuf);
+                log.error("Unexpected error handling fetch block data, id: {}", id, e);
+                FutureResponse remove = inFlightRequest.remove(Action.FETCH_BLOCK_NEW.getAction(), id);
+                if (null != remove) {
+                    remove.getFuture().complete(FetchBlockHealthCheckResp.getFailedResp());
+                }
             }
         });
+
+        // start background health check
+        BgHealthCheck bgHealthCheck = new BgHealthCheck(WSFunction.WS, param, index, inFlightRequest);
+        bgHealthCheck.start();
     }
 
 }
