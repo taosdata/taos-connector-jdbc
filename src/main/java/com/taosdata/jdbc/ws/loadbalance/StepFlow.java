@@ -4,6 +4,7 @@ import com.taosdata.jdbc.utils.Utils;
 import org.slf4j.Logger;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 class StepFlow {
     static Logger log = org.slf4j.LoggerFactory.getLogger(StepFlow.class);
@@ -36,14 +37,14 @@ class StepFlow {
                         log.info("Step {} returned response: {}", StepEnum.getNameByInt(currentStepIndex), stepResponse);
                     }
 
-                    if (stepResponse.getWaitMs() == 0){
+                    if (stepResponse.getWaitSeconds() == 0){
                         currentStepIndex = stepResponse.getStep().get();
                         executeCurrentStep();
                     } else {
                         Utils.getEventLoopGroup().schedule(() -> {
                             currentStepIndex = stepResponse.getStep().get();
                             executeCurrentStep();
-                        }, stepResponse.getWaitMs(), java.util.concurrent.TimeUnit.MILLISECONDS);
+                        }, stepResponse.getWaitSeconds(), TimeUnit.SECONDS);
                     }
                 });
     }

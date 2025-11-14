@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.rs;
 
+import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
@@ -7,7 +8,6 @@ import com.taosdata.jdbc.common.Endpoint;
 import com.taosdata.jdbc.utils.HttpClientPoolUtil;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.Utils;
-import com.taosdata.jdbc.ws.Transport;
 import io.netty.buffer.ByteBuf;
 
 import java.io.UnsupportedEncodingException;
@@ -54,7 +54,14 @@ public class ConnectionParam {
     private String asyncWrite;
     private String pbsMode;
     private int wsKeepAlive;
-
+    private int healthCheckInitInterval;
+    private int healthCheckMaxInterval;
+    private int healthCheckConTimeout;
+    private int healthCheckCmdTimeout;
+    private int healthCheckRecoveryCount;
+    private int healthCheckRecoveryInterval;
+    private int rebalanceThreshold;
+    private int rebalanceConBaseCount;
     private Consumer<String> textMessageHandler;
     private Consumer<ByteBuf> binaryMessageHandler;
     static public final int CONNECT_MODE_BI = 1;
@@ -212,6 +219,37 @@ public class ConnectionParam {
         this.wsKeepAlive = wsKeepAlive;
     }
 
+    public void setHealthCheckInitInterval(int healthCheckInitInterval) {
+        this.healthCheckInitInterval = healthCheckInitInterval;
+    }
+
+    public void setHealthCheckMaxInterval(int healthCheckMaxInterval) {
+        this.healthCheckMaxInterval = healthCheckMaxInterval;
+    }
+
+    public void setHealthCheckConTimeout(int healthCheckConTimeout) {
+        this.healthCheckConTimeout = healthCheckConTimeout;
+    }
+
+    public void setHealthCheckCmdTimeout(int healthCheckCmdTimeout) {
+        this.healthCheckCmdTimeout = healthCheckCmdTimeout;
+    }
+
+    public void setHealthCheckRecoveryCount(int healthCheckRecoveryCount) {
+        this.healthCheckRecoveryCount = healthCheckRecoveryCount;
+    }
+
+    public void setHealthCheckRecoveryInterval(int healthCheckRecoveryInterval) {
+        this.healthCheckRecoveryInterval = healthCheckRecoveryInterval;
+    }
+
+    public void setRebalanceThreshold(int rebalanceThreshold) {
+        this.rebalanceThreshold = rebalanceThreshold;
+    }
+
+    public void setRebalanceConBaseCount(int rebalanceConBaseCount) {
+        this.rebalanceConBaseCount = rebalanceConBaseCount;
+    }
     public List<Endpoint> getEndpoints() {
         return endpoints;
     }
@@ -315,6 +353,37 @@ public class ConnectionParam {
     public int getWsKeepAlive() {
         return wsKeepAlive;
     }
+    public int getHealthCheckInitInterval() {
+        return healthCheckInitInterval;
+    }
+
+    public int getHealthCheckMaxInterval() {
+        return healthCheckMaxInterval;
+    }
+
+    public int getHealthCheckConTimeout() {
+        return healthCheckConTimeout;
+    }
+
+    public int getHealthCheckCmdTimeout() {
+        return healthCheckCmdTimeout;
+    }
+
+    public int getHealthCheckRecoveryCount() {
+        return healthCheckRecoveryCount;
+    }
+
+    public int getHealthCheckRecoveryInterval() {
+        return healthCheckRecoveryInterval;
+    }
+
+    public int getRebalanceThreshold() {
+        return rebalanceThreshold;
+    }
+
+    public int getRebalanceConBaseCount() {
+        return rebalanceConBaseCount;
+    }
     public Consumer<String> getTextMessageHandler() {
         return textMessageHandler;
     }
@@ -411,7 +480,7 @@ public class ConnectionParam {
                 properties.getProperty(TSDBDriver.HTTP_CONNECT_TIMEOUT, HttpClientPoolUtil.DEFAULT_CONNECT_TIMEOUT));
 
         int requestTimeout = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT,
-                String.valueOf(Transport.DEFAULT_MESSAGE_WAIT_TIMEOUT)));
+                String.valueOf(TSDBConstants.DEFAULT_MESSAGE_WAIT_TIMEOUT)));
 
         int connectMode = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_CONNECT_MODE,"0"));
         if (connectMode < 0 || connectMode > 1){
@@ -502,6 +571,44 @@ public class ConnectionParam {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_WS_KEEP_ALIVE_SECONDS");
         }
 
+        int healthCheckInitInterval = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_INIT_INTERVAL, "10"));
+        if (healthCheckInitInterval <= 0){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_HEALTH_CHECK_INIT_INTERVAL, must be positive integer");
+        }
+
+        int healthCheckMaxInterval = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_MAX_INTERVAL, "300"));
+        if (healthCheckMaxInterval <= 0 || healthCheckMaxInterval <= healthCheckInitInterval){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_HEALTH_CHECK_MAX_INTERVAL, must be positive integer and greater than PROPERTY_KEY_HEALTH_CHECK_INIT_INTERVAL");
+        }
+        int healthCheckConTimeout = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_CON_TIMEOUT, "1"));
+        if (healthCheckConTimeout <= 0){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_HEALTH_CHECK_CON_TIMEOUT, must be positive integer");
+        }
+
+        int healthCheckCmdTimeout = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_CMD_TIMEOUT, "5"));
+        if (healthCheckCmdTimeout <= 0){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_HEALTH_CHECK_CMD_TIMEOUT, must be positive integer");
+        }
+
+        int healthCheckRecoveryCount = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_RECOVERY_COUNT, "3"));
+        if (healthCheckRecoveryCount <= 0){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_HEALTH_CHECK_RECOVERY_COUNT, must be positive integer");
+        }
+
+        int healthCheckRecoveryInterval = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_RECOVERY_INTERVAL, "60"));
+        if (healthCheckRecoveryInterval <= 0){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_HEALTH_CHECK_RECOVERY_INTERVAL, must be positive integer");
+        }
+
+        int rebalanceThreshold = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_REBALANCE_THRESHOLD, "20"));
+        if (rebalanceThreshold < 10 || rebalanceThreshold > 50){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_REBALANCE_THRESHOLD, must be between 10 and 50");
+        }
+        int rebalanceConBaseCount = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_REBALANCE_CON_BASE_COUNT, "30"));
+        if (rebalanceConBaseCount <= 0){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_REBALANCE_CON_BASE_COUNT, must be positive integer");
+        }
+
         return new Builder(endpoints)
                 .setDatabase(database)
                 .setCloudToken(cloudToken)
@@ -531,6 +638,14 @@ public class ConnectionParam {
                 .setAsyncWrite(asyncWrite)
                 .setPbsMode(pbsMode)
                 .setWsKeepAlive(wsKeepAlive)
+                .setHealthCheckInitInterval(healthCheckInitInterval)
+                .setHealthCheckMaxInterval(healthCheckMaxInterval)
+                .setHealthCheckConTimeout(healthCheckConTimeout)
+                .setHealthCheckCmdTimeout(healthCheckCmdTimeout)
+                .setHealthCheckRecoveryCount(healthCheckRecoveryCount)
+                .setHealthCheckRecoveryInterval(healthCheckRecoveryInterval)
+                .setRebalanceThreshold(rebalanceThreshold)
+                .setRebalanceConBaseCount(rebalanceConBaseCount)
                 .build();
     }
 
@@ -567,7 +682,14 @@ public class ConnectionParam {
         private String asyncWrite;
         private String pbsMode;
         private int wsKeepAlive;
-
+        private int healthCheckInitInterval;
+        private int healthCheckMaxInterval;
+        private int healthCheckConTimeout;
+        private int healthCheckCmdTimeout;
+        private int healthCheckRecoveryCount;
+        private int healthCheckRecoveryInterval;
+        private int rebalanceThreshold;
+        private int rebalanceConBaseCount;
         private Consumer<String> textMessageHandler;
         private Consumer<ByteBuf> binaryMessageHandler;
 
@@ -712,6 +834,44 @@ public class ConnectionParam {
             return this;
         }
 
+        public Builder setHealthCheckInitInterval(int healthCheckInitInterval) {
+            this.healthCheckInitInterval = healthCheckInitInterval;
+            return this;
+        }
+
+        public Builder setHealthCheckMaxInterval(int healthCheckMaxInterval) {
+            this.healthCheckMaxInterval = healthCheckMaxInterval;
+            return this;
+        }
+
+        public Builder setHealthCheckConTimeout(int healthCheckConTimeout) {
+            this.healthCheckConTimeout = healthCheckConTimeout;
+            return this;
+        }
+
+        public Builder setHealthCheckCmdTimeout(int healthCheckCmdTimeout) {
+            this.healthCheckCmdTimeout = healthCheckCmdTimeout;
+            return this;
+        }
+
+        public Builder setHealthCheckRecoveryCount(int healthCheckRecoveryCount) {
+            this.healthCheckRecoveryCount = healthCheckRecoveryCount;
+            return this;
+        }
+
+        public Builder setHealthCheckRecoveryInterval(int healthCheckRecoveryInterval) {
+            this.healthCheckRecoveryInterval = healthCheckRecoveryInterval;
+            return this;
+        }
+
+        public Builder setRebalanceThreshold(int rebalanceThreshold) {
+            this.rebalanceThreshold = rebalanceThreshold;
+            return this;
+        }
+        public Builder setRebalanceConBaseCount(int rebalanceConBaseCount) {
+            this.rebalanceConBaseCount = rebalanceConBaseCount;
+            return this;
+        }
         public Builder setTextMessageHandler(Consumer<String> textMessageHandler) {
             this.textMessageHandler = textMessageHandler;
             return this;
@@ -760,6 +920,14 @@ public class ConnectionParam {
                 .setAsyncWrite(original.getAsyncWrite())
                 .setPbsMode(original.getPbsMode())
                 .setWsKeepAlive(original.getWsKeepAlive())
+                .setHealthCheckInitInterval(original.getHealthCheckInitInterval())
+                .setHealthCheckMaxInterval(original.getHealthCheckMaxInterval())
+                .setHealthCheckConTimeout(original.getHealthCheckConTimeout())
+                .setHealthCheckCmdTimeout(original.getHealthCheckCmdTimeout())
+                .setHealthCheckRecoveryCount(original.getHealthCheckRecoveryCount())
+                .setHealthCheckRecoveryInterval(original.getHealthCheckRecoveryInterval())
+                .setRebalanceThreshold(original.getRebalanceThreshold())
+                .setRebalanceConBaseCount(original.getRebalanceConBaseCount())
                 .setTextMessageHandler(original.getTextMessageHandler())
                 .setBinaryMessageHandler(original.getBinaryMessageHandler());
     }

@@ -2,9 +2,17 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.utils.StringUtils;
 
-import java.io.*;
-import java.net.*;
-import java.util.concurrent.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.SocketException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class TaosAdapterMock {
     private String cmd = "";
@@ -16,6 +24,7 @@ public class TaosAdapterMock {
     private volatile boolean isRunning = false;
     private ServerSocket serverSocket;
     private ExecutorService executor;
+    private AtomicInteger delayMillis = new AtomicInteger(0);
     private final ConcurrentHashMap<Socket, Boolean> activeConnections = new ConcurrentHashMap<>();
 
     public TaosAdapterMock() {
@@ -38,6 +47,10 @@ public class TaosAdapterMock {
 
     public int getListenPort() {
         return listenPort;
+    }
+
+    public void setDelayMillis(int delayMillis) {
+        this.delayMillis.set(delayMillis);
     }
 
     public synchronized void start() throws IOException {
@@ -120,11 +133,11 @@ public class TaosAdapterMock {
 
                 // start two threads to forward data
                 Future<?> clientToTarget = executor.submit(
-                        () -> forwardData(clientInput, targetOutput, "client->target")
+                        () -> forwardData(clientInput, targetOutput, "client->target", false)
                 );
 
                 Future<?> targetToClient = executor.submit(
-                        () -> forwardData(targetInput, clientOutput, "target->client")
+                        () -> forwardData(targetInput, clientOutput, "target->client", true)
                 );
 
                 // wait for both threads to finish
@@ -141,7 +154,7 @@ public class TaosAdapterMock {
             }
         }
 
-        private void forwardData(InputStream input, OutputStream output, String direction) {
+        private void forwardData(InputStream input, OutputStream output, String direction, boolean withDelay) {
             byte[] buffer = new byte[4096];
             int bytesRead;
 
@@ -159,6 +172,14 @@ public class TaosAdapterMock {
                         }
                     }
 
+                    if (withDelay && delayMillis.get() > 0) {
+                        try {
+                            Thread.sleep(delayMillis.get());
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            return;
+                        }
+                    }
                     output.write(buffer, 0, bytesRead);
                     output.flush();
                 }

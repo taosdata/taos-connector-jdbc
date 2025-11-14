@@ -112,7 +112,7 @@ public abstract class AbstractDriver implements Driver {
         transport.checkConnection(param.getConnectTimeout());
 
         ConnectReq connectReq = new ConnectReq(param);
-        ConnectResp auth = (ConnectResp) transport.send(new Request(Action.CONN.getAction(), connectReq));
+        ConnectResp auth = (ConnectResp) transport.send(new Request(Action.CONN.getAction(), connectReq), param.getRequestTimeout());
 
         if (Code.SUCCESS.getCode() != auth.getCode()) {
             transport.close();

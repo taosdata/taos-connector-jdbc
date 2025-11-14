@@ -6,7 +6,8 @@ public enum StepEnum {
     QUERTY(2),
     FETCH(3),
     FETCH2(4),
-    FINISH(5),
+    FREE_RESULT(5),
+    FINISH(6),
 
     ;
     private final int step;

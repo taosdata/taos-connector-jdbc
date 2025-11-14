@@ -3,10 +3,13 @@ package com.taosdata.jdbc.utils;
 import com.taosdata.jdbc.common.Cluster;
 import com.taosdata.jdbc.common.Endpoint;
 import com.taosdata.jdbc.common.EndpointInfo;
+import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.rs.ConnectionParam;
-import com.taosdata.jdbc.ws.FetchBlockData;
+import com.taosdata.jdbc.ws.FutureResponse;
 import com.taosdata.jdbc.ws.InFlightRequest;
-import com.taosdata.jdbc.ws.entity.FetchBlockNewResp;
+import com.taosdata.jdbc.ws.entity.Action;
+import com.taosdata.jdbc.ws.entity.FetchBlockHealthCheckResp;
+import com.taosdata.jdbc.ws.loadbalance.BgHealthCheck;
 
 import java.util.List;
 import java.util.Map;
@@ -55,6 +58,8 @@ public class RebalanceUtil {
         Cluster cluster = ENDPOINT_CLUSTER_MAP.get(endpoint);
         CLUSTER_MAP.get(cluster).set(true);
         g_reblancing.set(true);
+
+        log.info("endpoint: " + endpoint + " is up, start rebalancing");
     }
 
     public static synchronized void rebalanceDone(Endpoint endpoint){
@@ -96,7 +101,7 @@ public class RebalanceUtil {
         return indexes;
     }
 
-    public static void startBackgroundHealthCheck(ConnectionParam original, InFlightRequest inFlightRequest) {
+    public static void startBackgroundHealthCheck(ConnectionParam original, int index, InFlightRequest inFlightRequest) {
         ConnectionParam param = ConnectionParam.copyToBuilder(original)
                 .build();
         param.setBinaryMessageHandler(byteBuf -> {
@@ -104,29 +109,28 @@ public class RebalanceUtil {
             long id = byteBuf.readLongLE();
             byteBuf.readerIndex(8);
 
-            // only neet to handle fetch block new response
-            FetchBlockData fetchBlockData = FetchDataUtil.getFetchMap().get(id);
-            if (null != fetchBlockData) {
-                Utils.retainByteBuf(byteBuf);
-                byte[] bytes = new byte[byteBuf.readableBytes()];
-                byteBuf.getBytes(byteBuf.readerIndex(), bytes);
+            Utils.retainByteBuf(byteBuf);
+            byte[] bytes = new byte[byteBuf.readableBytes()];
+            byteBuf.getBytes(byteBuf.readerIndex(), bytes);
 
-                FetchBlockNewResp fetchBlockResp = new FetchBlockNewResp(byteBuf);
-                try {
-                    fetchBlockData.handleReceiveBlockData(fetchBlockResp);
-                } catch (InterruptedException e) {
-                    log.error("Error handling fetch block data", e);
-                    Thread.currentThread().interrupt();
-                    Utils.releaseByteBuf(byteBuf);
-                } catch (Exception e) {
-                    Utils.releaseByteBuf(byteBuf);
-                    log.error("Unexpected error handling fetch block data, id: {}", id, e);
+            try {
+                FetchBlockHealthCheckResp resp = new FetchBlockHealthCheckResp(byteBuf);
+                FutureResponse remove = inFlightRequest.remove(Action.FETCH_BLOCK_NEW.getAction(), id);
+                if (null != remove) {
+                    remove.getFuture().complete(resp);
                 }
-            } else {
-                // for the connection pool test sql will not fetch all data, we ignore this case log.
-                log.trace("Received fetch block new response, but no fetch data found for id: {}", id);
+            } catch (Exception e) {
+                Utils.releaseByteBuf(byteBuf);
+                log.error("Unexpected error handling fetch block data, id: {}", id, e);
+                FutureResponse remove = inFlightRequest.remove(Action.FETCH_BLOCK_NEW.getAction(), id);
+                if (null != remove) {
+                    remove.getFuture().complete(FetchBlockHealthCheckResp.getFailedResp());
+                }
             }
         });
+
+        // 启动后台探活
+        BgHealthCheck bgHealthCheck = new BgHealthCheck(WSFunction.WS, param, index, inFlightRequest);
     }
 
 }

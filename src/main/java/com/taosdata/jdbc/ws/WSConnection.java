@@ -171,7 +171,7 @@ public class WSConnection extends AbstractConnection {
                 insertReq.setTtl(ttl);
             if (reqId != null)
                 insertReq.setReqId(reqId);
-            CommonResp response = (CommonResp) transport.send(new Request(SchemalessAction.INSERT.getAction(), insertReq));
+            CommonResp response = (CommonResp) transport.send(new Request(SchemalessAction.INSERT.getAction(), insertReq), param.getRequestTimeout());
             if (Code.SUCCESS.getCode() != response.getCode()) {
                 throw new SQLException("0x" + Integer.toHexString(response.getCode()) + ":" + response.getMessage());
             }
@@ -189,7 +189,7 @@ public class WSConnection extends AbstractConnection {
             insertReq.setTtl(ttl);
         if (reqId != null)
             insertReq.setReqId(reqId);
-        CommonResp response = (CommonResp) transport.send(new Request(SchemalessAction.INSERT.getAction(), insertReq));
+        CommonResp response = (CommonResp) transport.send(new Request(SchemalessAction.INSERT.getAction(), insertReq), param.getRequestTimeout());
         if (Code.SUCCESS.getCode() != response.getCode()) {
             throw new SQLException("(0x" + Integer.toHexString(response.getCode()) + "):" + response.getMessage());
         }

@@ -9,7 +9,6 @@ class ConnectStep implements Step {
 
     @Override
     public CompletableFuture<StepResponse> execute(BgHealthCheck context, StepFlow flow) {
-        // 若已有活跃连接，直接进入下一步
         if (context.getWsClient() != null && context.getWsClient().isOpen()) {
             return CompletableFuture.completedFuture(new StepResponse(StepEnum.CON_CMD, 0));
         }
@@ -22,8 +21,8 @@ class ConnectStep implements Step {
                 })
                 .exceptionally(ex -> {
                     log.info("Connection or handshake failed.", ex);
-                    context.cleanup(); // 重置组内计数（步骤特有逻辑）
-                    return new StepResponse(StepEnum.CONNECT, 0); // 立即返回，等待重试
+                    context.cleanUp();
+                    return new StepResponse(StepEnum.CONNECT, context.getNextInterval()); // 立即返回，等待重试
                 });
     }
 }

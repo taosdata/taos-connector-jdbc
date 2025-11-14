@@ -2,21 +2,21 @@ package com.taosdata.jdbc.ws.loadbalance;
 
 public class StepResponse {
     private StepEnum step;
-    private int waitMs;
+    private int waitSeconds;
 
-    public StepResponse(StepEnum step, int waitMs) {
+    public StepResponse(StepEnum step, int waitSeconds) {
         this.step = step;
-        this.waitMs = waitMs;
+        this.waitSeconds = waitSeconds;
     }
 
     public StepEnum getStep() {
         return step;
     }
-    public int getWaitMs() {
-        return waitMs;
+    public int getWaitSeconds() {
+        return waitSeconds;
     }
 
     public String toString() {
-        return "StepResponse{stepIndex=" + StepEnum.getNameByInt(step.get()) + ", waitMs=" + waitMs + "}";
+        return "StepResponse{stepIndex=" + StepEnum.getNameByInt(step.get()) + ", waitSeconds=" + waitSeconds + "}";
     }
 }
