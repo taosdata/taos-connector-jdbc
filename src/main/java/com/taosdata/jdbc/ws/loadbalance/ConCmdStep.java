@@ -10,10 +10,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 class ConCmdStep implements Step {
-    private final Logger log;
-    public ConCmdStep() {
-        this.log = LoggerFactory.getLogger(ConCmdStep.class);
-    }
+    private static final Logger log = LoggerFactory.getLogger(ConCmdStep.class);
     @Override
     public CompletableFuture<StepResponse> execute(BgHealthCheck context, StepFlow flow) {
         // connection is closed

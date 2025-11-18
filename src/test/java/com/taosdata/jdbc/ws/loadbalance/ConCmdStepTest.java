@@ -6,9 +6,8 @@ import com.taosdata.jdbc.ws.InFlightRequest;
 import com.taosdata.jdbc.ws.WSClient;
 import com.taosdata.jdbc.ws.entity.Code;
 import com.taosdata.jdbc.ws.entity.ConnectResp;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import io.netty.util.ResourceLeakDetector;
+import org.junit.*;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -35,7 +34,7 @@ public class ConCmdStepTest {
     private ConCmdStep conCmdStep;
 
     @Before
-    public void setUp() {
+    public void init() {
         MockitoAnnotations.openMocks(this);
         // Inject mock logger into ConCmdStep via test constructor
         conCmdStep = new ConCmdStep();
@@ -164,5 +163,15 @@ public class ConCmdStepTest {
         Assert.assertEquals(StepEnum.CON_CMD, response.getStep());
         Assert.assertEquals(expectedInterval, response.getWaitSeconds());
         verify(context).cleanUp();
+    }
+
+    @BeforeClass
+    public static void setUp() {
+        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+    }
+
+    @AfterClass
+    public static void tearDown() {
+        System.gc();
     }
 }

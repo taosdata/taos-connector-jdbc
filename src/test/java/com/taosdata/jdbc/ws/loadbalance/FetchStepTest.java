@@ -9,9 +9,8 @@ import com.taosdata.jdbc.ws.entity.Action;
 import com.taosdata.jdbc.ws.entity.FetchBlockHealthCheckResp;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import io.netty.util.ResourceLeakDetector;
+import org.junit.*;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -38,12 +37,22 @@ public class FetchStepTest {
     private FetchStep fetchStep;
 
     @Before
-    public void setUp() {
+    public void init() {
         MockitoAnnotations.openMocks(this);
         fetchStep = new FetchStep();
 
         // Bind mocks to context
         when(context.getWsClient()).thenReturn(wsClient);
+        // 关键：Mock send方法，执行时自动释放ByteBuf
+        doAnswer(invocation -> {
+            // 获取send方法的第一个参数（ByteBuf）
+            ByteBuf buf = invocation.getArgument(0);
+            if (buf != null && buf.refCnt() > 0) {
+                buf.release(); // 自动释放
+            }
+            return null; // send方法为void，返回null即可
+        }).when(wsClient).send(any(ByteBuf.class));
+
         when(context.getInFlightRequest()).thenReturn(inFlightRequest);
         when(context.getParam()).thenReturn(param);
         when(context.getResultId()).thenReturn(123456L); // Mock fixed resultId
@@ -179,6 +188,8 @@ public class FetchStepTest {
         when(wsClient.isOpen()).thenReturn(true);
         when(param.getRequestTimeout()).thenReturn(6000);
         doNothing().when(inFlightRequest).put(any(FutureResponse.class));
+        doNothing().when(wsClient).send(any(ByteBuf.class));
+
         ArgumentCaptor<ByteBuf> byteBufCaptor = ArgumentCaptor.forClass(ByteBuf.class);
 
         // Act
@@ -199,5 +210,14 @@ public class FetchStepTest {
         Assert.assertTrue(writtenReqId > 0); // ReqId.getReqID() returns non-zero value
 
         capturedBuf.release(); // Release ByteBuf to avoid memory leak
+    }
+    @BeforeClass
+    public static void setUp() {
+        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+    }
+
+    @AfterClass
+    public static void tearDown() {
+        System.gc();
     }
 }

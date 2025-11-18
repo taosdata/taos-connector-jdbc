@@ -4,9 +4,8 @@ import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.ws.WSClient;
 import io.netty.channel.Channel;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import io.netty.util.ResourceLeakDetector;
+import org.junit.*;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -28,7 +27,7 @@ public class ConnectStepTest {
     private ConnectStep connectStep;
 
     @Before
-    public void setUp() {
+    public void init() {
         MockitoAnnotations.openMocks(this);
         connectStep = new ConnectStep();
 
@@ -124,5 +123,15 @@ public class ConnectStepTest {
         Assert.assertEquals(StepEnum.CON_CMD, response.getStep());
         Assert.assertEquals(0, response.getWaitSeconds());
         verify(newWsClient).getChannelAsync();
+    }
+
+    @BeforeClass
+    public static void setUp() {
+        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+    }
+
+    @AfterClass
+    public static void tearDown() {
+        System.gc();
     }
 }

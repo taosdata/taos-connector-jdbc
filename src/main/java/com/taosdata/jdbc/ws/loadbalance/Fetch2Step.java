@@ -13,7 +13,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 class Fetch2Step implements Step {
-    static Logger log = org.slf4j.LoggerFactory.getLogger(Fetch2Step.class);
+    private static final Logger log = org.slf4j.LoggerFactory.getLogger(Fetch2Step.class);
 
 
     @Override
@@ -60,7 +60,7 @@ class Fetch2Step implements Step {
                             return new StepResponse(StepEnum.QUERTY, context.getRecoveryInterval());
                         }
                         else {
-                            RebalanceUtil.endpointUp(context.getEndpoint());
+                            RebalanceUtil.endpointUp(context.getParam(), context.getEndpoint());
                             return new StepResponse(StepEnum.FINISH, 0);
                         }
                     } else {

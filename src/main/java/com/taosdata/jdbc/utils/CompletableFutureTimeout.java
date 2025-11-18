@@ -121,6 +121,6 @@ public class CompletableFutureTimeout {
     private static final Timer NETTY_TIMER = new HashedWheelTimer(
             new DefaultThreadFactory("taos-jdbc-short-timer", true),
             50, TimeUnit.MILLISECONDS,
-            1024 // slot（2^10，cover 1024 * 50ms = 51.2, 60s task will be handled in 2 loops）
+            1024 // slots (2^10), covers 1024 * 50ms = 51.2s, a 60s task will be handled in 2 loops
     );
 }

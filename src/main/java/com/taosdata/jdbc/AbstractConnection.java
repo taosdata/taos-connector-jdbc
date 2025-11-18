@@ -42,6 +42,10 @@ public abstract class AbstractConnection extends WrapperImpl implements Connecti
         this.statementsMap.put(stmtId, stmt);
     }
 
+    public boolean canRebalanced() {
+        return this.statementsMap.isEmpty();
+    }
+
     @Override
     public abstract Statement createStatement() throws SQLException;
 

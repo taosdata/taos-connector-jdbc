@@ -14,7 +14,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 class FetchStep implements Step {
-    static Logger log = org.slf4j.LoggerFactory.getLogger(FetchStep.class);
+    private static final Logger log = org.slf4j.LoggerFactory.getLogger(FetchStep.class);
 
     @Override
     public CompletableFuture<StepResponse> execute(BgHealthCheck context, StepFlow flow) {
@@ -42,6 +42,7 @@ class FetchStep implements Step {
         try{
             context.getInFlightRequest().put(new FutureResponse(action, reqId, completableFuture));
         } catch (Exception e) {
+
             return CompletableFuture.completedFuture(new StepResponse(StepEnum.CONNECT, 0));
         }
 

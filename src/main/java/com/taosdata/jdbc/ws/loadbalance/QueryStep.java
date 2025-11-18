@@ -13,7 +13,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 class QueryStep implements Step {
-    static Logger log = org.slf4j.LoggerFactory.getLogger(QueryStep.class);
+    private static final Logger log = org.slf4j.LoggerFactory.getLogger(QueryStep.class);
 
     @Override
     public CompletableFuture<StepResponse> execute(BgHealthCheck context, StepFlow flow) {

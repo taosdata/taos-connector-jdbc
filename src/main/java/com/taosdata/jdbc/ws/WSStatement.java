@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.*;
+import com.taosdata.jdbc.utils.RebalanceUtil;
 import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.utils.SqlSyntaxValidator;
 import com.taosdata.jdbc.ws.entity.*;
@@ -30,6 +31,15 @@ public class WSStatement extends AbstractStatement {
         this.database = database;
         this.connection = connection;
         this.instanceId = instanceId;
+
+        // check if need to rebalance
+        if (RebalanceUtil.isRebalancing()
+                && this.transport.isConnected()
+                && this.connection.canRebalanced()
+                && RebalanceUtil.isRebalancing(this.transport.getCurrentEndpoint())
+                && RebalanceUtil.handleRebalancing(this.transport.getConnectionParam(), this.transport.getCurrentEndpoint())) {
+            this.transport.balanceConnection();
+        }
         this.connection.registerStatement(this.instanceId, this);
         this.zoneId = zoneId;
         this.queryTimeoutInSeconds = (transport.getConnectionParam().getRequestTimeout() + (1000 - 1)) / 1000;
@@ -101,13 +111,17 @@ public class WSStatement extends AbstractStatement {
             this.connection.setCatalog(this.database);
             this.connection.setClientInfo(TSDBDriver.PROPERTY_KEY_DBNAME, this.database);
         }
+
+        if (this.resultSet != null) {
+            this.resultSet.close();
+        }
+
         if (queryResp.isUpdate()) {
             this.resultSet = null;
             this.affectedRows = queryResp.getAffectedRows();
             return false;
         } else {
             this.resultSet = new BlockResultSet(this, this.transport, queryResp, this.database, this.zoneId);
-            //this.resultSet = new BlockResultSet(this, this.transport, queryResp, this.database, this.zoneId, binQueryNewResp.getFetchBlockNewResp());
             this.affectedRows = -1;
             return true;
         }

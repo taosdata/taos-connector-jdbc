@@ -13,6 +13,7 @@ import com.taosdata.jdbc.ws.TaosAdapterMock;
 import com.taosdata.jdbc.ws.WSConnection;
 import org.junit.*;
 import org.junit.runner.RunWith;
+import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -27,6 +28,7 @@ import java.util.concurrent.CountDownLatch;
 @TestTarget(alias = "websocket master slave test", author = "yjshe", version = "3.2.11")
 @FixMethodOrder
 public class MinimumConnectionCountTest {
+    private static Logger log = org.slf4j.LoggerFactory.getLogger(MinimumConnectionCountTest.class);
     private static final String host = "127.0.0.1";
     private static final int portA = 6041;
     private static final String db_name = TestUtils.camelToSnake(MinimumConnectionCountTest.class);
@@ -54,10 +56,13 @@ public class MinimumConnectionCountTest {
         Connection connection1 = DriverManager.getConnection(url, properties);
         ConnectionParam param = ((WSConnection)connection1).getParam();
         Assert.assertEquals(1, RebalanceUtil.getEndpointInfo(param.getEndpoints().get(0)).getConnectCount());
+        Assert.assertEquals(0, RebalanceUtil.getEndpointInfo(param.getEndpoints().get(1)).getConnectCount());
+        Assert.assertEquals(0, RebalanceUtil.getEndpointInfo(param.getEndpoints().get(2)).getConnectCount());
 
         Connection connection2 = DriverManager.getConnection(url, properties);
         Assert.assertEquals(1, RebalanceUtil.getEndpointInfo(param.getEndpoints().get(0)).getConnectCount());
         Assert.assertEquals(1, RebalanceUtil.getEndpointInfo(param.getEndpoints().get(1)).getConnectCount());
+        Assert.assertEquals(0, RebalanceUtil.getEndpointInfo(param.getEndpoints().get(2)).getConnectCount());
 
         Connection connection3 = DriverManager.getConnection(url, properties);
         Assert.assertEquals(1, RebalanceUtil.getEndpointInfo(param.getEndpoints().get(0)).getConnectCount());
@@ -104,6 +109,93 @@ public class MinimumConnectionCountTest {
         connection6.close();
         // restart mockA
         mockA.start();
+    }
+
+    @Description("test connection count after node down")
+    @Test
+    public void connectionCountAfterNodeDownTest() throws Exception  {
+        Properties properties = new Properties();
+        String url = "jdbc:TAOS-WS://" + host + ":" + mockA.getListenPort()
+                + "," + host + ":" + mockB.getListenPort()
+                + "," + host + ":" + mockC.getListenPort() + "/?user=root&password=taosdata";
+
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_INTERVAL_MS, "2000");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_RETRY_COUNT, "3");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, "5000");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_INIT_INTERVAL, "1");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_MAX_INTERVAL, "1");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_RECOVERY_COUNT, "1");
+
+        Connection connection1 = DriverManager.getConnection(url, properties);
+        ConnectionParam param = ((WSConnection)connection1).getParam();
+        Connection connection2 = DriverManager.getConnection(url, properties);
+        Connection connection3 = DriverManager.getConnection(url, properties);
+
+        Assert.assertEquals(1, RebalanceUtil.getEndpointInfo(param.getEndpoints().get(0)).getConnectCount());
+        Assert.assertEquals(1, RebalanceUtil.getEndpointInfo(param.getEndpoints().get(1)).getConnectCount());
+        Assert.assertEquals(1, RebalanceUtil.getEndpointInfo(param.getEndpoints().get(2)).getConnectCount());
+
+        mockC.stop();
+        // wait for connection lost
+        Thread.sleep(1000);
+        try (Statement statement = connection3.createStatement();ResultSet rs = statement.executeQuery("show databases;");) {
+            while (rs.next()) {
+                String dbName = rs.getString(1);
+            }
+        } catch (SQLException e) {
+            log.info("Expected exception when node C is down", e);
+        }
+
+        Assert.assertEquals(2, RebalanceUtil.getEndpointInfo(param.getEndpoints().get(0)).getConnectCount());
+        Assert.assertEquals(1, RebalanceUtil.getEndpointInfo(param.getEndpoints().get(1)).getConnectCount());
+        Assert.assertEquals(0, RebalanceUtil.getEndpointInfo(param.getEndpoints().get(2)).getConnectCount());
+        mockC.start();
+        // wait for health check
+        Thread.sleep(3000);
+
+        Connection connection4 = DriverManager.getConnection(url, properties);
+        Assert.assertEquals(1, RebalanceUtil.getEndpointInfo(param.getEndpoints().get(2)).getConnectCount());
+
+        connection1.close();
+        connection2.close();
+        connection3.close();
+        connection4.close();
+    }
+
+    @Description("test connection count after node down")
+    @Test
+    public void connectionCountAfterCloseTest() throws Exception  {
+        Properties properties = new Properties();
+        String url = "jdbc:TAOS-WS://" + host + ":" + mockA.getListenPort()
+                + "," + host + ":" + mockB.getListenPort()
+                + "," + host + ":" + mockC.getListenPort() + "/?user=root&password=taosdata";
+
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_INTERVAL_MS, "2000");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_RETRY_COUNT, "3");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, "5000");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_INIT_INTERVAL, "1");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_MAX_INTERVAL, "1");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_RECOVERY_COUNT, "1");
+
+        Connection connection1 = DriverManager.getConnection(url, properties);
+        ConnectionParam param = ((WSConnection)connection1).getParam();
+        Connection connection2 = DriverManager.getConnection(url, properties);
+        Connection connection3 = DriverManager.getConnection(url, properties);
+
+        Assert.assertEquals(1, RebalanceUtil.getEndpointInfo(param.getEndpoints().get(0)).getConnectCount());
+        Assert.assertEquals(1, RebalanceUtil.getEndpointInfo(param.getEndpoints().get(1)).getConnectCount());
+        Assert.assertEquals(1, RebalanceUtil.getEndpointInfo(param.getEndpoints().get(2)).getConnectCount());
+
+        connection1.close();
+        Assert.assertEquals(0, RebalanceUtil.getEndpointInfo(param.getEndpoints().get(0)).getConnectCount());
+        connection1 = DriverManager.getConnection(url, properties);
+        Assert.assertEquals(1, RebalanceUtil.getEndpointInfo(param.getEndpoints().get(0)).getConnectCount());
+
+        connection1.close();
+        connection2.close();
+        connection3.close();
     }
 
     @Test

@@ -6,10 +6,7 @@ import org.slf4j.LoggerFactory;
 import java.util.concurrent.CompletableFuture;
 
 class ConnectStep implements Step {
-    private final Logger log;
-    public ConnectStep() {
-        this.log = LoggerFactory.getLogger(ConCmdStep.class);
-    }
+    private static final Logger log = LoggerFactory.getLogger(ConnectStep.class);
     @Override
     public CompletableFuture<StepResponse> execute(BgHealthCheck context, StepFlow flow) {
         if (context.getWsClient() != null && context.getWsClient().isOpen()) {

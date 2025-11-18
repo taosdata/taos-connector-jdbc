@@ -11,9 +11,8 @@ import com.taosdata.jdbc.ws.entity.Action;
 import com.taosdata.jdbc.ws.entity.FetchBlockHealthCheckResp;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import io.netty.util.ResourceLeakDetector;
+import org.junit.*;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -41,7 +40,7 @@ public class Fetch2StepTest {
     private Fetch2Step fetch2Step;
     private final Endpoint endpoint = new Endpoint("test-endpoint", 6041, false);
     @Before
-    public void setUp() {
+    public void init() {
         MockitoAnnotations.openMocks(this);
         fetch2Step = new Fetch2Step();
 
@@ -120,7 +119,7 @@ public class Fetch2StepTest {
             Assert.assertEquals(0, response.getWaitSeconds());
             verify(inFlightRequest).remove(action, futureResponseCaptor.getValue().getId());
             verify(context, never()).cleanUp();
-            mockedRebalance.verify(() -> RebalanceUtil.endpointUp(endpoint), times(1));
+            mockedRebalance.verify(() -> RebalanceUtil.endpointUp(context.getParam(), endpoint), times(1));
         }
     }
 
@@ -152,7 +151,7 @@ public class Fetch2StepTest {
             Assert.assertEquals(StepEnum.FETCH2, response.getStep());
             Assert.assertEquals(0, response.getWaitSeconds());
             verify(inFlightRequest).remove(action, futureResponseCaptor.getValue().getId());
-            mockedRebalance.verify(() -> RebalanceUtil.endpointUp(any()), never());
+            mockedRebalance.verify(() -> RebalanceUtil.endpointUp(any(), any()), never());
             verify(context, never()).cleanUp();
         }
     }
@@ -181,5 +180,13 @@ public class Fetch2StepTest {
         Assert.assertEquals(expectedInterval, response.getWaitSeconds());
         verify(context).cleanUp();
     }
+    @BeforeClass
+    public static void setUp() {
+        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+    }
 
+    @AfterClass
+    public static void tearDown() {
+        System.gc();
+    }
 }

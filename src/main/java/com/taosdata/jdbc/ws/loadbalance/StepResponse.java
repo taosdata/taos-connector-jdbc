@@ -1,8 +1,8 @@
 package com.taosdata.jdbc.ws.loadbalance;
 
 public class StepResponse {
-    private StepEnum step;
-    private int waitSeconds;
+    private final StepEnum step;
+    private final int waitSeconds;
 
     public StepResponse(StepEnum step, int waitSeconds) {
         this.step = step;

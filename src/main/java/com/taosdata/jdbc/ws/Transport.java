@@ -425,7 +425,7 @@ public class Transport implements AutoCloseable {
         List<Endpoint> endpoints = connectionParam.getEndpoints();
         int[] indexes = RebalanceUtil.getConnectCountsAsc(endpoints);
         for (int currentIndex : indexes) {
-            if (!RebalanceUtil.getEndpointInfo(endpoints.get(currentIndex)).isOnline()) {
+            if (connectionParam.isEnableAutoConnect() && !RebalanceUtil.getEndpointInfo(endpoints.get(currentIndex)).isOnline()) {
                 continue;
             }
 
@@ -488,5 +488,26 @@ public class Transport implements AutoCloseable {
     }
     public final ConnectionParam getConnectionParam() {
         return connectionParam;
+    }
+
+    public final Endpoint getCurrentEndpoint() {
+        return connectionParam.getEndpoints().get(currentNodeIndex);
+    }
+
+    public void balanceConnection() {
+        synchronized (this) {
+            int toIndex = RebalanceUtil.getMinConnectionEndpointIndex(connectionParam);
+            if (currentNodeIndex != toIndex) {
+                try {
+                    clientArr.get(toIndex).reconnectBlocking();
+                } catch (Exception e) {
+                    log.error("try connect remote server failed!", e);
+                    return;
+                }
+                int closeIndex = currentNodeIndex;
+                currentNodeIndex = toIndex;
+                clientArr.get(closeIndex).closeBlocking();
+            }
+        }
     }
 }
