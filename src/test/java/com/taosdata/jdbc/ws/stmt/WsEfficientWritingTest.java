@@ -117,6 +117,7 @@ public class WsEfficientWritingTest {
     public void testReconnect() throws SQLException, InterruptedException, IOException {
         taosAdapterMock = new TaosAdapterMock(proxyPort);
         taosAdapterMock.start();
+        Thread.sleep(3000); // wait for the backend health check ready
 
         String sql = "INSERT INTO " + db_name + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
 
@@ -399,6 +400,9 @@ public class WsEfficientWritingTest {
 
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, "50000");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_INIT_INTERVAL, "1");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_MAX_INTERVAL, "1");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_RECOVERY_COUNT, "1");
 
         if (copyData) {
             properties.setProperty(TSDBDriver.PROPERTY_KEY_COPY_DATA, "true");

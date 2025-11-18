@@ -88,8 +88,6 @@ public abstract class AbstractDriver implements Driver {
             FetchBlockData fetchBlockData = FetchDataUtil.getFetchMap().get(id);
             if (null != fetchBlockData) {
                 Utils.retainByteBuf(byteBuf);
-                byte[] bytes = new byte[byteBuf.readableBytes()];
-                byteBuf.getBytes(byteBuf.readerIndex(), bytes);
 
                 FetchBlockNewResp fetchBlockResp = new FetchBlockNewResp(byteBuf);
                 try {

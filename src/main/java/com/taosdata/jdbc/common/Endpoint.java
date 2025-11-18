@@ -37,4 +37,8 @@ public class Endpoint {
     public int hashCode() {
         return Objects.hash(host, port, isIpv6);
     }
+
+    public String toString() {
+        return (isIpv6 ? "[" + host + "]" : host) + ":" + port;
+    }
 }

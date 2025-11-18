@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class FetchBlockHealthCheckResp extends FetchBlockNewResp {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(FetchBlockHealthCheckResp.class);
 
     public boolean isClusterAlive() {
         return isClusterAlive;
@@ -48,7 +49,7 @@ public class FetchBlockHealthCheckResp extends FetchBlockNewResp {
                     }
                 }
             } catch (Exception e){
-                e.printStackTrace();
+                log.error("error on parse health check response", e);
             } finally {
                 ReferenceCountUtil.safeRelease(buffer);
             }

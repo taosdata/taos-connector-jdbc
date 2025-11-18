@@ -99,6 +99,14 @@ public class ConnectionParam {
         this.binaryMessageHandler = builder.binaryMessageHandler;
         this.pbsMode = builder.pbsMode;
         this.wsKeepAlive = builder.wsKeepAlive;
+        this.healthCheckInitInterval = builder.healthCheckInitInterval;
+        this.healthCheckMaxInterval = builder.healthCheckMaxInterval;
+        this.healthCheckConTimeout = builder.healthCheckConTimeout;
+        this.healthCheckCmdTimeout = builder.healthCheckCmdTimeout;
+        this.healthCheckRecoveryCount = builder.healthCheckRecoveryCount;
+        this.healthCheckRecoveryInterval = builder.healthCheckRecoveryInterval;
+        this.rebalanceThreshold = builder.rebalanceThreshold;
+        this.rebalanceConBaseCount = builder.rebalanceConBaseCount;
     }
 
     public void setEndpoints(List<Endpoint> endpoints) {
@@ -577,7 +585,7 @@ public class ConnectionParam {
         }
 
         int healthCheckMaxInterval = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_MAX_INTERVAL, "300"));
-        if (healthCheckMaxInterval <= 0 || healthCheckMaxInterval <= healthCheckInitInterval){
+        if (healthCheckMaxInterval < healthCheckInitInterval){
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_HEALTH_CHECK_MAX_INTERVAL, must be positive integer and greater than PROPERTY_KEY_HEALTH_CHECK_INIT_INTERVAL");
         }
         int healthCheckConTimeout = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_CON_TIMEOUT, "1"));

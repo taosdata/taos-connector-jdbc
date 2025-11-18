@@ -29,7 +29,7 @@ public class ConnectStepTest {
 
     @Before
     public void setUp() {
-        MockitoAnnotations.initMocks(this);
+        MockitoAnnotations.openMocks(this);
         connectStep = new ConnectStep();
 
         // Bind mocks to context

@@ -23,7 +23,7 @@ class ConnectStep implements Step {
                     return new StepResponse(StepEnum.CON_CMD, 0);
                 })
                 .exceptionally(ex -> {
-                    log.info("Connection or handshake failed.", ex);
+                    log.info("Connection or handshake failed. endpoint: {}", context.getEndpoint());
                     context.cleanUp();
                     return new StepResponse(StepEnum.CONNECT, context.getNextInterval()); // 立即返回，等待重试
                 });

@@ -45,6 +45,9 @@ public class RebalanceUtil {
     public static void disconnected(ConnectionParam original, int index, InFlightRequest inFlightRequest) {
         disconnectedBySelf(original, index);
 
+        if (!StringUtils.isEmpty(original.getCloudToken())) {
+            return;
+        }
         if (ENDPOINT_MAP.get(original.getEndpoints().get(index)).setOffline()) {
             // only once set to offline
             startBackgroundHealthCheck(original, index, inFlightRequest);
@@ -69,6 +72,7 @@ public class RebalanceUtil {
     }
     public static synchronized void endpointUp(Endpoint endpoint){
         Cluster cluster = ENDPOINT_CLUSTER_MAP.get(endpoint);
+        ENDPOINT_MAP.get(endpoint).setOnline();
         CLUSTER_MAP.get(cluster).set(true);
         g_reblancing.set(true);
 
@@ -120,10 +124,7 @@ public class RebalanceUtil {
             byteBuf.readerIndex(26);
             long id = byteBuf.readLongLE();
             byteBuf.readerIndex(8);
-
             Utils.retainByteBuf(byteBuf);
-            byte[] bytes = new byte[byteBuf.readableBytes()];
-            byteBuf.getBytes(byteBuf.readerIndex(), bytes);
 
             try {
                 FetchBlockHealthCheckResp resp = new FetchBlockHealthCheckResp(byteBuf);

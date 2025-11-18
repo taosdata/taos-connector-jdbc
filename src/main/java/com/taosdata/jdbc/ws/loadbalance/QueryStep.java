@@ -8,6 +8,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import org.slf4j.Logger;
 
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -23,7 +24,7 @@ class QueryStep implements Step {
         String action = Action.BINARY_QUERY.getAction();
         long reqId = ReqId.getReqID();
 
-        byte[] sqlBytes = "SHOW CLUSTER ALIVE;".getBytes();
+        byte[] sqlBytes = "SHOW CLUSTER ALIVE;".getBytes(StandardCharsets.UTF_8);
         int totalLength = 30 + sqlBytes.length;
         ByteBuf buffer = PooledByteBufAllocator.DEFAULT.directBuffer(totalLength);
 
@@ -67,7 +68,7 @@ class QueryStep implements Step {
                 })
                 // 处理异常（包括超时、业务异常等，当 Future 异常完成时执行）
                 .exceptionally(ex -> {
-                    log.info("Connection command failed.", ex);
+                    log.info("execute 'show cluster alive' failed. {}", ex.getMessage());
                     context.cleanUp();
                     return new StepResponse(StepEnum.QUERTY, context.getRecoveryInterval());
                 });

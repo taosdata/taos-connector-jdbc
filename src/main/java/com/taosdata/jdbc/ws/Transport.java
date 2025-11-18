@@ -34,7 +34,7 @@ public class Transport implements AutoCloseable {
     public static final int TSDB_CODE_RPC_NETWORK_UNAVAIL = 0x0B;
     public static final int TSDB_CODE_RPC_SOMENODE_NOT_CONNECTED = 0x20;
     private final AtomicInteger reconnectCount = new AtomicInteger(0);
-
+    private boolean firstDisconnect = true;
     private final ArrayList<WSClient> clientArr = new ArrayList<>();
     private final InFlightRequest inFlightRequest;
     private final long defaultTimeout;
@@ -46,7 +46,6 @@ public class Transport implements AutoCloseable {
     public static final String ERROR_MSG_CONNECTION_CLOSED = "Websocket Not Connected Exception for connection closed";
 
     private int currentNodeIndex;
-
     protected Transport() {
         this.inFlightRequest = null;
         this.connectionParam = null;
@@ -91,12 +90,16 @@ public class Transport implements AutoCloseable {
             boolean reconnected = reconnectCurNode(isTmq);
             if (reconnected) {
                 reconnectCount.incrementAndGet();
+                firstDisconnect = true;
                 if (log.isDebugEnabled()) {
                     log.debug("reconnect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri.toString()));
                 }
                 return;
             } else {
-                RebalanceUtil.disconnected(connectionParam, currentNodeIndex, inFlightRequest);
+                if (firstDisconnect) {
+                    RebalanceUtil.disconnected(connectionParam, currentNodeIndex, inFlightRequest);
+                    firstDisconnect = false;
+                }
             }
 
             List<Endpoint> endpoints = connectionParam.getEndpoints();
@@ -108,6 +111,7 @@ public class Transport implements AutoCloseable {
                 currentNodeIndex = currentIndex;
                 if (reconnectCurNode(isTmq)){
                     reconnectCount.incrementAndGet();
+                    firstDisconnect = true;
                     RebalanceUtil.incrementConnectionCount(endpoints.get(currentNodeIndex));
                     RebalanceUtil.connected(endpoints, currentNodeIndex);
                     if (log.isDebugEnabled()) {
@@ -442,22 +446,6 @@ public class Transport implements AutoCloseable {
         }
         return false;
     }
-//
-//    public void shutdown() {
-//        closed = true;
-//        if (inFlightRequest.hasInFlightRequest()) {
-//            CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-//                try {
-//                    TimeUnit.MILLISECONDS.sleep(defaultTimeout);
-//                } catch (InterruptedException e) {
-//                    // ignore
-//                }
-//            });
-//            future.thenRun(this::close);
-//        } else {
-//            close();
-//        }
-//    }
 
     public void reconnectTmq() throws SQLException {
         reconnect(true);

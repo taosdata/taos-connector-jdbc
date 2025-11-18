@@ -65,7 +65,7 @@ class FetchStep implements Step {
                 })
                 // 处理异常（包括超时、业务异常等，当 Future 异常完成时执行）
                 .exceptionally(ex -> {
-                    log.info("Connection command failed.", ex);
+                    log.info("fetch command failed. {}", ex.getMessage());
                     context.cleanUp();
                     return new StepResponse(StepEnum.FREE_RESULT, 0);
                 });

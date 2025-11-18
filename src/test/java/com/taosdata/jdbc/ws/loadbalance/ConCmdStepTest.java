@@ -36,7 +36,7 @@ public class ConCmdStepTest {
 
     @Before
     public void setUp() {
-        MockitoAnnotations.initMocks(this);
+        MockitoAnnotations.openMocks(this);
         // Inject mock logger into ConCmdStep via test constructor
         conCmdStep = new ConCmdStep();
 
