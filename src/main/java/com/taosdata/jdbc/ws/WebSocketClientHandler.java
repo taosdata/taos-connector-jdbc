@@ -1,8 +1,9 @@
 package com.taosdata.jdbc.ws;
 
-import com.taosdata.jdbc.utils.StringUtils;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.websocketx.*;
 import io.netty.util.AttributeKey;
@@ -11,7 +12,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.util.function.Consumer;
 
 public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> {

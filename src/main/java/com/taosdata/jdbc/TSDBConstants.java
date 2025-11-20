@@ -90,7 +90,7 @@ public abstract class TSDBConstants {
     public static final int DOUBLE_SCALE = 31;
 
     public static final String DEFAULT_PRECISION = "ms";
-
+    public static final int DEFAULT_MESSAGE_WAIT_TIMEOUT = 60_000;
     public static final boolean DEFAULT_BATCH_ERROR_IGNORE = false;
 
 

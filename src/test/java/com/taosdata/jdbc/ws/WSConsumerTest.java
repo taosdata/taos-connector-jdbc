@@ -23,7 +23,7 @@ public class WSConsumerTest {
     private static final String superTable = "st";
     private static Connection connection;
     private static Statement statement;
-    private static String[] topics = {"topic_ws_map", "topic_ws_bean"};
+    private static String[] topics = {"topic_ws_map" + dbName, "topic_ws_bean" + dbName};
 
     @Test
     public void testWSMap() throws Exception {

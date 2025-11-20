@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.concurrent.ForkJoinPool;
 
 public abstract class AbstractResultSet extends WrapperImpl implements ResultSet {
+    protected final int START_BACKEND_FETCH_BLOCK_NUM = 3;
     private int fetchSize;
     protected boolean wasNull;
     protected int timestampPrecision;

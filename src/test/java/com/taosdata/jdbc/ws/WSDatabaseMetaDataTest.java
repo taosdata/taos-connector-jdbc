@@ -17,7 +17,7 @@ public class WSDatabaseMetaDataTest {
     private static String url;
     private static Connection connection;
     private static WSDatabaseMetaData metaData;
-    private static final String dbName = TestUtils.camelToSnake(WSDatabaseMetaDataTest.class);
+    private static final String dbName = "1" + TestUtils.camelToSnake(WSDatabaseMetaDataTest.class) + "";
 
     @Test
     public void getTablesView() throws SQLException {
@@ -54,7 +54,7 @@ public class WSDatabaseMetaDataTest {
     public void testShowTables() throws SQLException {
 
         Statement stmt = connection.createStatement();
-        ResultSet resultSet = stmt.executeQuery("show  "+ dbName +".tables");
+        ResultSet resultSet = stmt.executeQuery("show  `"+ dbName +"`.tables");
         while (resultSet.next()) {
             System.out.println(resultSet.getString(1));
         }
@@ -77,11 +77,11 @@ public class WSDatabaseMetaDataTest {
 
         connection = DriverManager.getConnection(url, properties);
         Statement stmt = connection.createStatement();
-        stmt.execute("drop database if exists " + dbName);
-        stmt.execute("create database if not exists " + dbName + " precision 'us'");
-        stmt.execute("use " + dbName);
-        stmt.execute("create table `dn` (ts TIMESTAMP,cpu_taosd FLOAT,cpu_system FLOAT,cpu_cores INT,mem_taosd FLOAT,mem_system FLOAT,mem_total INT,disk_used FLOAT,disk_total INT,band_speed FLOAT,io_read FLOAT,io_write FLOAT,req_http INT,req_select INT,req_insert INT) TAGS (dnodeid INT,fqdn BINARY(128))");
-        stmt.execute("insert into dn1 using dn tags(1,'a') (ts) values(now)");
+        stmt.execute("drop database if exists `" + dbName + "`");
+        stmt.execute("create database if not exists `" + dbName + "` precision 'us'");
+        stmt.execute("use `" + dbName + "`");
+        stmt.execute("create table `123dn` (ts TIMESTAMP,cpu_taosd FLOAT,cpu_system FLOAT,cpu_cores INT,mem_taosd FLOAT,mem_system FLOAT,mem_total INT,disk_used FLOAT,disk_total INT,band_speed FLOAT,io_read FLOAT,io_write FLOAT,req_http INT,req_select INT,req_insert INT) TAGS (dnodeid INT,fqdn BINARY(128))");
+        stmt.execute("insert into `123dn1` using `123dn` tags(1,'a') (ts) values(now)");
 
         metaData = connection.getMetaData().unwrap(WSDatabaseMetaData.class);
     }
@@ -90,7 +90,7 @@ public class WSDatabaseMetaDataTest {
     public static void afterClass() throws SQLException {
         if (connection != null) {
             try (Statement statement = connection.createStatement()) {
-                statement.executeUpdate("drop database if exists " + dbName);
+                statement.executeUpdate("drop database if exists `" + dbName + "`");
             }
             connection.close();
         }

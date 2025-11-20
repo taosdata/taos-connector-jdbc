@@ -109,16 +109,16 @@ public class RestfulResultSetMetaDataTest {
 
     @Test
     public void getCatalogName() throws SQLException {
-        Assert.assertEquals("restful_test", meta.getCatalogName(1));
-        Assert.assertEquals("restful_test", meta.getCatalogName(2));
-        Assert.assertEquals("restful_test", meta.getCatalogName(3));
-        Assert.assertEquals("restful_test", meta.getCatalogName(4));
-        Assert.assertEquals("restful_test", meta.getCatalogName(5));
-        Assert.assertEquals("restful_test", meta.getCatalogName(6));
-        Assert.assertEquals("restful_test", meta.getCatalogName(7));
-        Assert.assertEquals("restful_test", meta.getCatalogName(8));
-        Assert.assertEquals("restful_test", meta.getCatalogName(9));
-        Assert.assertEquals("restful_test", meta.getCatalogName(10));
+        Assert.assertEquals(dbname, meta.getCatalogName(1));
+        Assert.assertEquals(dbname, meta.getCatalogName(2));
+        Assert.assertEquals(dbname, meta.getCatalogName(3));
+        Assert.assertEquals(dbname, meta.getCatalogName(4));
+        Assert.assertEquals(dbname, meta.getCatalogName(5));
+        Assert.assertEquals(dbname, meta.getCatalogName(6));
+        Assert.assertEquals(dbname, meta.getCatalogName(7));
+        Assert.assertEquals(dbname, meta.getCatalogName(8));
+        Assert.assertEquals(dbname, meta.getCatalogName(9));
+        Assert.assertEquals(dbname, meta.getCatalogName(10));
     }
 
     @Test
@@ -196,12 +196,12 @@ public class RestfulResultSetMetaDataTest {
         }
         conn = DriverManager.getConnection(url);
         stmt = conn.createStatement();
-        stmt.execute("create database if not exists restful_test");
-        stmt.execute("use restful_test");
+        stmt.execute("create database if not exists " + dbname);
+        stmt.execute("use " + dbname);
         stmt.execute("drop table if exists weather");
         stmt.execute("create table if not exists weather(f1 timestamp, f2 int, f3 bigint, f4 float, f5 double, f6 binary(64), f7 smallint, f8 tinyint, f9 bool, f10 nchar(64))");
-        stmt.execute("insert into restful_test.weather values('2021-01-01 00:00:00.000', 1, 100, 3.1415, 3.1415926, 'abc', 10, 10, true, '涛思数据')");
-        rs = stmt.executeQuery("select * from restful_test.weather");
+        stmt.execute("insert into weather values('2021-01-01 00:00:00.000', 1, 100, 3.1415, 3.1415926, 'abc', 10, 10, true, '涛思数据')");
+        rs = stmt.executeQuery("select * from weather");
         rs.next();
         meta = rs.getMetaData();
     }

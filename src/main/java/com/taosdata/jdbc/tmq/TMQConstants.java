@@ -125,6 +125,7 @@ public class TMQConstants {
         knownKeys.add(CONNECT_TYPE);
         knownKeys.add(CONNECT_URL);
         knownKeys.add(BOOTSTRAP_SERVERS);
+        knownKeys.add(PROPERTY_KEY_ENDPOINTS);
         knownKeys.add(VALUE_DESERIALIZER);
         knownKeys.add(VALUE_DESERIALIZER_ENCODING);
     }

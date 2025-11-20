@@ -5,10 +5,11 @@ import com.taosdata.jdbc.enums.DataType;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.ws.WSConnection;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
 import java.sql.*;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -17,7 +18,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public abstract class AbstractDatabaseMetaData extends WrapperImpl implements DatabaseMetaData {
-
+    private static final Logger log = LoggerFactory.getLogger(AbstractDatabaseMetaData.class);
     private static final String PRODUCT_NAME;
     private static final String PRODUCT_VERSION;
     private static final String DRIVER_VERSION;
@@ -32,10 +33,16 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
 
     static {
         Properties props = System.getProperties();
-        try {
-            props.load(loadProperties());
-        } catch (IOException e) {
-            //ignore
+        InputStream propertiesStream = loadProperties();
+        if (propertiesStream != null) {
+            try (InputStream stream = propertiesStream) {
+                props.load(stream);
+            } catch (IOException e) {
+                log.error("load taos-jdbc-version.properties failed", e);
+                //ignore
+            }
+        } else {
+            log.error("Could not find taos-jdbc-version.properties on classpath");
         }
         PRODUCT_NAME = props.getProperty("PRODUCT_NAME");
         PRODUCT_VERSION = props.getProperty("PRODUCT_VERSION");
@@ -44,16 +51,8 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
         DRIVER_MINOR_VERSION = Integer.parseInt(DRIVER_VERSION.split("\\.")[1]);
     }
 
-    private static InputStream loadProperties() throws IOException {
-        String currentJar = AbstractDatabaseMetaData.class.getProtectionDomain().getCodeSource().getLocation().getFile();
-        Enumeration<URL> urls = AbstractDatabaseMetaData.class.getClassLoader().getResources("taos-jdbc-version.properties");
-        while (urls.hasMoreElements()) {
-            URL url = urls.nextElement();
-            if (url.getFile().contains(currentJar)) {
-                return url.openStream();
-            }
-        }
-        return null;
+    private static InputStream loadProperties() {
+        return AbstractDatabaseMetaData.class.getClassLoader().getResourceAsStream("taos-jdbc-version.properties");
     }
 
     public boolean allProceduresAreCallable() throws SQLException {
@@ -614,7 +613,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
 
         if (connection instanceof WSConnection) {
             WSConnection wsConnection = (WSConnection) connection;
-            //BI模式，只查询用户表，只查表，不查询子表
+            // BI mode, only query user tables, do not query subtables
             if (wsConnection.getParam().getConnectMode() == ConnectionParam.CONNECT_MODE_BI) {
                 dbHelperStr = "user";
                 tableHelperStr = "normal ";
@@ -653,9 +652,22 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                     tempTableTypeSet = new HashSet<>(Arrays.asList(types));
                 }
 
-                StringBuilder sql = new StringBuilder().append("show ").append(tableHelperStr).append(db).append(".tables ");
-                StringBuilder Ssql = new StringBuilder().append("show ").append(db).append(".stables ");
-                StringBuilder vsql = new StringBuilder().append("show ").append(db).append(".views ");
+                StringBuilder sql = new StringBuilder().append("show ")
+                        .append(tableHelperStr)
+                        .append(getIdentifierQuoteString())
+                        .append(db)
+                        .append(getIdentifierQuoteString())
+                        .append(".tables ");
+                StringBuilder Ssql = new StringBuilder().append("show ")
+                        .append(getIdentifierQuoteString())
+                        .append(db)
+                        .append(getIdentifierQuoteString())
+                        .append(".stables ");
+                StringBuilder vsql = new StringBuilder().append("show ")
+                        .append(getIdentifierQuoteString())
+                        .append(db)
+                        .append(getIdentifierQuoteString())
+                        .append(".views ");
 
                 if (!StringUtils.isEmpty(tableNamePattern)) {
                     sql.append("like '").append(tableNamePattern).append("'");
@@ -1568,7 +1580,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
 
         if (conn instanceof WSConnection) {
             WSConnection wsConnection = (WSConnection) conn;
-            //BI模式，只查询用户表，只查表，不查询子表
+            // BI mode, only query user databases, only query tables, not sub tables
             if (wsConnection.getParam().getConnectMode() == 1) {
                 dbHelperStr = "user";
             }

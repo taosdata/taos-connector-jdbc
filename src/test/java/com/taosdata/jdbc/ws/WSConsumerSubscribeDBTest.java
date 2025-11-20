@@ -2,7 +2,6 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.tmq.*;
-import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import io.netty.util.ResourceLeakDetector;
@@ -19,13 +18,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class WSConsumerSubscribeDBTest {
     private static final String host = "127.0.0.1";
-    private final String dbName = TestUtils.camelToSnake(WSConsumerSubscribeDBTest.class);
+    private static final String dbName = TestUtils.camelToSnake(WSConsumerSubscribeDBTest.class);
     private static final String superTable1 = "st1";
     private static final String superTable2 = "st2";
     private static final String superTableFullType = "st3";
     private static Connection connection;
     private static Statement statement;
-    private static String[] topics = {"topic_ws_map"};
+    private static String[] topics = {"topic_" + dbName};
 
     @Test
     public void testWSEhnMapDB() throws Exception {
