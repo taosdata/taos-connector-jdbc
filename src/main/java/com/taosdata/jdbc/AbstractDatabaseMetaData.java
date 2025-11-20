@@ -613,7 +613,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
 
         if (connection instanceof WSConnection) {
             WSConnection wsConnection = (WSConnection) connection;
-            //BI模式，只查询用户表，只查表，不查询子表
+            // BI mode, only query user tables, do not query subtables
             if (wsConnection.getParam().getConnectMode() == ConnectionParam.CONNECT_MODE_BI) {
                 dbHelperStr = "user";
                 tableHelperStr = "normal ";
@@ -652,9 +652,22 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                     tempTableTypeSet = new HashSet<>(Arrays.asList(types));
                 }
 
-                StringBuilder sql = new StringBuilder().append("show ").append(tableHelperStr).append(db).append(".tables ");
-                StringBuilder Ssql = new StringBuilder().append("show ").append(db).append(".stables ");
-                StringBuilder vsql = new StringBuilder().append("show ").append(db).append(".views ");
+                StringBuilder sql = new StringBuilder().append("show ")
+                        .append(tableHelperStr)
+                        .append(getIdentifierQuoteString())
+                        .append(db)
+                        .append(getIdentifierQuoteString())
+                        .append(".tables ");
+                StringBuilder Ssql = new StringBuilder().append("show ")
+                        .append(getIdentifierQuoteString())
+                        .append(db)
+                        .append(getIdentifierQuoteString())
+                        .append(".stables ");
+                StringBuilder vsql = new StringBuilder().append("show ")
+                        .append(getIdentifierQuoteString())
+                        .append(db)
+                        .append(getIdentifierQuoteString())
+                        .append(".views ");
 
                 if (!StringUtils.isEmpty(tableNamePattern)) {
                     sql.append("like '").append(tableNamePattern).append("'");
@@ -1567,7 +1580,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
 
         if (conn instanceof WSConnection) {
             WSConnection wsConnection = (WSConnection) conn;
-            //BI模式，只查询用户表，只查表，不查询子表
+            // BI mode, only query user databases, only query tables, not sub tables
             if (wsConnection.getParam().getConnectMode() == 1) {
                 dbHelperStr = "user";
             }
