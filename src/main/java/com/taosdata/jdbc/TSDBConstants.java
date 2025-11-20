@@ -93,7 +93,6 @@ public abstract class TSDBConstants {
     public static final int DEFAULT_MESSAGE_WAIT_TIMEOUT = 60_000;
     public static final boolean DEFAULT_BATCH_ERROR_IGNORE = false;
 
-
     public static final short MAX_UNSIGNED_BYTE = 255;
     public static final int MAX_UNSIGNED_SHORT = 65535;
     public static final long MAX_UNSIGNED_INT = 4294967295L;
