@@ -133,5 +133,6 @@ public class ConnectStepTest {
     @AfterClass
     public static void tearDown() {
         System.gc();
+        Assert.assertEquals(0, RebalanceManager.getInstance().getBgHealthCheckInstanceCount());
     }
 }

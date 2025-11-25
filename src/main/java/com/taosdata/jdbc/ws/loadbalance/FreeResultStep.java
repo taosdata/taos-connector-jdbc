@@ -27,6 +27,6 @@ class FreeResultStep implements Step {
         String reqString = request.toString();
         context.getWsClient().send(reqString);
 
-        return CompletableFuture.completedFuture(new StepResponse(StepEnum.QUERTY, context.getNextInterval()));
+        return CompletableFuture.completedFuture(new StepResponse(StepEnum.QUERY, context.getNextInterval()));
     }
 }

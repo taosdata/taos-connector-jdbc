@@ -36,7 +36,7 @@ public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> 
         }
 
         Boolean isLocalInitiated = ctx.channel().attr(LOCAL_INITIATED_CLOSE).get();
-        isLocalInitiated = isLocalInitiated != null && isLocalInitiated; // 默认非本地发起
+        isLocalInitiated = isLocalInitiated != null && isLocalInitiated;
 
         Integer code = ctx.channel().attr(CLOSE_CODE_KEY).get();
         code = code != null ? code : 1000; // default close code

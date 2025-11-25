@@ -1,7 +1,6 @@
 package com.taosdata.jdbc.ws.loadbalance;
 
 import com.taosdata.jdbc.utils.CompletableFutureTimeout;
-import com.taosdata.jdbc.utils.RebalanceUtil;
 import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.ws.FutureResponse;
 import com.taosdata.jdbc.ws.entity.*;
@@ -14,12 +13,18 @@ import java.util.concurrent.TimeUnit;
 
 class Fetch2Step implements Step {
     private static final Logger log = org.slf4j.LoggerFactory.getLogger(Fetch2Step.class);
+    private final RebalanceManager rebalanceManager;
 
-
+    public Fetch2Step() {
+        rebalanceManager = RebalanceManager.getInstance();
+    }
+    public Fetch2Step(RebalanceManager rebalanceManager) {
+        this.rebalanceManager = rebalanceManager;
+    }
     @Override
     public CompletableFuture<StepResponse> execute(BgHealthCheck context, StepFlow flow) {
         if (!context.getWsClient().isOpen()) {
-            return CompletableFuture.completedFuture(new StepResponse(StepEnum.CONNECT, context.getNextInterval())); // 立即返回，等待连接建立
+            return CompletableFuture.completedFuture(new StepResponse(StepEnum.CONNECT, context.getNextInterval()));
         }
 
         final byte[] version = {1, 0};
@@ -50,24 +55,22 @@ class Fetch2Step implements Step {
                 completableFuture, context.getParam().getRequestTimeout(), TimeUnit.MILLISECONDS, reqString);
 
         return responseFuture
-                // 处理成功的结果（当 Future 正常完成时执行）
                 .thenApply(response -> {
                     context.getInFlightRequest().remove(action, reqId);
 
                     FetchBlockHealthCheckResp queryResp = (FetchBlockHealthCheckResp) response;
                     if (queryResp.isCompleted()) {
                         if (context.needMoreRetry()){
-                            return new StepResponse(StepEnum.QUERTY, context.getRecoveryInterval());
+                            return new StepResponse(StepEnum.QUERY, context.getRecoveryInterval());
                         }
                         else {
-                            RebalanceUtil.endpointUp(context.getParam(), context.getEndpoint());
-                            return new StepResponse(StepEnum.FINISH, 0);
+                            rebalanceManager.endpointUp(context.getParam(), context.getEndpoint());
+                            return new StepResponse(StepEnum.CLOSE, 0);
                         }
                     } else {
                         return new StepResponse(StepEnum.FETCH2, 0);
                     }
                 })
-                // 处理异常（包括超时、业务异常等，当 Future 异常完成时执行）
                 .exceptionally(ex -> {
                     log.info("fetch command failed. {}", ex.getMessage());
                     context.cleanUp();

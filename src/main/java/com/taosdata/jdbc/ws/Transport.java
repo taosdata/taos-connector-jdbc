@@ -7,141 +7,104 @@ import com.taosdata.jdbc.common.Endpoint;
 import com.taosdata.jdbc.enums.WSFunction;
 import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.CompletableFutureTimeout;
-import com.taosdata.jdbc.utils.RebalanceUtil;
-import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.Utils;
-import com.taosdata.jdbc.ws.entity.*;
+import com.taosdata.jdbc.ws.entity.Request;
+import com.taosdata.jdbc.ws.entity.Response;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT;
 
 /**
- * send message
+ * Handles message sending and receiving over WebSocket connections to TDengine.
+ * Provides synchronous and asynchronous message sending with timeout and retry support.
+ * Delegates connection management to WSConnectionManager.
  */
 public class Transport implements AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(Transport.class);
-    public static final int TSDB_CODE_RPC_NETWORK_UNAVAIL = 0x0B;
-    public static final int TSDB_CODE_RPC_SOMENODE_NOT_CONNECTED = 0x20;
-    private final AtomicInteger reconnectCount = new AtomicInteger(0);
-    private boolean firstDisconnect = true;
-    private final ArrayList<WSClient> clientArr = new ArrayList<>();
-    private final InFlightRequest inFlightRequest;
-    private final long defaultTimeout;
-    private volatile boolean  closed = false;
 
-    private final ConnectionParam connectionParam;
-    private final WSFunction wsFunction;
+    /** Error code indicating RPC network unavailability */
+    public static final int TSDB_CODE_RPC_NETWORK_UNAVAIL = 0x0B;
+
+    /** Error code indicating some nodes are not connected */
+    public static final int TSDB_CODE_RPC_SOMENODE_NOT_CONNECTED = 0x20;
+
+    /** Empty byte array constant */
     public static final byte[] EMPTY_BYTE_ARRAY = new byte[0];
+
+    /** Error message for closed connection */
     public static final String ERROR_MSG_CONNECTION_CLOSED = "Websocket Not Connected Exception for connection closed";
 
-    private int currentNodeIndex;
+    private final WSConnectionManager connectionManager;
+    private final InFlightRequest inFlightRequest;
+    private final long defaultTimeout;
+    private volatile boolean closed = false;
+
+    /**
+     * Protected constructor for internal use.
+     */
     protected Transport() {
+        this.connectionManager = null;
         this.inFlightRequest = null;
-        this.connectionParam = null;
-        this.wsFunction = null;
         this.defaultTimeout = TSDBConstants.DEFAULT_MESSAGE_WAIT_TIMEOUT;
     }
+
+    /**
+     * Constructs a new Transport instance.
+     *
+     * @param function the WebSocket function type
+     * @param param the connection parameters
+     * @param inFlightRequest the in-flight request manager
+     * @throws SQLException if initialization fails
+     */
     public Transport(WSFunction function,
                      ConnectionParam param,
                      InFlightRequest inFlightRequest) throws SQLException {
-        this.connectionParam = param;
-        this.wsFunction = function;
-        this.defaultTimeout = param.getRequestTimeout();
-        // master slave mode
-        WSClient slave = WSClient.getSlaveInstance(param, function);
-        if (slave != null){
-            WSClient master = WSClient.getInstance(param, 0, function);
-            this.clientArr.add(master);
-            this.clientArr.add(slave);
-            currentNodeIndex = 0;
-        } else {
-            for (int i = 0; i < param.getEndpoints().size(); i++){
-                WSClient client = WSClient.getInstance(param, i, function);
-                this.clientArr.add(client);
-            }
-            currentNodeIndex = 0;
-        }
-
+        this.connectionManager = new WSConnectionManager(function, param, inFlightRequest);
         this.inFlightRequest = inFlightRequest;
-        RebalanceUtil.newCluster(param.getEndpoints());
-    }
-    private void reconnect(boolean isTmq) throws SQLException {
-        synchronized (this) {
-            if (isConnected()){
-                return;
-            }
-
-            if (!this.getConnectionParam().isEnableAutoConnect()){
-                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED,  ERROR_MSG_CONNECTION_CLOSED);
-            }
-
-            // first try reconnect current node
-            boolean reconnected = reconnectCurNode(isTmq);
-            if (reconnected) {
-                reconnectCount.incrementAndGet();
-                firstDisconnect = true;
-                if (log.isDebugEnabled()) {
-                    log.debug("reconnect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri.toString()));
-                }
-                return;
-            } else {
-                if (firstDisconnect) {
-                    RebalanceUtil.disconnected(connectionParam, currentNodeIndex, inFlightRequest);
-                    firstDisconnect = false;
-                }
-            }
-
-            List<Endpoint> endpoints = connectionParam.getEndpoints();
-            int[] indexes = RebalanceUtil.getConnectCountsAsc(endpoints);
-            for (int currentIndex : indexes) {
-                if (!RebalanceUtil.getEndpointInfo(endpoints.get(currentIndex)).isOnline()) {
-                    continue;
-                }
-                currentNodeIndex = currentIndex;
-                if (reconnectCurNode(isTmq)){
-                    reconnectCount.incrementAndGet();
-                    firstDisconnect = true;
-                    RebalanceUtil.incrementConnectionCount(endpoints.get(currentNodeIndex));
-                    RebalanceUtil.connected(endpoints, currentNodeIndex);
-                    if (log.isDebugEnabled()) {
-                        log.debug("reconnect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri.toString()));
-                    }
-                    return;
-                }
-            }
-
-            close();
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception for all endpoints");
-        }
+        this.defaultTimeout = param.getRequestTimeout();
     }
 
-    private void tmqRethrowConnectionCloseException() throws SQLException {
-        // TMQ reconnect will be handled in poll
-        if (WSFunction.TMQ.equals(this.wsFunction)){
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "Websocket Not Connected Exception internal for TMQ");
-        }
-    }
+    /**
+     * Sends a request with default timeout and retry enabled.
+     *
+     * @param request the request to send
+     * @return the response from server
+     * @throws SQLException if sending fails or timeout occurs
+     */
     @SuppressWarnings("all")
-
     public Response send(Request request) throws SQLException {
         return send(request, true, defaultTimeout);
     }
+
+    /**
+     * Sends a request with specified timeout and retry enabled.
+     *
+     * @param request the request to send
+     * @param timeout the timeout in milliseconds
+     * @return the response from server
+     * @throws SQLException if sending fails or timeout occurs
+     */
     public Response send(Request request, long timeout) throws SQLException {
         return send(request, true, timeout);
     }
+
+    /**
+     * Sends a request with specified timeout and retry configuration.
+     *
+     * @param request the request to send
+     * @param reSend whether to retry on connection failure
+     * @param timeout the timeout in milliseconds
+     * @return the response from server
+     * @throws SQLException if sending fails or timeout occurs
+     */
     public Response send(Request request, boolean reSend, long timeout) throws SQLException {
-        if (isClosed()){
+        if (isClosed()) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, ERROR_MSG_CONNECTION_CLOSED);
         }
 
@@ -152,17 +115,16 @@ public class Transport implements AutoCloseable {
         inFlightRequest.put(new FutureResponse(request.getAction(), request.id(), completableFuture));
 
         try {
-            clientArr.get(currentNodeIndex).send(reqString);
+            connectionManager.getCurrentClient().send(reqString);
         } catch (WebsocketNotConnectedException e) {
-            tmqRethrowConnectionCloseException();
-            reconnect(false);
+            connectionManager.handleConnectionException(false, this);
             try {
-                if (!reSend){
+                if (!reSend) {
                     inFlightRequest.remove(request.getAction(), request.id());
                     throw new SQLException("reconnect, need to resend " + request.getAction() + " msg");
                 }
-                clientArr.get(currentNodeIndex).send(reqString);
-            }catch (Exception ex){
+                connectionManager.getCurrentClient().send(reqString);
+            } catch (Exception ex) {
                 inFlightRequest.remove(request.getAction(), request.id());
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());
             }
@@ -172,19 +134,45 @@ public class Transport implements AutoCloseable {
                 completableFuture, timeout, TimeUnit.MILLISECONDS, reqString);
         try {
             response = responseFuture.get();
-            handleErrInMasterSlaveMode(response);
+            handleTaosdError(response);
         } catch (InterruptedException | ExecutionException e) {
             inFlightRequest.remove(request.getAction(), request.id());
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_QUERY_TIMEOUT, e.getMessage());
         }
         return response;
     }
+
+    /**
+     * Sends a binary request with single data payload.
+     *
+     * @param action the action type
+     * @param reqId the request ID
+     * @param resultId the result ID
+     * @param type the message type
+     * @param rawData the binary data payload
+     * @param timeout the timeout in milliseconds
+     * @return the response from server
+     * @throws SQLException if sending fails or timeout occurs
+     */
     public Response send(String action, long reqId, long resultId, long type, byte[] rawData, long timeout) throws SQLException {
         return send(action, reqId, resultId, type, rawData, EMPTY_BYTE_ARRAY, timeout);
     }
 
+    /**
+     * Sends a binary request with dual data payloads.
+     *
+     * @param action the action type
+     * @param reqId the request ID
+     * @param resultId the result ID
+     * @param type the message type
+     * @param rawData the first binary data payload
+     * @param rawData2 the second binary data payload
+     * @param timeout the timeout in milliseconds
+     * @return the response from server
+     * @throws SQLException if sending fails or timeout occurs
+     */
     public Response send(String action, long reqId, long resultId, long type, byte[] rawData, byte[] rawData2, long timeout) throws SQLException {
-        if (isClosed()){
+        if (isClosed()) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, ERROR_MSG_CONNECTION_CLOSED);
         }
 
@@ -203,14 +191,13 @@ public class Transport implements AutoCloseable {
 
         try {
             Utils.retainByteBuf(buffer);
-            clientArr.get(currentNodeIndex).send(buffer);
+            connectionManager.getCurrentClient().send(buffer);
         } catch (WebsocketNotConnectedException e) {
-            tmqRethrowConnectionCloseException();
-            reconnect(false);
+            connectionManager.handleConnectionException(false, this);
             try {
                 Utils.retainByteBuf(buffer);
-                clientArr.get(currentNodeIndex).send(buffer);
-            }catch (Exception ex){
+                connectionManager.getCurrentClient().send(buffer);
+            } catch (Exception ex) {
                 inFlightRequest.remove(action, reqId);
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());
             }
@@ -222,7 +209,7 @@ public class Transport implements AutoCloseable {
         CompletableFuture<Response> responseFuture = CompletableFutureTimeout.orTimeout(completableFuture, timeout, TimeUnit.MILLISECONDS, reqString);
         try {
             response = responseFuture.get();
-            handleErrInMasterSlaveMode(response);
+            handleTaosdError(response);
         } catch (InterruptedException | ExecutionException e) {
             inFlightRequest.remove(action, reqId);
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_QUERY_TIMEOUT, e.getMessage());
@@ -230,11 +217,17 @@ public class Transport implements AutoCloseable {
         return response;
     }
 
-    public void sendFetchBlockAsync(long reqId,
-                                    long resultId) throws SQLException {
+    /**
+     * Sends asynchronous fetch block request.
+     *
+     * @param reqId the request ID
+     * @param resultId the result ID
+     * @throws SQLException if sending fails
+     */
+    public void sendFetchBlockAsync(long reqId, long resultId) throws SQLException {
         final byte[] version = {1, 0};
 
-        if (isClosed()){
+        if (isClosed()) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, ERROR_MSG_CONNECTION_CLOSED);
         }
 
@@ -248,17 +241,29 @@ public class Transport implements AutoCloseable {
 
         try {
             Utils.retainByteBuf(buffer);
-            clientArr.get(currentNodeIndex).send(buffer);
+            connectionManager.getCurrentClient().send(buffer);
         } catch (WebsocketNotConnectedException e) {
-            reconnect(false);
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED, "Websocket reconnected, but the result set is closed");
+            connectionManager.handleConnectionException(false, this);
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED,
+                    "Websocket reconnected, but the result set is closed");
         } finally {
             Utils.releaseByteBuf(buffer);
         }
     }
 
+    /**
+     * Sends a request with pre-allocated ByteBuf buffer.
+     *
+     * @param action the action type
+     * @param reqId the request ID
+     * @param buffer the ByteBuf containing the request data
+     * @param resend whether to retry on connection failure
+     * @param timeout the timeout in milliseconds
+     * @return the response from server
+     * @throws SQLException if sending fails or timeout occurs
+     */
     public Response send(String action, long reqId, ByteBuf buffer, boolean resend, long timeout) throws SQLException {
-        if (isClosed()){
+        if (isClosed()) {
             Utils.releaseByteBuf(buffer);
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, ERROR_MSG_CONNECTION_CLOSED);
         }
@@ -269,18 +274,17 @@ public class Transport implements AutoCloseable {
 
         try {
             Utils.retainByteBuf(buffer);
-            clientArr.get(currentNodeIndex).send(buffer);
+            connectionManager.getCurrentClient().send(buffer);
         } catch (WebsocketNotConnectedException e) {
-            tmqRethrowConnectionCloseException();
-            reconnect(false);
+            connectionManager.handleConnectionException(false, this);
             try {
                 Utils.retainByteBuf(buffer);
-                if (!resend){
+                if (!resend) {
                     inFlightRequest.remove(action, reqId);
                     throw new SQLException("reconnect, need to resend " + action + " msg");
                 }
-                clientArr.get(currentNodeIndex).send(buffer);
-            }catch (Exception ex){
+                connectionManager.getCurrentClient().send(buffer);
+            } catch (Exception ex) {
                 inFlightRequest.remove(action, reqId);
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, ex.getMessage());
             } finally {
@@ -294,7 +298,7 @@ public class Transport implements AutoCloseable {
         CompletableFuture<Response> responseFuture = CompletableFutureTimeout.orTimeout(completableFuture, timeout, TimeUnit.MILLISECONDS, reqString);
         try {
             response = responseFuture.get();
-            handleErrInMasterSlaveMode(response);
+            handleTaosdError(response);
         } catch (InterruptedException | ExecutionException e) {
             inFlightRequest.remove(action, reqId);
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_QUERY_TIMEOUT, e.getMessage());
@@ -302,17 +306,32 @@ public class Transport implements AutoCloseable {
         return response;
     }
 
-    private void handleErrInMasterSlaveMode(Response response){
-        if (clientArr.size() > 1 && response instanceof CommonResp){
-            CommonResp commonResp = (CommonResp) response;
-            if (TSDB_CODE_RPC_NETWORK_UNAVAIL == commonResp.getCode() || TSDB_CODE_RPC_SOMENODE_NOT_CONNECTED == commonResp.getCode()) {
-                clientArr.get(currentNodeIndex).closeBlocking();
+    /**
+     * Handles TDengine-specific error codes that may require connection cleanup.
+     *
+     * @param response the response to check for errors
+     */
+    private void handleTaosdError(Response response) {
+        if (connectionManager.getConnectionParam().getEndpoints().size() > 1 &&
+                response instanceof com.taosdata.jdbc.ws.entity.CommonResp) {
+            com.taosdata.jdbc.ws.entity.CommonResp commonResp = (com.taosdata.jdbc.ws.entity.CommonResp) response;
+            if (TSDB_CODE_RPC_NETWORK_UNAVAIL == commonResp.getCode() ||
+                    TSDB_CODE_RPC_SOMENODE_NOT_CONNECTED == commonResp.getCode()) {
+                connectionManager.getCurrentClient().closeBlocking();
             }
         }
     }
 
+    /**
+     * Sends a request without automatic retry on connection failure.
+     *
+     * @param request the request to send
+     * @param timeout the timeout in milliseconds
+     * @return the response from server
+     * @throws SQLException if sending fails or timeout occurs
+     */
     public Response sendWithoutRetry(Request request, long timeout) throws SQLException {
-        if (isClosed()){
+        if (isClosed()) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, ERROR_MSG_CONNECTION_CLOSED);
         }
 
@@ -322,12 +341,12 @@ public class Transport implements AutoCloseable {
 
         inFlightRequest.put(new FutureResponse(request.getAction(), request.id(), completableFuture));
 
-
         try {
-            clientArr.get(currentNodeIndex).send(reqString);
+            connectionManager.getCurrentClient().send(reqString);
         } catch (Exception e) {
             inFlightRequest.remove(request.getAction(), request.id());
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage() == null ? "" : e.getMessage());
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException,
+                    e.getMessage() == null ? "" : e.getMessage());
         }
 
         CompletableFuture<Response> responseFuture = CompletableFutureTimeout.orTimeout(
@@ -341,173 +360,124 @@ public class Transport implements AutoCloseable {
         return response;
     }
 
-    public void sendWithoutResponse(Request request) throws SQLException  {
-        if (isClosed()){
+    /**
+     * Sends a request without waiting for response.
+     *
+     * @param request the request to send
+     * @throws SQLException if sending fails
+     */
+    public void sendWithoutResponse(Request request) throws SQLException {
+        if (isClosed()) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, ERROR_MSG_CONNECTION_CLOSED);
         }
 
         try {
-            clientArr.get(currentNodeIndex).send(request.toString());
+            connectionManager.getCurrentClient().send(request.toString());
         } catch (WebsocketNotConnectedException e) {
-            tmqRethrowConnectionCloseException();
-            reconnect(false);
+            connectionManager.handleConnectionException(false, this);
             try {
-                clientArr.get(currentNodeIndex).send(request.toString());
-            }catch (Exception ex){
+                connectionManager.getCurrentClient().send(request.toString());
+            } catch (Exception ex) {
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());
             }
         }
     }
 
+    /**
+     * Checks if this transport is closed.
+     *
+     * @return true if closed, false otherwise
+     */
     public boolean isClosed() {
         return closed;
     }
 
+    /**
+     * Checks if the current connection is lost.
+     *
+     * @return true if connection is lost, false otherwise
+     */
     public boolean isConnectionLost() {
-        return clientArr.get(currentNodeIndex).isClosed();
+        return connectionManager.isConnectionLost();
     }
+
+    /**
+     * Closes this transport and releases all resources.
+     */
     @Override
     public synchronized void close() {
-        if (isClosed()){
+        if (isClosed()) {
             return;
         }
         closed = true;
         inFlightRequest.close();
 
-        if (isConnected()) {
-            RebalanceUtil.disconnectedBySelf(connectionParam, currentNodeIndex);
-        }
-        for (WSClient wsClient : clientArr){
-            wsClient.close();
+        if (connectionManager != null) {
+            connectionManager.close();
         }
     }
 
+    /**
+     * Checks and establishes connection to TDengine servers.
+     *
+     * @param connectTimeout the connection timeout in milliseconds
+     * @throws SQLException if connection cannot be established within timeout
+     */
     public void checkConnection(int connectTimeout) throws SQLException {
-        if (WSConnection.g_FirstConnection.compareAndSet(true, false) && !StringUtils.isEmpty(connectionParam.getSlaveClusterHost())) {
-            // test all nodes, if connection failed, throw exception
-            for (int i = 0; i < clientArr.size(); i++){
-                if (!clientArr.get(i).connectBlocking()) {
-                    RebalanceUtil.disconnected(connectionParam, i, inFlightRequest);
-
-                    close();
-                    throw TSDBError.createSQLException(ERROR_CONNECTION_TIMEOUT,
-                            "can't create connection with server " + clientArr.get(i).serverUri.toString() + " within: " + connectTimeout + " milliseconds");
-                }
-                if (log.isDebugEnabled()) {
-                    log.debug("connect success to {}", StringUtils.getBasicUrl(clientArr.get(i).serverUri.toString()));
-                }
-
-                RebalanceUtil.incrementConnectionCount(connectionParam.getEndpoints().get(i));
-                RebalanceUtil.connected(connectionParam.getEndpoints(), i);
-            }
-
-            // disconnect all nodes except current node
-            for (int i = 0; i < clientArr.size(); i++){
-                if (i != currentNodeIndex) {
-                    clientArr.get(i).closeBlocking();
-                    if (log.isDebugEnabled()) {
-                        log.debug("disconnect success to {}", StringUtils.getBasicUrl(clientArr.get(i).serverUri.toString()));
-                    }
-                }
-            }
-        } else {
-            if (connectWithMinimumCount()) {
-                return;
-            }
-            close();
-            throw TSDBError.createSQLException(ERROR_CONNECTION_TIMEOUT,
-                    "can't create connection with any server within: " + connectTimeout + " milliseconds");
-        }
+        connectionManager.checkConnection(connectTimeout);
     }
 
-    private boolean connectWithMinimumCount() {
-        // find the minimum connection endpoint
-        List<Endpoint> endpoints = connectionParam.getEndpoints();
-        int[] indexes = RebalanceUtil.getConnectCountsAsc(endpoints);
-        for (int currentIndex : indexes) {
-            if (connectionParam.isEnableAutoConnect() && !RebalanceUtil.getEndpointInfo(endpoints.get(currentIndex)).isOnline()) {
-                continue;
-            }
-
-            currentNodeIndex = currentIndex;
-            RebalanceUtil.incrementConnectionCount(endpoints.get(currentNodeIndex));
-            if (clientArr.get(currentNodeIndex).connectBlocking()) {
-                if (log.isDebugEnabled()) {
-                    log.debug("connect success to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri.toString()));
-                }
-                RebalanceUtil.connected(endpoints, currentNodeIndex);
-                return true;
-            } else {
-                if (log.isErrorEnabled()) {
-                    log.error("connect failed to {}", StringUtils.getBasicUrl(clientArr.get(currentNodeIndex).serverUri.toString()));
-                }
-                RebalanceUtil.disconnected(connectionParam, currentNodeIndex, inFlightRequest);
-            }
-        }
-        return false;
-    }
-
+    /**
+     * Performs TMQ-specific reconnection.
+     *
+     * @throws SQLException if reconnection fails
+     */
     public void reconnectTmq() throws SQLException {
-        reconnect(true);
-    }
-    private boolean reconnectCurNode(boolean isTmq) throws SQLException {
-        for (int retryTimes = 0; retryTimes < connectionParam.getReconnectRetryCount(); retryTimes++) {
-            try {
-                boolean reconnected = clientArr.get(currentNodeIndex).reconnectBlocking();
-                if (reconnected) {
-                    if (isTmq){
-                        // tmq do not send connect req
-                        return true;
-                    }
-                    // send con msgs
-                    ConnectReq connectReq = new ConnectReq(connectionParam);
-                    ConnectResp auth;
-                    auth = (ConnectResp) sendWithoutRetry(new Request(Action.CONN.getAction(), connectReq), defaultTimeout);
-
-                    if (Code.SUCCESS.getCode() == auth.getCode()) {
-                        return true;
-                    } else {
-                        clientArr.get(currentNodeIndex).closeBlocking();
-                        log.error("reconnect failed, code: {}, msg: {}", auth.getCode(), auth.getMessage());
-                    }
-                }
-                Thread.sleep(connectionParam.getReconnectIntervalMs());
-            } catch (Exception e) {
-                log.error("try connect remote server failed!", e);
-            }
-        }
-        return false;
+        connectionManager.performReconnect(true, this);
     }
 
+    /**
+     * Gets the number of reconnection attempts made.
+     *
+     * @return the reconnection count
+     */
     public int getReconnectCount() {
-        return reconnectCount.get();
+        return connectionManager.getReconnectCount();
     }
 
+    /**
+     * Checks if the current connection is active.
+     *
+     * @return true if connected, false otherwise
+     */
     public boolean isConnected() {
-        return clientArr.get(currentNodeIndex).isOpen();
+        return connectionManager.isConnected();
     }
+
+    /**
+     * Gets the connection parameters.
+     *
+     * @return the connection parameters
+     */
     public final ConnectionParam getConnectionParam() {
-        return connectionParam;
+        return connectionManager.getConnectionParam();
     }
 
+    /**
+     * Gets the current active endpoint.
+     *
+     * @return the current endpoint
+     */
     public final Endpoint getCurrentEndpoint() {
-        return connectionParam.getEndpoints().get(currentNodeIndex);
+        return connectionManager.getCurrentEndpoint();
     }
 
+    /**
+     * Balances connections across available endpoints.
+     *
+     * @throws SQLException if balance operation fails
+     */
     public void balanceConnection() {
-        synchronized (this) {
-            int toIndex = RebalanceUtil.getMinConnectionEndpointIndex(connectionParam);
-            if (currentNodeIndex != toIndex) {
-                try {
-                    clientArr.get(toIndex).reconnectBlocking();
-                } catch (Exception e) {
-                    log.error("try connect remote server failed!", e);
-                    return;
-                }
-                int closeIndex = currentNodeIndex;
-                currentNodeIndex = toIndex;
-                clientArr.get(closeIndex).closeBlocking();
-            }
-        }
+        connectionManager.balanceConnection(this);
     }
 }

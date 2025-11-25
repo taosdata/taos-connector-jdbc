@@ -107,7 +107,7 @@ public class ConCmdStepTest {
 
         // Assert
         StepResponse response = future.get();
-        Assert.assertEquals(StepEnum.QUERTY, response.getStep());
+        Assert.assertEquals(StepEnum.QUERY, response.getStep());
         Assert.assertEquals(0, response.getWaitSeconds());
         verify(inFlightRequest).remove(anyString(), anyLong());
         verify(context, never()).cleanUp();
@@ -173,5 +173,6 @@ public class ConCmdStepTest {
     @AfterClass
     public static void tearDown() {
         System.gc();
+        Assert.assertEquals(0, RebalanceManager.getInstance().getBgHealthCheckInstanceCount());
     }
 }

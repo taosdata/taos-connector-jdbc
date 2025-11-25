@@ -5,6 +5,7 @@ import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.ws.loadbalance.RebalanceManager;
 import org.junit.Assert;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
@@ -67,5 +68,7 @@ public class WSQueryTimeoutTest {
             resultSet2.close();
         }
         mockA.stop();
+        Assert.assertEquals(0, RebalanceManager.getInstance().getBgHealthCheckInstanceCount());
+        RebalanceManager.getInstance().clearAllForTest();
     }
 }

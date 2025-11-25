@@ -4,7 +4,6 @@ import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
-import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.TaosAdapterMock;
@@ -18,7 +17,6 @@ import java.util.Properties;
 
 
 @RunWith(CatalogRunner.class)
-@TestTarget(alias = "websocket master slave test", author = "yjshe", version = "3.2.11")
 @FixMethodOrder
 public class WSLoadBalanceTest {
     private static final String host = "127.0.0.1";
@@ -112,7 +110,6 @@ public class WSLoadBalanceTest {
              resultSet.next();
              System.out.println(resultSet.getLong(1));
         }
-
         mockB.stop();
         mockC.stop();
     }
@@ -171,6 +168,7 @@ public class WSLoadBalanceTest {
 
     @BeforeClass
     static public void before() throws SQLException, InterruptedException, IOException, URISyntaxException {
+        System.setProperty("ENV_TAOS_JDBC_NO_HEALTH_CHECK", "TRUE");
         TestUtils.runInMain();
         System.setProperty("ENV_TAOS_JDBC_TEST", "test");
         String url;
@@ -200,5 +198,8 @@ public class WSLoadBalanceTest {
             statement.close();
             connection.close();
         }
+        Assert.assertEquals(0, RebalanceManager.getInstance().getBgHealthCheckInstanceCount());
+        System.setProperty("ENV_TAOS_JDBC_NO_HEALTH_CHECK", "");
+        RebalanceManager.getInstance().clearAllForTest();
     }
 }

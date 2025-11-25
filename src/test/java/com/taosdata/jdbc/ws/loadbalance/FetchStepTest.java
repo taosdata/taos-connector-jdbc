@@ -43,14 +43,14 @@ public class FetchStepTest {
 
         // Bind mocks to context
         when(context.getWsClient()).thenReturn(wsClient);
-        // 关键：Mock send方法，执行时自动释放ByteBuf
+       // Key: Mock the send method to automatically release ByteBuf during execution.
         doAnswer(invocation -> {
-            // 获取send方法的第一个参数（ByteBuf）
+            // get the first argument of send method (ByteBuf)
             ByteBuf buf = invocation.getArgument(0);
             if (buf != null && buf.refCnt() > 0) {
-                buf.release(); // 自动释放
+                buf.release(); // release ByteBuf to avoid memory leak
             }
-            return null; // send方法为void，返回null即可
+            return null;
         }).when(wsClient).send(any(ByteBuf.class));
 
         when(context.getInFlightRequest()).thenReturn(inFlightRequest);
@@ -114,6 +114,36 @@ public class FetchStepTest {
         CompletableFuture<StepResponse> future = fetchStep.execute(context, flow);
 
         byte[] buffer = StringUtils.hexToBytes("07000000000000000100fac7070000000000050030be0629e42300000000000000000100000000000000002b000000010000002b0000000100000001000000000000800000000000000000040400000004000000000100000000");
+        ByteBuf buf = PooledByteBufAllocator.DEFAULT.buffer();
+        buf.writeBytes(buffer);
+        FetchBlockHealthCheckResp successResp = new FetchBlockHealthCheckResp(buf);
+        futureResponseCaptor.getValue().getFuture().complete(successResp);
+
+        // Assert
+        StepResponse response = future.get();
+        Assert.assertEquals(StepEnum.FETCH2, response.getStep());
+        Assert.assertEquals(0, response.getWaitSeconds());
+        // Verify request is removed from inFlightRequest
+        verify(inFlightRequest).remove(action, futureResponseCaptor.getValue().getId());
+        verify(context, never()).cleanUp(); // cleanUp is not called
+    }
+
+    /**
+     * Test: When response is successful and clusterAlive is true, return FETCH2 step
+     */
+    @Test
+    public void execute_responseClusterAliveTrue2_returnsFetch2Step() throws ExecutionException, InterruptedException, SQLException {
+        // Arrange
+        when(wsClient.isOpen()).thenReturn(true);
+        when(param.getRequestTimeout()).thenReturn(6000); // Mock timeout
+        String action = Action.FETCH_BLOCK_NEW.getAction();
+        ArgumentCaptor<FutureResponse> futureResponseCaptor = ArgumentCaptor.forClass(FutureResponse.class);
+        doNothing().when(inFlightRequest).put(futureResponseCaptor.capture());
+
+        // Act: Manually complete with successful response (clusterAlive=true)
+        CompletableFuture<StepResponse> future = fetchStep.execute(context, flow);
+
+        byte[] buffer = StringUtils.hexToBytes("07000000000000000100fac7070000000000050030be0629e42300000000000000000100000000000000002b000000010000002b0000000100000001000000000000800000000000000000040400000004000000000200000000");
         ByteBuf buf = PooledByteBufAllocator.DEFAULT.buffer();
         buf.writeBytes(buffer);
         FetchBlockHealthCheckResp successResp = new FetchBlockHealthCheckResp(buf);
@@ -219,5 +249,6 @@ public class FetchStepTest {
     @AfterClass
     public static void tearDown() {
         System.gc();
+        Assert.assertEquals(0, RebalanceManager.getInstance().getBgHealthCheckInstanceCount());
     }
 }

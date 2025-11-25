@@ -36,10 +36,10 @@ public class InFlightRequest {
     }
 
     public void put(FutureResponse rf) throws SQLException {
-        if (currentConcurrentNum.get() > 0) {
-            currentConcurrentNum.decrementAndGet();
+        if (currentConcurrentNum.decrementAndGet() >= 0) {
             futureMap.get(rf.getAction()).put(rf.getId(), rf);
         } else {
+            currentConcurrentNum.incrementAndGet(); // Revert if we went below zero
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT, "websocket connection reached the max number of concurrent requests");
         }
     }

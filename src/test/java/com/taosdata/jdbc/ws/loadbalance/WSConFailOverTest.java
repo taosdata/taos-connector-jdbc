@@ -4,14 +4,11 @@ import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
-import com.taosdata.jdbc.annotation.TestTarget;
+import com.taosdata.jdbc.common.Endpoint;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.TaosAdapterMock;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runner.RunWith;
 
 import java.io.IOException;
@@ -21,7 +18,6 @@ import java.util.Properties;
 
 
 @RunWith(CatalogRunner.class)
-@TestTarget(alias = "websocket master slave test", author = "yjshe", version = "3.2.11")
 @FixMethodOrder
 public class WSConFailOverTest {
     private static final String hostA = "127.0.0.1";
@@ -70,6 +66,9 @@ public class WSConFailOverTest {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+
+        taosAdapterMock.start();
+        RebalanceTestUtil.waitHealthCheckFinishedIgnoreException(new Endpoint(hostA, taosAdapterMock.getListenPort(), false));
     }
 
     @Before
@@ -85,6 +84,9 @@ public class WSConFailOverTest {
             url += "?user=root&password=taosdata";
         }
         Properties properties = new Properties();
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_INIT_INTERVAL, "1");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_MAX_INTERVAL, "1");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_RECOVERY_COUNT, "1");
 
         connection = DriverManager.getConnection(url, properties);
         Statement statement = connection.createStatement();
@@ -107,7 +109,9 @@ public class WSConFailOverTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_INTERVAL_MS, "2000");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_RETRY_COUNT, "3");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, "10000");
         connection = DriverManager.getConnection(url, properties);
+        Assert.assertEquals(0, RebalanceManager.getInstance().getBgHealthCheckInstanceCount());
     }
 
     @After
@@ -118,5 +122,8 @@ public class WSConFailOverTest {
             statement.close();
             connection.close();
         }
+        taosAdapterMock.stop();
+        Assert.assertEquals(0, RebalanceManager.getInstance().getBgHealthCheckInstanceCount());
+        RebalanceManager.getInstance().clearAllForTest();
     }
 }

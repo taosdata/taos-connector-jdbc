@@ -18,6 +18,7 @@ public class BgHealthCheck {
     private final int endpointIndex;
     private final Endpoint endpoint;
     private StepFlow flow;
+    private volatile boolean cancelled = false;
 
     private final int sleepMinSeconds;
     private final int sleepMaxSeconds;
@@ -54,16 +55,17 @@ public class BgHealthCheck {
             return;
         }
 
-        // 初始化步骤列表（按执行顺序）
         List<Step> steps = Arrays.asList(
                 new ConnectStep(),
                 new ConCmdStep(),
                 new QueryStep(),
                 new FetchStep(),
                 new Fetch2Step(),
-                new FreeResultStep()
+                new FreeResultStep(),
+                new CloseStep()
         );
         this.flow = new StepFlow(steps, this);
+        RebalanceManager.getInstance().addBgHealthCheckInstance();
    }
 
     public void start() {
@@ -111,5 +113,10 @@ public class BgHealthCheck {
     public boolean needMoreRetry() {
         return recoveryCmdCount < recoveryCmdMaxCount;
     }
-
+    public boolean isCancelled() {
+        return cancelled;
+    }
+    public void setCancelled() {
+        this.cancelled = true;
+    }
 }

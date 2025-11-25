@@ -44,6 +44,15 @@ public class ConsumerParam {
         knownKeys.add(TSDBDriver.PROPERTY_KEY_APP_NAME);
         knownKeys.add(TSDBDriver.PROPERTY_KEY_TIME_ZONE);
 
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_RECOVERY_COUNT);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_INIT_INTERVAL);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_MAX_INTERVAL);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_CON_TIMEOUT);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_CMD_TIMEOUT);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_RECOVERY_INTERVAL);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_REBALANCE_THRESHOLD);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_REBALANCE_CON_BASE_COUNT);
+
         knownKeys.add(TSDBDriver.HTTP_POOL_SIZE);
         knownKeys.add(TSDBDriver.HTTP_KEEP_ALIVE);
         knownKeys.add(TSDBDriver.HTTP_CONNECT_TIMEOUT);

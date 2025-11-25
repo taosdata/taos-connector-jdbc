@@ -1,10 +1,13 @@
 package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.common.Endpoint;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.TaosAdapterMock;
 import com.taosdata.jdbc.ws.WSEWPreparedStatement;
+import com.taosdata.jdbc.ws.loadbalance.RebalanceManager;
+import com.taosdata.jdbc.ws.loadbalance.RebalanceTestUtil;
 import io.netty.util.ResourceLeakDetector;
 import org.junit.*;
 
@@ -27,6 +30,7 @@ public class WsEfficientWritingTest {
     private final int numOfSubTable = 100;
     private final int numOfRow = 100;
     private final int proxyPort = 8041;
+    private final int proxyPort2 = 8042;
     private static final Random random = new Random(System.currentTimeMillis());
 
     public void createSubTable() throws SQLException{
@@ -115,14 +119,15 @@ public class WsEfficientWritingTest {
 
     @Test
     public void testReconnect() throws SQLException, InterruptedException, IOException {
-        taosAdapterMock = new TaosAdapterMock(proxyPort);
+        System.setProperty("ENV_TAOS_JDBC_NO_HEALTH_CHECK", "");
+        taosAdapterMock = new TaosAdapterMock(proxyPort2);
         taosAdapterMock.start();
-        Thread.sleep(3000); // wait for the backend health check ready
+        RebalanceTestUtil.waitHealthCheckFinishedIgnoreException(new Endpoint(host, proxyPort2, false));
 
         String sql = "INSERT INTO " + db_name + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
 
         long current = System.currentTimeMillis();
-        try (Connection con = getConnection(false, false, proxyPort);
+        try (Connection con = getConnection(false, false, proxyPort2);
              PreparedStatement pstmt = con.prepareStatement(sql)) {
             for (int j = 0; j < numOfRow; j++) {
                 current = current + 1000;
@@ -144,8 +149,9 @@ public class WsEfficientWritingTest {
                 if (j == 1){
                     taosAdapterMock.stop();
                     Thread.sleep(1000);
-                    taosAdapterMock = new TaosAdapterMock(proxyPort);
+                    taosAdapterMock = new TaosAdapterMock(proxyPort2);
                     taosAdapterMock.start();
+                    RebalanceTestUtil.waitHealthCheckFinishedIgnoreException(new Endpoint(host, proxyPort2, false));
                 }
 
                 int affectedRows = pstmt.executeUpdate();
@@ -158,6 +164,7 @@ public class WsEfficientWritingTest {
         if (taosAdapterMock != null) {
             taosAdapterMock.stop();
         }
+        System.setProperty("ENV_TAOS_JDBC_NO_HEALTH_CHECK", "TRUE");
     }
 
     @Test
@@ -420,15 +427,19 @@ public class WsEfficientWritingTest {
             statement.execute("drop database if exists " + db_name);
         }
         connection.close();
+        Assert.assertEquals(0, RebalanceManager.getInstance().getBgHealthCheckInstanceCount());
+        RebalanceManager.getInstance().clearAllForTest();
     }
 
     @BeforeClass
     public static void setUp() {
         ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+        System.setProperty("ENV_TAOS_JDBC_NO_HEALTH_CHECK", "TRUE");
     }
 
     @AfterClass
     public static void tearDown() {
         System.gc();
+        System.setProperty("ENV_TAOS_JDBC_NO_HEALTH_CHECK", "");
     }
 }

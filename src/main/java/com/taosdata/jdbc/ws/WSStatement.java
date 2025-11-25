@@ -1,7 +1,7 @@
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.*;
-import com.taosdata.jdbc.utils.RebalanceUtil;
+import com.taosdata.jdbc.ws.loadbalance.RebalanceManager;
 import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.utils.SqlSyntaxValidator;
 import com.taosdata.jdbc.ws.entity.*;
@@ -26,6 +26,7 @@ public class WSStatement extends AbstractStatement {
     private volatile int queryTimeoutInSeconds;
     private volatile long queryTimeoutInMs;
     protected final ZoneId zoneId;
+
     public WSStatement(Transport transport, String database, AbstractConnection connection, Long instanceId, ZoneId zoneId) {
         this.transport = transport;
         this.database = database;
@@ -33,11 +34,12 @@ public class WSStatement extends AbstractStatement {
         this.instanceId = instanceId;
 
         // check if need to rebalance
-        if (RebalanceUtil.isRebalancing()
+        RebalanceManager rebalanceManager = RebalanceManager.getInstance();
+        if (rebalanceManager.isRebalancing()
                 && this.transport.isConnected()
                 && this.connection.canRebalanced()
-                && RebalanceUtil.isRebalancing(this.transport.getCurrentEndpoint())
-                && RebalanceUtil.handleRebalancing(this.transport.getConnectionParam(), this.transport.getCurrentEndpoint())) {
+                && rebalanceManager.isRebalancing(this.transport.getCurrentEndpoint())
+                && rebalanceManager.handleRebalancing(this.transport.getConnectionParam(), this.transport.getCurrentEndpoint())) {
             this.transport.balanceConnection();
         }
         this.connection.registerStatement(this.instanceId, this);

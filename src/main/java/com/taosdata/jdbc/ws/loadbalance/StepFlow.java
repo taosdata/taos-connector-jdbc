@@ -10,26 +10,26 @@ class StepFlow {
     static Logger log = org.slf4j.LoggerFactory.getLogger(StepFlow.class);
     private final List<Step> steps;
     private final BgHealthCheck context;
-    private int currentStepIndex; // 当前步骤索引
+    private int currentStepIndex;
 
     public StepFlow(List<Step> steps, BgHealthCheck context) {
         this.steps = steps;
         this.context = context;
     }
 
-    // 启动流程（从第0步开始）
     public void start() {
         currentStepIndex = 0;
         executeCurrentStep();
     }
 
-    // 执行当前步骤
     private void executeCurrentStep() {
         if (currentStepIndex >= steps.size()) {
+            RebalanceManager.getInstance().removeBgHealthCheckInstance();
+            RebalanceManager.getInstance().removeBgHealthCheck(context);
             return;
         }
         steps.get(currentStepIndex).execute(context, this)
-                // 处理步骤返回的结果（无论成功失败，都由控制器决定下一步）
+                // handles the result of the step (regardless of success or failure, it is up to the controller to decide the next step)
                 .whenComplete((stepResponse, ex) -> {
                     if (ex != null) {
                         log.info("Error executing step {}: {}", StepEnum.getNameByInt(currentStepIndex), ex.getMessage());

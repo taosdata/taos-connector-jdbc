@@ -15,7 +15,7 @@ class ConCmdStep implements Step {
     public CompletableFuture<StepResponse> execute(BgHealthCheck context, StepFlow flow) {
         // connection is closed
         if (!context.getWsClient().isOpen()) {
-            return CompletableFuture.completedFuture(new StepResponse(StepEnum.CONNECT, context.getNextInterval())); // 立即返回，等待连接建立
+            return CompletableFuture.completedFuture(new StepResponse(StepEnum.CONNECT, context.getNextInterval()));
         }
 
         // send query
@@ -36,18 +36,16 @@ class ConCmdStep implements Step {
                 completableFuture, context.getParam().getRequestTimeout(), TimeUnit.MILLISECONDS, reqString);
 
         return responseFuture
-                // 处理成功的结果（当 Future 正常完成时执行）
                 .thenApply(response -> {
                     context.getInFlightRequest().remove(request.getAction(), request.id());
                     ConnectResp connectResp = (ConnectResp) response;
                     if (Code.SUCCESS.getCode() == connectResp.getCode()) {
-                        return new StepResponse(StepEnum.QUERTY, 0);
+                        return new StepResponse(StepEnum.QUERY, 0);
                     } else {
                         context.cleanUp();
                         return new StepResponse(StepEnum.CON_CMD, context.getRecoveryInterval());
                     }
                 })
-                // 处理异常（包括超时、业务异常等，当 Future 异常完成时执行）
                 .exceptionally(ex -> {
                     log.info("Connection command failed. {}", ex.getMessage());
                     context.cleanUp();
