@@ -39,7 +39,7 @@ public class ConnectionParam {
     private boolean enableAutoConnect;
 
     private String slaveClusterHost;
-    private String slaveClusterPort;
+    private int slaveClusterPort;
     private int reconnectIntervalMs;
     private int reconnectRetryCount;
     private boolean disableSslCertValidation;
@@ -54,7 +54,14 @@ public class ConnectionParam {
     private String asyncWrite;
     private String pbsMode;
     private int wsKeepAlive;
-
+    private int healthCheckInitInterval;
+    private int healthCheckMaxInterval;
+    private int healthCheckConTimeout;
+    private int healthCheckCmdTimeout;
+    private int healthCheckRecoveryCount;
+    private int healthCheckRecoveryInterval;
+    private int rebalanceThreshold;
+    private int rebalanceConBaseCount;
     private Consumer<String> textMessageHandler;
     private Consumer<ByteBuf> binaryMessageHandler;
     static public final int CONNECT_MODE_BI = 1;
@@ -92,6 +99,14 @@ public class ConnectionParam {
         this.binaryMessageHandler = builder.binaryMessageHandler;
         this.pbsMode = builder.pbsMode;
         this.wsKeepAlive = builder.wsKeepAlive;
+        this.healthCheckInitInterval = builder.healthCheckInitInterval;
+        this.healthCheckMaxInterval = builder.healthCheckMaxInterval;
+        this.healthCheckConTimeout = builder.healthCheckConTimeout;
+        this.healthCheckCmdTimeout = builder.healthCheckCmdTimeout;
+        this.healthCheckRecoveryCount = builder.healthCheckRecoveryCount;
+        this.healthCheckRecoveryInterval = builder.healthCheckRecoveryInterval;
+        this.rebalanceThreshold = builder.rebalanceThreshold;
+        this.rebalanceConBaseCount = builder.rebalanceConBaseCount;
     }
 
     public void setEndpoints(List<Endpoint> endpoints) {
@@ -153,7 +168,7 @@ public class ConnectionParam {
         this.slaveClusterHost = slaveClusterHost;
     }
 
-    public void setSlaveClusterPort(String slaveClusterPort) {
+    public void setSlaveClusterPort(int slaveClusterPort) {
         this.slaveClusterPort = slaveClusterPort;
     }
 
@@ -212,6 +227,37 @@ public class ConnectionParam {
         this.wsKeepAlive = wsKeepAlive;
     }
 
+    public void setHealthCheckInitInterval(int healthCheckInitInterval) {
+        this.healthCheckInitInterval = healthCheckInitInterval;
+    }
+
+    public void setHealthCheckMaxInterval(int healthCheckMaxInterval) {
+        this.healthCheckMaxInterval = healthCheckMaxInterval;
+    }
+
+    public void setHealthCheckConTimeout(int healthCheckConTimeout) {
+        this.healthCheckConTimeout = healthCheckConTimeout;
+    }
+
+    public void setHealthCheckCmdTimeout(int healthCheckCmdTimeout) {
+        this.healthCheckCmdTimeout = healthCheckCmdTimeout;
+    }
+
+    public void setHealthCheckRecoveryCount(int healthCheckRecoveryCount) {
+        this.healthCheckRecoveryCount = healthCheckRecoveryCount;
+    }
+
+    public void setHealthCheckRecoveryInterval(int healthCheckRecoveryInterval) {
+        this.healthCheckRecoveryInterval = healthCheckRecoveryInterval;
+    }
+
+    public void setRebalanceThreshold(int rebalanceThreshold) {
+        this.rebalanceThreshold = rebalanceThreshold;
+    }
+
+    public void setRebalanceConBaseCount(int rebalanceConBaseCount) {
+        this.rebalanceConBaseCount = rebalanceConBaseCount;
+    }
     public List<Endpoint> getEndpoints() {
         return endpoints;
     }
@@ -258,7 +304,7 @@ public class ConnectionParam {
     public String getSlaveClusterHost() {
         return slaveClusterHost;
     }
-    public String getSlaveClusterPort() {
+    public int getSlaveClusterPort() {
         return slaveClusterPort;
     }
     public int getReconnectIntervalMs() {
@@ -314,6 +360,37 @@ public class ConnectionParam {
     }
     public int getWsKeepAlive() {
         return wsKeepAlive;
+    }
+    public int getHealthCheckInitInterval() {
+        return healthCheckInitInterval;
+    }
+
+    public int getHealthCheckMaxInterval() {
+        return healthCheckMaxInterval;
+    }
+
+    public int getHealthCheckConTimeout() {
+        return healthCheckConTimeout;
+    }
+
+    public int getHealthCheckCmdTimeout() {
+        return healthCheckCmdTimeout;
+    }
+
+    public int getHealthCheckRecoveryCount() {
+        return healthCheckRecoveryCount;
+    }
+
+    public int getHealthCheckRecoveryInterval() {
+        return healthCheckRecoveryInterval;
+    }
+
+    public int getRebalanceThreshold() {
+        return rebalanceThreshold;
+    }
+
+    public int getRebalanceConBaseCount() {
+        return rebalanceConBaseCount;
     }
     public Consumer<String> getTextMessageHandler() {
         return textMessageHandler;
@@ -421,10 +498,17 @@ public class ConnectionParam {
         boolean varcharAsString = Boolean.parseBoolean(properties.getProperty(TSDBDriver.PROPERTY_KEY_VARCHAR_AS_STRING, "false"));
 
         String slaveClusterHost = properties.getProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_HOST, "");
-        String slaveClusterPort = properties.getProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_PORT, "");
+        int slaveClusterPort = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_PORT, "6041"));
+        if (slaveClusterPort <= 0){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "slave port must be positive integer");
+        }
 
-        if (!StringUtils.isEmpty(slaveClusterHost) && endpoints.size() > 1){
+        if (!StringUtils.isEmpty(slaveClusterHost) && endpoints.size() != 1){
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "load balancing and slave cluster can not be set at the same time");
+        }
+
+        if (!StringUtils.isEmpty(slaveClusterHost)) {
+            endpoints.add(new Endpoint(slaveClusterHost, slaveClusterPort, slaveClusterHost.startsWith("[") && slaveClusterHost.endsWith("]")));
         }
 
         int reconnectIntervalMs  = Integer
@@ -495,6 +579,44 @@ public class ConnectionParam {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_WS_KEEP_ALIVE_SECONDS");
         }
 
+        int healthCheckInitInterval = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_INIT_INTERVAL, "10"));
+        if (healthCheckInitInterval <= 0){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_HEALTH_CHECK_INIT_INTERVAL, must be positive integer");
+        }
+
+        int healthCheckMaxInterval = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_MAX_INTERVAL, "300"));
+        if (healthCheckMaxInterval < healthCheckInitInterval){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_HEALTH_CHECK_MAX_INTERVAL, must be positive integer and greater than PROPERTY_KEY_HEALTH_CHECK_INIT_INTERVAL");
+        }
+        int healthCheckConTimeout = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_CON_TIMEOUT, "1"));
+        if (healthCheckConTimeout <= 0){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_HEALTH_CHECK_CON_TIMEOUT, must be positive integer");
+        }
+
+        int healthCheckCmdTimeout = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_CMD_TIMEOUT, "5"));
+        if (healthCheckCmdTimeout <= 0){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_HEALTH_CHECK_CMD_TIMEOUT, must be positive integer");
+        }
+
+        int healthCheckRecoveryCount = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_RECOVERY_COUNT, "3"));
+        if (healthCheckRecoveryCount <= 0){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_HEALTH_CHECK_RECOVERY_COUNT, must be positive integer");
+        }
+
+        int healthCheckRecoveryInterval = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_RECOVERY_INTERVAL, "60"));
+        if (healthCheckRecoveryInterval <= 0){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_HEALTH_CHECK_RECOVERY_INTERVAL, must be positive integer");
+        }
+
+        int rebalanceThreshold = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_REBALANCE_THRESHOLD, "20"));
+        if (rebalanceThreshold < 10 || rebalanceThreshold > 50){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_REBALANCE_THRESHOLD, must be between 10 and 50");
+        }
+        int rebalanceConBaseCount = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_REBALANCE_CON_BASE_COUNT, "30"));
+        if (rebalanceConBaseCount <= 0){
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_REBALANCE_CON_BASE_COUNT, must be positive integer");
+        }
+
         return new Builder(endpoints)
                 .setDatabase(database)
                 .setCloudToken(cloudToken)
@@ -524,6 +646,14 @@ public class ConnectionParam {
                 .setAsyncWrite(asyncWrite)
                 .setPbsMode(pbsMode)
                 .setWsKeepAlive(wsKeepAlive)
+                .setHealthCheckInitInterval(healthCheckInitInterval)
+                .setHealthCheckMaxInterval(healthCheckMaxInterval)
+                .setHealthCheckConTimeout(healthCheckConTimeout)
+                .setHealthCheckCmdTimeout(healthCheckCmdTimeout)
+                .setHealthCheckRecoveryCount(healthCheckRecoveryCount)
+                .setHealthCheckRecoveryInterval(healthCheckRecoveryInterval)
+                .setRebalanceThreshold(rebalanceThreshold)
+                .setRebalanceConBaseCount(rebalanceConBaseCount)
                 .build();
     }
 
@@ -544,7 +674,7 @@ public class ConnectionParam {
         private boolean enableCompression;
         private boolean enableAutoReconnect;
         private String slaveClusterHost;
-        private String slaveClusterPort;
+        private int slaveClusterPort;
         private int reconnectIntervalMs;
         private int reconnectRetryCount;
         private boolean disableSslCertValidation;
@@ -560,7 +690,14 @@ public class ConnectionParam {
         private String asyncWrite;
         private String pbsMode;
         private int wsKeepAlive;
-
+        private int healthCheckInitInterval;
+        private int healthCheckMaxInterval;
+        private int healthCheckConTimeout;
+        private int healthCheckCmdTimeout;
+        private int healthCheckRecoveryCount;
+        private int healthCheckRecoveryInterval;
+        private int rebalanceThreshold;
+        private int rebalanceConBaseCount;
         private Consumer<String> textMessageHandler;
         private Consumer<ByteBuf> binaryMessageHandler;
 
@@ -631,7 +768,7 @@ public class ConnectionParam {
             return this;
         }
 
-        public Builder setSlaveClusterPort(String slaveClusterPort) {
+        public Builder setSlaveClusterPort(int slaveClusterPort) {
             this.slaveClusterPort = slaveClusterPort;
             return this;
         }
@@ -705,6 +842,44 @@ public class ConnectionParam {
             return this;
         }
 
+        public Builder setHealthCheckInitInterval(int healthCheckInitInterval) {
+            this.healthCheckInitInterval = healthCheckInitInterval;
+            return this;
+        }
+
+        public Builder setHealthCheckMaxInterval(int healthCheckMaxInterval) {
+            this.healthCheckMaxInterval = healthCheckMaxInterval;
+            return this;
+        }
+
+        public Builder setHealthCheckConTimeout(int healthCheckConTimeout) {
+            this.healthCheckConTimeout = healthCheckConTimeout;
+            return this;
+        }
+
+        public Builder setHealthCheckCmdTimeout(int healthCheckCmdTimeout) {
+            this.healthCheckCmdTimeout = healthCheckCmdTimeout;
+            return this;
+        }
+
+        public Builder setHealthCheckRecoveryCount(int healthCheckRecoveryCount) {
+            this.healthCheckRecoveryCount = healthCheckRecoveryCount;
+            return this;
+        }
+
+        public Builder setHealthCheckRecoveryInterval(int healthCheckRecoveryInterval) {
+            this.healthCheckRecoveryInterval = healthCheckRecoveryInterval;
+            return this;
+        }
+
+        public Builder setRebalanceThreshold(int rebalanceThreshold) {
+            this.rebalanceThreshold = rebalanceThreshold;
+            return this;
+        }
+        public Builder setRebalanceConBaseCount(int rebalanceConBaseCount) {
+            this.rebalanceConBaseCount = rebalanceConBaseCount;
+            return this;
+        }
         public Builder setTextMessageHandler(Consumer<String> textMessageHandler) {
             this.textMessageHandler = textMessageHandler;
             return this;
@@ -717,5 +892,51 @@ public class ConnectionParam {
         public ConnectionParam build() {
             return new ConnectionParam(this);
         }
+    }
+
+    public static ConnectionParam.Builder copyToBuilder(ConnectionParam original) {
+        if (original == null) {
+            return null;
+        }
+
+        return new ConnectionParam.Builder(original.getEndpoints()) // we can make sure endpoints will not be modified
+                .setDatabase(original.getDatabase())
+                .setCloudToken(original.getCloudToken())
+                .setUserAndPassword(original.getUser(), original.getPassword())
+                .setTimeZone(original.getTz())
+                .setUseSsl(original.isUseSsl())
+                .setMaxRequest(original.getMaxRequest())
+                .setConnectionTimeout(original.getConnectTimeout())
+                .setRequestTimeout(original.getRequestTimeout())
+                .setConnectMode(original.getConnectMode())
+                .setVarcharAsString(original.isVarcharAsString())
+                .setEnableCompression(original.isEnableCompression())
+                .setSlaveClusterHost(original.getSlaveClusterHost())
+                .setSlaveClusterPort(original.getSlaveClusterPort())
+                .setReconnectIntervalMs(original.getReconnectIntervalMs())
+                .setReconnectRetryCount(original.getReconnectRetryCount())
+                .setEnableAutoReconnect(original.isEnableAutoConnect())
+                .setDisableSslCertValidation(original.isDisableSslCertValidation())
+                .setAppName(original.getAppName())
+                .setAppIp(original.getAppIp())
+                .setCopyData(original.isCopyData())
+                .setBatchSizeByRow(original.getBatchSizeByRow())
+                .setCacheSizeByRow(original.getCacheSizeByRow())
+                .setBackendWriteThreadNum(original.getBackendWriteThreadNum())
+                .setStrictCheck(original.isStrictCheck())
+                .setRetryTimes(original.getRetryTimes())
+                .setAsyncWrite(original.getAsyncWrite())
+                .setPbsMode(original.getPbsMode())
+                .setWsKeepAlive(original.getWsKeepAlive())
+                .setHealthCheckInitInterval(original.getHealthCheckInitInterval())
+                .setHealthCheckMaxInterval(original.getHealthCheckMaxInterval())
+                .setHealthCheckConTimeout(original.getHealthCheckConTimeout())
+                .setHealthCheckCmdTimeout(original.getHealthCheckCmdTimeout())
+                .setHealthCheckRecoveryCount(original.getHealthCheckRecoveryCount())
+                .setHealthCheckRecoveryInterval(original.getHealthCheckRecoveryInterval())
+                .setRebalanceThreshold(original.getRebalanceThreshold())
+                .setRebalanceConBaseCount(original.getRebalanceConBaseCount())
+                .setTextMessageHandler(original.getTextMessageHandler())
+                .setBinaryMessageHandler(original.getBinaryMessageHandler());
     }
 }

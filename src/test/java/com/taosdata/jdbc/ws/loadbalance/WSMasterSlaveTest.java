@@ -1,12 +1,12 @@
-package com.taosdata.jdbc.ws;
+package com.taosdata.jdbc.ws.loadbalance;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
-import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
+import com.taosdata.jdbc.ws.TaosAdapterMock;
 import org.junit.*;
 import org.junit.runner.RunWith;
 
@@ -22,7 +22,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @RunWith(CatalogRunner.class)
-@TestTarget(alias = "websocket query test", author = "yjshe", version = "2.0.38")
 @FixMethodOrder
 public class WSMasterSlaveTest {
     private static final String host = "localhost";
@@ -127,6 +126,7 @@ public class WSMasterSlaveTest {
 
     @BeforeClass
     public static void before() throws SQLException {
+        System.setProperty("ENV_TAOS_JDBC_NO_HEALTH_CHECK", "TRUE");
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
             url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
@@ -164,5 +164,8 @@ public class WSMasterSlaveTest {
         } catch (SQLException e) {
             // ignore
         }
+        Assert.assertEquals(0, RebalanceManager.getInstance().getBgHealthCheckInstanceCount());
+        System.setProperty("ENV_TAOS_JDBC_NO_HEALTH_CHECK", "");
+        RebalanceManager.getInstance().clearAllForTest();
     }
 }

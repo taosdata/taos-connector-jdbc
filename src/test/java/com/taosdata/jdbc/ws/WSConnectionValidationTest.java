@@ -5,6 +5,7 @@ import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.entity.ConCheckInfo;
+import com.taosdata.jdbc.ws.loadbalance.RebalanceManager;
 import org.junit.*;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -347,6 +348,7 @@ public class WSConnectionValidationTest {private static volatile int queryExecut
 
     @BeforeClass
     public static void before() throws SQLException {
+        System.setProperty("ENV_TAOS_JDBC_NO_HEALTH_CHECK", "TRUE");
         System.setProperty("ENV_TAOS_JDBC_TEST", "test");
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
@@ -371,6 +373,9 @@ public class WSConnectionValidationTest {private static volatile int queryExecut
             statement.executeUpdate("drop database if exists " + dbName2);
         }
         connection.close();
+        System.setProperty("ENV_TAOS_JDBC_NO_HEALTH_CHECK", "");
+        Assert.assertEquals(0, RebalanceManager.getInstance().getBgHealthCheckInstanceCount());
+        RebalanceManager.getInstance().clearAllForTest();
     }
 
 }

@@ -44,8 +44,7 @@ public class WSConsumer<V> implements Consumer<V> {
     public void create(Properties properties) throws SQLException {
         factory = new TMQRequestFactory();
         param = new ConsumerParam(properties);
-        InFlightRequest inFlightRequest = new InFlightRequest(param.getConnectionParam().getRequestTimeout()
-                , param.getConnectionParam().getMaxRequest());
+        InFlightRequest inFlightRequest = new InFlightRequest(param.getConnectionParam().getMaxRequest());
 
         param.getConnectionParam().setTextMessageHandler(message -> {
             try {

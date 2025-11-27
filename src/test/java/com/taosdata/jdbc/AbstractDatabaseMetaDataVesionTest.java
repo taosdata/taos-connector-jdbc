@@ -32,6 +32,7 @@ public class AbstractDatabaseMetaDataVesionTest {
         Assert.assertEquals(driverVersion, metaData.getDriverVersion());
         Assert.assertNotEquals(0, metaData.getDriverMajorVersion());
         Assert.assertNotEquals(0, metaData.getDriverMinorVersion());
+        connection.close();
     }
 
     @Test
@@ -51,6 +52,7 @@ public class AbstractDatabaseMetaDataVesionTest {
         Assert.assertEquals(driverVersion, metaData.getDriverVersion());
         Assert.assertNotEquals(0, metaData.getDriverMajorVersion());
         Assert.assertNotEquals(0, metaData.getDriverMinorVersion());
+        connection.close();
     }
 
     @Test
@@ -72,6 +74,7 @@ public class AbstractDatabaseMetaDataVesionTest {
         Assert.assertEquals(driverVersion, metaData.getDriverVersion());
         Assert.assertNotEquals(0, metaData.getDriverMajorVersion());
         Assert.assertNotEquals(0, metaData.getDriverMinorVersion());
+        connection.close();
     }
 
 }

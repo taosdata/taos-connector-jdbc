@@ -30,7 +30,7 @@ public class WebSocketHandshakeHandler extends ChannelInboundHandlerAdapter {
     }
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
-        // 发起握手
+        // initialize handshake
         handshaker.handshake(ctx.channel());
         ctx.fireChannelActive();
     }

@@ -1714,7 +1714,14 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
     }
 
     private String generateDescribeSql(String dbName, String tableName) throws SQLException {
-        return "describe " + dbName + "." + getIdentifierQuoteString() + tableName + getIdentifierQuoteString();
+        return "describe " +
+                getIdentifierQuoteString() +
+                dbName +
+                getIdentifierQuoteString() +
+                "." +
+                getIdentifierQuoteString() +
+                tableName +
+                getIdentifierQuoteString();
     }
 
 

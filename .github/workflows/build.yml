@@ -250,6 +250,5 @@ jobs:
         with:
           name: service-logs
           path: |
-            /var/log/taosd.log
-            /var/log/taosadapter.log
-          retention-days: 1
+            /var/log/taos/**/*
+          retention-days: 7

@@ -2,13 +2,12 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.nio.ByteBuffer;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -21,7 +20,7 @@ public class WSSelectTest {
     private static final String host = "127.0.0.1";
     private static final int port = 6041;
     private static Connection connection;
-    private static final String databaseName = "driver";
+    private static final String databaseName = TestUtils.camelToSnake(WSSelectTest.class);
 
     private static void testInsert() throws SQLException {
         Statement statement = connection.createStatement();

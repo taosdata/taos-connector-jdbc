@@ -4,6 +4,7 @@ import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.TaosAdapterMock;
+import com.taosdata.jdbc.ws.loadbalance.RebalanceManager;
 import io.netty.util.ResourceLeakDetector;
 import org.junit.*;
 import org.junit.runner.RunWith;
@@ -70,6 +71,7 @@ public class WsPstmtReconnectFetchTest {
 
     @BeforeClass
     public static void setUp() throws SQLException {
+        System.setProperty("ENV_TAOS_JDBC_NO_HEALTH_CHECK", "TRUE");
         System.setProperty("ENV_TAOS_JDBC_TEST", "test");
         TestUtils.runInMain();
 
@@ -106,5 +108,8 @@ public class WsPstmtReconnectFetchTest {
         }
         connection.close();
         System.gc();
+        System.setProperty("ENV_TAOS_JDBC_NO_HEALTH_CHECK", "");
+        Assert.assertEquals(0, RebalanceManager.getInstance().getBgHealthCheckInstanceCount());
+        RebalanceManager.getInstance().clearAllForTest();
     }
 }
