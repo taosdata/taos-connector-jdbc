@@ -247,7 +247,6 @@ public class RestfulConnectionTest {
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void testPrepareStatement2() throws SQLException {
-        Assert.assertNotNull("", Statement.NO_GENERATED_KEYS);
         conn.prepareStatement("", Statement.RETURN_GENERATED_KEYS);
     }
 

@@ -9,8 +9,6 @@ import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.utils.SyncObj;
 import com.taosdata.jdbc.utils.Utils;
-import com.taosdata.jdbc.ws.entity.Code;
-import com.taosdata.jdbc.ws.entity.CommonResp;
 import com.taosdata.jdbc.ws.stmt2.entity.*;
 import io.netty.buffer.ByteBuf;
 import org.slf4j.LoggerFactory;
@@ -54,7 +52,6 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
 
         workerThreadList = new ArrayList<>(writeThreadNum);
 
-        CommonResp res = null;
         for (int i = 0; i < writeThreadNum; i++){
             WorkerThread workerThread = new WorkerThread(
                     backendThreadInfoList.get(i),
@@ -67,14 +64,18 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
                     syncObj
                     );
             workerThreadList.add(workerThread);
-            workerThread.initStmt(param.getRetryTimes());
         }
 
-        if (res != null && res.getCode() != Code.SUCCESS.getCode()){
+        try {
+            for (int i = 0; i < writeThreadNum; i++) {
+                workerThreadList.get(i).initStmt(param.getRetryTimes());
+            }
+        } catch (SQLException e) { //NOSONAR
             for (WorkerThread workerThread : workerThreadList){
                 workerThread.releaseStmt();
             }
-            throw new SQLException("(0x" + Integer.toHexString(res.getCode()) + "):" + res.getMessage());
+            log.error("Failed to initialize prepared statement, sql: {}", sql, e);
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "Failed to initialize prepared statement: " + e.getMessage());
         }
 
         for (WorkerThread workerThread : workerThreadList){
@@ -146,6 +147,7 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
             try {
                 syncObj.await();
             } catch (InterruptedException ignored) {
+                Thread.currentThread().interrupt();
             }
         }
     }
@@ -485,8 +487,8 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
                     }
 
                     rowCount = ewRawBlock.getRowCount();
-                    lastError = ewRawBlock.getLastError();
-                    if (lastError == null) {
+                    lastError.set(ewRawBlock.getLastError());
+                    if (lastError.get() == null) {
                         writeBlockWithRetry(ewRawBlock.getByteBuf());
                         triggerSerializeIfNeeded(backendThreadInfo, stmtInfo, param.getBatchSizeByRow());
                     }
@@ -494,7 +496,7 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
                     Thread.currentThread().interrupt();
                     break;
                 } catch (SQLException e) {
-                    lastError = e;
+                    lastError.set(e);
                     log.error("Error in write data to server, stmt id: {}" +
                                     "rows: {}, code: {}, msg: {}",
                             stmtInfo.getStmtId(),
@@ -510,8 +512,8 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
         }
 
         public Exception getAndClearLastError() {
-            Exception tmp = lastError;
-            lastError = null;
+            Exception tmp = lastError.get();
+            lastError.set(null);
             return tmp;
         }
     }

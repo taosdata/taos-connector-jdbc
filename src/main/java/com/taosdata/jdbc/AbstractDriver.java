@@ -52,6 +52,7 @@ public abstract class AbstractDriver implements Driver {
         propertyInfo[4] = passwordProp;
         return propertyInfo;
     }
+    @SuppressWarnings("java:S2095")
     protected Connection getWSConnection(String url, ConnectionParam param, Properties props) throws SQLException {
         if (log.isDebugEnabled()){
             log.debug("getWSConnection, url = {}", StringUtils.getBasicUrl(url));

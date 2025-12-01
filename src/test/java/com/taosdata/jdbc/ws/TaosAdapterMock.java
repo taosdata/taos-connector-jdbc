@@ -44,7 +44,6 @@ public class TaosAdapterMock {
         this.targetPort = 6041;
         this.listenPort = listenPort;
     }
-
     public int getListenPort() {
         return listenPort;
     }

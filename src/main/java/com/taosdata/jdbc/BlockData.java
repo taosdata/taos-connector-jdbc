@@ -1,10 +1,13 @@
 package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.rs.RestfulResultSet;
+import com.taosdata.jdbc.utils.BlockUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.DecimalUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.ReferenceCountUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.sql.SQLException;
@@ -17,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 import static com.taosdata.jdbc.TSDBConstants.*;
 
 public class BlockData {
+    private static final Logger log = LoggerFactory.getLogger(BlockData.class);
     private List<List<Object>> data;
 
     private int returnCode;
@@ -82,7 +86,7 @@ public class BlockData {
                             buffer.readBytes(tmp);
                             for (int j = 0; j < numOfRows; j++) {
                                 byte b = buffer.readByte();
-                                if (isNull(tmp, j)) {
+                                if (BlockUtil.isNull(tmp, j)) {
                                     col.add(null);
                                 } else {
                                     col.add(b);
@@ -97,7 +101,7 @@ public class BlockData {
                             buffer.readBytes(tmp);
                             for (int j = 0; j < numOfRows; j++) {
                                 short s = buffer.readShortLE();
-                                if (isNull(tmp, j)) {
+                                if (BlockUtil.isNull(tmp, j)) {
                                     col.add(null);
                                 } else {
                                     col.add(s);
@@ -112,7 +116,7 @@ public class BlockData {
                             buffer.readBytes(tmp);
                             for (int j = 0; j < numOfRows; j++) {
                                 int in = buffer.readIntLE();
-                                if (isNull(tmp, j)) {
+                                if (BlockUtil.isNull(tmp, j)) {
                                     col.add(null);
                                 } else {
                                     col.add(in);
@@ -127,7 +131,7 @@ public class BlockData {
                             buffer.readBytes(tmp);
                             for (int j = 0; j < numOfRows; j++) {
                                 long l = buffer.readLongLE();
-                                if (isNull(tmp, j)) {
+                                if (BlockUtil.isNull(tmp, j)) {
                                     col.add(null);
                                 } else {
                                     col.add(l);
@@ -141,7 +145,7 @@ public class BlockData {
                             buffer.readBytes(tmp);
                             for (int j = 0; j < numOfRows; j++) {
                                 long l = buffer.readLongLE();
-                                if (isNull(tmp, j)) {
+                                if (BlockUtil.isNull(tmp, j)) {
                                     col.add(null);
                                 } else {
                                     Instant instant = DateTimeUtils.parseTimestampColumnData(l, precision);
@@ -156,7 +160,7 @@ public class BlockData {
                             buffer.readBytes(tmp);
                             for (int j = 0; j < numOfRows; j++) {
                                 float f = buffer.readFloatLE();
-                                if (isNull(tmp, j)) {
+                                if (BlockUtil.isNull(tmp, j)) {
                                     col.add(null);
                                 } else {
                                     col.add(f);
@@ -170,7 +174,7 @@ public class BlockData {
                             buffer.readBytes(tmp);
                             for (int j = 0; j < numOfRows; j++) {
                                 double d = buffer.readDoubleLE();
-                                if (isNull(tmp, j)) {
+                                if (BlockUtil.isNull(tmp, j)) {
                                     col.add(null);
                                 } else {
                                     col.add(d);
@@ -241,7 +245,7 @@ public class BlockData {
                                 byte[] tb = new byte[dataLen];
                                 buffer.readBytes(tb);
 
-                                if (isNull(tmp, j)) {
+                                if (BlockUtil.isNull(tmp, j)) {
                                     col.add(null);
                                 } else {
                                     BigDecimal t = DecimalUtil.getBigDecimal(tb, scale);
@@ -262,7 +266,7 @@ public class BlockData {
             this.data = list;
             semaphore.release();
         } catch (Exception e){
-            e.printStackTrace();
+            log.error("block data handle error: {}", e.getMessage());
         } finally {
             ReferenceCountUtil.safeRelease(buffer);
         }
@@ -270,12 +274,6 @@ public class BlockData {
 
     private int bitmapLen(int n) {
         return (n + 0x7) >> 3;
-    }
-
-    private boolean isNull(byte[] c, int n) {
-        int position = n >>> 3;
-        int index = n & 0x7;
-        return (c[position] & (1 << (7 - index))) == (1 << (7 - index));
     }
 
     public void doneWithNoData(){

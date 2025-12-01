@@ -59,15 +59,12 @@ public class TaosInfo implements TaosInfoMBean {
     private TaosInfo() {
     }
 
+    private static class TaosInfoHolder {
+        private static final TaosInfo INSTANCE = new TaosInfo();
+    }
+
     public static TaosInfo getInstance() {
-        if (instance == null) {
-            synchronized (TaosInfo.class) {
-                if (instance == null) {
-                    instance = new TaosInfo();
-                }
-            }
-        }
-        return instance;
+        return TaosInfoHolder.INSTANCE;
     }
 
 }

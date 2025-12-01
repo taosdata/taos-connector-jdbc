@@ -68,14 +68,14 @@ public class OffsetSeekTest {
                 if (i == 0) {
                     for (ConsumerRecord<ResultBean> record : records) {
                         tmp = record.value();
-                        break;
+                        break; //NOSONAR
                     }
                 }
                 if (i == 5) {
                     for (ConsumerRecord<ResultBean> record : records) {
                         ResultBean value = record.value();
                         Assert.assertEquals(tmp.getTs(), value.getTs());
-                        break;
+                        break; //NOSONAR
                     }
                 }
             }

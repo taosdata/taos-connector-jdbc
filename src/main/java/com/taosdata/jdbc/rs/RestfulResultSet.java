@@ -53,9 +53,7 @@ public class RestfulResultSet extends AbstractResultSet {
             .appendOffset("+HHMM", "Z").toFormatter()
             .withResolverStyle(ResolverStyle.STRICT)
             .withChronology(IsoChronology.INSTANCE);
-
-    Pattern pattern = Pattern.compile("^[0-9a-zT\\-:]+\\.([0-9]+).*$");
-
+    private static final Pattern pattern = Pattern.compile("\\.(\\d++)");
     private final Statement statement;
     // data
     private final List<List<Object>> resultSet = new ArrayList<>();

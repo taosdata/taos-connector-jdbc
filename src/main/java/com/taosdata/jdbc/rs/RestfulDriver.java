@@ -58,7 +58,7 @@ public class RestfulDriver extends AbstractDriver {
                 url, auth, param.isUseSsl(), param.getCloudToken(), param.getTz());
         if (param.getDatabase() != null && !param.getDatabase().trim().replaceAll("\\s", "").isEmpty()) {
             try (Statement stmt = conn.createStatement()) {
-                stmt.execute("use " + param.getDatabase());
+                stmt.execute("use " + param.getDatabase()); // NOSONAR
             }
         }
         return conn;

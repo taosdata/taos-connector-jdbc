@@ -1,18 +1,20 @@
 package com.taosdata.jdbc.ws.tmq.entity;
 
 import com.taosdata.jdbc.TSDBError;
+import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.common.TDBlob;
 import com.taosdata.jdbc.enums.DataType;
 import com.taosdata.jdbc.enums.TmqMessageType;
 import com.taosdata.jdbc.rs.RestfulResultSet;
 import com.taosdata.jdbc.rs.RestfulResultSetMetaData;
-import com.taosdata.jdbc.tmq.*;
-import com.taosdata.jdbc.utils.DataTypeConverUtil;
-import com.taosdata.jdbc.utils.DateTimeUtils;
-import com.taosdata.jdbc.utils.DecimalUtil;
-import com.taosdata.jdbc.utils.Utils;
-import com.taosdata.jdbc.ws.tmq.ConsumerAction;
+import com.taosdata.jdbc.tmq.ConsumerRecord;
+import com.taosdata.jdbc.tmq.ConsumerRecords;
+import com.taosdata.jdbc.tmq.TMQEnhMap;
+import com.taosdata.jdbc.tmq.TopicPartition;
+import com.taosdata.jdbc.utils.*;
 import com.taosdata.jdbc.ws.entity.Response;
+import com.taosdata.jdbc.ws.tmq.ConsumerAction;
+import io.netty.buffer.ByteBuf;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -23,10 +25,6 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-
-import com.taosdata.jdbc.TSDBErrorNumbers;
-import io.netty.buffer.ByteBuf;
-import io.netty.util.ReferenceCountUtil;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
 
@@ -352,7 +350,7 @@ public class FetchRawBlockResp extends Response {
                     buffer.readBytes(tmp);
                     for (int j = 0; j < numOfRows; j++) {
                         byte b = buffer.readByte();
-                        if (isNull(tmp, j)) {
+                        if (BlockUtil.isNull(tmp, j)) {
                             col.add(null);
                         } else {
                             col.add(b);
@@ -367,7 +365,7 @@ public class FetchRawBlockResp extends Response {
                     buffer.readBytes(tmp);
                     for (int j = 0; j < numOfRows; j++) {
                         short s = buffer.readShortLE();
-                        if (isNull(tmp, j)) {
+                        if (BlockUtil.isNull(tmp, j)) {
                             col.add(null);
                         } else {
                             col.add(s);
@@ -382,7 +380,7 @@ public class FetchRawBlockResp extends Response {
                     buffer.readBytes(tmp);
                     for (int j = 0; j < numOfRows; j++) {
                         int in = buffer.readIntLE();
-                        if (isNull(tmp, j)) {
+                        if (BlockUtil.isNull(tmp, j)) {
                             col.add(null);
                         } else {
                             col.add(in);
@@ -398,7 +396,7 @@ public class FetchRawBlockResp extends Response {
                     buffer.readBytes(tmp);
                     for (int j = 0; j < numOfRows; j++) {
                         long l = buffer.readLongLE();
-                        if (isNull(tmp, j)) {
+                        if (BlockUtil.isNull(tmp, j)) {
                             col.add(null);
                         } else {
                             col.add(l);
@@ -412,7 +410,7 @@ public class FetchRawBlockResp extends Response {
                     buffer.readBytes(tmp);
                     for (int j = 0; j < numOfRows; j++) {
                         float f = buffer.readFloatLE();
-                        if (isNull(tmp, j)) {
+                        if (BlockUtil.isNull(tmp, j)) {
                             col.add(null);
                         } else {
                             col.add(f);
@@ -426,7 +424,7 @@ public class FetchRawBlockResp extends Response {
                     buffer.readBytes(tmp);
                     for (int j = 0; j < numOfRows; j++) {
                         double d = buffer.readDoubleLE();
-                        if (isNull(tmp, j)) {
+                        if (BlockUtil.isNull(tmp, j)) {
                             col.add(null);
                         } else {
                             col.add(d);
@@ -499,7 +497,7 @@ public class FetchRawBlockResp extends Response {
                         byte[] tb = new byte[dataLen];
                         buffer.readBytes(tb);
 
-                        if (isNull(tmp, j)) {
+                        if (BlockUtil.isNull(tmp, j)) {
                             col.add(null);
                         } else {
                             BigDecimal t = DecimalUtil.getBigDecimal(tb, scale);
@@ -520,13 +518,6 @@ public class FetchRawBlockResp extends Response {
     private int bitmapLen(int n) {
         return (n + 0x7) >> 3;
     }
-
-    private boolean isNull(byte[] c, int n) {
-        int position = n >>> 3;
-        int index = n & 0x7;
-        return (c[position] & (1 << (7 - index))) == (1 << (7 - index));
-    }
-
 
     public RestfulResultSetMetaData getMetaData() {
         return metaData;

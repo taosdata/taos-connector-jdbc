@@ -50,7 +50,7 @@ public class Request {
             return objectMapper.writeValueAsString(this);
         } catch (JsonProcessingException e) {
             log.error("Request to string error", e);
-            return null;
+            return "";
         }
     }
 }

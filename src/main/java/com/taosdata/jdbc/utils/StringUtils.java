@@ -170,9 +170,9 @@ public class StringUtils {
             if (i2 + 1 > hex.length())
                 throw new IllegalArgumentException("Hex string has odd length");
 
-            int nib1 = hexToInt(hex.charAt(i2));
-            int nib0 = hexToInt(hex.charAt(i2 + 1));
-            byte b = (byte) ((nib1 << 4) + (byte) nib0);
+            byte nib1 = (byte)hexToInt(hex.charAt(i2));
+            byte nib0 = (byte)hexToInt(hex.charAt(i2 + 1));
+            byte b = (byte) (((nib1 << 4) & 0xff) + nib0);
             bytes[i] = b;
         }
         return bytes;

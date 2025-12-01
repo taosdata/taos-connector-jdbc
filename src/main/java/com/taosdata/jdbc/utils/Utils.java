@@ -29,7 +29,8 @@ public class Utils {
     private static final ForkJoinPool forkJoinPool = new ForkJoinPool();
 
     private static EventLoopGroup eventLoopGroup = null;
-
+    private static final Pattern VALUES_CLAUSE_PATTERN = Pattern.compile("values\\s*((?:\\([^)]*\\)|,\\s*|\\s*)*)");
+    private static final Pattern BRACKET_PATTERN = Pattern.compile("\\([^)]*\\)");
     private Utils() {}
 
     public static String escapeSingleQuota(String origin) {
@@ -81,11 +82,26 @@ public class Utils {
     }
 
     private static void findValuesClauseRangeSet(String preparedSql, RangeSet<Integer> clauseRangeSet) {
-        Matcher matcher = Pattern.compile("(values||,)\\s*(\\([^)]*\\))").matcher(preparedSql);
-        while (matcher.find()) {
-            int start = matcher.start(2);
-            int end = matcher.end(2);
-            clauseRangeSet.add(Range.closedOpen(start, end));
+        // Null/empty check to avoid invalid regex matching and NullPointerExceptions
+        if (preparedSql == null || preparedSql.isEmpty() || clauseRangeSet == null) {
+            return;
+        }
+
+        Matcher valuesMatcher = VALUES_CLAUSE_PATTERN.matcher(preparedSql);
+        while (valuesMatcher.find()) {
+            // Get the start index of the entire VALUES clause (for calculating the actual position of brackets in the original string)
+            int clauseStart = valuesMatcher.start(1);
+            // Get the part of bracket groups in the VALUES clause (e.g., "(1,2)(3,4), (5,6)")
+            String bracketPart = valuesMatcher.group(1);
+
+            // Extract each bracket from the bracket group part
+            Matcher bracketMatcher = BRACKET_PATTERN.matcher(bracketPart);
+            while (bracketMatcher.find()) {
+                // Calculate the actual start/end indices of the bracket in the original SQL
+                int realStart = clauseStart + bracketMatcher.start();
+                int realEnd = clauseStart + bracketMatcher.end();
+                clauseRangeSet.add(Range.closedOpen(realStart, realEnd));
+            }
         }
     }
 

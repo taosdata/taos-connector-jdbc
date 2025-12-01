@@ -85,7 +85,7 @@ public class WSConsumerAutoCommitTest {
                 Bean bean = r.value();
                 //new msg value will bigger than last received
                 assert (bean.getC1() > last);
-                break;
+                break; //NOSONAR
             }
             consumer.unsubscribe();
         }

@@ -422,9 +422,11 @@ public abstract class AbstractConnection extends WrapperImpl implements Connecti
                 status = future.get();
             else
                 status = future.get(timeout, TimeUnit.SECONDS);
-        } catch (InterruptedException | ExecutionException ignored) {
-        } catch (TimeoutException e) {
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             future.cancel(true);
+        } catch (TimeoutException | ExecutionException ignored) {
+            future.cancel(false);
         } finally {
             executor.shutdownNow();
         }

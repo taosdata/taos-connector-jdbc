@@ -607,15 +607,16 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
         return col10;
     }
 
+    @SuppressWarnings("java:S2095")
     protected ResultSet getTables(String catalog, String schemaPattern, String tableNamePattern, String[] types, Connection connection) throws SQLException {
-        String dbHelperStr = "";
+        String showDBSql = "show databases";
         String tableHelperStr = "";
 
         if (connection instanceof WSConnection) {
             WSConnection wsConnection = (WSConnection) connection;
             // BI mode, only query user tables, do not query subtables
             if (wsConnection.getParam().getConnectMode() == ConnectionParam.CONNECT_MODE_BI) {
-                dbHelperStr = "user";
+                showDBSql = "show user databases";
                 tableHelperStr = "normal ";
             }
         }
@@ -634,7 +635,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
             if (!StringUtils.isEmpty(catalog)) {
                 dbs.add(catalog);
             } else {
-                try (ResultSet dbRs = stmt.executeQuery("show " + dbHelperStr + " databases")) {
+                try (ResultSet dbRs = stmt.executeQuery(showDBSql)) {
                     while (dbRs.next()) {
                         dbs.add(dbRs.getString("name"));
                     }
@@ -779,58 +780,75 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
     // database - stables
     private Map<String, Set<String>> getSTableMate(Connection connection, String sTable, String db) throws SQLException {
         Map<String, Set<String>> result = new HashMap<>();
-        String sql = "select stable_name, db_name from information_schema.ins_stables where 1 = 1 ";
-        if (sTable != null)
-            sql += " and stable_name='" + sTable + "'";
-        if (db != null)
-            sql += " and db_name= '" + db + "'";
-        try (Statement stmt = connection.createStatement();
-             ResultSet databases = stmt.executeQuery(sql)) {
-            while (databases.next()) {
-                String name = databases.getString("stable_name");
-                String dbName = databases.getString("db_name");
-                Set<String> stables = result.computeIfAbsent(dbName, k -> new HashSet<>());
-                stables.add(name);
-            }
+        StringBuilder sqlBuilder = new StringBuilder("select stable_name, db_name from information_schema.ins_stables where 1 = 1 ");
+        List<Object> params = new ArrayList<>();
+
+        // Dynamically add conditions (parameter binding, avoid concatenation)
+        if (sTable != null && !sTable.trim().isEmpty()) {
+            sqlBuilder.append("and stable_name = ? ");
+            params.add(sTable.trim());
         }
+        if (db != null && !db.trim().isEmpty()) {
+            sqlBuilder.append("and db_name = ? ");
+            params.add(db.trim());
+        }
+
+        // Execute parameterized query
+        executeParameterizedQuery(connection, sqlBuilder.toString(), params, rs -> {
+            while (rs.next()) {
+                String name = rs.getString("stable_name");
+                String dbName = rs.getString("db_name");
+                result.computeIfAbsent(dbName, k -> new HashSet<>()).add(name);
+            }
+        });
         return result;
     }
 
     private Map<String, Set<String>> getTableMate(Connection connection, String table, String db) throws SQLException {
         Map<String, Set<String>> result = new HashMap<>();
-        String sql = "select table_name, db_name, stable_name from information_schema.ins_tables where 1 = 1 ";
-        if (table != null)
-            sql += " and table_name='" + table + "'";
-        if (db != null)
-            sql += " and db_name='" + db + "'";
-        try (Statement stmt = connection.createStatement();
-             ResultSet tables = stmt.executeQuery(sql)) {
-            while (tables.next()) {
-                String name = tables.getString("table_name");
-                String dbName = tables.getString("db_name");
-                Set<String> set = result.computeIfAbsent(dbName, k -> new HashSet<>());
-                set.add(name);
-            }
+        StringBuilder sqlBuilder = new StringBuilder("select table_name, db_name, stable_name from information_schema.ins_tables where 1 = 1 ");
+        List<Object> params = new ArrayList<>();
+
+        if (table != null && !table.trim().isEmpty()) {
+            sqlBuilder.append("and table_name = ? ");
+            params.add(table.trim());
         }
+        if (db != null && !db.trim().isEmpty()) {
+            sqlBuilder.append("and db_name = ? ");
+            params.add(db.trim());
+        }
+
+        executeParameterizedQuery(connection, sqlBuilder.toString(), params, rs -> {
+            while (rs.next()) {
+                String name = rs.getString("table_name");
+                String dbName = rs.getString("db_name");
+                result.computeIfAbsent(dbName, k -> new HashSet<>()).add(name);
+            }
+        });
         return result;
     }
 
     private Map<String, Set<String>> getViewMate(Connection connection, String viewName, String db) throws SQLException {
         Map<String, Set<String>> result = new HashMap<>();
-        String sql = "select view_name, db_name from information_schema.ins_views where 1 = 1 ";
-        if (viewName != null)
-            sql += " and view_name='" + viewName + "'";
-        if (db != null)
-            sql += " and db_name= '" + db + "'";
-        try (Statement stmt = connection.createStatement();
-             ResultSet databases = stmt.executeQuery(sql)) {
-            while (databases.next()) {
-                String name = databases.getString("view_name");
-                String dbName = databases.getString("db_name");
-                Set<String> views = result.computeIfAbsent(dbName, k -> new HashSet<>());
-                views.add(name);
-            }
+        StringBuilder sqlBuilder = new StringBuilder("select view_name, db_name from information_schema.ins_views where 1 = 1 ");
+        List<Object> params = new ArrayList<>();
+
+        if (viewName != null && !viewName.trim().isEmpty()) {
+            sqlBuilder.append("and view_name = ? ");
+            params.add(viewName.trim());
         }
+        if (db != null && !db.trim().isEmpty()) {
+            sqlBuilder.append("and db_name = ? ");
+            params.add(db.trim());
+        }
+
+        executeParameterizedQuery(connection, sqlBuilder.toString(), params, rs -> {
+            while (rs.next()) {
+                String name = rs.getString("view_name");
+                String dbName = rs.getString("db_name");
+                result.computeIfAbsent(dbName, k -> new HashSet<>()).add(name);
+            }
+        });
         return result;
     }
 
@@ -1017,7 +1035,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
             rowIndex++;
         }
     }
-
+    @SuppressWarnings("java:S2095")
     protected ResultSet getColumns(String catalog, String schemaPattern, String tableNamePattern, String columnNamePattern, Connection conn) throws SQLException {
         DatabaseMetaDataResultSet resultSet = new DatabaseMetaDataResultSet();
         // set up ColumnMetaDataList
@@ -1053,19 +1071,17 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                         tagResultSet2RowData(rs, rowDataList, precisions);
                     }
                 } else {
-                    try (Statement stmt = conn.createStatement();
-                         ResultSet rs = stmt.executeQuery(
-                                 "select table_name, db_name, table_type, col_name, col_type, col_length " +
-                                         "from information_schema.ins_columns where col_name = '" + columnNamePattern + "'")) {
-                        colResultSet2RowData(rs, rowDataList, precisions);
-                    }
-                    // stable tag not found
-                    try (Statement stmt = conn.createStatement();
-                         ResultSet rs = stmt.executeQuery(
-                                 "select table_name, db_name, stable_name, tag_name, tag_type " +
-                                         "from information_schema.ins_tags where tag_name = '" + columnNamePattern + "'")) {
-                        tagResultSet2RowData(rs, rowDataList, precisions);
-                    }
+                    String colSql = "select table_name, db_name, table_type, col_name, col_type, col_length " +
+                            "from information_schema.ins_columns where col_name = ?";
+                    List<Object> colParams = new ArrayList<>();
+                    colParams.add(columnNamePattern);
+                    executeParameterizedQuery(conn, colSql, colParams, rs -> colResultSet2RowData(rs, rowDataList, precisions));
+
+                    String tagSql = "select table_name, db_name, stable_name, tag_name, tag_type " +
+                            "from information_schema.ins_tags where tag_name = ?";
+                    List<Object> tagParams = new ArrayList<>();
+                    tagParams.add(columnNamePattern);
+                    executeParameterizedQuery(conn, tagSql, tagParams, rs -> tagResultSet2RowData(rs, rowDataList, precisions));
                 }
             } else {
                 Map<String, Set<String>> sTableMate = getSTableMate(conn, tableNamePattern, null);
@@ -1105,34 +1121,33 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                         }
                     }
 
-                    try (Statement stmt = conn.createStatement();
-                         ResultSet rs = stmt.executeQuery(
-                                 "select table_name, db_name, table_type, col_name, col_type, col_length " +
-                                         "from information_schema.ins_columns where db_name = '" + catalog + "'")) {
-                        colResultSet2RowData(rs, rowDataList, precisions);
-                    }
+                    String colSqlSingle = "select table_name, db_name, table_type, col_name, col_type, col_length " +
+                            "from information_schema.ins_columns where db_name = ?";
+                    List<Object> colParamsSingle = new ArrayList<>();
+                    colParamsSingle.add(catalog);
+                    executeParameterizedQuery(conn, colSqlSingle, colParamsSingle, rs -> colResultSet2RowData(rs, rowDataList, precisions));
 
-                    try (Statement stmt = conn.createStatement();
-                         ResultSet rs = stmt.executeQuery(
-                                 "select table_name, db_name, stable_name, tag_name, tag_type " +
-                                         "from information_schema.ins_tags where db_name = '" + catalog + "'")) {
-                        tagResultSet2RowData(rs, rowDataList, precisions);
-                    }
+                    String tagSqlSingle = "select table_name, db_name, stable_name, tag_name, tag_type " +
+                            "from information_schema.ins_tags where db_name = ?";
+                    List<Object> tagParamsSingle = new ArrayList<>();
+                    tagParamsSingle.add(catalog);
+                    executeParameterizedQuery(conn, tagSqlSingle, tagParamsSingle, rs -> tagResultSet2RowData(rs, rowDataList, precisions));
+
                 } else {
-                    try (Statement stmt = conn.createStatement();
-                         ResultSet rs = stmt.executeQuery(
-                                 "select table_name, db_name, table_type, col_name, col_type, col_length " +
-                                         "from information_schema.ins_columns where col_name = '" + columnNamePattern + "' and db_name = '" + catalog + "'")) {
-                        colResultSet2RowData(rs, rowDataList, precisions);
-                    }
+                    String colSqlDouble = "select table_name, db_name, table_type, col_name, col_type, col_length " +
+                            "from information_schema.ins_columns where col_name = ? and db_name = ?";
+                    List<Object> colParamsDouble = new ArrayList<>();
+                    colParamsDouble.add(columnNamePattern); // 第一个参数：columnNamePattern
+                    colParamsDouble.add(catalog);           // 第二个参数：catalog
+                    executeParameterizedQuery(conn, colSqlDouble, colParamsDouble, rs -> colResultSet2RowData(rs, rowDataList, precisions));
 
                     // stable tag no found in result
-                    try (Statement stmt = conn.createStatement();
-                         ResultSet rs = stmt.executeQuery(
-                                 "select table_name, db_name, stable_name, tag_name, tag_type " +
-                                         "from information_schema.ins_tags where tag_name = '" + columnNamePattern + "' and db_name = '" + catalog + "'")) {
-                        tagResultSet2RowData(rs, rowDataList, precisions);
-                    }
+                    String tagSqlDouble = "select table_name, db_name, stable_name, tag_name, tag_type " +
+                            "from information_schema.ins_tags where tag_name = ? and db_name = ?";
+                    List<Object> tagParamsDouble = new ArrayList<>();
+                    tagParamsDouble.add(columnNamePattern);
+                    tagParamsDouble.add(catalog);
+                    executeParameterizedQuery(conn, tagSqlDouble, tagParamsDouble, rs -> tagResultSet2RowData(rs, rowDataList, precisions));
                 }
             } else {
                 Map<String, Set<String>> sTableMate = getSTableMate(conn, tableNamePattern, catalog);
@@ -1569,6 +1584,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
         return new EmptyResultSet();
     }
 
+    @SuppressWarnings("java:S2095")
     protected ResultSet getCatalogs(Connection conn) throws SQLException {
         DatabaseMetaDataResultSet resultSet = new DatabaseMetaDataResultSet();
         // set up ColumnMetaDataList
@@ -1576,18 +1592,18 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
         columnMetaDataList.add(buildTableCatalogMeta(1));       // 1. TABLE_CAT
         resultSet.setColumnMetaDataList(columnMetaDataList);
 
-        String dbHelperStr = "";
+        String sql = "show databases";
 
         if (conn instanceof WSConnection) {
             WSConnection wsConnection = (WSConnection) conn;
             // BI mode, only query user databases, only query tables, not sub tables
             if (wsConnection.getParam().getConnectMode() == 1) {
-                dbHelperStr = "user";
+                sql = "show user databases";
             }
         }
 
         try (Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("show " + dbHelperStr + " databases")) {
+             ResultSet rs = stmt.executeQuery(sql)) {
             List<TSDBResultSetRowData> rowDataList = new ArrayList<>();
             while (rs.next()) {
                 TSDBResultSetRowData rowData = new TSDBResultSetRowData(1);
@@ -1599,7 +1615,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
         return resultSet;
     }
 
-
+    @SuppressWarnings("java:S2095")
     protected ResultSet getPrimaryKeys(String catalog, String schema, String table, Connection conn) throws SQLException {
         if (catalog == null || catalog.isEmpty() || !isAvailableCatalog(conn, catalog))
             return new EmptyResultSet();
@@ -1665,7 +1681,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
         }
         return false;
     }
-
+    @SuppressWarnings("java:S2095")
     protected ResultSet getSuperTables(String catalog, String schemaPattern, String tableNamePattern, Connection conn) throws SQLException {
         if (catalog == null || catalog.isEmpty())
             return null;
@@ -1673,26 +1689,28 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
         if (!isAvailableCatalog(conn, catalog)) {
             return new EmptyResultSet();
         }
-
         DatabaseMetaDataResultSet resultSet = new DatabaseMetaDataResultSet();
-        try (Statement stmt = conn.createStatement()) {
-            // set up ColumnMetaDataList
-            resultSet.setColumnMetaDataList(buildGetSuperTablesColumnMetaDataList());
-            // set result set row data
-            try (ResultSet rs = stmt.executeQuery("select * from information_schema.ins_tables where db_name='"
-                    + catalog + "' and table_name like '" + tableNamePattern + "'")) {
-                List<TSDBResultSetRowData> rowDataList = new ArrayList<>();
-                while (rs.next()) {
-                    TSDBResultSetRowData rowData = new TSDBResultSetRowData(4);
-                    rowData.setStringValue(1, catalog);
-                    rowData.setStringValue(2, null);
-                    rowData.setStringValue(3, rs.getString("table_name"));
-                    rowData.setStringValue(4, rs.getString("stable_name"));
-                    rowDataList.add(rowData);
-                }
-                resultSet.setRowDataList(rowDataList);
+        resultSet.setColumnMetaDataList(buildGetSuperTablesColumnMetaDataList());
+
+        String sql = "select * from information_schema.ins_tables where db_name = ? and table_name like ?";
+        List<Object> params = new ArrayList<>();
+        params.add(catalog);
+        String processedLikePattern = wrapLikePattern(tableNamePattern);
+        params.add(processedLikePattern);
+
+        List<TSDBResultSetRowData> rowDataList = new ArrayList<>();
+        executeParameterizedQuery(conn, sql, params, rs -> {
+            while (rs.next()) {
+                TSDBResultSetRowData rowData = new TSDBResultSetRowData(4);
+                rowData.setStringValue(1, catalog);
+                rowData.setStringValue(2, null);
+                rowData.setStringValue(3, rs.getString("table_name"));
+                rowData.setStringValue(4, rs.getString("stable_name"));
+                rowDataList.add(rowData);
             }
-        }
+        });
+
+        resultSet.setRowDataList(rowDataList);
         return resultSet;
     }
 
@@ -1764,5 +1782,43 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
         if (connection == null || connection.isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
         return getSuperTables(catalog, schemaPattern, tableNamePattern, connection);
+    }
+
+
+    // 1. Functional interface for result set processing: adapts to different result set parsing logic
+    @FunctionalInterface
+    private interface ResultSetConsumer {
+        void accept(ResultSet rs) throws SQLException;
+    }
+
+    // 2. Generic parameterized query execution method (no return value, processes result set via consumer)
+    private void executeParameterizedQuery(Connection conn, String sql, List<Object> params, ResultSetConsumer consumer) throws SQLException {
+        if (conn == null || conn.isClosed()) {
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
+        }
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            // Bind parameters (placeholder index starts from 1)
+            for (int i = 0; i < params.size(); i++) {
+                Object param = params.get(i);
+                if (param instanceof String) {
+                    pstmt.setString(i + 1, ((String) param).trim());
+                } else {
+                    pstmt.setObject(i + 1, param);
+                }
+            }
+            // Execute query and process result set
+            try (ResultSet rs = pstmt.executeQuery()) {
+                consumer.accept(rs);
+            }
+        }
+    }
+
+    // 3. Generic LIKE query parameter processing (appends wildcards to avoid direct SQL concatenation)
+    private String wrapLikePattern(String pattern) {
+        if (pattern == null || pattern.trim().isEmpty()) {
+            return "%";
+        }
+        // Preserve existing %/_ wildcards, only trim whitespace
+        return pattern.trim();
     }
 }

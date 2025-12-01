@@ -98,8 +98,6 @@ public class RestfulJDBCTest {
 
             while (rs.next()) {
                 Assert.assertNotNull(rs.getTimestamp("ts"));
-                Assert.assertNotNull(rs.getFloat("temperature"));
-                Assert.assertNotNull(rs.getInt("humidity"));
                 Assert.assertNotNull(rs.getString("location"));
             }
         }
