@@ -17,10 +17,10 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class WSConsumerAutoCommitTest {
-    private static final String host = "127.0.0.1";
-    private static final String dbName = TestUtils.camelToSnake(WSConsumerAutoCommitTest.class);
-    private static final String superTable = "st";
-    private static String topic = "ws_topic_with_bean";
+    private static final String HOST = "127.0.0.1";
+    private static final String DB_NAME = TestUtils.camelToSnake(WSConsumerAutoCommitTest.class);
+    private static final String SUPER_TABLE = "st";
+    private static final String TOPIC = "ws_topic_with_bean";
 
     private static Connection connection;
 
@@ -40,7 +40,7 @@ public class WSConsumerAutoCommitTest {
             try {
                 if (!stop) {
                     Statement statement = connection.createStatement();
-                    String sql = String.format("insert into %s.ct0 (ts, c1) values (now, %s)", dbName, count);
+                    String sql = String.format("insert into %s.ct0 (ts, c1) values (now, %s)", DB_NAME, count);
                     statement.executeUpdate(sql);
                     count++;
                 }
@@ -50,7 +50,7 @@ public class WSConsumerAutoCommitTest {
         }, 20, 10, TimeUnit.MILLISECONDS);
 
         Properties properties = new Properties();
-        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, host + ":6041");
+        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, HOST + ":6041");
         properties.setProperty(TMQConstants.CONNECT_TYPE, "ws");
         properties.setProperty(TMQConstants.CONNECT_USER, "root");
         properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
@@ -62,8 +62,8 @@ public class WSConsumerAutoCommitTest {
         properties.setProperty(TMQConstants.VALUE_DESERIALIZER, "com.taosdata.jdbc.ws.WSConsumerAutoCommitTest$BeanDeserializer");
 
         int last = 0;
-        try (TaosConsumer<Bean> consumer = new TaosConsumer<>(properties);) {
-            consumer.subscribe(Collections.singletonList(topic));
+        try (TaosConsumer<Bean> consumer = new TaosConsumer<>(properties)) {
+            consumer.subscribe(Collections.singletonList(TOPIC));
 
             for (int i = 0; i < 5; i++) {
                 ConsumerRecords<Bean> consumerRecords = consumer.poll(Duration.ofMillis(10));
@@ -78,8 +78,8 @@ public class WSConsumerAutoCommitTest {
 
         }
 
-        try (TaosConsumer<Bean> consumer = new TaosConsumer<>(properties);) {
-            consumer.subscribe(Collections.singletonList(topic));
+        try (TaosConsumer<Bean> consumer = new TaosConsumer<>(properties)) {
+            consumer.subscribe(Collections.singletonList(TOPIC));
             ConsumerRecords<Bean> consumerRecords = consumer.poll(Duration.ofMillis(100));
             for (ConsumerRecord<Bean> r : consumerRecords) {
                 Bean bean = r.value();
@@ -97,7 +97,7 @@ public class WSConsumerAutoCommitTest {
     public static void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
@@ -105,22 +105,22 @@ public class WSConsumerAutoCommitTest {
         connection = DriverManager.getConnection(url, properties);
         try (Statement statement = connection.createStatement()) {
 
-            statement.executeUpdate("drop topic if exists " + topic);
-            statement.executeUpdate("drop database if exists " + dbName);
-            statement.executeUpdate("create database if not exists " + dbName + " WAL_RETENTION_PERIOD 3650");
-            statement.executeUpdate("use " + dbName);
-            statement.executeUpdate("create stable if not exists " + superTable
+            statement.executeUpdate("drop topic if exists " + TOPIC);
+            statement.executeUpdate("drop database if exists " + DB_NAME);
+            statement.executeUpdate("create database if not exists " + DB_NAME + " WAL_RETENTION_PERIOD 3650");
+            statement.executeUpdate("use " + DB_NAME);
+            statement.executeUpdate("create stable if not exists " + SUPER_TABLE
                     + " (ts timestamp, c1 int) tags(t1 int)");
-            statement.executeUpdate("create table if not exists ct0 using " + superTable + " tags(1000)");
-            statement.executeUpdate("create topic if not exists " + topic + " as select ts, c1, t1 from ct0");
+            statement.executeUpdate("create table if not exists ct0 using " + SUPER_TABLE + " tags(1000)");
+            statement.executeUpdate("create topic if not exists " + TOPIC + " as select ts, c1, t1 from ct0");
         }
     }
 
     @AfterClass
     public static void after() throws InterruptedException, SQLException {
         Statement statement = connection.createStatement();
-        statement.executeUpdate("drop topic if exists " + topic);
-        statement.executeUpdate("drop database if exists " + dbName);
+        statement.executeUpdate("drop topic if exists " + TOPIC);
+        statement.executeUpdate("drop database if exists " + DB_NAME);
         TimeUnit.SECONDS.sleep(3);
         connection.close();
        }

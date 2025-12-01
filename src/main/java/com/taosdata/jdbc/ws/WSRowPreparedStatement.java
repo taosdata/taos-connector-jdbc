@@ -34,7 +34,7 @@ import static com.taosdata.jdbc.TSDBConstants.*;
 
 public class WSRowPreparedStatement extends WSRetryableStmt implements PreparedStatement{
     protected final ConnectionParam param;
-    private TableInfo tableInfo;
+    private final TableInfo tableInfo;
     private AutoExpandingBuffer tableNameLensBuf;
     private AutoExpandingBuffer tableNamesBuf;
     private AutoExpandingBuffer tagLensBuf;
@@ -45,11 +45,11 @@ public class WSRowPreparedStatement extends WSRetryableStmt implements PreparedS
     private int curTableColTotalLen = 0;
     private int totalTableCount = 0;
 
-    private final int MAX_COMPONENT_COUNT = 1000;
-    private final int SMALL_BUFFER_INIT_SIZE = 1024; // 1KB
-    private final int TABLE_NAME_BUFFER_INIT_SIZE = 1024 * 10; // 10KB
-    private final int TAGS_BUFFER_INIT_SIZE = 1024 * 100; // 100KB
-    private final int COLS_BUFFER_INIT_SIZE = 1024 * 1024; // 1MB
+    private static final int MAX_COMPONENT_COUNT = 1000;
+    private static final int SMALL_BUFFER_INIT_SIZE = 1024; // 1KB
+    private static final int TABLE_NAME_BUFFER_INIT_SIZE = 1024 * 10; // 10KB
+    private static final int TAGS_BUFFER_INIT_SIZE = 1024 * 100; // 100KB
+    private static final int COLS_BUFFER_INIT_SIZE = 1024 * 1024; // 1MB
 
     private void initBuffers() {
         buffersStopWrite();
@@ -1007,7 +1007,7 @@ public class WSRowPreparedStatement extends WSRetryableStmt implements PreparedS
         try {
             this.affectedRows = 0;
             writeBlockWithRetrySync(rawBlock);
-            this.affectedRows = batchInsertedRows.getAndSet(0);
+            this.affectedRows = batchInsertedRowsInner.getAndSet(0);
         } finally {
             initBuffers();
             totalTableCount = 0;

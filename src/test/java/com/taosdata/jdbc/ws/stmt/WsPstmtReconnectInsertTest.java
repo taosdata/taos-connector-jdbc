@@ -20,9 +20,9 @@ import java.util.Properties;
 @RunWith(Parameterized.class)
 @FixMethodOrder
 public class WsPstmtReconnectInsertTest {
-    static String host = "localhost";
-    static String db_name = TestUtils.camelToSnake(WsPstmtReconnectInsertTest.class);
-    static String tableName = "wpt";
+    static final String HOST = "localhost";
+    static final String DB_NAME = TestUtils.camelToSnake(WsPstmtReconnectInsertTest.class);
+    static final String TABLE_NAME = "wpt";
     static Connection connection;
     private final String actionStr;
     private final String mode;
@@ -48,7 +48,7 @@ public class WsPstmtReconnectInsertTest {
 
     private void stmt2Write(String url, Properties properties) throws SQLException {
 
-        String sql = "INSERT INTO " + db_name + "." + tableName + "(tbname, groupId, location, ts, current, voltage, phase) VALUES (?,?,?,?,?,?,?)";
+        String sql = "INSERT INTO " + DB_NAME + "." + TABLE_NAME + "(tbname, groupId, location, ts, current, voltage, phase) VALUES (?,?,?,?,?,?,?)";
 
         try (Connection connection = DriverManager.getConnection(url, properties);
              PreparedStatement pstmt = connection.prepareStatement(sql)) {
@@ -73,9 +73,9 @@ public class WsPstmtReconnectInsertTest {
                     Assert.assertEquals(ele, Statement.SUCCESS_NO_INFO);
                 }
             }
-            Assert.assertEquals((5), Utils.getSqlRows(connection, db_name + "." + tableName));
-            Assert.assertEquals((1), Utils.getSqlRows(connection, db_name + "." + "`d_bind_中国人1`"));
-            pstmt.execute("delete from " + db_name + "." + tableName);
+            Assert.assertEquals((5), Utils.getSqlRows(connection, DB_NAME + "." + TABLE_NAME));
+            Assert.assertEquals((1), Utils.getSqlRows(connection, DB_NAME + "." + "`d_bind_中国人1`"));
+            pstmt.execute("delete from " + DB_NAME + "." + TABLE_NAME);
         }
     }
     @Test
@@ -85,8 +85,8 @@ public class WsPstmtReconnectInsertTest {
 
         Properties properties = new Properties();
         String url = "jdbc:TAOS-WS://"
-                + host + ":" + mockB.getListenPort() + ","
-                + host + ":" + 6041 + "/?user=root&password=taosdata";
+                + HOST + ":" + mockB.getListenPort() + ","
+                + HOST + ":" + 6041 + "/?user=root&password=taosdata";
 
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_INTERVAL_MS, "2000");
@@ -108,8 +108,8 @@ public class WsPstmtReconnectInsertTest {
 
         Properties properties = new Properties();
         String url = "jdbc:TAOS-WS://"
-                + host + ":" + mockB.getListenPort() + ","
-                + host + ":" + 6041 + "/?user=root&password=taosdata";
+                + HOST + ":" + mockB.getListenPort() + ","
+                + HOST + ":" + 6041 + "/?user=root&password=taosdata";
 
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_INTERVAL_MS, "2000");
@@ -120,7 +120,7 @@ public class WsPstmtReconnectInsertTest {
             properties.setProperty(TSDBDriver.PROPERTY_KEY_PBS_MODE, this.mode);
         }
 
-        String sql = "INSERT INTO " + db_name + "." + tableName + "(tbname, groupId, location, ts, current, voltage, phase) VALUES (?,?,?,?,?,?,?)";
+        String sql = "INSERT INTO " + DB_NAME + "." + TABLE_NAME + "(tbname, groupId, location, ts, current, voltage, phase) VALUES (?,?,?,?,?,?,?)";
 
         try (Connection connection = DriverManager.getConnection(url, properties);
              PreparedStatement pstmt1 = connection.prepareStatement(sql);
@@ -157,9 +157,9 @@ public class WsPstmtReconnectInsertTest {
                     Assert.assertEquals(ele, Statement.SUCCESS_NO_INFO);
                 }
             }
-            Assert.assertEquals((5), Utils.getSqlRows(connection, db_name + "." + tableName));
-            Assert.assertEquals((1), Utils.getSqlRows(connection, db_name + "." + "`d_bind_中国人1`"));
-            pstmt1.execute("delete from " + db_name + "." + tableName);
+            Assert.assertEquals((5), Utils.getSqlRows(connection, DB_NAME + "." + TABLE_NAME));
+            Assert.assertEquals((1), Utils.getSqlRows(connection, DB_NAME + "." + "`d_bind_中国人1`"));
+            pstmt1.execute("delete from " + DB_NAME + "." + TABLE_NAME);
         }
 
         mockB.stop();
@@ -175,17 +175,17 @@ public class WsPstmtReconnectInsertTest {
 
         String url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + host + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST + ":6041/?user=root&password=taosdata";
         } else {
             url += "?user=root&password=taosdata&batchfetch=true";
         }
         Properties properties = new Properties();
         connection = DriverManager.getConnection(url, properties);
         Statement statement = connection.createStatement();
-        statement.execute("drop database if exists " + db_name);
-        statement.execute("create database " + db_name);
-        statement.execute("use " + db_name);
-        statement.execute("create stable if not exists " + db_name + "." + tableName + " (ts TIMESTAMP, current FLOAT, voltage INT, phase FLOAT) TAGS (groupId INT, location BINARY(24))");
+        statement.execute("drop database if exists " + DB_NAME);
+        statement.execute("create database " + DB_NAME);
+        statement.execute("use " + DB_NAME);
+        statement.execute("create stable if not exists " + DB_NAME + "." + TABLE_NAME + " (ts TIMESTAMP, current FLOAT, voltage INT, phase FLOAT) TAGS (groupId INT, location BINARY(24))");
         statement.close();
     }
 
@@ -196,7 +196,7 @@ public class WsPstmtReconnectInsertTest {
         }
 
         try (Statement statement = connection.createStatement()) {
-            statement.execute("drop database if exists " + db_name);
+            statement.execute("drop database if exists " + DB_NAME);
         }
         connection.close();
         System.gc();

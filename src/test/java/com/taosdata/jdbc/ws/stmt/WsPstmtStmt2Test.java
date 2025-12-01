@@ -9,18 +9,17 @@ import org.junit.*;
 
 import java.sql.*;
 import java.util.*;
-import java.util.Random;
 
 @FixMethodOrder
 public class WsPstmtStmt2Test {
-    String host = "localhost";
-    String db_name = TestUtils.camelToSnake(WsPstmtStmt2Test.class);
-    String tableName = "wpt";
+    final String host = "localhost";
+    final String db_name = TestUtils.camelToSnake(WsPstmtStmt2Test.class);
+    final String tableName = "wpt";
     String superTable = "wpt_st";
     Connection connection;
 
-    int numOfSubTable = 10;
-    int numOfRow = 10;
+    final int numOfSubTable = 10;
+    final int numOfRow = 10;
     private static final Random random = new Random(System.currentTimeMillis());
 
     @Test

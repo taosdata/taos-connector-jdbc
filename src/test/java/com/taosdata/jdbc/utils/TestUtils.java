@@ -9,7 +9,7 @@ import java.sql.Statement;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class TestUtils {
-    private static AtomicInteger counter = new AtomicInteger(0);
+    private static final AtomicInteger counter = new AtomicInteger(0);
     public static String camelToSnake(Class<?> clazz) {
         String className = clazz.getSimpleName();
         String temp = className.replaceAll("(?<=[a-z])([A-Z])", "_$1").toLowerCase();

@@ -12,7 +12,7 @@ import java.util.List;
 
 // Health check node context: manages node state, health check parameters, and timer tasks
 public class BgHealthCheck {
-    static Logger log = org.slf4j.LoggerFactory.getLogger(BgHealthCheck.class);
+    static final Logger log = org.slf4j.LoggerFactory.getLogger(BgHealthCheck.class);
     private WSClient wsClient; // Reference to the WebSocket client for connection handling
     private final ConnectionParam param;
     private final int endpointIndex;

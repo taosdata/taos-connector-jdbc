@@ -30,7 +30,7 @@ public class BlockData {
     private ByteBuf buffer;
     private List<RestfulResultSet.Field> fields;
     private final Semaphore semaphore;
-    private int precision;
+    private final int precision;
 
     public BlockData(List<List<Object>> data,
                      int returnCode,

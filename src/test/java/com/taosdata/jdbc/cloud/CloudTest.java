@@ -10,8 +10,8 @@ import java.util.stream.Collectors;
 import static org.junit.Assert.assertNotEquals;
 
 public class CloudTest {
-    String[] strings = {"abc", "涛思数据"};
-    String[] types = {"BINARY", "TIMESTAMP"};
+    final String[] strings = {"abc", "涛思数据"};
+    final String[] types = {"BINARY", "TIMESTAMP"};
 
     @Test
     public void connectCloudService() throws Exception {

@@ -187,7 +187,6 @@ public class WSConsumer<V> implements Consumer<V> {
         return records;
     }
 
-    @SuppressWarnings("unchecked")
     private ConsumerRecords<V> doPoll(Duration timeout, Deserializer<V> deserializer) throws SQLException{
         if (param.isAutoCommit() && (0 != messageId)) {
             long now = System.currentTimeMillis();

@@ -85,7 +85,7 @@ public class ConsumerParam {
     private String msgWithTableName;
     private String enableBatchMeta;
 
-    private HashMap<String, String> config = new HashMap<>();
+    private final HashMap<String, String> config = new HashMap<>();
 
     public ConsumerParam(Properties properties) throws SQLException {
         if (null != properties.getProperty(TMQConstants.CONNECT_URL)) {

@@ -905,7 +905,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
         }
     }
 
-    Pattern pattern = Pattern.compile("\\((\\d+)\\)");
+    final Pattern pattern = Pattern.compile("\\((\\d+)\\)");
 
     // normal table or child table
     private void colResultSet2RowData(ResultSet rs, List<TSDBResultSetRowData> rowDataList, Map<String, String> precision) throws SQLException {
@@ -1137,8 +1137,8 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
                     String colSqlDouble = "select table_name, db_name, table_type, col_name, col_type, col_length " +
                             "from information_schema.ins_columns where col_name = ? and db_name = ?";
                     List<Object> colParamsDouble = new ArrayList<>();
-                    colParamsDouble.add(columnNamePattern); // 第一个参数：columnNamePattern
-                    colParamsDouble.add(catalog);           // 第二个参数：catalog
+                    colParamsDouble.add(columnNamePattern);
+                    colParamsDouble.add(catalog);
                     executeParameterizedQuery(conn, colSqlDouble, colParamsDouble, rs -> colResultSet2RowData(rs, rowDataList, precisions));
 
                     // stable tag no found in result
@@ -1813,7 +1813,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
         }
     }
 
-    // 3. Generic LIKE query parameter processing (appends wildcards to avoid direct SQL concatenation)
+    // 3. Generic LIKE query parameter processing (returns a default wildcard if pattern is empty)
     private String wrapLikePattern(String pattern) {
         if (pattern == null || pattern.trim().isEmpty()) {
             return "%";

@@ -29,7 +29,7 @@ public class TSDBResultSetBlockData {
 
     private int timestampPrecision;
     private ByteBuffer buffer;
-    Semaphore semaphore = new Semaphore(0);
+    final Semaphore semaphore = new Semaphore(0);
     public int returnCode = 0;
 
     public TSDBResultSetBlockData(List<ColumnMetaData> colMeta, int numOfCols, int timestampPrecision) {

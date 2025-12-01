@@ -46,7 +46,7 @@ public class TSDBJNIConnectorTest {
         connector.connect(host, 6030, null, "root", "taosdata");
 
         // setup
-        String setupSqlStrs[] = {"create database if not exists d precision \"us\"", "create table if not exists d.t(ts timestamp, f int)", "create database if not exists d2", "create table if not exists d2.t2(ts timestamp, f int)", "insert into d.t values(now+100s, 100)", "insert into d2.t2 values(now+200s, 200)"};
+        String[] setupSqlStrs = {"create database if not exists d precision \"us\"", "create table if not exists d.t(ts timestamp, f int)", "create database if not exists d2", "create table if not exists d2.t2(ts timestamp, f int)", "insert into d.t values(now+100s, 100)", "insert into d2.t2 values(now+200s, 200)"};
         for (String setupSqlStr : setupSqlStrs) {
             long setupSql = connector.executeQuery(setupSqlStr);
 

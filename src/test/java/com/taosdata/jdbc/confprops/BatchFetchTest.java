@@ -1,6 +1,5 @@
 package com.taosdata.jdbc.confprops;
 
-import com.taosdata.jdbc.cases.QueryDataTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
@@ -13,10 +12,10 @@ import java.util.Random;
 @Ignore // performance
 public class BatchFetchTest {
 
-    private static String host = "127.0.0.1";
+    private static final String host = "127.0.0.1";
     private long rowFetchCost, batchFetchCost;
 
-    private static String dbName = TestUtils.camelToSnake(BatchFetchTest.class);
+    private static final String dbName = TestUtils.camelToSnake(BatchFetchTest.class);
 
     @Test
     public void case01_rowFetch() throws SQLException {
@@ -35,6 +34,7 @@ public class BatchFetchTest {
             long start = System.currentTimeMillis();
             ResultSet rs = stmt.executeQuery("select * from weather");
             while (rs.next()) {
+                // do nothing
             }
             long end = System.currentTimeMillis();
             rowFetchCost = end - start;
@@ -58,6 +58,7 @@ public class BatchFetchTest {
             long start = System.currentTimeMillis();
             ResultSet rs = stmt.executeQuery("select * from weather");
             while (rs.next()) {
+                // do nothing
             }
             long end = System.currentTimeMillis();
             batchFetchCost = end - start;

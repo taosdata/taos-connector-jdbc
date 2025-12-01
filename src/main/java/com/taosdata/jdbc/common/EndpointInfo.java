@@ -4,8 +4,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class EndpointInfo {
-    private AtomicBoolean online;
-    private AtomicInteger connectCount;
+    private final AtomicBoolean online;
+    private final AtomicInteger connectCount;
     public EndpointInfo() {
         this.online = new AtomicBoolean(true);
         this.connectCount = new AtomicInteger(0);

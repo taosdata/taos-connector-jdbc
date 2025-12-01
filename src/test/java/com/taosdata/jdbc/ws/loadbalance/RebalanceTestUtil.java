@@ -10,7 +10,7 @@ import java.sql.SQLException;
 
 public class RebalanceTestUtil {
 
-    private static Logger log = LoggerFactory.getLogger(RebalanceTestUtil.class);
+    private static final Logger log = LoggerFactory.getLogger(RebalanceTestUtil.class);
     public static void waitHealthCheckFinished(Endpoint endpoint) throws InterruptedException, SQLException {
         if (RebalanceManager.getInstance().getBgHealthCheckInstanceCount() == 0) {
             TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "Health check thread is not running");

@@ -9,14 +9,14 @@ import java.sql.*;
 import java.util.Properties;
 
 public class BlobTest {
-    static String host = "127.0.0.1";
-    static String dbName = TestUtils.camelToSnake(BlobTest.class);;
-    static String tableNative = "blob_noraml";
+    static final String host = "127.0.0.1";
+    static final String dbName = TestUtils.camelToSnake(BlobTest.class);
+    static final String tableNative = "blob_noraml";
     static Connection connection;
     static Statement statement;
 
-    static String testStr = "20160601";
-    static byte[] expectedArray = StringUtils.hexToBytes(testStr);
+    static final String testStr = "20160601";
+    static final byte[] expectedArray = StringUtils.hexToBytes(testStr);
 
     @BeforeClass
     public static void checkEnvironment() {

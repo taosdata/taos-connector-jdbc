@@ -146,7 +146,6 @@ public class WSConnectionManager implements AutoCloseable {
                 if (reconnected) {
                     return true;
                 }
-
                 Thread.sleep(connectionParam.getReconnectIntervalMs());
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();

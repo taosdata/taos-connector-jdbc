@@ -12,16 +12,16 @@ import java.time.Instant;
 import java.util.Properties;
 
 public class WsPstmtLineModeAllTypeTest {
-    String host = "127.0.0.1";
-    String db_name = TestUtils.camelToSnake(WsPstmtLineModeAllTypeTest.class);
-    String tableName = "wpt";
-    String stableName = "swpt";
+    final String host = "127.0.0.1";
+    final String db_name = TestUtils.camelToSnake(WsPstmtLineModeAllTypeTest.class);
+    final String tableName = "wpt";
+    final String stableName = "swpt";
 
-    String tableName2 = "unsigned_stable";
+    final String tableName2 = "unsigned_stable";
     Connection connection;
-    static String testStr = "20160601";
-    static byte[] expectedVarBinary = StringUtils.hexToBytes(testStr);
-    static byte[] expectedGeometry = StringUtils.hexToBytes("0101000000000000000000F03F0000000000000040");
+    static final String testStr = "20160601";
+    static final byte[] expectedVarBinary = StringUtils.hexToBytes(testStr);
+    static final byte[] expectedGeometry = StringUtils.hexToBytes("0101000000000000000000F03F0000000000000040");
 
 
     @Test
@@ -63,32 +63,30 @@ public class WsPstmtLineModeAllTypeTest {
 
         ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + tableName);
         resultSet.next();
-        Assert.assertEquals(resultSet.getTimestamp(1), new Timestamp(current));
-        Assert.assertEquals(resultSet.getByte(2), (byte) 2);
-        Assert.assertEquals(resultSet.getShort(3), (short) 3);
-        Assert.assertEquals(resultSet.getInt(4), 4);
-        Assert.assertEquals(resultSet.getLong(5), 5L);
-        Assert.assertEquals(resultSet.getFloat(6), 6.6f, 0.0001);
-        Assert.assertEquals(resultSet.getDouble(7), 7.7, 0.0001);
+        Assert.assertEquals(new Timestamp(current), resultSet.getTimestamp(1));
+        Assert.assertEquals((byte) 2, resultSet.getByte(2));
+        Assert.assertEquals((short) 3, resultSet.getShort(3));
+        Assert.assertEquals(4, resultSet.getInt(4));
+        Assert.assertEquals(5L, resultSet.getLong(5));
+        Assert.assertEquals(6.6f, resultSet.getFloat(6), 0.0001);
+        Assert.assertEquals(7.7, resultSet.getDouble(7), 0.0001);
         Assert.assertTrue(resultSet.getBoolean(8));
-        Assert.assertEquals(resultSet.getString(9), "你好");
-        Assert.assertEquals(resultSet.getString(10), "世界");
-        Assert.assertEquals(resultSet.getString(11), "hello world");
-        Assert.assertArrayEquals(resultSet.getBytes(12), expectedVarBinary);
-        Assert.assertArrayEquals(resultSet.getBytes(13), expectedGeometry);
+        Assert.assertEquals("你好", resultSet.getString(9));
+        Assert.assertEquals("世界", resultSet.getString(10));
+        Assert.assertEquals("hello world", resultSet.getString(11));
+        Assert.assertArrayEquals(expectedVarBinary, resultSet.getBytes(12));
+        Assert.assertArrayEquals(expectedGeometry, resultSet.getBytes(13));
 
-        Assert.assertEquals(resultSet.getShort(14), TSDBConstants.MAX_UNSIGNED_BYTE);
-        Assert.assertEquals(resultSet.getInt(15), TSDBConstants.MAX_UNSIGNED_SHORT);
-        Assert.assertEquals(resultSet.getLong(16), TSDBConstants.MAX_UNSIGNED_INT);
-        Assert.assertEquals(resultSet.getObject(17), new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
+        Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_BYTE, resultSet.getShort(14));
+        Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_SHORT, resultSet.getInt(15));
+        Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_INT, resultSet.getLong(16));
+        Assert.assertEquals(new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG), resultSet.getObject(17));
 
 
-        Date date = new Date(current);
-        Date date1 = resultSet.getDate(1);
-        Assert.assertEquals(resultSet.getDate(1), new Date(current));
-        Assert.assertEquals(resultSet.getTime(1), new Time(current));
-        Assert.assertEquals(resultSet.getTimestamp(1), new Timestamp(current));
-        Assert.assertEquals(resultSet.getBigDecimal(7).doubleValue(), 7.7, 0.000001);
+        Assert.assertEquals(new Date(current), resultSet.getDate(1));
+        Assert.assertEquals(new Time(current), resultSet.getTime(1));
+        Assert.assertEquals(new Timestamp(current), resultSet.getTimestamp(1));
+        Assert.assertEquals(7.7, resultSet.getBigDecimal(7).doubleValue(), 0.000001);
 
         resultSet.close();
         statement.close();
@@ -123,32 +121,30 @@ public class WsPstmtLineModeAllTypeTest {
 
         ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + tableName);
         resultSet.next();
-        Assert.assertEquals(resultSet.getTimestamp(1), new Timestamp(current));
-        Assert.assertEquals(resultSet.getByte(2), (byte) 2);
-        Assert.assertEquals(resultSet.getShort(3), (short) 3);
-        Assert.assertEquals(resultSet.getInt(4), 4);
-        Assert.assertEquals(resultSet.getLong(5), 5L);
-        Assert.assertEquals(resultSet.getFloat(6), 6.6f, 0.0001);
-        Assert.assertEquals(resultSet.getDouble(7), 7.7, 0.0001);
+        Assert.assertEquals(new Timestamp(current), resultSet.getTimestamp(1));
+        Assert.assertEquals((byte) 2, resultSet.getByte(2));
+        Assert.assertEquals((short) 3, resultSet.getShort(3));
+        Assert.assertEquals(4, resultSet.getInt(4));
+        Assert.assertEquals(5L, resultSet.getLong(5));
+        Assert.assertEquals(6.6f, resultSet.getFloat(6), 0.0001);
+        Assert.assertEquals(7.7, resultSet.getDouble(7), 0.0001);
         Assert.assertTrue(resultSet.getBoolean(8));
-        Assert.assertEquals(resultSet.getString(9), "你好");
-        Assert.assertEquals(resultSet.getString(10), "世界");
-        Assert.assertEquals(resultSet.getString(11), "hello world");
-        Assert.assertArrayEquals(resultSet.getBytes(12), expectedVarBinary);
-        Assert.assertArrayEquals(resultSet.getBytes(13), expectedGeometry);
+        Assert.assertEquals("你好", resultSet.getString(9));
+        Assert.assertEquals("世界", resultSet.getString(10));
+        Assert.assertEquals("hello world", resultSet.getString(11));
+        Assert.assertArrayEquals(expectedVarBinary, resultSet.getBytes(12));
+        Assert.assertArrayEquals(expectedGeometry, resultSet.getBytes(13));
 
-        Assert.assertEquals(resultSet.getShort(14), TSDBConstants.MAX_UNSIGNED_BYTE);
-        Assert.assertEquals(resultSet.getInt(15), TSDBConstants.MAX_UNSIGNED_SHORT);
-        Assert.assertEquals(resultSet.getLong(16), TSDBConstants.MAX_UNSIGNED_INT);
-        Assert.assertEquals(resultSet.getObject(17), new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
+        Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_BYTE, resultSet.getShort(14));
+        Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_SHORT, resultSet.getInt(15));
+        Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_INT, resultSet.getLong(16));
+        Assert.assertEquals(new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG), resultSet.getObject(17));
 
 
-        Date date = new Date(current);
-        Date date1 = resultSet.getDate(1);
-        Assert.assertEquals(resultSet.getDate(1), new Date(current));
-        Assert.assertEquals(resultSet.getTime(1), new Time(current));
-        Assert.assertEquals(resultSet.getTimestamp(1), new Timestamp(current));
-        Assert.assertEquals(resultSet.getBigDecimal(7).doubleValue(), 7.7, 0.000001);
+        Assert.assertEquals(new Date(current), resultSet.getDate(1));
+        Assert.assertEquals(new Time(current), resultSet.getTime(1));
+        Assert.assertEquals(new Timestamp(current), resultSet.getTimestamp(1));
+        Assert.assertEquals(7.7, resultSet.getBigDecimal(7).doubleValue(), 0.000001);
 
         resultSet.close();
         statement.close();
@@ -171,7 +167,7 @@ public class WsPstmtLineModeAllTypeTest {
         statement.setObject(10, "世界", Types.NCHAR);
         statement.setObject(11, "hello world", Types.VARCHAR);
         statement.setObject(12, expectedVarBinary, Types.VARBINARY);
-        statement.setObject(13, expectedGeometry,  Types.VARBINARY);
+        statement.setObject(13, expectedGeometry, Types.VARBINARY);
 
         statement.setObject(14, TSDBConstants.MAX_UNSIGNED_BYTE, Types.SMALLINT);
         statement.setObject(15, TSDBConstants.MAX_UNSIGNED_SHORT, Types.INTEGER);
@@ -182,32 +178,30 @@ public class WsPstmtLineModeAllTypeTest {
 
         ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + tableName);
         resultSet.next();
-        Assert.assertEquals(resultSet.getTimestamp(1), new Timestamp(current));
-        Assert.assertEquals(resultSet.getByte(2), (byte) 2);
-        Assert.assertEquals(resultSet.getShort(3), (short) 3);
-        Assert.assertEquals(resultSet.getInt(4), 4);
-        Assert.assertEquals(resultSet.getLong(5), 5L);
-        Assert.assertEquals(resultSet.getFloat(6), 6.6f, 0.0001);
-        Assert.assertEquals(resultSet.getDouble(7), 7.7, 0.0001);
+        Assert.assertEquals(new Timestamp(current), resultSet.getTimestamp(1));
+        Assert.assertEquals((byte) 2, resultSet.getByte(2));
+        Assert.assertEquals((short) 3, resultSet.getShort(3));
+        Assert.assertEquals(4, resultSet.getInt(4));
+        Assert.assertEquals(5L, resultSet.getLong(5));
+        Assert.assertEquals(6.6f, resultSet.getFloat(6), 0.0001);
+        Assert.assertEquals(7.7, resultSet.getDouble(7), 0.0001);
         Assert.assertTrue(resultSet.getBoolean(8));
-        Assert.assertEquals(resultSet.getString(9), "你好");
-        Assert.assertEquals(resultSet.getString(10), "世界");
-        Assert.assertEquals(resultSet.getString(11), "hello world");
-        Assert.assertArrayEquals(resultSet.getBytes(12), expectedVarBinary);
-        Assert.assertArrayEquals(resultSet.getBytes(13), expectedGeometry);
+        Assert.assertEquals("你好", resultSet.getString(9));
+        Assert.assertEquals("世界", resultSet.getString(10));
+        Assert.assertEquals("hello world", resultSet.getString(11));
+        Assert.assertArrayEquals(expectedVarBinary, resultSet.getBytes(12));
+        Assert.assertArrayEquals(expectedGeometry, resultSet.getBytes(13));
 
-        Assert.assertEquals(resultSet.getShort(14), TSDBConstants.MAX_UNSIGNED_BYTE);
-        Assert.assertEquals(resultSet.getInt(15), TSDBConstants.MAX_UNSIGNED_SHORT);
-        Assert.assertEquals(resultSet.getLong(16), TSDBConstants.MAX_UNSIGNED_INT);
-        Assert.assertEquals(resultSet.getObject(17), new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
+        Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_BYTE, resultSet.getShort(14));
+        Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_SHORT, resultSet.getInt(15));
+        Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_INT, resultSet.getLong(16));
+        Assert.assertEquals(new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG), resultSet.getObject(17));
 
 
-        Date date = new Date(current);
-        Date date1 = resultSet.getDate(1);
-        Assert.assertEquals(resultSet.getDate(1), new Date(current));
-        Assert.assertEquals(resultSet.getTime(1), new Time(current));
-        Assert.assertEquals(resultSet.getTimestamp(1), new Timestamp(current));
-        Assert.assertEquals(resultSet.getBigDecimal(7).doubleValue(), 7.7, 0.000001);
+        Assert.assertEquals(new Date(current), resultSet.getDate(1));
+        Assert.assertEquals(new Time(current), resultSet.getTime(1));
+        Assert.assertEquals(new Timestamp(current), resultSet.getTimestamp(1));
+        Assert.assertEquals(7.7, resultSet.getBigDecimal(7).doubleValue(), 0.000001);
 
         resultSet.close();
         statement.close();
@@ -230,13 +224,13 @@ public class WsPstmtLineModeAllTypeTest {
 
         ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + tableName);
         resultSet.next();
-        Assert.assertEquals(resultSet.getTimestamp(1), new Timestamp(current));
-        Assert.assertEquals(resultSet.getByte(2), (byte) 1);
-        Assert.assertEquals(resultSet.getShort(3), (short) 1);
-        Assert.assertEquals(resultSet.getInt(4), 1);
-        Assert.assertEquals(resultSet.getLong(5), 1L);
-        Assert.assertEquals(resultSet.getFloat(6), 1f, 0.0001);
-        Assert.assertEquals(resultSet.getDouble(7), 1, 0.0001);
+        Assert.assertEquals(new Timestamp(current), resultSet.getTimestamp(1));
+        Assert.assertEquals((byte) 1, resultSet.getByte(2));
+        Assert.assertEquals((short) 1, resultSet.getShort(3));
+        Assert.assertEquals(1, resultSet.getInt(4));
+        Assert.assertEquals(1L, resultSet.getLong(5));
+        Assert.assertEquals(1f, resultSet.getFloat(6), 0.0001);
+        Assert.assertEquals(1, resultSet.getDouble(7), 0.0001);
         resultSet.close();
         statement.close();
     }
@@ -259,7 +253,7 @@ public class WsPstmtLineModeAllTypeTest {
         statement.setObject(1, DateTimeUtils.getZonedDateTime(Instant.ofEpochMilli(current + 5), null), Types.TIMESTAMP);
         statement.execute();
 
-        int insertedRows = Utils.getSqlRows(connection,db_name + "." + tableName);
+        int insertedRows = Utils.getSqlRows(connection, db_name + "." + tableName);
         Assert.assertEquals(6, insertedRows);
         statement.close();
     }
@@ -285,8 +279,8 @@ public class WsPstmtLineModeAllTypeTest {
         statement.setBytes(13, expectedVarBinary);
         statement.setBytes(14, expectedGeometry);
         statement.setShort(15, TSDBConstants.MAX_UNSIGNED_BYTE);
-        statement.setInt(16,  TSDBConstants.MAX_UNSIGNED_SHORT);
-        statement.setLong(17,  TSDBConstants.MAX_UNSIGNED_INT);
+        statement.setInt(16, TSDBConstants.MAX_UNSIGNED_SHORT);
+        statement.setLong(17, TSDBConstants.MAX_UNSIGNED_INT);
         statement.setObject(18, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
 
         statement.setTimestamp(19, new Timestamp(current));
@@ -296,23 +290,23 @@ public class WsPstmtLineModeAllTypeTest {
 
         ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + stableName);
         resultSet.next();
-        Assert.assertEquals(resultSet.getTimestamp(1), new Timestamp(current));
-        Assert.assertEquals(resultSet.getByte(2), (byte) 2);
+        Assert.assertEquals(new Timestamp(current), resultSet.getTimestamp(1));
+        Assert.assertEquals((byte) 2, resultSet.getByte(2));
 
-        Assert.assertEquals(resultSet.getTimestamp(3), new Timestamp(current));
-        Assert.assertEquals(resultSet.getByte(4), (byte) 2);
-        Assert.assertEquals(resultSet.getShort(5), (short) 3);
-        Assert.assertEquals(resultSet.getInt(6), 4);
-        Assert.assertEquals(resultSet.getLong(7), 5L);
-        Assert.assertEquals(resultSet.getFloat(8), 6.6f, 0.0001);
-        Assert.assertEquals(resultSet.getDouble(9), 7.7, 0.0001);
+        Assert.assertEquals(new Timestamp(current), resultSet.getTimestamp(3));
+        Assert.assertEquals((byte) 2, resultSet.getByte(4));
+        Assert.assertEquals((short) 3, resultSet.getShort(5));
+        Assert.assertEquals(4, resultSet.getInt(6));
+        Assert.assertEquals(5L, resultSet.getLong(7));
+        Assert.assertEquals(6.6f, resultSet.getFloat(8), 0.0001);
+        Assert.assertEquals(7.7, resultSet.getDouble(9), 0.0001);
         Assert.assertTrue(resultSet.getBoolean(10));
-        Assert.assertEquals(resultSet.getString(11), "你好");
-        Assert.assertEquals(resultSet.getString(12), "世界");
-        Assert.assertEquals(resultSet.getString(13), "hello world");
+        Assert.assertEquals("你好", resultSet.getString(11));
+        Assert.assertEquals("世界", resultSet.getString(12));
+        Assert.assertEquals("hello world", resultSet.getString(13));
 
-        Assert.assertArrayEquals(resultSet.getBytes(14), expectedVarBinary);
-        Assert.assertArrayEquals(resultSet.getBytes(15), expectedGeometry);
+        Assert.assertArrayEquals(expectedVarBinary, resultSet.getBytes(14));
+        Assert.assertArrayEquals(expectedGeometry, resultSet.getBytes(15));
 
         Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_BYTE, resultSet.getShort(16));
         Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_SHORT, resultSet.getInt(17));

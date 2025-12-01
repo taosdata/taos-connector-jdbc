@@ -11,11 +11,11 @@ import java.sql.*;
 import java.util.Properties;
 
 public class TSDBDatabaseMetaDataTest {
-    private static final String host = "127.0.0.1";
+    private static final String HOST = "127.0.0.1";
     private static String url;
     private static Connection connection;
     private static TSDBDatabaseMetaData metaData;
-    private static String db_name = TestUtils.camelToSnake(TSDBDatabaseMetaDataTest.class);
+    private static final String DB_NAME = TestUtils.camelToSnake(TSDBDatabaseMetaDataTest.class);
 
     @Test
     public void unwrap() throws SQLException {
@@ -630,15 +630,15 @@ public class TSDBDatabaseMetaDataTest {
 
     @Test
     public void getTables() throws SQLException {
-        ResultSet rs = metaData.getTables(db_name, "", null, null);
+        ResultSet rs = metaData.getTables(DB_NAME, "", null, null);
         ResultSetMetaData meta = rs.getMetaData();
         Assert.assertNotNull(rs);
         rs.next();
         {
             // TABLE_CAT
             Assert.assertEquals("TABLE_CAT", meta.getColumnLabel(1));
-            Assert.assertEquals(db_name, rs.getString(1));
-            Assert.assertEquals(db_name, rs.getString("TABLE_CAT"));
+            Assert.assertEquals(DB_NAME, rs.getString(1));
+            Assert.assertEquals(DB_NAME, rs.getString("TABLE_CAT"));
             // TABLE_SCHEM
             Assert.assertEquals("TABLE_SCHEM", meta.getColumnLabel(2));
             Assert.assertEquals(null, rs.getString(2));
@@ -696,7 +696,7 @@ public class TSDBDatabaseMetaDataTest {
     @Test
     public void getColumns() throws SQLException {
         // when
-        ResultSet columns = metaData.getColumns(db_name, "", "dn", null);
+        ResultSet columns = metaData.getColumns(DB_NAME, "", "dn", null);
         // then
         ResultSetMetaData meta = columns.getMetaData();
         columns.next();
@@ -704,8 +704,8 @@ public class TSDBDatabaseMetaDataTest {
         {
             // TABLE_CAT
             Assert.assertEquals("TABLE_CAT", meta.getColumnLabel(1));
-            Assert.assertEquals(db_name, columns.getString(1));
-            Assert.assertEquals(db_name, columns.getString("TABLE_CAT"));
+            Assert.assertEquals(DB_NAME, columns.getString(1));
+            Assert.assertEquals(DB_NAME, columns.getString("TABLE_CAT"));
             // TABLE_NAME
             Assert.assertEquals("TABLE_NAME", meta.getColumnLabel(3));
             Assert.assertEquals("dn", columns.getString(3));
@@ -750,8 +750,8 @@ public class TSDBDatabaseMetaDataTest {
         {
             // TABLE_CAT
             Assert.assertEquals("TABLE_CAT", meta.getColumnLabel(1));
-            Assert.assertEquals(db_name, columns.getString(1));
-            Assert.assertEquals(db_name, columns.getString("TABLE_CAT"));
+            Assert.assertEquals(DB_NAME, columns.getString(1));
+            Assert.assertEquals(DB_NAME, columns.getString("TABLE_CAT"));
             // TABLE_NAME
             Assert.assertEquals("TABLE_NAME", meta.getColumnLabel(3));
             Assert.assertEquals("dn", columns.getString(3));
@@ -792,7 +792,7 @@ public class TSDBDatabaseMetaDataTest {
     @Test
     public void getColumnsUpperTableName() throws SQLException {
         // when
-        ResultSet columns = metaData.getColumns(db_name, "", "Bigdn1", null);
+        ResultSet columns = metaData.getColumns(DB_NAME, "", "Bigdn1", null);
         // then
         ResultSetMetaData meta = columns.getMetaData();
         columns.next();
@@ -800,8 +800,8 @@ public class TSDBDatabaseMetaDataTest {
         {
             // TABLE_CAT
             Assert.assertEquals("TABLE_CAT", meta.getColumnLabel(1));
-            Assert.assertEquals(db_name, columns.getString(1));
-            Assert.assertEquals(db_name, columns.getString("TABLE_CAT"));
+            Assert.assertEquals(DB_NAME, columns.getString(1));
+            Assert.assertEquals(DB_NAME, columns.getString("TABLE_CAT"));
             // TABLE_NAME
             Assert.assertEquals("TABLE_NAME", meta.getColumnLabel(3));
             Assert.assertEquals("Bigdn1", columns.getString(3));
@@ -846,8 +846,8 @@ public class TSDBDatabaseMetaDataTest {
         {
             // TABLE_CAT
             Assert.assertEquals("TABLE_CAT", meta.getColumnLabel(1));
-            Assert.assertEquals(db_name, columns.getString(1));
-            Assert.assertEquals(db_name, columns.getString("TABLE_CAT"));
+            Assert.assertEquals(DB_NAME, columns.getString(1));
+            Assert.assertEquals(DB_NAME, columns.getString("TABLE_CAT"));
             // TABLE_NAME
             Assert.assertEquals("TABLE_NAME", meta.getColumnLabel(3));
             Assert.assertEquals("Bigdn1", columns.getString(3));
@@ -908,14 +908,14 @@ public class TSDBDatabaseMetaDataTest {
     @Test
     public void getPrimaryKeys() throws SQLException {
         Assert.assertNotNull(metaData.getPrimaryKeys("", "", ""));
-        ResultSet rs = metaData.getPrimaryKeys(db_name, "", "dn1");
+        ResultSet rs = metaData.getPrimaryKeys(DB_NAME, "", "dn1");
         ResultSetMetaData meta = rs.getMetaData();
         rs.next();
         {
             // TABLE_CAT
             Assert.assertEquals("TABLE_CAT", meta.getColumnLabel(1));
-            Assert.assertEquals(db_name, rs.getString(1));
-            Assert.assertEquals(db_name, rs.getString("TABLE_CAT"));
+            Assert.assertEquals(DB_NAME, rs.getString(1));
+            Assert.assertEquals(DB_NAME, rs.getString("TABLE_CAT"));
             // TABLE_SCHEM
             Assert.assertEquals("TABLE_SCHEM", meta.getColumnLabel(2));
             Assert.assertEquals(null, rs.getString(2));
@@ -941,14 +941,14 @@ public class TSDBDatabaseMetaDataTest {
 
     @Test
     public void getPrimaryKeysUpperTableName() throws SQLException {
-        ResultSet rs = metaData.getPrimaryKeys(db_name, "", "Bigdn1");
+        ResultSet rs = metaData.getPrimaryKeys(DB_NAME, "", "Bigdn1");
         ResultSetMetaData meta = rs.getMetaData();
         rs.next();
         {
             // TABLE_CAT
             Assert.assertEquals("TABLE_CAT", meta.getColumnLabel(1));
-            Assert.assertEquals(db_name, rs.getString(1));
-            Assert.assertEquals(db_name, rs.getString("TABLE_CAT"));
+            Assert.assertEquals(DB_NAME, rs.getString(1));
+            Assert.assertEquals(DB_NAME, rs.getString("TABLE_CAT"));
             // TABLE_SCHEM
             Assert.assertEquals("TABLE_SCHEM", meta.getColumnLabel(2));
             Assert.assertEquals(null, rs.getString(2));
@@ -1094,14 +1094,14 @@ public class TSDBDatabaseMetaDataTest {
 
     @Test
     public void getSuperTables() throws SQLException {
-        ResultSet rs = metaData.getSuperTables(db_name, "", "dn1");
+        ResultSet rs = metaData.getSuperTables(DB_NAME, "", "dn1");
         ResultSetMetaData meta = rs.getMetaData();
         rs.next();
         {
             // TABLE_CAT
             Assert.assertEquals("TABLE_CAT", meta.getColumnLabel(1));
-            Assert.assertEquals(db_name, rs.getString(1));
-            Assert.assertEquals(db_name, rs.getString("TABLE_CAT"));
+            Assert.assertEquals(DB_NAME, rs.getString(1));
+            Assert.assertEquals(DB_NAME, rs.getString("TABLE_CAT"));
             // TABLE_CAT
             Assert.assertEquals("TABLE_SCHEM", meta.getColumnLabel(2));
             Assert.assertEquals(null, rs.getString(2));
@@ -1216,12 +1216,12 @@ public class TSDBDatabaseMetaDataTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
         url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
         }
         connection = DriverManager.getConnection(url, properties);
         try (Statement statement = connection.createStatement()) {
-            statement.executeUpdate("create database if not exists " + db_name + " precision 'ns'");
-            statement.executeUpdate("use " + db_name);
+            statement.executeUpdate("create database if not exists " + DB_NAME + " precision 'ns'");
+            statement.executeUpdate("use " + DB_NAME);
             statement.executeUpdate(
                     "create table if not exists dn (ts timestamp, cpu_taosd float, cpu_system float, cpu_cores int," +
                             " mem_taosd float, mem_system float, mem_total int, disk_used float, disk_total int," +
@@ -1237,7 +1237,7 @@ public class TSDBDatabaseMetaDataTest {
     public static void afterClass() throws SQLException {
         if (connection != null)
             try (Statement statement = connection.createStatement()) {
-                statement.executeUpdate("drop database if exists " + db_name);
+                statement.executeUpdate("drop database if exists " + DB_NAME);
             }
         connection.close();
     }

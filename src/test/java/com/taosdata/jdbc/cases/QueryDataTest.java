@@ -16,9 +16,9 @@ public class QueryDataTest {
 
     static Connection connection;
     static Statement statement;
-    static String dbName = TestUtils.camelToSnake(QueryDataTest.class);
-    static String stbName = "meters";
-    static String host = "127.0.0.1";
+    static final String dbName = TestUtils.camelToSnake(QueryDataTest.class);
+    static final String stbName = "meters";
+    static final String host = "127.0.0.1";
 
     @Before
     public void createDatabase() throws SQLException {

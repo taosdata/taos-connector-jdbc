@@ -15,9 +15,9 @@ import static org.junit.Assert.*;
 
 public class MultiConnectionWithDifferentDbTest {
 
-    private static String host = "127.0.0.1";
-    private static String db1 = "db1";
-    private static String db2 = "db2";
+    private static final String HOST = "127.0.0.1";
+    private static final String DB_1 = "db1";
+    private static final String DB_2 = "db2";
 
     private long ts;
 
@@ -40,7 +40,7 @@ public class MultiConnectionWithDifferentDbTest {
             private void queryDb() throws SQLException {
                 String url = SpecifyAddress.getInstance().getRestWithoutUrl();
                 if (url == null) {
-                    url = "jdbc:TAOS-RS://" + host + ":6041/db" + i + "?user=root&password=taosdata";
+                    url = "jdbc:TAOS-RS://" + HOST + ":6041/db" + i + "?user=root&password=taosdata";
                 } else {
                     url = url + "db" + i + "?user=root&password=taosdata";
                 }
@@ -57,8 +57,8 @@ public class MultiConnectionWithDifferentDbTest {
                     assertEquals(i, f1);
 
                     String loc = i == 1 ? "beijing" : "shanghai";
-                    String loc_actual = rs.getString("loc");
-                    assertEquals(loc, loc_actual);
+                    String locActual = rs.getString("loc");
+                    assertEquals(loc, locActual);
 
                     stmt.close();
                 }
@@ -83,19 +83,19 @@ public class MultiConnectionWithDifferentDbTest {
 
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
         }
         try (Connection conn = DriverManager.getConnection(url)) {
             Statement stmt = conn.createStatement();
-            stmt.execute("drop database if exists " + db1);
-            stmt.execute("create database if not exists " + db1);
-            stmt.execute("use " + db1);
+            stmt.execute("drop database if exists " + DB_1);
+            stmt.execute("create database if not exists " + DB_1);
+            stmt.execute("use " + DB_1);
             stmt.execute("create table weather(ts timestamp, f1 int) tags(loc nchar(10))");
             stmt.execute("insert into t1 using weather tags('beijing') values(" + ts + ", 1)");
 
-            stmt.execute("drop database if exists " + db2);
-            stmt.execute("create database if not exists " + db2);
-            stmt.execute("use " + db2);
+            stmt.execute("drop database if exists " + DB_2);
+            stmt.execute("create database if not exists " + DB_2);
+            stmt.execute("use " + DB_2);
             stmt.execute("create table weather(ts timestamp, f1 int) tags(loc nchar(10))");
             stmt.execute("insert into t1 using weather tags('shanghai') values(" + ts + ", 2)");
         }
@@ -105,12 +105,12 @@ public class MultiConnectionWithDifferentDbTest {
     public void after() {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
         }
         try (Connection connection = DriverManager.getConnection(url);
              Statement statement = connection.createStatement()) {
-            statement.execute("drop database if exists " + db1);
-            statement.execute("drop database if exists " + db2);
+            statement.execute("drop database if exists " + DB_1);
+            statement.execute("drop database if exists " + DB_2);
         } catch (SQLException e) {
             e.printStackTrace();
         }

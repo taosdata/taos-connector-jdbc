@@ -5,8 +5,6 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.taosdata.jdbc.utils.UInt64Deserializer;
 import com.taosdata.jdbc.ws.entity.CommonResp;
 
-import java.util.List;
-
 // init | prepare | set_table_name | set_tags | bind | add_batch
 public class Stmt2Resp extends CommonResp {
     @JsonProperty("stmt_id")

@@ -16,19 +16,19 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 public class WSConsumerMetaTest {
-    private static final String host = "127.0.0.1";
-    private static final String dbName = TestUtils.camelToSnake(WSConsumerMetaTest.class);
-    private static final String superTable = "st";
-    private static final String superTableJson = "st_json";
+    private static final String HOST = "127.0.0.1";
+    private static final String DB_NAME = TestUtils.camelToSnake(WSConsumerMetaTest.class);
+    private static final String SUPER_TABLE = "st";
+    private static final String SUPER_TABLE_JSON = "st_json";
     private static Connection connection;
     private static Statement statement;
-    private static String[] topics = {"topic_ws_map" + dbName, "topic_db" + dbName, "topic_json" + dbName};
+    private static final String[] topics = {"topic_ws_map" + DB_NAME, "topic_db" + DB_NAME, "topic_json" + DB_NAME};
 
     @Test
     public void testCreateChildTable() throws Exception {
         String topic = topics[0];
         // create topic
-        statement.executeUpdate("create topic if not exists " + topic + " only meta as STABLE " + superTable);
+        statement.executeUpdate("create topic if not exists " + topic + " only meta as STABLE " + SUPER_TABLE);
 
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.CONNECT_USER, "root");
@@ -46,7 +46,7 @@ public class WSConsumerMetaTest {
             consumer.poll(Duration.ofMillis(100));
             {
                 int idx = 1;
-                String sql = String.format("create table if not exists %s using %s.%s tags(%s, '%s', %s)", "ct" + idx, dbName, superTable, idx, "t" + idx, "true");
+                String sql = String.format("create table if not exists %s using %s.%s tags(%s, '%s', %s)", "ct" + idx, DB_NAME, SUPER_TABLE, idx, "t" + idx, "true");
                 statement.execute(sql);
             }
 
@@ -86,7 +86,7 @@ public class WSConsumerMetaTest {
     public void testAutoCreateChildTable() throws Exception {
         String topic = topics[0];
         // create topic
-        statement.executeUpdate("create topic if not exists " + topic + " only meta as STABLE " + superTable);
+        statement.executeUpdate("create topic if not exists " + topic + " only meta as STABLE " + SUPER_TABLE);
 
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.CONNECT_USER, "root");
@@ -104,7 +104,7 @@ public class WSConsumerMetaTest {
             consumer.poll(Duration.ofMillis(100));
             {
                 int idx = 1;
-                String sql = String.format("insert into %s using %s.%s tags(%s, '%s', %s) values (now, 1)", "act" + idx, dbName, superTable, idx, "t" + idx, "true");
+                String sql = String.format("insert into %s using %s.%s tags(%s, '%s', %s) values (now, 1)", "act" + idx, DB_NAME, SUPER_TABLE, idx, "t" + idx, "true");
                 statement.execute(sql);
             }
 
@@ -144,7 +144,7 @@ public class WSConsumerMetaTest {
     public void testCreateChildTableJson() throws Exception {
         String topic = topics[2];
         // create topic
-        statement.executeUpdate("create topic if not exists " + topic + " only meta as STABLE " + superTableJson);
+        statement.executeUpdate("create topic if not exists " + topic + " only meta as STABLE " + SUPER_TABLE_JSON);
 
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.CONNECT_USER, "root");
@@ -162,7 +162,7 @@ public class WSConsumerMetaTest {
             consumer.poll(Duration.ofMillis(100));
             {
                 int idx = 1;
-                String sql = String.format("create table if not exists %s using %s.%s tags('%s')", "et" + idx, dbName, superTableJson, "{\"a\":1}");
+                String sql = String.format("create table if not exists %s using %s.%s tags('%s')", "et" + idx, DB_NAME, SUPER_TABLE_JSON, "{\"a\":1}");
                 statement.execute(sql);
             }
 
@@ -200,7 +200,7 @@ public class WSConsumerMetaTest {
     public void testCreateMultiChildTable() throws Exception {
         String topic = topics[0];
         // create topic
-        statement.executeUpdate("create topic if not exists " + topic + " only meta as STABLE " + superTable);
+        statement.executeUpdate("create topic if not exists " + topic + " only meta as STABLE " + SUPER_TABLE);
 
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.CONNECT_USER, "root");
@@ -220,7 +220,7 @@ public class WSConsumerMetaTest {
             {
                 String sql = "create table if not exists ";
                 for (int idx = 1; idx <= subTableNum; idx++) {
-                    sql += String.format("%s using %s.%s tags(%s, '%s', %s)", "dt" + idx, dbName, superTable, idx, "t" + idx, "true");
+                    sql += String.format("%s using %s.%s tags(%s, '%s', %s)", "dt" + idx, DB_NAME, SUPER_TABLE, idx, "t" + idx, "true");
                 }
                 statement.execute(sql);
             }
@@ -271,7 +271,7 @@ public class WSConsumerMetaTest {
     public void testCreateSuperTable() throws Exception {
         String topic = topics[1];
         // create topic
-        statement.executeUpdate("create topic if not exists " + topic + " only meta as database " + dbName);
+        statement.executeUpdate("create topic if not exists " + topic + " only meta as database " + DB_NAME);
 
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.CONNECT_USER, "root");
@@ -289,7 +289,7 @@ public class WSConsumerMetaTest {
             consumer.poll(Duration.ofMillis(100));
             {
                 int idx = 1;
-                statement.execute("create stable if not exists " + superTable + idx
+                statement.execute("create stable if not exists " + SUPER_TABLE + idx
                         + " (ts timestamp, c1 int) tags(t1 int, t2 bool)");
             }
 
@@ -330,7 +330,7 @@ public class WSConsumerMetaTest {
     public void testCreateNormalTable() throws Exception {
         String topic = topics[1];
         // create topic
-        statement.executeUpdate("create topic if not exists " + topic + " only meta as database " + dbName);
+        statement.executeUpdate("create topic if not exists " + topic + " only meta as database " + DB_NAME);
 
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.CONNECT_USER, "root");
@@ -388,7 +388,7 @@ public class WSConsumerMetaTest {
     public void testDropSuperTable() throws Exception {
         String topic = topics[1];
         // create topic
-        statement.executeUpdate("create topic if not exists " + topic + " only meta as database " + dbName);
+        statement.executeUpdate("create topic if not exists " + topic + " only meta as database " + DB_NAME);
 
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.CONNECT_USER, "root");
@@ -406,10 +406,10 @@ public class WSConsumerMetaTest {
             consumer.poll(Duration.ofMillis(100));
             {
                 int idx = 2;
-                statement.execute("create stable if not exists " + superTable + idx
+                statement.execute("create stable if not exists " + SUPER_TABLE + idx
                         + " (ts timestamp, c1 int) tags(t1 int, t2 bool)");
 
-                statement.execute("drop stable if exists " + superTable + idx);
+                statement.execute("drop stable if exists " + SUPER_TABLE + idx);
             }
 
             MetaDropSuperTable dstMeta = new MetaDropSuperTable();
@@ -431,7 +431,7 @@ public class WSConsumerMetaTest {
                     }
                 }
                 maxLoop--;
-            };
+            }
 
             Assert.assertTrue(getDrop);
             consumer.commitSync();
@@ -443,7 +443,7 @@ public class WSConsumerMetaTest {
     public void testDropChildTable() throws Exception {
         String topic = topics[0];
         // create topic
-        statement.executeUpdate("create topic if not exists " + topic + " only meta as STABLE " + superTable);
+        statement.executeUpdate("create topic if not exists " + topic + " only meta as STABLE " + SUPER_TABLE);
 
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.CONNECT_USER, "root");
@@ -463,7 +463,7 @@ public class WSConsumerMetaTest {
             {
                 String sql = "create table if not exists ";
                 for (int idx = 1; idx <= subTableNum; idx++) {
-                    sql += String.format(" %s using %s.%s tags(%s, '%s', %s)", "cht" + idx, dbName, superTable, idx, "t" + idx, "true");
+                    sql += String.format(" %s using %s.%s tags(%s, '%s', %s)", "cht" + idx, DB_NAME, SUPER_TABLE, idx, "t" + idx, "true");
                 }
                 statement.execute(sql);
 
@@ -505,7 +505,7 @@ public class WSConsumerMetaTest {
     public void testAlterTable() throws Exception {
         String topic = topics[0];
         // create topic
-        statement.executeUpdate("create topic if not exists " + topic + " only meta as STABLE " + superTable);
+        statement.executeUpdate("create topic if not exists " + topic + " only meta as STABLE " + SUPER_TABLE);
 
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.CONNECT_USER, "root");
@@ -524,7 +524,7 @@ public class WSConsumerMetaTest {
             consumer.poll(Duration.ofMillis(100));
             {
                 int idx = 1001;
-                String sql = String.format("create table if not exists %s using %s.%s tags(%s, '%s', %s)", "ct" + idx, dbName, superTable, idx, "t" + idx, "true");
+                String sql = String.format("create table if not exists %s using %s.%s tags(%s, '%s', %s)", "ct" + idx, DB_NAME, SUPER_TABLE, idx, "t" + idx, "true");
                 statement.execute(sql);
 
                 String alterSql = String.format("alter table ct" + idx + " set tag t1=1001, t2='tt1001', t3=false");
@@ -570,7 +570,7 @@ public class WSConsumerMetaTest {
     public static void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + host + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST + ":6041/?user=root&password=taosdata";
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
@@ -581,12 +581,12 @@ public class WSConsumerMetaTest {
         for (String topic : topics) {
             statement.executeUpdate("drop topic if exists " + topic);
         }
-        statement.execute("drop database if exists " + dbName);
-        statement.execute("create database if not exists " + dbName + " WAL_RETENTION_PERIOD 3650");
-        statement.execute("use " + dbName);
-        statement.execute("create stable if not exists " + superTable
+        statement.execute("drop database if exists " + DB_NAME);
+        statement.execute("create database if not exists " + DB_NAME + " WAL_RETENTION_PERIOD 3650");
+        statement.execute("use " + DB_NAME);
+        statement.execute("create stable if not exists " + SUPER_TABLE
                 + " (ts timestamp, c1 int) tags(t1 int, t2 varchar(10), t3 bool)");
-        statement.execute("create stable if not exists " + superTableJson
+        statement.execute("create stable if not exists " + SUPER_TABLE_JSON
                 + " (ts timestamp, c1 int) tags(t1 json)");
     }
 
@@ -599,7 +599,7 @@ public class WSConsumerMetaTest {
                         TimeUnit.SECONDS.sleep(3);
                         statement.executeUpdate("drop topic if exists " + topic);
                     }
-                    statement.executeUpdate("drop database if exists " + dbName);
+                    statement.executeUpdate("drop database if exists " + DB_NAME);
                     statement.close();
                 }
                 connection.close();

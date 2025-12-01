@@ -1,10 +1,8 @@
 package com.taosdata.jdbc.cloud;
 
 import com.taosdata.jdbc.AbstractConnection;
-import com.taosdata.jdbc.confprops.HttpKeepAliveTest;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
-import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -15,7 +13,7 @@ import java.sql.*;
 public class CloudSchemalessNewTest {
     String url = null;
     public static Connection connection;
-    String dbName = "javatest";
+    final String dbName = "javatest";
 
     @Before
     public void before() throws SQLException {
@@ -36,9 +34,9 @@ public class CloudSchemalessNewTest {
         }
 
         // given
-        long cur_time = System.currentTimeMillis();
+        long curTime = System.currentTimeMillis();
         String[] lines = new String[]{
-                "st,t1=3i64,t2=4f64,t3=\"t3\",ts=" + cur_time + " c1=3i64,c3=L\"passit\",c2=false,c4=4f64 " + cur_time};
+                "st,t1=3i64,t2=4f64,t3=\"t3\",ts=" + curTime + " c1=3i64,c3=L\"passit\",c2=false,c4=4f64 " + curTime};
 
         // when
         ((AbstractConnection)connection).write(lines, SchemalessProtocolType.LINE, SchemalessTimestampType.MILLI_SECONDS);
@@ -49,7 +47,7 @@ public class CloudSchemalessNewTest {
         ResultSetMetaData metaData = rs.getMetaData();
         Assert.assertTrue(metaData.getColumnCount() > 0);
         while (rs.next()) {
-            Assert.assertEquals(cur_time, rs.getLong("_ts"));
+            Assert.assertEquals(curTime, rs.getLong("_ts"));
         }
         rs.close();
         statement.close();

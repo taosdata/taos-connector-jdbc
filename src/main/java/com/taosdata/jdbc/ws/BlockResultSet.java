@@ -1,18 +1,11 @@
 package com.taosdata.jdbc.ws;
 
-import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
-import com.google.common.primitives.Shorts;
-import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.TaosGlobalConfig;
 import com.taosdata.jdbc.common.TDBlob;
-import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.utils.DataTypeConverUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
-import com.taosdata.jdbc.utils.Utils;
-import com.taosdata.jdbc.ws.entity.FetchBlockNewResp;
 import com.taosdata.jdbc.ws.entity.QueryResp;
 
 import java.io.UnsupportedEncodingException;
@@ -21,11 +14,9 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.time.*;
-import java.time.format.DateTimeParseException;
 import java.util.Calendar;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
-import static com.taosdata.jdbc.utils.UnsignedDataUtils.*;
 
 public class BlockResultSet extends AbstractWSResultSet {
     private final ZoneId zoneId;

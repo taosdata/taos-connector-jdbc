@@ -19,7 +19,7 @@ import java.util.Set;
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "JsonTag", author = "huolibo", version = "2.0.38")
 public class WSJsonTagTest {
-    private static String host = "127.0.0.1";
+    private static final String host = "127.0.0.1";
     private static final String dbName = TestUtils.camelToSnake(WSJsonTagTest.class);
     private static Connection connection;
     private static Statement statement;

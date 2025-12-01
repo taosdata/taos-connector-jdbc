@@ -27,8 +27,8 @@ public class WSRetryableStmt extends WSStatement {
 
     protected final ConnectionParam param;
     protected StmtInfo stmtInfo;
-    protected AtomicReference<SQLException> lastError = new AtomicReference<>(null);
-    protected final AtomicInteger batchInsertedRows;
+    protected final AtomicReference<SQLException> lastError = new AtomicReference<>(null);
+    protected final AtomicInteger batchInsertedRowsInner;
     private long reconnectCount;
 
     public WSRetryableStmt(AbstractConnection connection,
@@ -41,7 +41,7 @@ public class WSRetryableStmt extends WSStatement {
         super(transport, database, connection, instanceId, param.getZoneId());
         this.param = param;
         this.stmtInfo = stmtInfo;
-        this.batchInsertedRows = batchInsertedRows;
+        this.batchInsertedRowsInner = batchInsertedRows;
         this.reconnectCount = transport.getReconnectCount();
     }
 
@@ -142,7 +142,7 @@ public class WSRetryableStmt extends WSStatement {
                 // Process result based on operation type
                 if (operationType == OPERATION_TYPE_WRITE) {
                     int affectedRows = resp.getAffected();
-                    batchInsertedRows.addAndGet(affectedRows);
+                    batchInsertedRowsInner.addAndGet(affectedRows);
                     return affectedRows;
                 } else if (operationType == OPERATION_TYPE_QUERY) {
                     // Get query result

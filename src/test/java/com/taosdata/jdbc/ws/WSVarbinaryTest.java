@@ -11,20 +11,20 @@ import java.util.ArrayList;
 import java.util.Properties;
 
 public class WSVarbinaryTest {
-    static String host = "127.0.0.1";
-    static String dbName = TestUtils.camelToSnake(WSVarbinaryTest.class);
-    static String tableNative = "varbinary_noraml";
-    static String tableStmt = "varbinary_stmt";
+    static final String HOST = "127.0.0.1";
+    static final String DB_NAME = TestUtils.camelToSnake(WSVarbinaryTest.class);
+    static final String TABLE_NATIVE = "varbinary_noraml";
+    static final String TABLE_STMT = "varbinary_stmt";
     static Connection connection;
     static Statement statement;
 
-    static String testStr = "20160601";
-    static byte[] expectedArray = StringUtils.hexToBytes(testStr);
+    static final String TEST_STR = "20160601";
+    static final byte[] expectedArray = StringUtils.hexToBytes(TEST_STR);
 
     @Test
     public void testInsert() throws Exception {
-        statement.executeUpdate("insert into " + dbName + "." + tableNative + " values(now, \"\\x" + testStr + "\")");
-        ResultSet resultSet = statement.executeQuery("select c1 from " + dbName + "." + tableNative);
+        statement.executeUpdate("insert into " + DB_NAME + "." + TABLE_NATIVE + " values(now, \"\\x" + TEST_STR + "\")");
+        ResultSet resultSet = statement.executeQuery("select c1 from " + DB_NAME + "." + TABLE_NATIVE);
 
         resultSet.next();
         byte[] result1 = resultSet.getBytes(1);
@@ -34,13 +34,13 @@ public class WSVarbinaryTest {
 
     @Test
     public void testPrepare() throws SQLException {
-        TSWSPreparedStatement preparedStatement = (TSWSPreparedStatement) connection.prepareStatement("insert into " + dbName + "." + tableStmt + " values (?, ?)");
+        TSWSPreparedStatement preparedStatement = (TSWSPreparedStatement) connection.prepareStatement("insert into " + DB_NAME + "." + TABLE_STMT + " values (?, ?)");
         preparedStatement.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
 
         preparedStatement.setBytes(2, expectedArray);
         preparedStatement.addBatch();
         preparedStatement.executeBatch();
-        ResultSet resultSet = statement.executeQuery("select c1 from " + dbName + "." + tableStmt);
+        ResultSet resultSet = statement.executeQuery("select c1 from " + DB_NAME + "." + TABLE_STMT);
         while (resultSet.next()) {
             Assert.assertArrayEquals(expectedArray, resultSet.getBytes(1));
         }
@@ -48,7 +48,7 @@ public class WSVarbinaryTest {
 
     @Test
     public void testPrepareOld() throws SQLException {
-        TSWSPreparedStatement preparedStatement = (TSWSPreparedStatement) connection.prepareStatement("insert into " + dbName + "." + tableStmt + " values (?, ?)");
+        TSWSPreparedStatement preparedStatement = (TSWSPreparedStatement) connection.prepareStatement("insert into " + DB_NAME + "." + TABLE_STMT + " values (?, ?)");
 
         long current = System.currentTimeMillis();
         ArrayList<Long> tsList = new ArrayList<>();
@@ -61,7 +61,7 @@ public class WSVarbinaryTest {
 
         preparedStatement.columnDataAddBatch();
         preparedStatement.columnDataExecuteBatch();
-        ResultSet resultSet = statement.executeQuery("select c1 from " + dbName + "." + tableStmt);
+        ResultSet resultSet = statement.executeQuery("select c1 from " + DB_NAME + "." + TABLE_STMT);
         while (resultSet.next()) {
             Assert.assertArrayEquals(expectedArray, resultSet.getBytes(1));
         }
@@ -71,25 +71,25 @@ public class WSVarbinaryTest {
     public static void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata&batchfetch=true";
+            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata&batchfetch=true";
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
         connection = DriverManager.getConnection(url, properties);
         statement = connection.createStatement();
-        statement.executeUpdate("drop database if exists " + dbName);
-        statement.executeUpdate("create database if not exists " + dbName);
-        statement.executeUpdate("use " + dbName);
-        statement.executeUpdate("create table " + tableNative + " (ts timestamp, c1 varbinary(20))");
-        statement.executeUpdate("create table " + tableStmt + " (ts timestamp, c1 varbinary(20))");
+        statement.executeUpdate("drop database if exists " + DB_NAME);
+        statement.executeUpdate("create database if not exists " + DB_NAME);
+        statement.executeUpdate("use " + DB_NAME);
+        statement.executeUpdate("create table " + TABLE_NATIVE + " (ts timestamp, c1 varbinary(20))");
+        statement.executeUpdate("create table " + TABLE_STMT + " (ts timestamp, c1 varbinary(20))");
     }
 
     @AfterClass
     public static void after() {
         try {
             if (statement != null && !statement.isClosed()) {
-                statement.executeUpdate("drop database if exists " + dbName);
+                statement.executeUpdate("drop database if exists " + DB_NAME);
                 statement.close();
             }
             if (connection != null && !connection.isClosed()) {

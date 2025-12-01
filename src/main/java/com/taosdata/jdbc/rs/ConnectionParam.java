@@ -34,7 +34,7 @@ public class ConnectionParam {
     private int connectTimeout;
     private int requestTimeout;
     private int connectMode;
-    private boolean varcharAsString;
+    private final boolean varcharAsString;
     private boolean enableCompression;
     private boolean enableAutoConnect;
 

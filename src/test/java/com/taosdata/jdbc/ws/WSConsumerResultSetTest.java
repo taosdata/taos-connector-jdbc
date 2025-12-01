@@ -1,8 +1,5 @@
 package com.taosdata.jdbc.ws;
 
-import com.taosdata.jdbc.EmptyResultSet;
-import com.taosdata.jdbc.TSDBError;
-import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.ws.tmq.WSConsumerResultSet;
 import org.junit.Before;
 import org.junit.Test;

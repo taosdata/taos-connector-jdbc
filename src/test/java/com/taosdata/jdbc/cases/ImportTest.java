@@ -14,9 +14,9 @@ import static org.junit.Assert.assertEquals;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class ImportTest {
     private static Connection connection;
-    static String dbName = TestUtils.camelToSnake(ImportTest.class);
-    static String tName = "t0";
-    static String host = "127.0.0.1";
+    static final String dbName = TestUtils.camelToSnake(ImportTest.class);
+    static final String tName = "t0";
+    static final String host = "127.0.0.1";
     private static long ts;
 
     @Test

@@ -31,8 +31,8 @@ public class WSConsumerMetaDeleteTest {
     private static final String superTableJson = "st_json";
     private static Connection connection;
     private static Statement statement;
-    private static String[] topics = {"topic_ws_map" + dbName, "topic_db" + dbName, "topic_json" + dbName};
-    private String topicWith;
+    private static final String[] topics = {"topic_ws_map" + dbName, "topic_db" + dbName, "topic_json" + dbName};
+    private final String topicWith;
 
     public WSConsumerMetaDeleteTest(String topicWith) {
         this.topicWith = topicWith;

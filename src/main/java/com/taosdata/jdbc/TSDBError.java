@@ -10,7 +10,7 @@ import java.util.concurrent.TimeoutException;
 
 public class TSDBError {
     private static final Map<Integer, String> TSDBErrorMap = new HashMap<>();
-    private TSDBError(){};
+    private TSDBError(){}
 
     static {
         TSDBErrorMap.put(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, "connection already closed");

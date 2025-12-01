@@ -13,15 +13,15 @@ import java.util.ArrayList;
 import java.util.Properties;
 
 public class WSBlobTest {
-    static String host = "127.0.0.1";
-    static String dbName = TestUtils.camelToSnake(WSBlobTest.class);;
-    static String tableNative = "blob_noraml";
-    static String tableStmt = "blob_stmt";
+    static final String host = "127.0.0.1";
+    static final String dbName = TestUtils.camelToSnake(WSBlobTest.class);
+    static final String tableNative = "blob_noraml";
+    static final String tableStmt = "blob_stmt";
     static Connection connection;
     static Statement statement;
 
-    static String testStr = "20160601";
-    static byte[] expectedArray = StringUtils.hexToBytes(testStr);
+    static final String testStr = "20160601";
+    static final byte[] expectedArray = StringUtils.hexToBytes(testStr);
 
     @BeforeClass
     public static void checkEnvironment() {

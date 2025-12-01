@@ -24,7 +24,7 @@ public class RestfulStatement extends AbstractStatement {
     private final RestfulConnection conn;
     private static final String ROW_NAME = "affected_rows";
 
-    private RestfulResultSet resultSet;
+    private volatile RestfulResultSet resultSet; //NOSONAR
 
     public RestfulStatement(RestfulConnection conn, String database) {
         this.conn = conn;

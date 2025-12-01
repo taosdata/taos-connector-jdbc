@@ -4,7 +4,6 @@ package com.taosdata.jdbc.utils;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
-import com.taosdata.jdbc.TSDBConstants;
 import org.junit.Ignore;
 import org.junit.Test;
 

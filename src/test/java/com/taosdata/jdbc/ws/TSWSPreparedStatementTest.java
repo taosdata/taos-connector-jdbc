@@ -11,39 +11,39 @@ import java.util.ArrayList;
 import java.util.Random;
 
 public class TSWSPreparedStatementTest {
-    private static final String host = "127.0.0.1";
+    private static final String HOST = "127.0.0.1";
     private static Connection conn;
-    private static final String sql_insert = "insert into t1 values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    private static final String sql_select = "select * from t1 where ts >= ? and ts < ? and f1 >= ?";
-    private static final String dbname = TestUtils.camelToSnake(TSWSPreparedStatementTest.class);
+    private static final String SQL_INSERT = "insert into t1 values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    private static final String SQL_SELECT = "select * from t1 where ts >= ? and ts < ? and f1 >= ?";
+    private static final String DBNAME = TestUtils.camelToSnake(TSWSPreparedStatementTest.class);
 
-    private PreparedStatement pstmt_insert;
-    private PreparedStatement pstmt_select;
+    private PreparedStatement pstmtInsert;
+    private PreparedStatement pstmtSelect;
     //create table weather(ts timestamp, f1 int, f2 bigint, f3 float, f4 double, f5 smallint, f6 tinyint, f7 bool, f8 binary(64), f9 nchar(64)) tags(loc nchar(64))
 
     @Test
     public void executeQuery() throws SQLException {
         // given
         long ts = System.currentTimeMillis();
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        pstmt_insert.setInt(2, 2);
-        pstmt_insert.setLong(3, 3L);
-        pstmt_insert.setFloat(4, 3.14f);
-        pstmt_insert.setDouble(5, 3.1415);
-        pstmt_insert.setShort(6, (short) 6);
-        pstmt_insert.setByte(7, (byte) 7);
-        pstmt_insert.setBoolean(8, true);
-        pstmt_insert.setBytes(9, "abc".getBytes());
-        pstmt_insert.setNString(10, "涛思数据");
-        pstmt_insert.executeUpdate();
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setInt(2, 2);
+        pstmtInsert.setLong(3, 3L);
+        pstmtInsert.setFloat(4, 3.14f);
+        pstmtInsert.setDouble(5, 3.1415);
+        pstmtInsert.setShort(6, (short) 6);
+        pstmtInsert.setByte(7, (byte) 7);
+        pstmtInsert.setBoolean(8, true);
+        pstmtInsert.setBytes(9, "abc".getBytes());
+        pstmtInsert.setNString(10, "涛思数据");
+        pstmtInsert.executeUpdate();
         long start = ts - 1000 * 60 * 60;
         long end = ts + 1000 * 60 * 60;
-        pstmt_select.setTimestamp(1, new Timestamp(start));
-        pstmt_select.setTimestamp(2, new Timestamp(end));
-        pstmt_select.setInt(3, 0);
+        pstmtSelect.setTimestamp(1, new Timestamp(start));
+        pstmtSelect.setTimestamp(2, new Timestamp(end));
+        pstmtSelect.setInt(3, 0);
 
         // when
-        ResultSet rs = pstmt_select.executeQuery();
+        ResultSet rs = pstmtSelect.executeQuery();
         ResultSetMetaData meta = rs.getMetaData();
         rs.next();
 
@@ -93,17 +93,17 @@ public class TSWSPreparedStatementTest {
         long ts = System.currentTimeMillis();
 
         // when
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        pstmt_insert.setNull(2, Types.INTEGER);
-        pstmt_insert.setNull(3, Types.BIGINT);
-        pstmt_insert.setNull(4, Types.FLOAT);
-        pstmt_insert.setNull(5, Types.DOUBLE);
-        pstmt_insert.setNull(6, Types.SMALLINT);
-        pstmt_insert.setNull(7, Types.TINYINT);
-        pstmt_insert.setNull(8, Types.BOOLEAN);
-        pstmt_insert.setNull(9, Types.BINARY);
-        pstmt_insert.setNull(10, Types.NCHAR);
-        int result = pstmt_insert.executeUpdate();
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setNull(2, Types.INTEGER);
+        pstmtInsert.setNull(3, Types.BIGINT);
+        pstmtInsert.setNull(4, Types.FLOAT);
+        pstmtInsert.setNull(5, Types.DOUBLE);
+        pstmtInsert.setNull(6, Types.SMALLINT);
+        pstmtInsert.setNull(7, Types.TINYINT);
+        pstmtInsert.setNull(8, Types.BOOLEAN);
+        pstmtInsert.setNull(9, Types.BINARY);
+        pstmtInsert.setNull(10, Types.NCHAR);
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -564,17 +564,17 @@ public class TSWSPreparedStatementTest {
         long ts = System.currentTimeMillis();
 
         // when
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        pstmt_insert.setNull(2, Types.INTEGER);
-        pstmt_insert.setNull(3, Types.BIGINT);
-        pstmt_insert.setNull(4, Types.FLOAT);
-        pstmt_insert.setNull(5, Types.DOUBLE);
-        pstmt_insert.setNull(6, Types.SMALLINT);
-        pstmt_insert.setNull(7, Types.TINYINT);
-        pstmt_insert.setBoolean(8, true);
-        pstmt_insert.setBytes(9, null);
-        pstmt_insert.setNString(10, null);
-        int result = pstmt_insert.executeUpdate();
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setNull(2, Types.INTEGER);
+        pstmtInsert.setNull(3, Types.BIGINT);
+        pstmtInsert.setNull(4, Types.FLOAT);
+        pstmtInsert.setNull(5, Types.DOUBLE);
+        pstmtInsert.setNull(6, Types.SMALLINT);
+        pstmtInsert.setNull(7, Types.TINYINT);
+        pstmtInsert.setBoolean(8, true);
+        pstmtInsert.setBytes(9, null);
+        pstmtInsert.setNString(10, null);
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -599,18 +599,18 @@ public class TSWSPreparedStatementTest {
         long ts = System.currentTimeMillis();
 
         // when
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        pstmt_insert.setNull(2, Types.INTEGER);
-        pstmt_insert.setNull(3, Types.BIGINT);
-        pstmt_insert.setNull(4, Types.FLOAT);
-        pstmt_insert.setNull(5, Types.DOUBLE);
-        pstmt_insert.setNull(6, Types.SMALLINT);
-        pstmt_insert.setByte(7, (byte) 0x001);
-        pstmt_insert.setNull(8, Types.BOOLEAN);
-        pstmt_insert.setBytes(9, null);
-        pstmt_insert.setNString(10, null);
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setNull(2, Types.INTEGER);
+        pstmtInsert.setNull(3, Types.BIGINT);
+        pstmtInsert.setNull(4, Types.FLOAT);
+        pstmtInsert.setNull(5, Types.DOUBLE);
+        pstmtInsert.setNull(6, Types.SMALLINT);
+        pstmtInsert.setByte(7, (byte) 0x001);
+        pstmtInsert.setNull(8, Types.BOOLEAN);
+        pstmtInsert.setBytes(9, null);
+        pstmtInsert.setNString(10, null);
 
-        int result = pstmt_insert.executeUpdate();
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -635,17 +635,17 @@ public class TSWSPreparedStatementTest {
         long ts = System.currentTimeMillis();
 
         // when
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        pstmt_insert.setNull(2, Types.INTEGER);
-        pstmt_insert.setNull(3, Types.BIGINT);
-        pstmt_insert.setNull(4, Types.FLOAT);
-        pstmt_insert.setNull(5, Types.DOUBLE);
-        pstmt_insert.setNull(7, Types.TINYINT);
-        pstmt_insert.setNull(8, Types.BOOLEAN);
-        pstmt_insert.setNull(9, Types.BINARY);
-        pstmt_insert.setNull(10, Types.NCHAR);
-        pstmt_insert.setShort(6, (short) 2);
-        int result = pstmt_insert.executeUpdate();
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setNull(2, Types.INTEGER);
+        pstmtInsert.setNull(3, Types.BIGINT);
+        pstmtInsert.setNull(4, Types.FLOAT);
+        pstmtInsert.setNull(5, Types.DOUBLE);
+        pstmtInsert.setNull(7, Types.TINYINT);
+        pstmtInsert.setNull(8, Types.BOOLEAN);
+        pstmtInsert.setNull(9, Types.BINARY);
+        pstmtInsert.setNull(10, Types.NCHAR);
+        pstmtInsert.setShort(6, (short) 2);
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -670,17 +670,17 @@ public class TSWSPreparedStatementTest {
         long ts = System.currentTimeMillis();
 
         // when
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        pstmt_insert.setInt(2, 10086);
-        pstmt_insert.setNull(3, Types.BIGINT);
-        pstmt_insert.setNull(4, Types.FLOAT);
-        pstmt_insert.setNull(5, Types.DOUBLE);
-        pstmt_insert.setNull(6, Types.SMALLINT);
-        pstmt_insert.setNull(7, Types.TINYINT);
-        pstmt_insert.setNull(8, Types.BOOLEAN);
-        pstmt_insert.setNull(9, Types.BINARY);
-        pstmt_insert.setNull(10, Types.NCHAR);
-        int result = pstmt_insert.executeUpdate();
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setInt(2, 10086);
+        pstmtInsert.setNull(3, Types.BIGINT);
+        pstmtInsert.setNull(4, Types.FLOAT);
+        pstmtInsert.setNull(5, Types.DOUBLE);
+        pstmtInsert.setNull(6, Types.SMALLINT);
+        pstmtInsert.setNull(7, Types.TINYINT);
+        pstmtInsert.setNull(8, Types.BOOLEAN);
+        pstmtInsert.setNull(9, Types.BINARY);
+        pstmtInsert.setNull(10, Types.NCHAR);
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -705,17 +705,17 @@ public class TSWSPreparedStatementTest {
         long ts = System.currentTimeMillis();
 
         // when
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        pstmt_insert.setLong(3, Long.MAX_VALUE);
-        pstmt_insert.setNull(2, Types.INTEGER);
-        pstmt_insert.setNull(4, Types.FLOAT);
-        pstmt_insert.setNull(5, Types.DOUBLE);
-        pstmt_insert.setNull(6, Types.SMALLINT);
-        pstmt_insert.setNull(7, Types.TINYINT);
-        pstmt_insert.setNull(8, Types.BOOLEAN);
-        pstmt_insert.setNull(9, Types.BINARY);
-        pstmt_insert.setNull(10, Types.NCHAR);
-        int result = pstmt_insert.executeUpdate();
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setLong(3, Long.MAX_VALUE);
+        pstmtInsert.setNull(2, Types.INTEGER);
+        pstmtInsert.setNull(4, Types.FLOAT);
+        pstmtInsert.setNull(5, Types.DOUBLE);
+        pstmtInsert.setNull(6, Types.SMALLINT);
+        pstmtInsert.setNull(7, Types.TINYINT);
+        pstmtInsert.setNull(8, Types.BOOLEAN);
+        pstmtInsert.setNull(9, Types.BINARY);
+        pstmtInsert.setNull(10, Types.NCHAR);
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -740,17 +740,17 @@ public class TSWSPreparedStatementTest {
         long ts = System.currentTimeMillis();
 
         // when
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        pstmt_insert.setFloat(4, 3.14f);
-        pstmt_insert.setNull(2, Types.INTEGER);
-        pstmt_insert.setNull(3, Types.BIGINT);
-        pstmt_insert.setNull(5, Types.DOUBLE);
-        pstmt_insert.setNull(6, Types.SMALLINT);
-        pstmt_insert.setNull(7, Types.TINYINT);
-        pstmt_insert.setNull(8, Types.BOOLEAN);
-        pstmt_insert.setNull(9, Types.BINARY);
-        pstmt_insert.setNull(10, Types.NCHAR);
-        int result = pstmt_insert.executeUpdate();
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setFloat(4, 3.14f);
+        pstmtInsert.setNull(2, Types.INTEGER);
+        pstmtInsert.setNull(3, Types.BIGINT);
+        pstmtInsert.setNull(5, Types.DOUBLE);
+        pstmtInsert.setNull(6, Types.SMALLINT);
+        pstmtInsert.setNull(7, Types.TINYINT);
+        pstmtInsert.setNull(8, Types.BOOLEAN);
+        pstmtInsert.setNull(9, Types.BINARY);
+        pstmtInsert.setNull(10, Types.NCHAR);
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -775,18 +775,18 @@ public class TSWSPreparedStatementTest {
         long ts = System.currentTimeMillis();
 
         // when
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
 
-        pstmt_insert.setDouble(5, 3.14444);
-        pstmt_insert.setNull(2, Types.INTEGER);
-        pstmt_insert.setNull(3, Types.BIGINT);
-        pstmt_insert.setNull(4, Types.FLOAT);
-        pstmt_insert.setNull(6, Types.SMALLINT);
-        pstmt_insert.setNull(7, Types.TINYINT);
-        pstmt_insert.setNull(8, Types.BOOLEAN);
-        pstmt_insert.setNull(9, Types.BINARY);
-        pstmt_insert.setNull(10, Types.NCHAR);
-        int result = pstmt_insert.executeUpdate();
+        pstmtInsert.setDouble(5, 3.14444);
+        pstmtInsert.setNull(2, Types.INTEGER);
+        pstmtInsert.setNull(3, Types.BIGINT);
+        pstmtInsert.setNull(4, Types.FLOAT);
+        pstmtInsert.setNull(6, Types.SMALLINT);
+        pstmtInsert.setNull(7, Types.TINYINT);
+        pstmtInsert.setNull(8, Types.BOOLEAN);
+        pstmtInsert.setNull(9, Types.BINARY);
+        pstmtInsert.setNull(10, Types.NCHAR);
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -812,18 +812,18 @@ public class TSWSPreparedStatementTest {
         String f9 = "{\"name\": \"john\", \"age\": 10, \"address\": \"192.168.1.100\"}";
 
         // when
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        pstmt_insert.setNull(2, Types.INTEGER);
-        pstmt_insert.setNull(3, Types.BIGINT);
-        pstmt_insert.setNull(4, Types.FLOAT);
-        pstmt_insert.setNull(5, Types.DOUBLE);
-        pstmt_insert.setNull(6, Types.SMALLINT);
-        pstmt_insert.setNull(7, Types.TINYINT);
-        pstmt_insert.setNull(8, Types.BOOLEAN);
-        pstmt_insert.setNull(9, Types.VARCHAR);
-        pstmt_insert.setNString(10, f9);
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setNull(2, Types.INTEGER);
+        pstmtInsert.setNull(3, Types.BIGINT);
+        pstmtInsert.setNull(4, Types.FLOAT);
+        pstmtInsert.setNull(5, Types.DOUBLE);
+        pstmtInsert.setNull(6, Types.SMALLINT);
+        pstmtInsert.setNull(7, Types.TINYINT);
+        pstmtInsert.setNull(8, Types.BOOLEAN);
+        pstmtInsert.setNull(9, Types.VARCHAR);
+        pstmtInsert.setNString(10, f9);
 
-        int result = pstmt_insert.executeUpdate();
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -849,17 +849,17 @@ public class TSWSPreparedStatementTest {
         byte[] f8 = "{\"name\": \"john\", \"age\": 10, \"address\": \"192.168.1.100\"}".getBytes();
 
         // when
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        pstmt_insert.setNull(2, Types.INTEGER);
-        pstmt_insert.setNull(3, Types.BIGINT);
-        pstmt_insert.setNull(4, Types.FLOAT);
-        pstmt_insert.setNull(5, Types.DOUBLE);
-        pstmt_insert.setNull(6, Types.SMALLINT);
-        pstmt_insert.setNull(7, Types.TINYINT);
-        pstmt_insert.setNull(8, Types.BOOLEAN);
-        pstmt_insert.setBytes(9, f8);
-        pstmt_insert.setNull(10, Types.NCHAR);
-        int result = pstmt_insert.executeUpdate();
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setNull(2, Types.INTEGER);
+        pstmtInsert.setNull(3, Types.BIGINT);
+        pstmtInsert.setNull(4, Types.FLOAT);
+        pstmtInsert.setNull(5, Types.DOUBLE);
+        pstmtInsert.setNull(6, Types.SMALLINT);
+        pstmtInsert.setNull(7, Types.TINYINT);
+        pstmtInsert.setNull(8, Types.BOOLEAN);
+        pstmtInsert.setBytes(9, f8);
+        pstmtInsert.setNull(10, Types.NCHAR);
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -884,17 +884,17 @@ public class TSWSPreparedStatementTest {
         long ts = new java.util.Date().getTime();
 
         // when
-        pstmt_insert.setDate(1, new Date(ts));
-        pstmt_insert.setNull(2, Types.INTEGER);
-        pstmt_insert.setNull(3, Types.BIGINT);
-        pstmt_insert.setNull(4, Types.FLOAT);
-        pstmt_insert.setNull(5, Types.DOUBLE);
-        pstmt_insert.setNull(6, Types.SMALLINT);
-        pstmt_insert.setNull(7, Types.TINYINT);
-        pstmt_insert.setNull(8, Types.BOOLEAN);
-        pstmt_insert.setNull(9, Types.BINARY);
-        pstmt_insert.setNull(10, Types.NCHAR);
-        int result = pstmt_insert.executeUpdate();
+        pstmtInsert.setDate(1, new Date(ts));
+        pstmtInsert.setNull(2, Types.INTEGER);
+        pstmtInsert.setNull(3, Types.BIGINT);
+        pstmtInsert.setNull(4, Types.FLOAT);
+        pstmtInsert.setNull(5, Types.DOUBLE);
+        pstmtInsert.setNull(6, Types.SMALLINT);
+        pstmtInsert.setNull(7, Types.TINYINT);
+        pstmtInsert.setNull(8, Types.BOOLEAN);
+        pstmtInsert.setNull(9, Types.BINARY);
+        pstmtInsert.setNull(10, Types.NCHAR);
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -917,17 +917,17 @@ public class TSWSPreparedStatementTest {
         long ts = System.currentTimeMillis();
 
         // when
-        pstmt_insert.setTime(1, new Time(ts));
-        pstmt_insert.setNull(2, Types.INTEGER);
-        pstmt_insert.setNull(3, Types.BIGINT);
-        pstmt_insert.setNull(4, Types.FLOAT);
-        pstmt_insert.setNull(5, Types.DOUBLE);
-        pstmt_insert.setNull(6, Types.SMALLINT);
-        pstmt_insert.setNull(7, Types.TINYINT);
-        pstmt_insert.setNull(8, Types.BOOLEAN);
-        pstmt_insert.setNull(9, Types.BINARY);
-        pstmt_insert.setNull(10, Types.NCHAR);
-        int result = pstmt_insert.executeUpdate();
+        pstmtInsert.setTime(1, new Time(ts));
+        pstmtInsert.setNull(2, Types.INTEGER);
+        pstmtInsert.setNull(3, Types.BIGINT);
+        pstmtInsert.setNull(4, Types.FLOAT);
+        pstmtInsert.setNull(5, Types.DOUBLE);
+        pstmtInsert.setNull(6, Types.SMALLINT);
+        pstmtInsert.setNull(7, Types.TINYINT);
+        pstmtInsert.setNull(8, Types.BOOLEAN);
+        pstmtInsert.setNull(9, Types.BINARY);
+        pstmtInsert.setNull(10, Types.NCHAR);
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -950,17 +950,17 @@ public class TSWSPreparedStatementTest {
         long ts = System.currentTimeMillis();
 
         // when
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        pstmt_insert.setNull(2, Types.INTEGER);
-        pstmt_insert.setNull(3, Types.BIGINT);
-        pstmt_insert.setNull(4, Types.FLOAT);
-        pstmt_insert.setNull(5, Types.DOUBLE);
-        pstmt_insert.setNull(6, Types.SMALLINT);
-        pstmt_insert.setNull(7, Types.TINYINT);
-        pstmt_insert.setNull(8, Types.BOOLEAN);
-        pstmt_insert.setNull(9, Types.BINARY);
-        pstmt_insert.setNull(10, Types.NCHAR);
-        int result = pstmt_insert.executeUpdate();
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setNull(2, Types.INTEGER);
+        pstmtInsert.setNull(3, Types.BIGINT);
+        pstmtInsert.setNull(4, Types.FLOAT);
+        pstmtInsert.setNull(5, Types.DOUBLE);
+        pstmtInsert.setNull(6, Types.SMALLINT);
+        pstmtInsert.setNull(7, Types.TINYINT);
+        pstmtInsert.setNull(8, Types.BOOLEAN);
+        pstmtInsert.setNull(9, Types.BINARY);
+        pstmtInsert.setNull(10, Types.NCHAR);
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -979,68 +979,68 @@ public class TSWSPreparedStatementTest {
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void setAsciiStream() throws SQLException {
-        pstmt_insert.setAsciiStream(1, null);
+        pstmtInsert.setAsciiStream(1, null);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void setBinaryStream() throws SQLException {
-        pstmt_insert.setBinaryStream(1, null);
+        pstmtInsert.setBinaryStream(1, null);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void setCharacterStream() throws SQLException {
-        pstmt_insert.setCharacterStream(1, null);
+        pstmtInsert.setCharacterStream(1, null);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void setRef() throws SQLException {
-        pstmt_insert.setRef(1, null);
+        pstmtInsert.setRef(1, null);
     }
 
     @Test(expected = SQLException.class)
     public void setBlobErr() throws SQLException {
         TestUtils.runIn336();
-        pstmt_insert.setBlob(1, (Blob) null);
+        pstmtInsert.setBlob(1, (Blob) null);
     }
 
     @Test
     public void setBlob() throws SQLException {
         TestUtils.runInMain();
-        pstmt_insert.setBlob(1, (Blob) null);
+        pstmtInsert.setBlob(1, (Blob) null);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void setClob() throws SQLException {
-        pstmt_insert.setClob(1, (Clob) null);
+        pstmtInsert.setClob(1, (Clob) null);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void setArray() throws SQLException {
-        pstmt_insert.setArray(1, null);
+        pstmtInsert.setArray(1, null);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void setURL() throws SQLException {
-        pstmt_insert.setURL(1, null);
+        pstmtInsert.setURL(1, null);
     }
 
     @Test
     public void getParameterMetaData() throws SQLException {
         // given
         long ts = System.currentTimeMillis();
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        pstmt_insert.setInt(2, 2);
-        pstmt_insert.setLong(3, 3L);
-        pstmt_insert.setFloat(4, 3.14f);
-        pstmt_insert.setDouble(5, 3.1415);
-        pstmt_insert.setShort(6, (short) 6);
-        pstmt_insert.setByte(7, (byte) 7);
-        pstmt_insert.setBoolean(8, true);
-        pstmt_insert.setBytes(9, "abc".getBytes());
-        pstmt_insert.setNString(10, "涛思数据");
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setInt(2, 2);
+        pstmtInsert.setLong(3, 3L);
+        pstmtInsert.setFloat(4, 3.14f);
+        pstmtInsert.setDouble(5, 3.1415);
+        pstmtInsert.setShort(6, (short) 6);
+        pstmtInsert.setByte(7, (byte) 7);
+        pstmtInsert.setBoolean(8, true);
+        pstmtInsert.setBytes(9, "abc".getBytes());
+        pstmtInsert.setNString(10, "涛思数据");
 
         // when
-        ParameterMetaData parameterMetaData = pstmt_insert.getParameterMetaData();
+        ParameterMetaData parameterMetaData = pstmtInsert.getParameterMetaData();
 
         // then
         Assert.assertNotNull(parameterMetaData);
@@ -1075,10 +1075,10 @@ public class TSWSPreparedStatementTest {
 
         //private static final String sql_select = "select * from t1 where ts >= ? and ts < ? and f1 >= ?";
         long ts = System.currentTimeMillis();
-        pstmt_select.setObject(1, new Timestamp(ts - 10000));
-        pstmt_select.setObject(2, new Timestamp(ts + 10000));
-        pstmt_select.setObject(3, 10);
-        pstmt_select.execute();
+        pstmtSelect.setObject(1, new Timestamp(ts - 10000));
+        pstmtSelect.setObject(2, new Timestamp(ts + 10000));
+        pstmtSelect.setObject(3, 10);
+        pstmtSelect.execute();
     }
     @Test
     public void setObjectFullTest() throws SQLException {
@@ -1118,22 +1118,22 @@ public class TSWSPreparedStatementTest {
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void setRowId() throws SQLException {
-        pstmt_insert.setRowId(1, null);
+        pstmtInsert.setRowId(1, null);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void setNCharacterStream() throws SQLException {
-        pstmt_insert.setNCharacterStream(1, null);
+        pstmtInsert.setNCharacterStream(1, null);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void setNClob() throws SQLException {
-        pstmt_insert.setNClob(1, (NClob) null);
+        pstmtInsert.setNClob(1, (NClob) null);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void setSQLXML() throws SQLException {
-        pstmt_insert.setSQLXML(1, null);
+        pstmtInsert.setSQLXML(1, null);
     }
 
     @Before
@@ -1144,17 +1144,17 @@ public class TSWSPreparedStatementTest {
         stmt.execute("create table if not exists t1 using weather tags('beijing')");
         stmt.close();
 
-        pstmt_insert = conn.prepareStatement(sql_insert);
-        pstmt_select = conn.prepareStatement(sql_select);
+        pstmtInsert = conn.prepareStatement(SQL_INSERT);
+        pstmtSelect = conn.prepareStatement(SQL_SELECT);
     }
 
     @After
     public void after() {
         try {
-            if (pstmt_insert != null)
-                pstmt_insert.close();
-            if (pstmt_select != null)
-                pstmt_select.close();
+            if (pstmtInsert != null)
+                pstmtInsert.close();
+            if (pstmtSelect != null)
+                pstmtSelect.close();
         } catch (SQLException e) {
             // nothing
         }
@@ -1165,13 +1165,13 @@ public class TSWSPreparedStatementTest {
     public static void beforeClass() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata&batchfetch=true";
+            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata&batchfetch=true";
         }
         conn = DriverManager.getConnection(url);
         try (Statement stmt = conn.createStatement()) {
-            stmt.execute("drop database if exists " + dbname);
-            stmt.execute("create database if not exists " + dbname);
-            stmt.execute("use " + dbname);
+            stmt.execute("drop database if exists " + DBNAME);
+            stmt.execute("create database if not exists " + DBNAME);
+            stmt.execute("use " + DBNAME);
         }
     }
 
@@ -1179,7 +1179,7 @@ public class TSWSPreparedStatementTest {
     public static void afterClass() {
         try {
             Statement statement = conn.createStatement();
-            statement.execute("drop database if exists " + dbname);
+            statement.execute("drop database if exists " + DBNAME);
             statement.execute("drop database if exists dbtest");
             statement.close();
             if (conn != null)

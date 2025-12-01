@@ -34,7 +34,6 @@ public class WebSocketChannelInitializer extends ChannelInitializer<SocketChanne
     }
     @Override
     protected void initChannel(SocketChannel ch) throws Exception {
-        Thread.sleep(2000);
         ChannelPipeline p = ch.pipeline();
 
         if (connectionParam.isUseSsl()) {

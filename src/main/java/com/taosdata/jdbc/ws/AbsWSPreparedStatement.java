@@ -1069,7 +1069,7 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
         }
 
         writeBlockWithRetrySync(rawBlock);
-        this.affectedRows = batchInsertedRows.getAndSet(0);
+        this.affectedRows = batchInsertedRowsInner.getAndSet(0);
         return this.affectedRows;
     }
     private ResultResp executeQueryImpl() throws SQLException {

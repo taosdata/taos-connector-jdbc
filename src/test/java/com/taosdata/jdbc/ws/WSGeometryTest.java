@@ -1,7 +1,6 @@
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
-import com.taosdata.jdbc.TSDBPreparedStatement;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.TestUtils;
@@ -15,13 +14,13 @@ import java.util.ArrayList;
 import java.util.Properties;
 
 public class WSGeometryTest {
-    static String host = "127.0.0.1";
-    static String dbName = TestUtils.camelToSnake(WSGeometryTest.class);
-    static String tableNative = "geometry_noraml";
-    static String tableStmt = "geometry_stmt";
+    static final String host = "127.0.0.1";
+    static final String dbName = TestUtils.camelToSnake(WSGeometryTest.class);
+    static final String tableNative = "geometry_noraml";
+    static final String tableStmt = "geometry_stmt";
     static Connection connection;
     static Statement statement;
-    byte[] expectedArray = StringUtils.hexToBytes("0101000000000000000000F03F0000000000000040");
+    final byte[] expectedArray = StringUtils.hexToBytes("0101000000000000000000F03F0000000000000040");
 
 
     @Test

@@ -31,8 +31,8 @@ import static org.mockito.Mockito.when;
  * Focuses on concurrent behavior for same/different jdbcUrls with private jdbcUrl field handling.
  */
 public class WSConnectionValidationTest {private static volatile int queryExecutionCount = 0;
-    private static final String dbName1 = TestUtils.camelToSnake(WSConsumerAutoCommitTest.class) + "1";
-    private static final String dbName2 = TestUtils.camelToSnake(WSConsumerAutoCommitTest.class) + "2";
+    private static final String DB_NAME_1 = TestUtils.camelToSnake(WSConsumerAutoCommitTest.class) + "1";
+    private static final String DB_NAME_2 = TestUtils.camelToSnake(WSConsumerAutoCommitTest.class) + "2";
 
     @Mock
     private WSConnection connection1;
@@ -53,7 +53,7 @@ public class WSConnectionValidationTest {private static volatile int queryExecut
     private static final String URL_FIELD_NAME = "jdbcUrl";
     private static final String TRANSPORT_FIELD_NAME = "transport"; // Transport field name
     private static final String PARAM_FIELD_NAME = "param"; // ConnectionParam field name
-    private static Connection connection;
+    private static Connection gConnection;
 
     @Before
     public void setup() throws Exception {
@@ -231,11 +231,11 @@ public class WSConnectionValidationTest {private static volatile int queryExecut
     }
     @Test
     public void testCacheSize() throws Exception {
-        String url1 =  "jdbc:TAOS-WS://localhost:6041/" + dbName1 +"?user=root&password=taosdata";
+        String url1 =  "jdbc:TAOS-WS://localhost:6041/" + DB_NAME_1 +"?user=root&password=taosdata";
         try (Connection connection = DriverManager.getConnection(url1)){
             connection.isValid(10);
         }
-        String url2 =  "jdbc:TAOS-WS://localhost:6041/" + dbName2 +"?user=root&password=taosdata";
+        String url2 =  "jdbc:TAOS-WS://localhost:6041/" + DB_NAME_2 +"?user=root&password=taosdata";
         try (Connection connection = DriverManager.getConnection(url2)){
             connection.isValid(10);
         }
@@ -245,13 +245,13 @@ public class WSConnectionValidationTest {private static volatile int queryExecut
     }
     @Test
     public void testCacheSize2() throws Exception {
-        String url1 =  "jdbc:TAOS-WS://localhost:6041/" + dbName1 +"?user=root&password=taosdata";
+        String url1 =  "jdbc:TAOS-WS://localhost:6041/" + DB_NAME_1 +"?user=root&password=taosdata";
         try (Connection connection = DriverManager.getConnection(url1)){
             connection.isValid(10);
         }
         TaosAdapterMock mockB = new TaosAdapterMock();
         mockB.start();
-        String url2 =  "jdbc:TAOS-WS://localhost:" + mockB.getListenPort() + "/" + dbName2 +"?user=root&password=taosdata";
+        String url2 =  "jdbc:TAOS-WS://localhost:" + mockB.getListenPort() + "/" + DB_NAME_2 +"?user=root&password=taosdata";
         try (Connection connection = DriverManager.getConnection(url2)){
             connection.isValid(10);
         }
@@ -266,7 +266,7 @@ public class WSConnectionValidationTest {private static volatile int queryExecut
     public void testConnectionLoss() throws Exception {
         TaosAdapterMock mockB = new TaosAdapterMock();
         mockB.start();
-        String url2 =  "jdbc:TAOS-WS://localhost:" + mockB.getListenPort() + "/" + dbName2 +"?user=root&password=taosdata";
+        String url2 =  "jdbc:TAOS-WS://localhost:" + mockB.getListenPort() + "/" + DB_NAME_2 +"?user=root&password=taosdata";
         try (Connection connection = DriverManager.getConnection(url2)){
             connection.isValid(10);
             mockB.stop();
@@ -357,22 +357,22 @@ public class WSConnectionValidationTest {private static volatile int queryExecut
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
-        connection = DriverManager.getConnection(url, properties);
-        try (Statement statement = connection.createStatement()) {
-            statement.executeUpdate("drop database if exists " + dbName1);
-            statement.executeUpdate("create database if not exists " + dbName1);
-            statement.executeUpdate("drop database if exists " + dbName2);
-            statement.executeUpdate("create database if not exists " + dbName2);
+        gConnection = DriverManager.getConnection(url, properties);
+        try (Statement statement = gConnection.createStatement()) {
+            statement.executeUpdate("drop database if exists " + DB_NAME_1);
+            statement.executeUpdate("create database if not exists " + DB_NAME_1);
+            statement.executeUpdate("drop database if exists " + DB_NAME_2);
+            statement.executeUpdate("create database if not exists " + DB_NAME_2);
         }
     }
 
     @AfterClass
     public static void after() throws InterruptedException, SQLException {
-        try (Statement statement = connection.createStatement()) {
-            statement.executeUpdate("drop database if exists " + dbName1);
-            statement.executeUpdate("drop database if exists " + dbName2);
+        try (Statement statement = gConnection.createStatement()) {
+            statement.executeUpdate("drop database if exists " + DB_NAME_1);
+            statement.executeUpdate("drop database if exists " + DB_NAME_2);
         }
-        connection.close();
+        gConnection.close();
         System.setProperty("ENV_TAOS_JDBC_NO_HEALTH_CHECK", "");
         Assert.assertEquals(0, RebalanceManager.getInstance().getBgHealthCheckInstanceCount());
         RebalanceManager.getInstance().clearAllForTest();

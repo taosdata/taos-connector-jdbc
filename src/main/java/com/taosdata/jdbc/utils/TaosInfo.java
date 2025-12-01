@@ -5,11 +5,9 @@ import java.lang.management.ManagementFactory;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class TaosInfo implements TaosInfoMBean {
-
-    private static volatile TaosInfo instance;
-    private final AtomicLong connect_open = new AtomicLong();
-    private final AtomicLong connect_close = new AtomicLong();
-    private final AtomicLong statement_count = new AtomicLong();
+    private final AtomicLong connectOpen = new AtomicLong();
+    private final AtomicLong connectClose = new AtomicLong();
+    private final AtomicLong statementCount = new AtomicLong();
 
     static {
         try {
@@ -22,37 +20,37 @@ public class TaosInfo implements TaosInfoMBean {
     }
 
     @Override
-    public long getConnect_open() {
-        return connect_open.get();
+    public long getConnectOpen() {
+        return connectOpen.get();
     }
 
     @Override
-    public long getConnect_close() {
-        return connect_close.get();
+    public long getConnectClose() {
+        return connectClose.get();
     }
 
     @Override
     public long getConnect_active() {
-        return connect_open.get() - connect_close.get();
+        return connectOpen.get() - connectClose.get();
     }
 
     @Override
-    public long getStatement_count() {
-        return statement_count.get();
+    public long getStatementCount() {
+        return statementCount.get();
     }
 
     /*******************************************************/
 
-    public void conn_open_increment() {
-        connect_open.incrementAndGet();
+    public void connOpenIncrement() {
+        connectOpen.incrementAndGet();
     }
 
-    public void connect_close_increment() {
-        connect_close.incrementAndGet();
+    public void connectCloseIncrement() {
+        connectClose.incrementAndGet();
     }
 
-    public void stmt_count_increment() {
-        statement_count.incrementAndGet();
+    public void stmtCountIncrement() {
+        statementCount.incrementAndGet();
     }
 
     /********************************************************************************/

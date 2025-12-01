@@ -13,11 +13,11 @@ import java.util.Properties;
 
 public class MicroSecondPrecisionRestfulTest {
 
-    private static final String host = "127.0.0.1";
-    private static final String ms_timestamp_db = "ms_precision_test1";
-    private static final String us_timestamp_db = "us_precision_test1";
-    private static final long timestamp1 = System.currentTimeMillis();
-    private static final long timestamp2 = timestamp1 * 1000 + 123;
+    private static final String HOST = "127.0.0.1";
+    private static final String MS_TIMESTAMP_DB = "ms_precision_test1";
+    private static final String US_TIMESTAMP_DB = "us_precision_test1";
+    private static final long TIMESTAMP_1 = System.currentTimeMillis();
+    private static final long TIMESTAMP_2 = TIMESTAMP_1 * 1000 + 123;
 
     private static Connection conn1;
     private static Connection conn2;
@@ -26,89 +26,89 @@ public class MicroSecondPrecisionRestfulTest {
     @Test
     public void testCase1() throws SQLException {
         try (Statement stmt = conn1.createStatement()) {
-            ResultSet rs = stmt.executeQuery("select last_row(ts) from " + ms_timestamp_db + ".weather");
+            ResultSet rs = stmt.executeQuery("select last_row(ts) from " + MS_TIMESTAMP_DB + ".weather");
             rs.next();
             long ts = rs.getTimestamp(1).getTime();
-            Assert.assertEquals(timestamp1, ts);
+            Assert.assertEquals(TIMESTAMP_1, ts);
             ts = rs.getLong(1);
-            Assert.assertEquals(timestamp1, ts);
+            Assert.assertEquals(TIMESTAMP_1, ts);
         }
     }
 
     @Test
     public void testCase2() throws SQLException {
         try (Statement stmt = conn1.createStatement()) {
-            ResultSet rs = stmt.executeQuery("select last_row(ts) from " + us_timestamp_db + ".weather");
+            ResultSet rs = stmt.executeQuery("select last_row(ts) from " + US_TIMESTAMP_DB + ".weather");
             rs.next();
 
             Timestamp timestamp = rs.getTimestamp(1);
             long ts = timestamp.getTime();
-            Assert.assertEquals(timestamp1, ts);
+            Assert.assertEquals(TIMESTAMP_1, ts);
             int nanos = timestamp.getNanos();
-            Assert.assertEquals(timestamp2 % 1000_000l * 1000, nanos);
+            Assert.assertEquals(TIMESTAMP_2 % 1000_000L * 1000, nanos);
 
             ts = rs.getLong(1);
-            Assert.assertEquals(timestamp2, ts);
+            Assert.assertEquals(TIMESTAMP_2, ts);
         }
     }
 
     @Test
     public void testCase3() throws SQLException {
         try (Statement stmt = conn2.createStatement()) {
-            ResultSet rs = stmt.executeQuery("select last_row(ts) from " + ms_timestamp_db + ".weather");
+            ResultSet rs = stmt.executeQuery("select last_row(ts) from " + MS_TIMESTAMP_DB + ".weather");
             rs.next();
             Timestamp rsTimestamp = rs.getTimestamp(1);
             long ts = rsTimestamp.getTime();
-            Assert.assertEquals(timestamp1, ts);
+            Assert.assertEquals(TIMESTAMP_1, ts);
             ts = rs.getLong(1);
-            Assert.assertEquals(timestamp1, ts);
+            Assert.assertEquals(TIMESTAMP_1, ts);
         }
     }
 
     @Test
     public void testCase4() throws SQLException {
         try (Statement stmt = conn2.createStatement()) {
-            ResultSet rs = stmt.executeQuery("select last_row(ts) from " + us_timestamp_db + ".weather");
+            ResultSet rs = stmt.executeQuery("select last_row(ts) from " + US_TIMESTAMP_DB + ".weather");
             rs.next();
 
             Timestamp timestamp = rs.getTimestamp(1);
             long ts = timestamp.getTime();
-            Assert.assertEquals(timestamp1, ts);
+            Assert.assertEquals(TIMESTAMP_1, ts);
             int nanos = timestamp.getNanos();
-            Assert.assertEquals(timestamp2 % 1000_000l * 1000, nanos);
+            Assert.assertEquals(TIMESTAMP_2 % 1000_000L * 1000, nanos);
 
             ts = rs.getLong(1);
-            Assert.assertEquals(timestamp2, ts);
+            Assert.assertEquals(TIMESTAMP_2, ts);
         }
     }
 
     @Test
     public void testCase5() throws SQLException {
         try (Statement stmt = conn3.createStatement()) {
-            ResultSet rs = stmt.executeQuery("select last_row(ts) from " + ms_timestamp_db + ".weather");
+            ResultSet rs = stmt.executeQuery("select last_row(ts) from " + MS_TIMESTAMP_DB + ".weather");
             rs.next();
             Timestamp actual = rs.getTimestamp(1);
             long ts = actual == null ? 0 : actual.getTime();
-            Assert.assertEquals(timestamp1, ts);
+            Assert.assertEquals(TIMESTAMP_1, ts);
             ts = rs.getLong(1);
-            Assert.assertEquals(timestamp1, ts);
+            Assert.assertEquals(TIMESTAMP_1, ts);
         }
     }
 
     @Test
     public void testCase6() throws SQLException {
         try (Statement stmt = conn3.createStatement()) {
-            ResultSet rs = stmt.executeQuery("select last_row(ts) from " + us_timestamp_db + ".weather");
+            ResultSet rs = stmt.executeQuery("select last_row(ts) from " + US_TIMESTAMP_DB + ".weather");
             rs.next();
 
             Timestamp timestamp = rs.getTimestamp(1);
             long ts = timestamp == null ? 0 : timestamp.getTime();
-            Assert.assertEquals(timestamp1, ts);
+            Assert.assertEquals(TIMESTAMP_1, ts);
             int nanos = timestamp.getNanos();
-            Assert.assertEquals(timestamp2 % 1000_000l * 1000, nanos);
+            Assert.assertEquals(TIMESTAMP_2 % 1000_000L * 1000, nanos);
 
             ts = rs.getLong(1);
-            Assert.assertEquals(timestamp2, ts);
+            Assert.assertEquals(TIMESTAMP_2, ts);
         }
     }
 
@@ -122,7 +122,7 @@ public class MicroSecondPrecisionRestfulTest {
 
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
         }
         conn1 = DriverManager.getConnection(url, properties);
 
@@ -133,15 +133,15 @@ public class MicroSecondPrecisionRestfulTest {
         conn3 = DriverManager.getConnection(url2, properties);
 
         Statement stmt = conn1.createStatement();
-        stmt.execute("drop database if exists " + ms_timestamp_db);
-        stmt.execute("create database if not exists " + ms_timestamp_db + " precision 'ms'");
-        stmt.execute("create table " + ms_timestamp_db + ".weather(ts timestamp, f1 int)");
-        stmt.executeUpdate("insert into " + ms_timestamp_db + ".weather(ts,f1) values(" + timestamp1 + ", 127)");
+        stmt.execute("drop database if exists " + MS_TIMESTAMP_DB);
+        stmt.execute("create database if not exists " + MS_TIMESTAMP_DB + " precision 'ms'");
+        stmt.execute("create table " + MS_TIMESTAMP_DB + ".weather(ts timestamp, f1 int)");
+        stmt.executeUpdate("insert into " + MS_TIMESTAMP_DB + ".weather(ts,f1) values(" + TIMESTAMP_1 + ", 127)");
 
-        stmt.execute("drop database if exists " + us_timestamp_db);
-        stmt.execute("create database if not exists " + us_timestamp_db + " precision 'us'");
-        stmt.execute("create table " + us_timestamp_db + ".weather(ts timestamp, f1 int)");
-        stmt.executeUpdate("insert into " + us_timestamp_db + ".weather(ts,f1) values(" + timestamp2 + ", 127)");
+        stmt.execute("drop database if exists " + US_TIMESTAMP_DB);
+        stmt.execute("create database if not exists " + US_TIMESTAMP_DB + " precision 'us'");
+        stmt.execute("create table " + US_TIMESTAMP_DB + ".weather(ts timestamp, f1 int)");
+        stmt.executeUpdate("insert into " + US_TIMESTAMP_DB + ".weather(ts,f1) values(" + TIMESTAMP_2 + ", 127)");
         stmt.close();
     }
 
@@ -150,8 +150,8 @@ public class MicroSecondPrecisionRestfulTest {
         try {
             if (conn1 != null) {
                 Statement statement = conn1.createStatement();
-                statement.execute("drop database if exists " + ms_timestamp_db);
-                statement.execute("drop database if exists " + us_timestamp_db);
+                statement.execute("drop database if exists " + MS_TIMESTAMP_DB);
+                statement.execute("drop database if exists " + US_TIMESTAMP_DB);
                 statement.close();
                 conn1.close();
             }

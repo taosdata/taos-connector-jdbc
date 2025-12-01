@@ -174,7 +174,7 @@ public class WSClient implements AutoCloseable {
                     } else {
                         wsHandlerPromise.setSuccess(wsHandler);
                     }
-                } catch (Throwable e) {
+                } catch (Exception e) {
                     wsHandlerPromise.setFailure(e);
                 }
             });
@@ -312,6 +312,7 @@ public class WSClient implements AutoCloseable {
                 channel = getChannel();
                 return true;
             } catch (SQLException e) {
+                log.error("WebSocket connect failed: ", e);
                 return false;
             }
         }

@@ -15,7 +15,7 @@ public class ConsumerTopicTest {
     private static final String host = "127.0.0.1";
     private static final String dbName = TestUtils.camelToSnake(ConsumerTopicTest.class);
     private static final String superTable = "st";
-    private static String topic = "topic_result_topic";
+    private static final String topic = "topic_result_topic";
 
     private static Connection connection;
 

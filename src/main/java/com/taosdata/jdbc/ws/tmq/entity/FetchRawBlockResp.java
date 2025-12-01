@@ -40,7 +40,7 @@ public class FetchRawBlockResp extends Response {
 
     private RestfulResultSetMetaData metaData;
     private final List<RestfulResultSet.Field> fields = new ArrayList<>();
-    private List<String> columnNames = new ArrayList<>();
+    private final List<String> columnNames = new ArrayList<>();
     // data
     private List<List<Object>> resultData;
     private byte precision;

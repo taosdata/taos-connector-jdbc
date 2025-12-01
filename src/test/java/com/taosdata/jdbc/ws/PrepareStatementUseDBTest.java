@@ -11,25 +11,25 @@ import java.sql.*;
 import java.util.Properties;
 
 public class PrepareStatementUseDBTest {
-    private static final String host = "127.0.0.1";
+    private static final String HOST = "127.0.0.1";
     private static Connection conn;
-    private static final String sql_insert = "insert into t1 values (?, ?)";
-    private static final String dbname = TestUtils.camelToSnake(PrepareStatementUseDBTest.class);
-    private static final String use_db = "stmt_ws_use_db2";
+    private static final String SQL_INSERT = "insert into t1 values (?, ?)";
+    private static final String DBNAME = TestUtils.camelToSnake(PrepareStatementUseDBTest.class);
+    private static final String USE_DB = "stmt_ws_use_db2";
 
     @Test
     public void testUseDB() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/" + dbname + "?user=root&password=taosdata&batchfetch=true";
+            url = "jdbc:TAOS-RS://" + HOST + ":6041/" + DBNAME + "?user=root&password=taosdata&batchfetch=true";
         }
         conn = DriverManager.getConnection(url);
-        try (PreparedStatement stmt = conn.prepareStatement(sql_insert)) {
+        try (PreparedStatement stmt = conn.prepareStatement(SQL_INSERT)) {
             stmt.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
             stmt.setInt(2, 1);
             stmt.addBatch();
             stmt.executeBatch();
-            stmt.execute("use " + use_db);
+            stmt.execute("use " + USE_DB);
             stmt.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
             stmt.setInt(2, 2);
             stmt.addBatch();
@@ -41,7 +41,7 @@ public class PrepareStatementUseDBTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata&batchfetch=true";
+            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata&batchfetch=true";
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
@@ -49,14 +49,14 @@ public class PrepareStatementUseDBTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
         conn = DriverManager.getConnection(url, properties);
         try (Statement stmt = conn.createStatement()) {
-            stmt.execute("drop database if exists " + dbname);
-            stmt.execute("create database if not exists " + dbname);
-            stmt.execute("use " + dbname);
+            stmt.execute("drop database if exists " + DBNAME);
+            stmt.execute("create database if not exists " + DBNAME);
+            stmt.execute("use " + DBNAME);
             stmt.execute("create table t1 (ts timestamp, c1 int)");
 
-            stmt.execute("drop database if exists " + use_db);
-            stmt.execute("create database if not exists " + use_db);
-            stmt.execute("use " + use_db);
+            stmt.execute("drop database if exists " + USE_DB);
+            stmt.execute("create database if not exists " + USE_DB);
+            stmt.execute("use " + USE_DB);
             stmt.execute("create table t1 (ts timestamp, c1 int)");
         }
     }
@@ -64,8 +64,8 @@ public class PrepareStatementUseDBTest {
     @AfterClass
     public static void after() throws SQLException {
         try (Statement stmt = conn.createStatement()) {
-            stmt.execute("drop database if exists " + dbname);
-            stmt.execute("drop database if exists " + use_db);
+            stmt.execute("drop database if exists " + DBNAME);
+            stmt.execute("drop database if exists " + USE_DB);
         }
         conn.close();
     }

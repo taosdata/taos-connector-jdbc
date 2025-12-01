@@ -174,9 +174,9 @@ public class RestfulPreparedStatementTest {
     }
 
     private class Person {
-        String name;
-        int age;
-        boolean sex;
+        final String name;
+        final int age;
+        final boolean sex;
 
         public Person(String name, int age, boolean sex) {
             this.name = name;

@@ -26,7 +26,7 @@ public class WSConnectionTest {
     private static String host = "127.0.0.1";
     private static String port = "6041";
     private Connection connection;
-    private String db_name = "information_schema";
+    private final String db_name = "information_schema";
 
     @Test
     @Ignore

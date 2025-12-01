@@ -1,31 +1,29 @@
 // src/test/java/com/taosdata/jdbc/AbstractResultSetTest.java
 package com.taosdata.jdbc;
 
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.Reader;
-import java.io.Writer;
 import java.math.BigDecimal;
 import java.sql.*;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.junit.Assert.fail;
-
 public class AbstractResultSetTest {
 
-    private ResultSetTest resultSet = new ResultSetTest();
+    private final ResultSetTest resultSet = new ResultSetTest();
 
     @Before
     public void setUp() throws SQLException {
-
+        // doing nothing
     }
 
-    private  class ResultSetTest extends AbstractResultSet {
+    private  class ResultSetTest
+            extends AbstractResultSet {
         public boolean closed = false;
 
 
@@ -131,12 +129,12 @@ public class AbstractResultSetTest {
 
         @Override
         public void beforeFirst() throws SQLException {
-
+            // do nothing
         }
 
         @Override
         public void afterLast() throws SQLException {
-
+            // do nothing
         }
 
         @Override
@@ -188,7 +186,7 @@ public class AbstractResultSetTest {
         public String getNString(int columnIndex) throws SQLException {
             return null;
         }
-    };
+    }
 
     @Test(expected = SQLException.class)
     public void testUpdateNull() throws SQLException {
@@ -401,11 +399,6 @@ public class AbstractResultSetTest {
 
     @Test(expected = SQLException.class)
     public void testUpdateObject() throws SQLException {
-        resultSet.closed = false;
-        resultSet.updateObject(1, new Object());
-    }
-    @Test(expected = SQLException.class)
-    public void testUpdateObject2() throws SQLException {
         resultSet.closed = false;
         resultSet.updateObject(1, new Object());
     }
@@ -1067,5 +1060,438 @@ public class AbstractResultSetTest {
         resultSet.getObject(1, String.class);
     }
 
+    @Test(expected = SQLException.class)
+    public void testRowUpdated() throws SQLException {
+        resultSet.closed = false;
+        resultSet.rowUpdated();
+    }
+
+    @Test(expected = SQLException.class)
+    public void testRowUpdated2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.rowUpdated();
+    }
+
+    @Test(expected = SQLException.class)
+    public void testRowInserted() throws SQLException {
+        resultSet.closed = false;
+        resultSet.rowInserted();
+    }
+
+    @Test(expected = SQLException.class)
+    public void testRowInserted2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.rowInserted();
+    }
+
+    @Test(expected = SQLException.class)
+    public void testRowDeleted() throws SQLException {
+        resultSet.closed = false;
+        resultSet.rowDeleted();
+    }
+
+    @Test(expected = SQLException.class)
+    public void testRowDeleted2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.rowDeleted();
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateNullByLabel() throws SQLException {
+        resultSet.closed = false;
+        resultSet.updateNull("column");
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateNullByLabel2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.updateNull("column");
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateBooleanByLabel() throws SQLException {
+        resultSet.closed = false;
+        resultSet.updateBoolean("column", true);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateBooleanByLabel2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.updateBoolean("column", true);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateByteByLabel() throws SQLException {
+        resultSet.closed = false;
+        resultSet.updateByte("column", (byte) 1);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateByteByLabel2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.updateByte("column", (byte) 1);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateShortByLabel() throws SQLException {
+        resultSet.closed = false;
+        resultSet.updateShort("column", (short) 1);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateShortByLabel2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.updateShort("column", (short) 1);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateIntByLabel() throws SQLException {
+        resultSet.closed = false;
+        resultSet.updateInt("column", 1);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateIntByLabel2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.updateInt("column", 1);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateLongByLabel() throws SQLException {
+        resultSet.closed = false;
+        resultSet.updateLong("column", 1L);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateLongByLabel2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.updateLong("column", 1L);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateFloatByLabel() throws SQLException {
+        resultSet.closed = false;
+        resultSet.updateFloat("column", 1.0f);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateFloatByLabel2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.updateFloat("column", 1.0f);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateDoubleByLabel() throws SQLException {
+        resultSet.closed = false;
+        resultSet.updateDouble("column", 1.0d);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateDoubleByLabel2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.updateDouble("column", 1.0d);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateBigDecimalByLabel() throws SQLException {
+        resultSet.closed = false;
+        resultSet.updateBigDecimal("column", BigDecimal.ONE);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateBigDecimalByLabel2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.updateBigDecimal("column", BigDecimal.ONE);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateStringByLabel() throws SQLException {
+        resultSet.closed = false;
+        resultSet.updateString("column", "value");
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateStringByLabel2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.updateString("column", "value");
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateBytesByLabel() throws SQLException {
+        resultSet.closed = false;
+        resultSet.updateBytes("column", new byte[]{1, 2, 3});
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateBytesByLabel2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.updateBytes("column", new byte[]{1, 2, 3});
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateDateByLabel() throws SQLException {
+        resultSet.closed = false;
+        resultSet.updateDate("column", new Date(System.currentTimeMillis()));
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateDateByLabel2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.updateDate("column", new Date(System.currentTimeMillis()));
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateTimeByLabel() throws SQLException {
+        resultSet.closed = false;
+        resultSet.updateTime("column", new Time(System.currentTimeMillis()));
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateTimeByLabel2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.updateTime("column", new Time(System.currentTimeMillis()));
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateTimestampByLabel() throws SQLException {
+        resultSet.closed = false;
+        resultSet.updateTimestamp("column", new Timestamp(System.currentTimeMillis()));
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateTimestampByLabel2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.updateTimestamp("column", new Timestamp(System.currentTimeMillis()));
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateAsciiStreamByLabelWithIntLength() throws SQLException {
+        resultSet.closed = false;
+        resultSet.updateAsciiStream("column", null, 10);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateAsciiStreamByLabelWithIntLength2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.updateAsciiStream("column", null, 10);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateBinaryStreamByLabelWithIntLength() throws SQLException {
+        resultSet.closed = false;
+        resultSet.updateBinaryStream("column", null, 10);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateBinaryStreamByLabelWithIntLength2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.updateBinaryStream("column", null, 10);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateCharacterStreamByLabelWithIntLength() throws SQLException {
+        resultSet.closed = false;
+        resultSet.updateCharacterStream("column", null, 10);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateCharacterStreamByLabelWithIntLength2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.updateCharacterStream("column", null, 10);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateObjectByLabelWithScale() throws SQLException {
+        resultSet.closed = false;
+        resultSet.updateObject("column", new Object(), 10);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateObjectByLabelWithScale2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.updateObject("column", new Object(), 10);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateObjectByLabel() throws SQLException {
+        resultSet.closed = false;
+        resultSet.updateObject("column", new Object());
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateObjectByLabel2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.updateObject("column", new Object());
+    }
+
+    @Test(expected = SQLException.class)
+    public void testGetRefByIndex() throws SQLException {
+        resultSet.closed = false;
+        resultSet.getRef(1);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testGetRefByIndex2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.getRef(1);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testGetBlobByIndex() throws SQLException {
+        resultSet.closed = false;
+        resultSet.getBlob(1);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testGetBlobByIndex2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.getBlob(1);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testGetClobByIndex() throws SQLException {
+        resultSet.closed = false;
+        resultSet.getClob(1);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testGetClobByIndex2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.getClob(1);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testGetArrayByIndex() throws SQLException {
+        resultSet.closed = false;
+        resultSet.getArray(1);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testGetArrayByIndex2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.getArray(1);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testGetObjectByLabelWithMap() throws SQLException {
+        resultSet.closed = false;
+        Map<String, Class<?>> map = new HashMap<>();
+        resultSet.getObject("column", map);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testGetObjectByLabelWithMap2() throws SQLException {
+        resultSet.closed = true;
+        Map<String, Class<?>> map = new HashMap<>();
+        resultSet.getObject("column", map);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testGetRefByLabel() throws SQLException {
+        resultSet.closed = false;
+        resultSet.getRef("column");
+    }
+
+    @Test(expected = SQLException.class)
+    public void testGetRefByLabel2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.getRef("column");
+    }
+
+    @Test(expected = SQLException.class)
+    public void testGetBlobByLabel() throws SQLException {
+        resultSet.closed = false;
+        resultSet.getBlob("column");
+    }
+
+    @Test(expected = SQLException.class)
+    public void testGetBlobByLabel2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.getBlob("column");
+    }
+
+    @Test(expected = SQLException.class)
+    public void testGetClobByLabel() throws SQLException {
+        resultSet.closed = false;
+        resultSet.getClob("column");
+    }
+
+    @Test(expected = SQLException.class)
+    public void testGetClobByLabel2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.getClob("column");
+    }
+
+    @Test(expected = SQLException.class)
+    public void testGetArrayByLabel() throws SQLException {
+        resultSet.closed = false;
+        resultSet.getArray("column");
+    }
+
+    @Test(expected = SQLException.class)
+    public void testGetArrayByLabel2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.getArray("column");
+    }
+
+    @Test(expected = SQLException.class)
+    public void testGetTimeByLabelWithCalendar() throws SQLException {
+        resultSet.closed = false;
+        resultSet.getTime("column", Calendar.getInstance());
+    }
+
+    @Test(expected = SQLException.class)
+    public void testGetTimeByLabelWithCalendar2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.getTime("column", Calendar.getInstance());
+    }
+
+    @Test
+    public void testGetTimestampByIndexWithCalendar() throws SQLException {
+        resultSet.closed = false;
+        Assert.assertNull(resultSet.getTimestamp(1, Calendar.getInstance()));
+    }
+
+    @Test
+    public void testGetTimestampByIndexWithCalendar2() throws SQLException {
+        resultSet.closed = true;
+        Assert.assertNull(resultSet.getTimestamp(1, Calendar.getInstance()));
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateNClobByIndexNoLength() throws SQLException {
+        resultSet.closed = false;
+        resultSet.updateNClob(1, (Reader) null);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateNClobByIndexNoLength2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.updateNClob(1, (Reader) null);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateNClobByLabelNoLength() throws SQLException {
+        resultSet.closed = false;
+        resultSet.updateNClob("column", (Reader) null);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testUpdateNClobByLabelNoLength2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.updateNClob("column", (Reader) null);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testGetObjectByLabelWithType() throws SQLException {
+        resultSet.closed = false;
+        resultSet.getObject("column", String.class);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testGetObjectByLabelWithType2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.getObject("column", String.class);
+    }
 
 }

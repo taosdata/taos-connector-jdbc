@@ -2,7 +2,6 @@ package com.taosdata.jdbc.common;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.sql.Blob;
 import java.sql.Timestamp;
 
 public class Bean336 {
