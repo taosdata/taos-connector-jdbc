@@ -13,20 +13,20 @@ import java.util.Properties;
 
 public class WsPstmtLineModeAllTypeTest {
     final String host = "127.0.0.1";
-    final String db_name = TestUtils.camelToSnake(WsPstmtLineModeAllTypeTest.class);
+    final String dbName = TestUtils.camelToSnake(WsPstmtLineModeAllTypeTest.class);
     final String tableName = "wpt";
     final String stableName = "swpt";
 
     final String tableName2 = "unsigned_stable";
     Connection connection;
-    static final String testStr = "20160601";
-    static final byte[] expectedVarBinary = StringUtils.hexToBytes(testStr);
+    static final String TEST_STR = "20160601";
+    static final byte[] expectedVarBinary = StringUtils.hexToBytes(TEST_STR);
     static final byte[] expectedGeometry = StringUtils.hexToBytes("0101000000000000000000F03F0000000000000040");
 
 
     @Test
     public void testExecuteUpdate() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "insert into " + dbName + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         PreparedStatement statement = connection.prepareStatement(sql);
         ParameterMetaData parameterMetaData = statement.getParameterMetaData();
         Assert.assertEquals(17, parameterMetaData.getParameterCount());
@@ -61,7 +61,7 @@ public class WsPstmtLineModeAllTypeTest {
 
         statement.executeUpdate();
 
-        ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + tableName);
+        ResultSet resultSet = statement.executeQuery("select * from " + dbName + "." + tableName);
         resultSet.next();
         Assert.assertEquals(new Timestamp(current), resultSet.getTimestamp(1));
         Assert.assertEquals((byte) 2, resultSet.getByte(2));
@@ -95,7 +95,7 @@ public class WsPstmtLineModeAllTypeTest {
 
     @Test
     public void testSetObject() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "insert into " + dbName + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         PreparedStatement statement = connection.prepareStatement(sql);
         long current = System.currentTimeMillis();
         statement.setObject(1, new Timestamp(current));
@@ -119,7 +119,7 @@ public class WsPstmtLineModeAllTypeTest {
 
         statement.executeUpdate();
 
-        ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + tableName);
+        ResultSet resultSet = statement.executeQuery("select * from " + dbName + "." + tableName);
         resultSet.next();
         Assert.assertEquals(new Timestamp(current), resultSet.getTimestamp(1));
         Assert.assertEquals((byte) 2, resultSet.getByte(2));
@@ -152,7 +152,7 @@ public class WsPstmtLineModeAllTypeTest {
 
     @Test
     public void testSetObject2() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "insert into " + dbName + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         PreparedStatement statement = connection.prepareStatement(sql);
         long current = System.currentTimeMillis();
         statement.setObject(1, new Timestamp(current), Types.TIMESTAMP);
@@ -176,7 +176,7 @@ public class WsPstmtLineModeAllTypeTest {
 
         statement.executeUpdate();
 
-        ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + tableName);
+        ResultSet resultSet = statement.executeQuery("select * from " + dbName + "." + tableName);
         resultSet.next();
         Assert.assertEquals(new Timestamp(current), resultSet.getTimestamp(1));
         Assert.assertEquals((byte) 2, resultSet.getByte(2));
@@ -209,7 +209,7 @@ public class WsPstmtLineModeAllTypeTest {
 
     @Test
     public void testSetObject3() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName + " (ts, c1, c2, c3, c4, c5, c6) values(?, ?, ?, ?, ?, ?, ?)";
+        String sql = "insert into " + dbName + "." + tableName + " (ts, c1, c2, c3, c4, c5, c6) values(?, ?, ?, ?, ?, ?, ?)";
         PreparedStatement statement = connection.prepareStatement(sql);
         long current = System.currentTimeMillis();
         statement.setObject(1, new Timestamp(current), Types.TIMESTAMP);
@@ -222,7 +222,7 @@ public class WsPstmtLineModeAllTypeTest {
 
         statement.executeUpdate();
 
-        ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + tableName);
+        ResultSet resultSet = statement.executeQuery("select * from " + dbName + "." + tableName);
         resultSet.next();
         Assert.assertEquals(new Timestamp(current), resultSet.getTimestamp(1));
         Assert.assertEquals((byte) 1, resultSet.getByte(2));
@@ -237,7 +237,7 @@ public class WsPstmtLineModeAllTypeTest {
 
     @Test
     public void testSetObject4() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName + " (ts) values(?)";
+        String sql = "insert into " + dbName + "." + tableName + " (ts) values(?)";
         PreparedStatement statement = connection.prepareStatement(sql);
         long current = System.currentTimeMillis();
         statement.setObject(1, new Date(current), Types.TIMESTAMP);
@@ -253,7 +253,7 @@ public class WsPstmtLineModeAllTypeTest {
         statement.setObject(1, DateTimeUtils.getZonedDateTime(Instant.ofEpochMilli(current + 5), null), Types.TIMESTAMP);
         statement.execute();
 
-        int insertedRows = Utils.getSqlRows(connection, db_name + "." + tableName);
+        int insertedRows = Utils.getSqlRows(connection, dbName + "." + tableName);
         Assert.assertEquals(6, insertedRows);
         statement.close();
     }
@@ -261,7 +261,7 @@ public class WsPstmtLineModeAllTypeTest {
 
     @Test
     public void testExecuteUpdate2() throws SQLException {
-        String sql = "insert into " + db_name + "." + stableName + "(tbname, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, ts, c1) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "insert into " + dbName + "." + stableName + "(tbname, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, ts, c1) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         PreparedStatement statement = connection.prepareStatement(sql);
         long current = System.currentTimeMillis();
         statement.setString(1, "stable_name_1");
@@ -288,7 +288,7 @@ public class WsPstmtLineModeAllTypeTest {
         statement.addBatch();
         statement.executeBatch();
 
-        ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + stableName);
+        ResultSet resultSet = statement.executeQuery("select * from " + dbName + "." + stableName);
         resultSet.next();
         Assert.assertEquals(new Timestamp(current), resultSet.getTimestamp(1));
         Assert.assertEquals((byte) 2, resultSet.getByte(2));
@@ -319,7 +319,7 @@ public class WsPstmtLineModeAllTypeTest {
 
     @Test
     public void testExecuteCriticalValue() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "insert into " + dbName + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         PreparedStatement statement = connection.prepareStatement(sql);
         statement.setTimestamp(1, new Timestamp(0));
         statement.setByte(2, (byte) 127);
@@ -345,7 +345,7 @@ public class WsPstmtLineModeAllTypeTest {
 
     @Test(expected = SQLException.class)
     public void testUtinyIntOutOfRange() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName2 + " values(?, ?, ?, ?, ?)";
+        String sql = "insert into " + dbName + "." + tableName2 + " values(?, ?, ?, ?, ?)";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setTimestamp(1, new Timestamp(0));
             statement.setShort(2, (short) (TSDBConstants.MAX_UNSIGNED_BYTE + 1));
@@ -358,7 +358,7 @@ public class WsPstmtLineModeAllTypeTest {
     }
     @Test(expected = SQLException.class)
     public void testUtinyIntOutOfRange2() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName2 + " values(?, ?, ?, ?, ?)";
+        String sql = "insert into " + dbName + "." + tableName2 + " values(?, ?, ?, ?, ?)";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setTimestamp(1, new Timestamp(0));
             statement.setShort(2, (short) -1);
@@ -372,7 +372,7 @@ public class WsPstmtLineModeAllTypeTest {
 
     @Test(expected = SQLException.class)
     public void testUShortOutOfRange() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName2 + " values(?, ?, ?, ?, ?)";
+        String sql = "insert into " + dbName + "." + tableName2 + " values(?, ?, ?, ?, ?)";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setTimestamp(1, new Timestamp(0));
             statement.setShort(2, (short) 0);
@@ -386,7 +386,7 @@ public class WsPstmtLineModeAllTypeTest {
 
     @Test(expected = SQLException.class)
     public void testUShortOutOfRange2() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName2 + " values(?, ?, ?, ?, ?)";
+        String sql = "insert into " + dbName + "." + tableName2 + " values(?, ?, ?, ?, ?)";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setTimestamp(1, new Timestamp(0));
             statement.setShort(2, (short) 0);
@@ -400,7 +400,7 @@ public class WsPstmtLineModeAllTypeTest {
 
     @Test(expected = SQLException.class)
     public void testUIntOutOfRange() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName2 + " values(?, ?, ?, ?, ?)";
+        String sql = "insert into " + dbName + "." + tableName2 + " values(?, ?, ?, ?, ?)";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setTimestamp(1, new Timestamp(0));
             statement.setShort(2, (short) 0);
@@ -414,7 +414,7 @@ public class WsPstmtLineModeAllTypeTest {
 
     @Test(expected = SQLException.class)
     public void testUIntOutOfRange2() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName2 + " values(?, ?, ?, ?, ?)";
+        String sql = "insert into " + dbName + "." + tableName2 + " values(?, ?, ?, ?, ?)";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setTimestamp(1, new Timestamp(0));
             statement.setShort(2, (short) 0);
@@ -428,7 +428,7 @@ public class WsPstmtLineModeAllTypeTest {
 
     @Test(expected = SQLException.class)
     public void testULongOutOfRange() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName2 + " values(?, ?, ?, ?, ?)";
+        String sql = "insert into " + dbName + "." + tableName2 + " values(?, ?, ?, ?, ?)";
 
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setTimestamp(1, new Timestamp(0));
@@ -442,7 +442,7 @@ public class WsPstmtLineModeAllTypeTest {
     }
     @Test(expected = SQLException.class)
     public void testULongOutOfRange2() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName2 + " values(?, ?, ?, ?, ?)";
+        String sql = "insert into " + dbName + "." + tableName2 + " values(?, ?, ?, ?, ?)";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setTimestamp(1, new Timestamp(0));
             statement.setShort(2, (short) 0);
@@ -456,7 +456,7 @@ public class WsPstmtLineModeAllTypeTest {
 
     @Test
     public void testQuery() throws SQLException {
-        String sql = "select * from " + db_name + "." + tableName2 + " where ts > ? and ts < ?";
+        String sql = "select * from " + dbName + "." + tableName2 + " where ts > ? and ts < ?";
         PreparedStatement statement = connection.prepareStatement(sql);
         statement.setTimestamp(1, new Timestamp(1735660800000L - 1000));
         statement.setTimestamp(2, new Timestamp(1735660800000L + 1000));
@@ -472,7 +472,7 @@ public class WsPstmtLineModeAllTypeTest {
 
     @Test
     public void testQuery2() throws SQLException {
-        String sql = "select * from " + db_name + "." + tableName2 + " where ts > ? and ts < ?";
+        String sql = "select * from " + dbName + "." + tableName2 + " where ts > ? and ts < ?";
         PreparedStatement statement = connection.prepareStatement(sql);
         statement.setTimestamp(1, new Timestamp(1735660800000L - 1000));
         statement.setTimestamp(2, new Timestamp(1735660800000L + 1000));
@@ -504,23 +504,23 @@ public class WsPstmtLineModeAllTypeTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_PBS_MODE, "line");
         connection = DriverManager.getConnection(url, properties);
         Statement statement = connection.createStatement();
-        statement.execute("drop database if exists " + db_name);
-        statement.execute("create database " + db_name + " keep 36500");
-        statement.execute("use " + db_name);
-        statement.execute("create table if not exists " + db_name + "." + tableName +
+        statement.execute("drop database if exists " + dbName);
+        statement.execute("create database " + dbName + " keep 36500");
+        statement.execute("use " + dbName);
+        statement.execute("create table if not exists " + dbName + "." + tableName +
                 "(ts timestamp, c1 tinyint, c2 smallint, c3 int, c4 bigint, " +
                 "c5 float, c6 double, c7 bool, c8 binary(10), c9 nchar(10), c10 varchar(20), c11 varbinary(100), c12 geometry(100)," +
                 "c13 tinyint unsigned, c14 smallint unsigned, c15 int unsigned, c16 bigint unsigned)");
 
-        statement.execute("create stable if not exists " + db_name + "." + stableName +
+        statement.execute("create stable if not exists " + dbName + "." + stableName +
                 "(ts timestamp, c1 tinyint) tags (t1 timestamp, t2 tinyint, t3 smallint, t4 int, t5 bigint, " +
                 "t6 float, t7 double, t8 bool, t9 binary(10), t10 nchar(10), t11 varchar(20), t12 varbinary(100), t13 geometry(100)," +
                 "t14 tinyint unsigned, t15 smallint unsigned, t16 int unsigned, t17 bigint unsigned)");
 
-        statement.execute("create table if not exists " + db_name + "." + tableName2 +
+        statement.execute("create table if not exists " + dbName + "." + tableName2 +
                 "(ts timestamp, " +
                 "c1 tinyint unsigned, c2 smallint unsigned, c3 int unsigned, c4 bigint unsigned)");
-        statement.execute("insert into " + db_name + "." + tableName2 +
+        statement.execute("insert into " + dbName + "." + tableName2 +
                 " values (1735660800000, 255, 65535, 4294967295, 18446744073709551615)");
 
         statement.close();
@@ -529,7 +529,7 @@ public class WsPstmtLineModeAllTypeTest {
     @After
     public void after() throws SQLException {
         try (Statement statement = connection.createStatement()){
-            statement.execute("drop database if exists " + db_name);
+            statement.execute("drop database if exists " + dbName);
         }
         connection.close();
     }

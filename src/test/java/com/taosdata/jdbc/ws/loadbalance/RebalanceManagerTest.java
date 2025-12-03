@@ -2,7 +2,7 @@ package com.taosdata.jdbc.ws.loadbalance;
 
 import com.taosdata.jdbc.common.Endpoint;
 import com.taosdata.jdbc.common.EndpointInfo;
-import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.common.ConnectionParam;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;

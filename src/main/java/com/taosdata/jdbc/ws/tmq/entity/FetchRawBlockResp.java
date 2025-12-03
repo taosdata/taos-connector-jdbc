@@ -227,13 +227,13 @@ public class FetchRawBlockResp extends Response {
                 HashMap<String, Object> lineDataMap = new HashMap<>();
                 for (int k = 0; k < cols; k++) {
                     if (fields.get(k).getTaosType() == TSDB_DATA_TYPE_TIMESTAMP){
-                        Long o = (Long) DataTypeConverUtil.parseValue(TSDB_DATA_TYPE_TIMESTAMP, resultData.get(k).get(j), varcharAsString);
+                        Long o = (Long) DataTypeConvertUtil.parseValue(TSDB_DATA_TYPE_TIMESTAMP, resultData.get(k).get(j), varcharAsString);
                         Instant instant = DateTimeUtils.parseTimestampColumnData(o, precision);
                         Timestamp t = DateTimeUtils.getTimestamp(instant, zoneId);
                         lineDataMap.put(columnNames.get(k), t);
                         continue;
                     }
-                    Object o = DataTypeConverUtil.parseValue(fields.get(k).getTaosType(), resultData.get(k).get(j), varcharAsString);
+                    Object o = DataTypeConvertUtil.parseValue(fields.get(k).getTaosType(), resultData.get(k).get(j), varcharAsString);
                     lineDataMap.put(columnNames.get(k), o);
                 }
                 TMQEnhMap map = new TMQEnhMap(tableName, lineDataMap);

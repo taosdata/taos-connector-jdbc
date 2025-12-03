@@ -6,7 +6,7 @@ import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.rs.RestfulResultSet;
 import com.taosdata.jdbc.rs.RestfulResultSetMetaData;
 import com.taosdata.jdbc.tmq.*;
-import com.taosdata.jdbc.utils.DataTypeConverUtil;
+import com.taosdata.jdbc.utils.DataTypeConvertUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.ws.Transport;
 import com.taosdata.jdbc.ws.entity.Code;
@@ -132,7 +132,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
             return null;
         }
         wasNull = false;
-        return DataTypeConverUtil.getString(value);
+        return DataTypeConvertUtil.getString(value);
     }
 
     @Override
@@ -149,7 +149,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
             return (boolean) value;
 
         int taosType = fields.get(columnIndex - 1).getTaosType();
-        return DataTypeConverUtil.getBoolean(taosType, value);
+        return DataTypeConvertUtil.getBoolean(taosType, value);
     }
 
     @Override
@@ -166,7 +166,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
             return (byte) value;
 
         int taosType = fields.get(columnIndex - 1).getTaosType();
-        return DataTypeConverUtil.getByte(taosType, value, columnIndex);
+        return DataTypeConvertUtil.getByte(taosType, value, columnIndex);
     }
 
     private void throwRangeException(String valueAsString, int columnIndex, int jdbcType) throws SQLException {
@@ -188,7 +188,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
             return (short) value;
 
         int taosType = fields.get(columnIndex - 1).getTaosType();
-        return DataTypeConverUtil.getShort(taosType, value, columnIndex);
+        return DataTypeConvertUtil.getShort(taosType, value, columnIndex);
     }
 
     @Override
@@ -205,7 +205,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
             return (int) value;
 
         int taosType = fields.get(columnIndex - 1).getTaosType();
-        return DataTypeConverUtil.getInt(taosType, value, columnIndex);
+        return DataTypeConvertUtil.getInt(taosType, value, columnIndex);
     }
 
     @Override
@@ -222,7 +222,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
             return (long) value;
         int taosType = fields.get(columnIndex - 1).getTaosType();
 
-        return DataTypeConverUtil.getLong(taosType, value, columnIndex, this.timestampPrecision);
+        return DataTypeConvertUtil.getLong(taosType, value, columnIndex, this.timestampPrecision);
     }
 
     @Override
@@ -239,7 +239,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
             return (float) value;
 
         int taosType = fields.get(columnIndex - 1).getTaosType();
-        return DataTypeConverUtil.getFloat(taosType, value, columnIndex);
+        return DataTypeConvertUtil.getFloat(taosType, value, columnIndex);
     }
 
     @Override
@@ -254,7 +254,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
         wasNull = false;
 
         int taosType = fields.get(columnIndex - 1).getTaosType();
-        return DataTypeConverUtil.getDouble(taosType, value, columnIndex, this.timestampPrecision);
+        return DataTypeConvertUtil.getDouble(taosType, value, columnIndex, this.timestampPrecision);
     }
 
     @Override
@@ -267,7 +267,7 @@ public class WSConsumerResultSet extends AbstractResultSet {
             return null;
         }
         wasNull = false;
-        return DataTypeConverUtil.getBytes(value);
+        return DataTypeConvertUtil.getBytes(value);
     }
 
     @Override
@@ -338,127 +338,8 @@ public class WSConsumerResultSet extends AbstractResultSet {
 
         int taosType = fields.get(columnIndex - 1).getTaosType();
 
-        return DataTypeConverUtil.getBigDecimal(taosType, value);
+        return DataTypeConvertUtil.getBigDecimal(taosType, value);
     }
-
-    @Override
-    public boolean isBeforeFirst() throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);
-        return this.rowIndex == -1 && this.numOfRows != 0;
-    }
-
-    @Override
-    public boolean isAfterLast() throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);
-
-        return this.rowIndex >= numOfRows && this.numOfRows != 0;
-    }
-
-    @Override
-    public boolean isFirst() throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);
-        return this.rowIndex == 0;
-    }
-
-    @Override
-    public boolean isLast() throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);
-        if (this.numOfRows == 0)
-            return false;
-        return this.rowIndex == (this.numOfRows - 1);
-    }
-
-    @Override
-    public void beforeFirst() throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);
-
-        synchronized (this) {
-            if (this.numOfRows > 0) {
-                this.rowIndex = -1;
-            }
-        }
-    }
-
-    @Override
-    public void afterLast() throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);
-        synchronized (this) {
-            if (this.numOfRows > 0) {
-                this.rowIndex = this.numOfRows;
-            }
-        }
-    }
-
-    @Override
-    public boolean first() throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);
-
-        if (this.numOfRows == 0)
-            return false;
-
-        synchronized (this) {
-            this.rowIndex = 0;
-        }
-        return true;
-    }
-
-    @Override
-    public boolean last() throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);
-        if (this.numOfRows == 0)
-            return false;
-        synchronized (this) {
-            this.rowIndex = this.numOfRows - 1;
-        }
-        return true;
-    }
-
-    @Override
-    public int getRow() throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);
-        int row;
-        synchronized (this) {
-            if (this.rowIndex < 0 || this.rowIndex >= this.numOfRows)
-                return 0;
-            row = this.rowIndex + 1;
-        }
-        return row;
-    }
-
-    @Override
-    public boolean absolute(int row) throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);
-
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
-    }
-
-    @Override
-    public boolean relative(int rows) throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);
-
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
-
-    }
-
-    @Override
-    public boolean previous() throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);
-
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
-    }
-
     @Override
     public Statement getStatement() throws SQLException {
         throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);
@@ -487,10 +368,10 @@ public class WSConsumerResultSet extends AbstractResultSet {
         int type = fields.get(columnIndex - 1).getTaosType();
 
         if (type == TSDB_DATA_TYPE_TIMESTAMP){
-            Long o = (Long)DataTypeConverUtil.parseValue(type, source, varcharAsString);
+            Long o = (Long) DataTypeConvertUtil.parseValue(type, source, varcharAsString);
             Instant instant = DateTimeUtils.parseTimestampColumnData(o, this.timestampPrecision);
             return DateTimeUtils.getTimestamp(instant, zoneId);
         }
-        return DataTypeConverUtil.parseValue(type, source, varcharAsString);
+        return DataTypeConvertUtil.parseValue(type, source, varcharAsString);
     }
 }

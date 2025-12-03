@@ -1,10 +1,9 @@
-package com.taosdata.jdbc.rs;
+package com.taosdata.jdbc.common;
 
 import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
-import com.taosdata.jdbc.common.Endpoint;
 import com.taosdata.jdbc.utils.HttpClientPoolUtil;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.Utils;

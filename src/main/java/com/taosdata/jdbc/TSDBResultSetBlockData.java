@@ -2,7 +2,7 @@ package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.common.TDBlob;
 import com.taosdata.jdbc.utils.BlockUtil;
-import com.taosdata.jdbc.utils.DataTypeConverUtil;
+import com.taosdata.jdbc.utils.DataTypeConvertUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
 
 import java.io.UnsupportedEncodingException;
@@ -299,7 +299,7 @@ public class TSDBResultSetBlockData {
             return null;
         }
         wasNull = false;
-        return DataTypeConverUtil.getString(obj);
+        return DataTypeConvertUtil.getString(obj);
     }
 
     public byte[] getBytes(int col) throws SQLException {
@@ -310,7 +310,7 @@ public class TSDBResultSetBlockData {
             return null;
         }
         wasNull = false;
-        return DataTypeConverUtil.getBytes(obj);
+        return DataTypeConvertUtil.getBytes(obj);
     }
 
     public int getInt(int col) throws SQLException {
@@ -321,7 +321,7 @@ public class TSDBResultSetBlockData {
         }
         wasNull = false;
         int type = this.columnMetaDataList.get(col).getColType();
-        return DataTypeConverUtil.getInt(type, obj, col);
+        return DataTypeConvertUtil.getInt(type, obj, col);
     }
 
     public boolean getBoolean(int col) throws SQLException {
@@ -337,7 +337,7 @@ public class TSDBResultSetBlockData {
 
         wasNull = false;
         int type = this.columnMetaDataList.get(col).getColType();
-        return DataTypeConverUtil.getBoolean(type, obj);
+        return DataTypeConvertUtil.getBoolean(type, obj);
     }
 
     public long getLong(int col) throws SQLException {
@@ -351,7 +351,7 @@ public class TSDBResultSetBlockData {
             return (long) obj;
         }
         int type = this.columnMetaDataList.get(col).getColType();
-        return DataTypeConverUtil.getLong(type, obj, col, this.timestampPrecision);
+        return DataTypeConvertUtil.getLong(type, obj, col, this.timestampPrecision);
     }
 
     private void throwRangeException(String valueAsString, int columnIndex, int jdbcType) throws SQLException {
@@ -394,7 +394,7 @@ public class TSDBResultSetBlockData {
         }
         wasNull = false;
         int type = this.columnMetaDataList.get(col).getColType();
-        return DataTypeConverUtil.getDouble(type, obj, col, this.timestampPrecision);
+        return DataTypeConvertUtil.getDouble(type, obj, col, this.timestampPrecision);
     }
 
     public Object get(int col) {

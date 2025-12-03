@@ -21,8 +21,8 @@ public class WsPstmtAllType336Test {
 
     final String tableName2 = "unsigned_stable";
     Connection connection;
-    static final String testStr = "20160601";
-    static final byte[] expectedVarBinary = StringUtils.hexToBytes(testStr);
+    static final String TEST_STR = "20160601";
+    static final byte[] expectedVarBinary = StringUtils.hexToBytes(TEST_STR);
     static final byte[] expectedGeometry = StringUtils.hexToBytes("0101000000000000000000F03F0000000000000040");
 
     @Test

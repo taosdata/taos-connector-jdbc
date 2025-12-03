@@ -13,7 +13,7 @@ import static org.junit.Assert.assertNotNull;
 
 public class DatabaseSpecifiedTest {
 
-    private static final String host = "127.0.0.1";
+    private static final String HOST = "127.0.0.1";
     private final String dbname = TestUtils.camelToSnake(DatabaseSpecifiedTest.class);
 
     private Connection connection;
@@ -24,7 +24,7 @@ public class DatabaseSpecifiedTest {
         // when
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/" + dbname + "?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":6041/" + dbname + "?user=root&password=taosdata";
         } else {
             url = url + dbname + "?user=root&password=taosdata";
         }
@@ -50,7 +50,7 @@ public class DatabaseSpecifiedTest {
         try {
             String url = SpecifyAddress.getInstance().getRestUrl();
             if (url == null) {
-                url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+                url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
             }
             Connection connection = DriverManager.getConnection(url);
             Statement stmt = connection.createStatement();

@@ -12,10 +12,10 @@ import java.util.Properties;
 
 @FixMethodOrder
 public class DeserializerNullTest {
-    private static final String host = "127.0.0.1";
-    private static final String dbName = TestUtils.camelToSnake(DeserializerNullTest.class);
-    private static final String superTable = "st";
-    private static final String topic = "topic_with_bean";
+    private static final String HOST = "127.0.0.1";
+    private static final String DB_NAME = TestUtils.camelToSnake(DeserializerNullTest.class);
+    private static final String SUPER_TABLE = "st";
+    private static final String TOPIC = "topic_with_bean";
 
     private static Connection connection;
 
@@ -28,7 +28,7 @@ public class DeserializerNullTest {
         properties.setProperty(TMQConstants.VALUE_DESERIALIZER, "com.taosdata.jdbc.tmq.DeserializerNullTest$BeanDeserializer");
 
         try (TaosConsumer<Bean> consumer = new TaosConsumer<>(properties)) {
-            consumer.subscribe(Collections.singletonList(topic));
+            consumer.subscribe(Collections.singletonList(TOPIC));
             for (int i = 0; i < 1; i++) {
                 ConsumerRecords<Bean> consumerRecords = consumer.poll(Duration.ofMillis(100));
                 for (ConsumerRecord<Bean> r : consumerRecords) {
@@ -49,7 +49,7 @@ public class DeserializerNullTest {
     public static void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
@@ -57,22 +57,22 @@ public class DeserializerNullTest {
         connection = DriverManager.getConnection(url, properties);
         try (Statement statement = connection.createStatement()) {
 
-            statement.executeUpdate("drop database if exists " + dbName);
-            statement.executeUpdate("create database if not exists " + dbName + " WAL_RETENTION_PERIOD 3650");
-            statement.executeUpdate("use " + dbName);
-            statement.executeUpdate("create stable if not exists " + superTable
+            statement.executeUpdate("drop database if exists " + DB_NAME);
+            statement.executeUpdate("create database if not exists " + DB_NAME + " WAL_RETENTION_PERIOD 3650");
+            statement.executeUpdate("use " + DB_NAME);
+            statement.executeUpdate("create stable if not exists " + SUPER_TABLE
                     + " (ts timestamp, c1 int, c2 float, c3 nchar(10), c4 binary(10), c5 bool) tags(t1 int)");
-            statement.executeUpdate("create table if not exists ct0 using " + superTable + " tags(1000)");
-            statement.executeUpdate("insert into " + dbName + ".ct0 (ts) values (now)");
-            statement.executeUpdate("create topic if not exists " + topic + " as select ts, c1, c2, c3, c4, c5, t1 from ct0");
+            statement.executeUpdate("create table if not exists ct0 using " + SUPER_TABLE + " tags(1000)");
+            statement.executeUpdate("insert into " + DB_NAME + ".ct0 (ts) values (now)");
+            statement.executeUpdate("create topic if not exists " + TOPIC + " as select ts, c1, c2, c3, c4, c5, t1 from ct0");
         }
     }
 
     @AfterClass
     public static void after() {
         try (Statement statement = connection.createStatement()) {
-            statement.executeUpdate("drop topic if exists " + topic);
-            statement.executeUpdate("drop database if exists " + dbName);
+            statement.executeUpdate("drop topic if exists " + TOPIC);
+            statement.executeUpdate("drop database if exists " + DB_NAME);
         } catch (SQLException e) {
             // nothing
         }

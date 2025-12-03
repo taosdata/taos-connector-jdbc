@@ -184,6 +184,7 @@ public class TSDBParameterMetaDataTest {
             pstmtSelect.setTimestamp(2, new Timestamp(System.currentTimeMillis() + 10000));
             pstmtSelect.setInt(3, 0);
             parameterMetaDataSelect = pstmtSelect.getParameterMetaData();
+            Assert.assertNotNull(parameterMetaDataSelect);
 
         } catch (SQLException e) {
             e.printStackTrace();

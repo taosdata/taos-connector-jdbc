@@ -4,7 +4,7 @@ import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.TaosGlobalConfig;
 import com.taosdata.jdbc.common.TDBlob;
-import com.taosdata.jdbc.utils.DataTypeConverUtil;
+import com.taosdata.jdbc.utils.DataTypeConvertUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.ws.entity.QueryResp;
 
@@ -36,7 +36,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             return null;
 
         int type = fields.get(columnIndex - 1).getTaosType();
-        return DataTypeConverUtil.parseValue(type, source, this.varcharAsString);
+        return DataTypeConvertUtil.parseValue(type, source, this.varcharAsString);
     }
 
     @Override
@@ -80,7 +80,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             return (boolean) value;
 
         int taosType = fields.get(columnIndex - 1).getTaosType();
-        return DataTypeConverUtil.getBoolean(taosType, value);
+        return DataTypeConvertUtil.getBoolean(taosType, value);
     }
 
     @Override
@@ -97,7 +97,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             return (byte) value;
 
         int taosType = fields.get(columnIndex - 1).getTaosType();
-        return DataTypeConverUtil.getByte(taosType, value, columnIndex);
+        return DataTypeConvertUtil.getByte(taosType, value, columnIndex);
     }
 
 
@@ -116,7 +116,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             return (short) value;
 
         int taosType = fields.get(columnIndex - 1).getTaosType();
-        return DataTypeConverUtil.getShort(taosType, value, columnIndex);
+        return DataTypeConvertUtil.getShort(taosType, value, columnIndex);
 
     }
 
@@ -134,7 +134,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             return (int) value;
 
         int taosType = fields.get(columnIndex - 1).getTaosType();
-        return DataTypeConverUtil.getInt(taosType, value, columnIndex);
+        return DataTypeConvertUtil.getInt(taosType, value, columnIndex);
     }
 
     @Override
@@ -150,7 +150,7 @@ public class BlockResultSet extends AbstractWSResultSet {
         if (value instanceof Long)
             return (long) value;
         int taosType = fields.get(columnIndex - 1).getTaosType();
-        return DataTypeConverUtil.getLong(taosType, value, columnIndex, this.timestampPrecision);
+        return DataTypeConvertUtil.getLong(taosType, value, columnIndex, this.timestampPrecision);
     }
 
     @Override
@@ -167,7 +167,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             return (float) value;
 
         int taosType = fields.get(columnIndex - 1).getTaosType();
-        return DataTypeConverUtil.getFloat(taosType, value, columnIndex);
+        return DataTypeConvertUtil.getFloat(taosType, value, columnIndex);
     }
 
     @Override
@@ -181,7 +181,7 @@ public class BlockResultSet extends AbstractWSResultSet {
         }
         wasNull = false;
         int taosType = fields.get(columnIndex - 1).getTaosType();
-        return DataTypeConverUtil.getDouble(taosType, value, columnIndex, this.timestampPrecision);
+        return DataTypeConvertUtil.getDouble(taosType, value, columnIndex, this.timestampPrecision);
     }
 
     @Override
@@ -194,7 +194,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             return null;
         }
         wasNull = false;
-        return DataTypeConverUtil.getBytes(value);
+        return DataTypeConvertUtil.getBytes(value);
     }
 
     @Override
@@ -207,7 +207,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             return null;
         }
         wasNull = false;
-        return DataTypeConverUtil.getDate(value, zoneId);
+        return DataTypeConvertUtil.getDate(value, zoneId);
     }
 
     @Override
@@ -220,7 +220,7 @@ public class BlockResultSet extends AbstractWSResultSet {
             return null;
         }
         wasNull = false;
-        return DataTypeConverUtil.getTime(value, zoneId);
+        return DataTypeConvertUtil.getTime(value, zoneId);
     }
 
     @Override
@@ -372,7 +372,7 @@ public class BlockResultSet extends AbstractWSResultSet {
 
 
         int taosType = fields.get(columnIndex - 1).getTaosType();
-        return DataTypeConverUtil.getBigDecimal(taosType, value);
+        return DataTypeConvertUtil.getBigDecimal(taosType, value);
     }
 
     @Override

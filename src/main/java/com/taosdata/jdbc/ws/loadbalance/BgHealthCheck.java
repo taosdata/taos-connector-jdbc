@@ -2,7 +2,7 @@ package com.taosdata.jdbc.ws.loadbalance;
 
 import com.taosdata.jdbc.common.Endpoint;
 import com.taosdata.jdbc.enums.WSFunction;
-import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.ws.InFlightRequest;
 import com.taosdata.jdbc.ws.WSClient;
 import org.slf4j.Logger;

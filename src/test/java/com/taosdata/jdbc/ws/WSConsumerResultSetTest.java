@@ -16,48 +16,48 @@ public class WSConsumerResultSetTest {
         wsConsumerResultSet = new WSConsumerResultSet(null, null, 0, null, null);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testIsBeforeFirst() throws SQLException {
-        assertFalse(wsConsumerResultSet.isBeforeFirst());
+        wsConsumerResultSet.isBeforeFirst();
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testIsAfterLast() throws SQLException {
-        assertFalse(wsConsumerResultSet.isAfterLast());
+        wsConsumerResultSet.isAfterLast();
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testIsFirst() throws SQLException {
-        assertTrue(wsConsumerResultSet.isFirst());
+        wsConsumerResultSet.isFirst();
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testIsLast() throws SQLException {
-        assertFalse(wsConsumerResultSet.isLast());
+        wsConsumerResultSet.isLast();
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testBeforeFirst() throws SQLException {
         wsConsumerResultSet.beforeFirst();
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testafterFirst() throws SQLException {
         wsConsumerResultSet.afterLast();
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testFirst() throws SQLException {
-        assertFalse(wsConsumerResultSet.first());
+        wsConsumerResultSet.first();
     }
 
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testLast() throws SQLException {
-        assertFalse(wsConsumerResultSet.last());
+        wsConsumerResultSet.last();
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testGetRow() throws SQLException {
         assertEquals(0, wsConsumerResultSet.getRow());
     }

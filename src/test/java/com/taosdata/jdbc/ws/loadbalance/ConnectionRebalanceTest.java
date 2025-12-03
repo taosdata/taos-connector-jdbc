@@ -4,7 +4,7 @@ import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.common.Endpoint;
-import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.TaosAdapterMock;

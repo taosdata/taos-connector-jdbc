@@ -14,10 +14,10 @@ import java.util.ArrayList;
 import java.util.Properties;
 
 public class WSGeometryTest {
-    static final String host = "127.0.0.1";
-    static final String dbName = TestUtils.camelToSnake(WSGeometryTest.class);
-    static final String tableNative = "geometry_noraml";
-    static final String tableStmt = "geometry_stmt";
+    static final String HOST = "127.0.0.1";
+    static final String DB_NAME = TestUtils.camelToSnake(WSGeometryTest.class);
+    static final String TABLE_NATIVE = "geometry_noraml";
+    static final String TABLE_STMT = "geometry_stmt";
     static Connection connection;
     static Statement statement;
     final byte[] expectedArray = StringUtils.hexToBytes("0101000000000000000000F03F0000000000000040");
@@ -27,7 +27,7 @@ public class WSGeometryTest {
     public void testInsert() throws Exception {
         String sql = "insert into ? using stable3 tags(?) values(?,?)";
 
-        statement.executeUpdate("insert into subt_a using " + dbName + "." + tableNative + " tags( \"POINT(3 5)\") values(now, \"POINT(1 2)\")");
+        statement.executeUpdate("insert into subt_a using " + DB_NAME + "." + TABLE_NATIVE + " tags( \"POINT(3 5)\") values(now, \"POINT(1 2)\")");
         ResultSet resultSet = statement.executeQuery("select c1 from subt_a");
 
         resultSet.next();
@@ -38,7 +38,7 @@ public class WSGeometryTest {
 
     @Test
     public void testPrepare() throws SQLException {
-        TSWSPreparedStatement preparedStatement = (TSWSPreparedStatement) connection.prepareStatement("insert into ? using  " + dbName + "." + tableStmt + "  tags(?) values (?, ?)");
+        TSWSPreparedStatement preparedStatement = (TSWSPreparedStatement) connection.prepareStatement("insert into ? using  " + DB_NAME + "." + TABLE_STMT + "  tags(?) values (?, ?)");
         preparedStatement.setTableName("subt_b");
         preparedStatement.setTagGeometry(0, expectedArray);
 
@@ -69,24 +69,24 @@ public class WSGeometryTest {
     public static void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata&batchfetch=true";
+            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata&batchfetch=true";
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
         connection = DriverManager.getConnection(url, properties);
         statement = connection.createStatement();
-        statement.executeUpdate("drop database if exists " + dbName);
-        statement.executeUpdate("create database if not exists " + dbName);
-        statement.executeUpdate("use " + dbName);
-        statement.executeUpdate("create table " + tableNative + " (ts timestamp, c1 GEOMETRY(50))  tags(t1 GEOMETRY(50))");
-        statement.executeUpdate("create table " + tableStmt + " (ts timestamp, c1 GEOMETRY(50))    tags(t1 GEOMETRY(50))");
+        statement.executeUpdate("drop database if exists " + DB_NAME);
+        statement.executeUpdate("create database if not exists " + DB_NAME);
+        statement.executeUpdate("use " + DB_NAME);
+        statement.executeUpdate("create table " + TABLE_NATIVE + " (ts timestamp, c1 GEOMETRY(50))  tags(t1 GEOMETRY(50))");
+        statement.executeUpdate("create table " + TABLE_STMT + " (ts timestamp, c1 GEOMETRY(50))    tags(t1 GEOMETRY(50))");
     }
 
     @AfterClass
     public static void after() {
         try {
             if (statement != null && !statement.isClosed()) {
-                statement.executeUpdate("drop database if exists " + dbName);
+                statement.executeUpdate("drop database if exists " + DB_NAME);
                 statement.close();
             }
             if (connection != null && !connection.isClosed()) {

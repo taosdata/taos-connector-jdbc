@@ -4,7 +4,7 @@ package com.taosdata.jdbc.ws;
 import com.taosdata.jdbc.AbstractDriver;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
-import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.utils.StringUtils;
 
 import java.sql.*;

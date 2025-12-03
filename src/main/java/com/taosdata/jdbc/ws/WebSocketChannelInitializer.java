@@ -1,6 +1,6 @@
 package com.taosdata.jdbc.ws;
 
-import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.common.ConnectionParam;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;

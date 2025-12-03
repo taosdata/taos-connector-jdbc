@@ -5,7 +5,7 @@ import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.common.*;
 import com.taosdata.jdbc.enums.FieldBindType;
-import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.utils.SyncObj;
 import com.taosdata.jdbc.utils.Utils;

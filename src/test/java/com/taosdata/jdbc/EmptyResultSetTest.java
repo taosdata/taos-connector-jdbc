@@ -1,5 +1,6 @@
 package com.taosdata.jdbc;
 
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -200,14 +201,16 @@ public class EmptyResultSetTest {
         assertFalse(emptyResultSet.isLast());
     }
 
-    @Test(expected = SQLException.class)
+    @Test
     public void testBeforeFirst() throws SQLException {
         emptyResultSet.beforeFirst();
+        Assert.assertNotNull(emptyResultSet);
     }
 
-    @Test(expected = SQLException.class)
+    @Test
     public void testAfterLast() throws SQLException {
         emptyResultSet.afterLast();
+        Assert.assertNotNull(emptyResultSet);
     }
 
     @Test
@@ -240,9 +243,10 @@ public class EmptyResultSetTest {
         assertFalse(emptyResultSet.previous());
     }
 
-    @Test(expected = SQLException.class)
+    @Test
     public void testSetFetchDirection() throws SQLException {
          emptyResultSet.setFetchDirection(ResultSet.FETCH_FORWARD);
+        Assert.assertEquals(ResultSet.FETCH_FORWARD, emptyResultSet.getFetchDirection());
     }
 
     @Test

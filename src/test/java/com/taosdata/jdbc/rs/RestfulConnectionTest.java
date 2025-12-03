@@ -1,6 +1,9 @@
 package com.taosdata.jdbc.rs;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.TSDBErrorNumbers;
+import com.taosdata.jdbc.enums.SchemalessProtocolType;
+import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -10,9 +13,8 @@ import org.junit.Test;
 import java.sql.*;
 import java.util.Properties;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
+import static org.junit.Assert.*;
+@SuppressWarnings("java:S1874")
 public class RestfulConnectionTest {
 
     private static final String host = "127.0.0.1";
@@ -86,7 +88,7 @@ public class RestfulConnectionTest {
 
     @Test
     public void isClosed() throws SQLException {
-        Assert.assertFalse(conn.isClosed());
+        assertFalse(conn.isClosed());
     }
 
     @Test
@@ -379,6 +381,104 @@ public class RestfulConnectionTest {
         Assert.assertTrue(conn.isWrapperFor(RestfulConnection.class));
     }
 
+    // Test write method throws unsupported exception
+    @Test(expected = SQLException.class)
+    public void testWriteMethodUnsupported() throws SQLException {
+        String[] lines = {"test line"};
+        ((RestfulConnection)conn).write(lines, SchemalessProtocolType.LINE, SchemalessTimestampType.NOT_CONFIGURED, 0, 1L);
+    }
+
+    // Test writeRaw method throws unsupported exception
+    @Test(expected = SQLException.class)
+    public void testWriteRawMethodUnsupported() throws SQLException {
+        String line = "test raw line";
+        ((RestfulConnection)conn).writeRaw(line, SchemalessProtocolType.LINE, SchemalessTimestampType.NOT_CONFIGURED, 0, 1L);
+    }
+
+    // Test getter methods of RestfulConnection
+    @Test
+    public void testRestfulConnectionGetters() throws SQLException {
+        RestfulConnection restfulConn = conn.unwrap(RestfulConnection.class);
+
+        // Verify basic getters (values depend on actual connection config)
+        assertNotNull("Host should not be null", restfulConn.getHost());
+        assertNotNull("Port should not be null", restfulConn.getPort());
+        assertNotNull("URL should not be null", restfulConn.getUrl());
+        assertNotNull("Auth should not be null (Basic auth format)", restfulConn.getAuth());
+        assertNull("Database name mismatch", restfulConn.getDatabase()); // Catalog matches database
+
+        // Test other getters
+        assertNull("Token should be null for basic auth", restfulConn.getToken());
+        assertNotNull("Timezone should not be null", restfulConn.getTz());
+        assertFalse("SSL should be disabled by default", restfulConn.isUseSsl());
+    }
+
+    // Test createStatement when connection is closed
+    @Test(expected = SQLException.class)
+    public void testCreateStatementAfterClose() throws SQLException {
+        Connection tempConn = DriverManager.getConnection(conn.getMetaData().getURL());
+        tempConn.close();
+        tempConn.createStatement();
+    }
+
+    // Test prepareStatement when connection is closed
+    @Test(expected = SQLException.class)
+    public void testPrepareStatementAfterClose() throws SQLException {
+        Connection tempConn = DriverManager.getConnection(conn.getMetaData().getURL());
+        tempConn.close();
+        tempConn.prepareStatement("show databases");
+    }
+
+    // Test getMetaData when connection is closed
+    @Test(expected = SQLException.class)
+    public void testGetMetaDataAfterClose() throws SQLException {
+        Connection tempConn = DriverManager.getConnection(conn.getMetaData().getURL());
+        tempConn.close();
+        tempConn.getMetaData();
+    }
+
+    // Test close method called multiple times (no exception)
+    @Test
+    public void testCloseMultipleTimes() throws SQLException {
+        Connection tempConn = DriverManager.getConnection(conn.getMetaData().getURL());
+        assertFalse("Connection should be open initially", tempConn.isClosed());
+
+        tempConn.close();
+        assertTrue("Connection should be closed after first close", tempConn.isClosed());
+
+        // Second close should not throw exception
+        tempConn.close();
+        assertTrue("Connection should remain closed after second close", tempConn.isClosed());
+    }
+
+    // Test isClosed returns correct status
+    @Test
+    public void testIsClosedStatus() throws SQLException {
+        Connection tempConn = DriverManager.getConnection(conn.getMetaData().getURL());
+
+        // Initial state: open
+        assertFalse("New connection should not be closed", tempConn.isClosed());
+
+        // After close: closed
+        tempConn.close();
+        assertTrue("Connection should be closed after close()", tempConn.isClosed());
+    }
+
+    // Test error code for closed connection operations
+    @Test
+    public void testClosedConnectionErrorCode() throws SQLException {
+        Connection tempConn = DriverManager.getConnection(conn.getMetaData().getURL());
+        tempConn.close();
+
+        try {
+            tempConn.createStatement();
+            fail("Should throw SQLException for closed connection");
+        } catch (SQLException e) {
+            assertEquals("Incorrect error code for closed connection",
+                    TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, e.getErrorCode());
+        }
+    }
+
     @BeforeClass
     public static void beforeClass() throws Exception {
         Properties properties = new Properties();
@@ -407,5 +507,4 @@ public class RestfulConnectionTest {
             conn.close();
         }
     }
-
 }

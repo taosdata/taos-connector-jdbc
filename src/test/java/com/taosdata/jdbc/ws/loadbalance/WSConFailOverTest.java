@@ -25,7 +25,7 @@ public class WSConFailOverTest {
 
     private static final String HOST_B = "127.0.0.1";
     private static final int PORT_B = 9041;
-    private final String db_name = TestUtils.camelToSnake(WSConFailOverTest.class);
+    private final String dbName = TestUtils.camelToSnake(WSConFailOverTest.class);
     private static final String TABLE_NAME = "meters";
     private Connection connection;
     private TaosAdapterMock taosAdapterMock;
@@ -41,7 +41,7 @@ public class WSConFailOverTest {
                     if (i == 2){
                         taosAdapterMock.stop();
                     }
-                    resultSet = statement.executeQuery("select ts from " + db_name + "." + TABLE_NAME + " limit 1;");
+                    resultSet = statement.executeQuery("select ts from " + dbName + "." + TABLE_NAME + " limit 1;");
 
                 }catch (SQLException e){
                     if (e.getErrorCode() == TSDBErrorNumbers.ERROR_RESULTSET_CLOSED){
@@ -90,11 +90,11 @@ public class WSConFailOverTest {
 
         connection = DriverManager.getConnection(url, properties);
         Statement statement = connection.createStatement();
-        statement.execute("drop database if exists " + db_name);
-        statement.execute("create database " + db_name);
-        statement.execute("use " + db_name);
-        statement.execute("create table if not exists " + db_name + "." + TABLE_NAME + "(ts timestamp, f int)");
-        statement.execute("insert into " + db_name + "." + TABLE_NAME + " values (now, 1)");
+        statement.execute("drop database if exists " + dbName);
+        statement.execute("create database " + dbName);
+        statement.execute("use " + dbName);
+        statement.execute("create table if not exists " + dbName + "." + TABLE_NAME + "(ts timestamp, f int)");
+        statement.execute("insert into " + dbName + "." + TABLE_NAME + " values (now, 1)");
         statement.close();
         connection.close();
 
@@ -118,7 +118,8 @@ public class WSConFailOverTest {
     public void after() throws SQLException {
         if (null != connection) {
             Statement statement = connection.createStatement();
-            statement.execute("drop database if exists " + db_name);
+            statement.setQueryTimeout(60);
+            statement.execute("drop database if exists " + dbName);
             statement.close();
             connection.close();
         }

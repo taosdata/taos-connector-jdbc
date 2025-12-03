@@ -2,7 +2,7 @@ package com.taosdata.jdbc;
 
 import com.google.common.collect.Lists;
 import com.taosdata.jdbc.enums.DataType;
-import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.ws.WSConnection;
 import org.slf4j.Logger;

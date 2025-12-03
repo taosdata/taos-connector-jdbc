@@ -108,16 +108,6 @@ public class AbstractResultSetTest {
         }
 
         @Override
-        public boolean isBeforeFirst() throws SQLException {
-            return false;
-        }
-
-        @Override
-        public boolean isAfterLast() throws SQLException {
-            return false;
-        }
-
-        @Override
         public boolean isFirst() throws SQLException {
             return false;
         }
@@ -1494,4 +1484,27 @@ public class AbstractResultSetTest {
         resultSet.getObject("column", String.class);
     }
 
+    @Test(expected = SQLException.class)
+    public void testIsBeforeFirst() throws SQLException {
+        resultSet.closed = false;
+        resultSet.isBeforeFirst();
+    }
+
+    @Test(expected = SQLException.class)
+    public void testIsBeforeFirst2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.isBeforeFirst();
+    }
+
+    @Test(expected = SQLException.class)
+    public void testIsAfterLast() throws SQLException {
+        resultSet.closed = false;
+        resultSet.isAfterLast();
+    }
+
+    @Test(expected = SQLException.class)
+    public void testIsAfterLast2() throws SQLException {
+        resultSet.closed = true;
+        resultSet.isAfterLast();
+    }
 }

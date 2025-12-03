@@ -63,7 +63,7 @@ public class ConsumerCommittedTest {
             Set<TopicPartition> assignment = consumer.assignment();
             Assert.assertTrue(assignment.containsAll(position.keySet()));
             // seek to beginning
-//            consumer.seekToBeginning(position.keySet());
+            consumer.seekToBeginning(position.keySet());
             // seek to end
             consumer.seekToEnd(position.keySet());
             consumer.poll(Duration.ofMillis(100));
@@ -114,7 +114,7 @@ public class ConsumerCommittedTest {
             Set<TopicPartition> assignment = consumer.assignment();
             Assert.assertTrue(assignment.containsAll(position.keySet()));
             // seek to beginning
-//            consumer.seekToBeginning(position.keySet());
+            consumer.seekToBeginning(position.keySet());
             // seek to end
             consumer.seekToEnd(position.keySet());
             consumer.poll(Duration.ofMillis(100));

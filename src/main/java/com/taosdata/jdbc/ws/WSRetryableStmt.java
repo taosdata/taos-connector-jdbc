@@ -2,7 +2,7 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.AbstractConnection;
 import com.taosdata.jdbc.TSDBErrorNumbers;
-import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.utils.StmtUtils;
 import com.taosdata.jdbc.utils.Utils;

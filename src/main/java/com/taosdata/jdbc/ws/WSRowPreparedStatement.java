@@ -6,7 +6,7 @@ import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.common.AutoExpandingBuffer;
 import com.taosdata.jdbc.common.TableInfo;
 import com.taosdata.jdbc.enums.FieldBindType;
-import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.utils.BlobUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.ReqId;

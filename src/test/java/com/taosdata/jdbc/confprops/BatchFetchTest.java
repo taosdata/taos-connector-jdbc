@@ -12,16 +12,16 @@ import java.util.Random;
 @Ignore // performance
 public class BatchFetchTest {
 
-    private static final String host = "127.0.0.1";
+    private static final String HOST = "127.0.0.1";
     private long rowFetchCost, batchFetchCost;
 
-    private static final String dbName = TestUtils.camelToSnake(BatchFetchTest.class);
+    private static final String DB_NAME = TestUtils.camelToSnake(BatchFetchTest.class);
 
     @Test
     public void case01_rowFetch() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/" + dbName + "?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":6030/" + DB_NAME + "?user=root&password=taosdata";
         } else {
             url += "test?user=root&password=taosdata";
         }
@@ -45,7 +45,7 @@ public class BatchFetchTest {
     public void case02_batchFetch() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/" + dbName + "?user=root&password=taosdata&batchfetch=true";
+            url = "jdbc:TAOS://" + HOST + ":6030/" + DB_NAME + "?user=root&password=taosdata&batchfetch=true";
         } else {
             url += "test?user=root&password=taosdata&batchfetch=true";
         }
@@ -74,13 +74,13 @@ public class BatchFetchTest {
     public static void beforeClass() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
         }
         try (Connection conn = DriverManager.getConnection(url);
              Statement stmt = conn.createStatement()) {
-            stmt.execute("drop database if exists " + dbName);
-            stmt.execute("create database if not exists " + dbName);
-            stmt.execute("use " + dbName);
+            stmt.execute("drop database if exists " + DB_NAME);
+            stmt.execute("create database if not exists " + DB_NAME);
+            stmt.execute("use " + DB_NAME);
             stmt.execute("create table weather(ts timestamp, f int) tags(t int)");
             for (int i = 0; i < 1000; i++) {
                 stmt.execute(generateSql(100, 100));
@@ -104,11 +104,11 @@ public class BatchFetchTest {
     public static void afterClass() {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
         }
         try (Connection conn = DriverManager.getConnection(url);
              Statement stmt = conn.createStatement()) {
-            stmt.execute("drop database if exists " + dbName);
+            stmt.execute("drop database if exists " + DB_NAME);
         } catch (SQLException e) {
             e.printStackTrace();
         }

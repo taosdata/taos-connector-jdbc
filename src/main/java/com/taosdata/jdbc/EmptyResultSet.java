@@ -266,16 +266,6 @@ public class EmptyResultSet extends AbstractResultSet {
     }
 
     @Override
-    public void beforeFirst() throws SQLException {
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
-    }
-
-    @Override
-    public void afterLast() throws SQLException {
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
-    }
-
-    @Override
     public boolean first() throws SQLException {
         return false;
     }
@@ -303,11 +293,6 @@ public class EmptyResultSet extends AbstractResultSet {
     @Override
     public boolean previous() throws SQLException {
         return false;
-    }
-
-    @Override
-    public void setFetchDirection(int direction) throws SQLException {
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
     }
 
     @Override
@@ -519,5 +504,13 @@ public class EmptyResultSet extends AbstractResultSet {
     @Override
     public boolean isWrapperFor(Class<?> iface) throws SQLException {
         return false;
+    }
+    @Override
+    public void beforeFirst() throws SQLException {
+        // do nothing
+    }
+    @Override
+    public void afterLast() throws SQLException {
+        // do nothing
     }
 }

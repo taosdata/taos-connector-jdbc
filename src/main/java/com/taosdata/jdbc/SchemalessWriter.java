@@ -7,7 +7,7 @@ import com.taosdata.jdbc.enums.ConnectionType;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.enums.WSFunction;
-import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.rs.RestfulDriver;
 import com.taosdata.jdbc.utils.HttpClientPoolUtil;
 import com.taosdata.jdbc.utils.JsonUtil;

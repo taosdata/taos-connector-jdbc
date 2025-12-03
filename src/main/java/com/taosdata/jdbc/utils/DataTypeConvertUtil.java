@@ -21,7 +21,9 @@ import java.time.format.DateTimeParseException;
 import static com.taosdata.jdbc.TSDBConstants.*;
 import static com.taosdata.jdbc.utils.UnsignedDataUtils.*;
 
-public class DataTypeConverUtil {
+public class DataTypeConvertUtil {
+    private DataTypeConvertUtil() {
+    }
     public static boolean getBoolean(int taosType, Object value) throws SQLDataException {
         switch (taosType) {
             case TSDB_DATA_TYPE_TINYINT:
