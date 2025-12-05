@@ -117,13 +117,16 @@ public class Transport implements AutoCloseable {
         try {
             connectionManager.getCurrentClient().send(reqString);
         } catch (WebsocketNotConnectedException e) {
-            connectionManager.handleConnectionException(false, this);
             try {
+                connectionManager.handleConnectionException(this);
                 if (!reSend) {
                     inFlightRequest.remove(request.getAction(), request.id());
-                    throw new SQLException("reconnect, need to resend " + request.getAction() + " msg");
+                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
                 }
                 connectionManager.getCurrentClient().send(reqString);
+            } catch (SQLException ex) {
+                inFlightRequest.remove(request.getAction(), request.id());
+                throw ex;
             } catch (Exception ex) {
                 inFlightRequest.remove(request.getAction(), request.id());
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());
@@ -135,7 +138,11 @@ public class Transport implements AutoCloseable {
         try {
             response = responseFuture.get();
             handleTaosdError(response);
-        } catch (InterruptedException | ExecutionException e) {
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            inFlightRequest.remove(request.getAction(), request.id());
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_QUERY_TIMEOUT, e.getMessage());
+        } catch (ExecutionException e) {
             inFlightRequest.remove(request.getAction(), request.id());
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_QUERY_TIMEOUT, e.getMessage());
         }
@@ -193,8 +200,8 @@ public class Transport implements AutoCloseable {
             Utils.retainByteBuf(buffer);
             connectionManager.getCurrentClient().send(buffer);
         } catch (WebsocketNotConnectedException e) {
-            connectionManager.handleConnectionException(false, this);
             try {
+                connectionManager.handleConnectionException(this);
                 Utils.retainByteBuf(buffer);
                 connectionManager.getCurrentClient().send(buffer);
             } catch (Exception ex) {
@@ -210,7 +217,11 @@ public class Transport implements AutoCloseable {
         try {
             response = responseFuture.get();
             handleTaosdError(response);
-        } catch (InterruptedException | ExecutionException e) {
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            inFlightRequest.remove(action, reqId);
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_QUERY_TIMEOUT, e.getMessage());
+        } catch (ExecutionException e) {
             inFlightRequest.remove(action, reqId);
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_QUERY_TIMEOUT, e.getMessage());
         }
@@ -243,7 +254,7 @@ public class Transport implements AutoCloseable {
             Utils.retainByteBuf(buffer);
             connectionManager.getCurrentClient().send(buffer);
         } catch (WebsocketNotConnectedException e) {
-            connectionManager.handleConnectionException(false, this);
+            connectionManager.handleConnectionException(this);
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED,
                     "Websocket reconnected, but the result set is closed");
         } finally {
@@ -276,13 +287,20 @@ public class Transport implements AutoCloseable {
             Utils.retainByteBuf(buffer);
             connectionManager.getCurrentClient().send(buffer);
         } catch (WebsocketNotConnectedException e) {
-            connectionManager.handleConnectionException(false, this);
+            try {
+                connectionManager.handleConnectionException(this);
+            } catch (SQLException ex) {
+                inFlightRequest.remove(action, reqId);
+                throw ex;
+            }
+
+            if (!resend) {
+                inFlightRequest.remove(action, reqId);
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
+            }
+
             try {
                 Utils.retainByteBuf(buffer);
-                if (!resend) {
-                    inFlightRequest.remove(action, reqId);
-                    throw new SQLException("reconnect, need to resend " + action + " msg");
-                }
                 connectionManager.getCurrentClient().send(buffer);
             } catch (Exception ex) {
                 inFlightRequest.remove(action, reqId);
@@ -299,8 +317,12 @@ public class Transport implements AutoCloseable {
         try {
             response = responseFuture.get();
             handleTaosdError(response);
-        } catch (InterruptedException | ExecutionException e) {
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             inFlightRequest.remove(action, reqId);
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_QUERY_TIMEOUT, e.getMessage());
+        } catch (ExecutionException e) {
+           inFlightRequest.remove(action, reqId);
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_QUERY_TIMEOUT, e.getMessage());
         }
         return response;
@@ -353,9 +375,13 @@ public class Transport implements AutoCloseable {
                 completableFuture, timeout, TimeUnit.MILLISECONDS, reqString);
         try {
             response = responseFuture.get();
-        } catch (InterruptedException | ExecutionException e) {
-            inFlightRequest.remove(request.getAction(), request.id());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_QUERY_TIMEOUT, e.getMessage());
+        } catch (ExecutionException e) {
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_QUERY_TIMEOUT, e.getMessage());
+        } finally {
+            inFlightRequest.remove(request.getAction(), request.id());
         }
         return response;
     }
@@ -374,7 +400,7 @@ public class Transport implements AutoCloseable {
         try {
             connectionManager.getCurrentClient().send(request.toString());
         } catch (WebsocketNotConnectedException e) {
-            connectionManager.handleConnectionException(false, this);
+            connectionManager.handleConnectionException(this);
             try {
                 connectionManager.getCurrentClient().send(request.toString());
             } catch (Exception ex) {

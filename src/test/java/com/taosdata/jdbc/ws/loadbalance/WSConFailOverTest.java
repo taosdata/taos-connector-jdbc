@@ -20,13 +20,13 @@ import java.util.Properties;
 @RunWith(CatalogRunner.class)
 @FixMethodOrder
 public class WSConFailOverTest {
-    private static final String hostA = "127.0.0.1";
-    private static final int portA = 6041;
+    private static final String HOST_A = "127.0.0.1";
+    private static final int PORT_A = 6041;
 
-    private static final String hostB = "127.0.0.1";
-    private static final int portB = 9041;
-    private final String db_name = TestUtils.camelToSnake(WSConFailOverTest.class);
-    private static final String tableName = "meters";
+    private static final String HOST_B = "127.0.0.1";
+    private static final int PORT_B = 9041;
+    private final String dbName = TestUtils.camelToSnake(WSConFailOverTest.class);
+    private static final String TABLE_NAME = "meters";
     private Connection connection;
     private TaosAdapterMock taosAdapterMock;
 
@@ -41,7 +41,7 @@ public class WSConFailOverTest {
                     if (i == 2){
                         taosAdapterMock.stop();
                     }
-                    resultSet = statement.executeQuery("select ts from " + db_name + "." + tableName + " limit 1;");
+                    resultSet = statement.executeQuery("select ts from " + dbName + "." + TABLE_NAME + " limit 1;");
 
                 }catch (SQLException e){
                     if (e.getErrorCode() == TSDBErrorNumbers.ERROR_RESULTSET_CLOSED){
@@ -68,7 +68,7 @@ public class WSConFailOverTest {
         }
 
         taosAdapterMock.start();
-        RebalanceTestUtil.waitHealthCheckFinishedIgnoreException(new Endpoint(hostA, taosAdapterMock.getListenPort(), false));
+        RebalanceTestUtil.waitHealthCheckFinishedIgnoreException(new Endpoint(HOST_A, taosAdapterMock.getListenPort(), false));
     }
 
     @Before
@@ -79,7 +79,7 @@ public class WSConFailOverTest {
         String url;
         url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + hostA + ":" + portA + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST_A + ":" + PORT_A + "/?user=root&password=taosdata";
         } else {
             url += "?user=root&password=taosdata";
         }
@@ -90,22 +90,22 @@ public class WSConFailOverTest {
 
         connection = DriverManager.getConnection(url, properties);
         Statement statement = connection.createStatement();
-        statement.execute("drop database if exists " + db_name);
-        statement.execute("create database " + db_name);
-        statement.execute("use " + db_name);
-        statement.execute("create table if not exists " + db_name + "." + tableName + "(ts timestamp, f int)");
-        statement.execute("insert into " + db_name + "." + tableName + " values (now, 1)");
+        statement.execute("drop database if exists " + dbName);
+        statement.execute("create database " + dbName);
+        statement.execute("use " + dbName);
+        statement.execute("create table if not exists " + dbName + "." + TABLE_NAME + "(ts timestamp, f int)");
+        statement.execute("insert into " + dbName + "." + TABLE_NAME + " values (now, 1)");
         statement.close();
         connection.close();
 
         url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + hostB + ":" + portB + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST_B + ":" + PORT_B + "/?user=root&password=taosdata";
         } else {
             url += "?user=root&password=taosdata";
         }
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_HOST, hostA);
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_PORT, String.valueOf(portA));
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_HOST, HOST_A);
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_PORT, String.valueOf(PORT_A));
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_INTERVAL_MS, "2000");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_RETRY_COUNT, "3");
@@ -118,7 +118,8 @@ public class WSConFailOverTest {
     public void after() throws SQLException {
         if (null != connection) {
             Statement statement = connection.createStatement();
-            statement.execute("drop database if exists " + db_name);
+            statement.setQueryTimeout(60);
+            statement.execute("drop database if exists " + dbName);
             statement.close();
             connection.close();
         }

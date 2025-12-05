@@ -7,12 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
-**Full Changelog**: [3.7.6...](https://github.com/taosdata/taos-connector-jdbc/compare/3.7.6...)
+**Full Changelog**: [3.7.8...](https://github.com/taosdata/taos-connector-jdbc/compare/3.7.8...)
+
+### Features
+
+
+- Optimize the load balancing logic to achieve rebalancing after node failure recovery. (#291) ([9c473bc](https://github.com/taosdata/taos-connector-jdbc/commit/9c473bccc699ddba33316efa313da2230143ac34))
+
+
+## [3.7.8] - 2025-11-20
+
+**Full Changelog**: [3.7.7...3.7.8](https://github.com/taosdata/taos-connector-jdbc/compare/3.7.7...3.7.8)
+
+### Bug Fixes
+
+
+- Fix getTables need identifier quote string bug. (#292) ([ce5651d](https://github.com/taosdata/taos-connector-jdbc/commit/ce5651d31c87174c06ba567b9a1596c54a6c288b))
+
+
+## [3.7.7] - 2025-11-13
+
+**Full Changelog**: [3.7.6...3.7.7](https://github.com/taosdata/taos-connector-jdbc/compare/3.7.6...3.7.7)
 
 ### Bug Fixes
 
 
 - Load properties issue in windows (#289) ([b6841d7](https://github.com/taosdata/taos-connector-jdbc/commit/b6841d726f9520556ddf069a5e0aea95af3be876))
+- WebSocket statement timeout setting resets transport's timeout (#290) ([c9792c0](https://github.com/taosdata/taos-connector-jdbc/commit/c9792c0eea77e9978ff29bf64c55b823d0c0755f))
 
 
 ## [3.7.6] - 2025-10-17
