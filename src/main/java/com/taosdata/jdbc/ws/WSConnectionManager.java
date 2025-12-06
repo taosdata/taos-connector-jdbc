@@ -105,7 +105,7 @@ public class WSConnectionManager implements AutoCloseable {
     }
 
     private boolean performCurrentNodeReconnect(boolean isTmq, Transport transport) throws SQLException {
-        boolean reconnected = reconnectCurrentNodePhysical(isTmq);
+        boolean reconnected = reconnectCurrentNodePhysical();
         if (reconnected && !isTmq) {
             reconnected = authenticateAfterReconnect(transport);
         }
@@ -139,7 +139,7 @@ public class WSConnectionManager implements AutoCloseable {
                 "Websocket Not Connected Exception for all endpoints");
     }
 
-    private boolean reconnectCurrentNodePhysical(boolean isTmq) {
+    private boolean reconnectCurrentNodePhysical() {
         for (int retryTimes = 0; retryTimes < connectionParam.getReconnectRetryCount(); retryTimes++) {
             try {
                 boolean reconnected = clientArr.get(currentNodeIndex).reconnectBlocking();
@@ -170,6 +170,7 @@ public class WSConnectionManager implements AutoCloseable {
         ConnectResp auth;
         try {
             auth = (ConnectResp) transport.sendWithoutRetry(new Request(Action.CONN.getAction(), connectReq), defaultTimeout);
+
             if (Code.SUCCESS.getCode() == auth.getCode()) {
                 return true;
             } else {
@@ -424,12 +425,11 @@ public class WSConnectionManager implements AutoCloseable {
     /**
      * Handles connection exceptions and initiates reconnection if appropriate.
      *
-     * @param isTmq whether this is a TMQ connection
      * @param transport the transport instance for reconnection
      * @throws SQLException if reconnection fails or TMQ exception should be thrown
      */
-    void handleConnectionException(boolean isTmq, Transport transport) throws SQLException {
-        if (isTmq) {
+    void handleConnectionException(Transport transport) throws SQLException {
+        if (WSFunction.TMQ.equals(this.wsFunction)) {
             tmqRethrowConnectionCloseException();
         }
         performReconnect(false, transport);
