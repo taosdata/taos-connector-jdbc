@@ -1,10 +1,12 @@
 package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
 import java.io.ByteArrayInputStream;
+import java.io.Reader;
 import java.io.StringReader;
 import java.math.BigDecimal;
 import java.sql.*;
@@ -477,11 +479,11 @@ public class TSDBPreparedStatementTest {
     public void bindDataWithSingleTagTest() throws SQLException {
         Statement stmt = conn.createStatement();
 
-        String[] types = new String[]{"tinyint", "smallint", "int", "bigint", "bool", "float", "double", "binary(10)", "nchar(10)"};
+        String[] types = new String[]{"tinyint", "smallint", "int", "bigint",  "timestamp", "bool", "float", "double", "binary(10)", "nchar(10)", "varbinary(10)", "geometry(50)"};
 
         for (String type : types) {
             stmt.execute("drop table if exists weather_test");
-            stmt.execute("create table weather_test(ts timestamp, f1 nchar(10), f2 binary(10)) tags (t " + type + ")");
+            stmt.execute("create table weather_test(ts timestamp, f1 tinyint, f2 smallint) tags (t " + type + ")");
 
             int numOfRows = 1;
 
@@ -491,10 +493,19 @@ public class TSDBPreparedStatementTest {
 
             switch (type) {
                 case "tinyint":
+                    s.setTagByte(0, (byte)1);
+                    break;
                 case "smallint":
+                    s.setTagShort(0, (short) 1);
+                    break;
                 case "int":
-                case "bigint":
                     s.setTagInt(0, 1);
+                    break;
+                case "bigint":
+                    s.setTagLong(0, 1L);
+                    break;
+                case "timestamp":
+                    s.setTagTimestamp(0, 1L);
                     break;
                 case "float":
                     s.setTagFloat(0, 1.23f);
@@ -511,6 +522,12 @@ public class TSDBPreparedStatementTest {
                 case "nchar(10)":
                     s.setTagNString(0, "test");
                     break;
+                case "varbinary(10)":
+                    s.setTagVarbinary(0, "test".getBytes());
+                    break;
+                case "geometry(50)":
+                    s.setTagGeometry(0, StringUtils.hexToBytes("0101000020E6100000000000000000F03F0000000000000040"));
+                    break;
                 default:
                     break;
             }
@@ -523,18 +540,18 @@ public class TSDBPreparedStatementTest {
             s.setTimestamp(0, ts);
 
             int random = 10 + r.nextInt(5);
-            ArrayList<String> s2 = new ArrayList<>();
+            ArrayList<Byte> s2 = new ArrayList<>();
             for (int i = 0; i < numOfRows; i++) {
-                s2.add("分支" + i % 4);
+                s2.add((byte)1);
             }
-            s.setNString(1, s2, 10);
+            s.setByte(1, s2);
 
             random = 10 + r.nextInt(5);
-            ArrayList<String> s3 = new ArrayList<>();
+            ArrayList<Short> s3 = new ArrayList<>();
             for (int i = 0; i < numOfRows; i++) {
-                s3.add("test" + i % 4);
+                s3.add((short) i);
             }
-            s.setString(2, s3, 10);
+            s.setShort(2, s3);
 
             s.columnDataAddBatch();
             s.columnDataExecuteBatch();
@@ -1103,6 +1120,28 @@ public class TSDBPreparedStatementTest {
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void setArray() throws SQLException {
         pstmtInsert.setArray(1, null);
+    }
+
+    @Test(expected = SQLFeatureNotSupportedException.class)
+    public void setNCharacterStream() throws SQLException {
+        pstmtInsert.setNCharacterStream(1, null);
+    }
+    @Test(expected = SQLFeatureNotSupportedException.class)
+    public void setNCharacterStream2() throws SQLException {
+        pstmtInsert.setNCharacterStream(1, null, 0L);
+    }
+
+    @Test(expected = SQLFeatureNotSupportedException.class)
+    public void setAsciiStream2() throws SQLException {
+        pstmtInsert.setAsciiStream(1, null, 0L);
+    }
+    @Test(expected = SQLFeatureNotSupportedException.class)
+    public void setBinaryStream2() throws SQLException {
+        pstmtInsert.setBinaryStream(1, null, 0L);
+    }
+    @Test(expected = SQLFeatureNotSupportedException.class)
+    public void setCharacterStream2() throws SQLException {
+        pstmtInsert.setCharacterStream(1, null, 0L);
     }
 
     @Test

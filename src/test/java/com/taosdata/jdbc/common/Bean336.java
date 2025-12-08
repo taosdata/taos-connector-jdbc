@@ -6,27 +6,27 @@ import java.sql.Timestamp;
 
 public class Bean336 {
 
-    private int t1;
-    private long ts;
-    private int c1;
-    private long c2;
+    private Integer t1;
+    private Long ts;
+    private Integer c1;
+    private Long c2;
 
 
-    private float c3;
-    private double c4;
+    private Float c3;
+    private Double c4;
     private byte[] c5;
-    private short c6;
+    private Short c6;
 
-    private byte c7;
-    private boolean c8;
+    private Byte c7;
+    private Boolean c8;
     private String c9;
     private byte[] c10;
     private byte[] c11;
     private BigDecimal c12;
     private Timestamp c13;
-    private short c14;
-    private int c15;
-    private long c16;
+    private Short c14;
+    private Integer c15;
+    private Long c16;
     private BigInteger c17;
     private BigDecimal c18;
     private BigDecimal c19;
@@ -58,43 +58,43 @@ public class Bean336 {
         return sb.toString();
     }
 
-    public long getTs() {
+    public Long getTs() {
         return ts;
     }
 
-    public void setTs(long ts) {
+    public void setTs(Long ts) {
         this.ts = ts;
     }
 
-    public int getC1() {
+    public Integer getC1() {
         return c1;
     }
 
-    public void setC1(int c1) {
+    public void setC1(Integer c1) {
         this.c1 = c1;
     }
 
-    public long getC2() {
+    public Long getC2() {
         return c2;
     }
 
-    public void setC2(long c2) {
+    public void setC2(Long c2) {
         this.c2 = c2;
     }
 
-    public float getC3() {
+    public Float getC3() {
         return c3;
     }
 
-    public void setC3(float c3) {
+    public void setC3(Float c3) {
         this.c3 = c3;
     }
 
-    public double getC4() {
+    public Double getC4() {
         return c4;
     }
 
-    public void setC4(double c4) {
+    public void setC4(Double c4) {
         this.c4 = c4;
     }
 
@@ -106,27 +106,27 @@ public class Bean336 {
         this.c5 = c5;
     }
 
-    public short getC6() {
+    public Short getC6() {
         return c6;
     }
 
-    public void setC6(short c6) {
+    public void setC6(Short c6) {
         this.c6 = c6;
     }
 
-    public byte getC7() {
+    public Byte getC7() {
         return c7;
     }
 
-    public void setC7(byte c7) {
+    public void setC7(Byte c7) {
         this.c7 = c7;
     }
 
-    public boolean isC8() {
+    public Boolean isC8() {
         return c8;
     }
 
-    public void setC8(boolean c8) {
+    public void setC8(Boolean c8) {
         this.c8 = c8;
     }
 
@@ -170,27 +170,27 @@ public class Bean336 {
     }
 
 
-    public short getC14() {
+    public Short getC14() {
         return c14;
     }
 
-    public void setC14(short c14) {
+    public void setC14(Short c14) {
         this.c14 = c14;
     }
 
-    public int getC15() {
+    public Integer getC15() {
         return c15;
     }
 
-    public void setC15(int c15) {
+    public void setC15(Integer c15) {
         this.c15 = c15;
     }
 
-    public long getC16() {
+    public Long getC16() {
         return c16;
     }
 
-    public void setC16(long c16) {
+    public void setC16(Long c16) {
         this.c16 = c16;
     }
 
@@ -202,11 +202,11 @@ public class Bean336 {
         this.c17 = c17;
     }
 
-    public int getT1() {
+    public Integer getT1() {
         return t1;
     }
 
-    public void setT1(int t1) {
+    public void setT1(Integer t1) {
         this.t1 = t1;
     }
 

@@ -59,19 +59,19 @@ public class WSConsumerWithDiffType336Test {
                 for (ConsumerRecord<Bean336> r : consumerRecords) {
                     Bean336 bean = r.value();
                     Assert.assertEquals(1.0, bean.getC1(), 0.000001);
-                    Assert.assertEquals(100L, bean.getC2());
+                    Assert.assertEquals(100L, bean.getC2().longValue());
                     Assert.assertEquals(2.2, bean.getC3(), 0.000001);
                     Assert.assertEquals(2.3, bean.getC4(), 0.000001);
                     Assert.assertArrayEquals("1".getBytes(), bean.getC5());
-                    Assert.assertEquals(12, bean.getC6());
-                    Assert.assertEquals(2, bean.getC7());
+                    Assert.assertEquals(12, bean.getC6().shortValue());
+                    Assert.assertEquals(2, bean.getC7().byteValue());
                     Assert.assertTrue(bean.isC8());
                     Assert.assertEquals("一", bean.getC9());
                     Assert.assertEquals(1.2234, bean.getC12().doubleValue(), 0.000001);
 
-                    Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_BYTE, bean.getC14());
-                    Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_SHORT, bean.getC15());
-                    Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_INT, bean.getC16());
+                    Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_BYTE, bean.getC14().shortValue());
+                    Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_SHORT, bean.getC15().intValue());
+                    Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_INT, bean.getC16().longValue());
                     Assert.assertEquals(new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG), bean.getC17());
 
                     Assert.assertEquals(new BigDecimal("-12345678901234567890123.4567890000"), bean.getC18());

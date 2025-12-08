@@ -9,7 +9,6 @@ import com.taosdata.jdbc.common.TDBlob;
 import com.taosdata.jdbc.enums.TimestampPrecision;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -23,6 +22,8 @@ import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
 import java.util.Date;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
@@ -35,6 +36,10 @@ public class DataTypeConvertUtilTest {
     private TDBlob mockTDBlob;
     private AutoCloseable closeable;
     private String originalCharset;
+
+    private static final int COLUMN_INDEX = 1;
+    private static final int TIMESTAMP_PRECISION_MS = TimestampPrecision.MS;
+
 
     @Test
     public void testGetBoolean() throws SQLDataException {
@@ -515,38 +520,40 @@ public class DataTypeConvertUtilTest {
 
     }
 
+    @Test(expected = RuntimeException.class)
+    public void testGetTimeException() {
+        // Test with invalid byte array (should throw RuntimeException with DateTimeParseException cause)
+        byte[] invalidBytes = "invalid-time-12345".getBytes(StandardCharsets.UTF_8);
+            DataTypeConvertUtil.getTime(invalidBytes, ZoneId.systemDefault());
+            fail("Expected RuntimeException for invalid byte array time");
+    }
     @Test
-    @Ignore
     public void testGetTime() {
-        // Test with Timestamp
+        ZoneId defaultZone = ZoneId.systemDefault();
+        // Test with Instant
         Instant now = Instant.now();
-        Time expectedTime = DateTimeUtils.getTime(now, null);
-        assertEquals(expectedTime, DataTypeConvertUtil.getTime(now, null));
+        Time expectedTime = DateTimeUtils.getTime(now, defaultZone);
+        assertEquals(expectedTime, DataTypeConvertUtil.getTime(now, defaultZone));
 
-        // Test with byte array representing a valid time string
-        String timeString = "12:34:56";
-        byte[] timeBytes = timeString.getBytes();
-        Time parsedTime = Time.valueOf(timeString);
-        assertEquals(parsedTime, DataTypeConvertUtil.getTime(timeBytes, null));
+        // Test with byte array representing a valid time string (UTF-8 charset)
+        String timeString = "2025-01-01 12:34:56.000";
+        byte[] timeBytes = timeString.getBytes(StandardCharsets.UTF_8);
+        Time parsedTime = Time.valueOf("12:34:56");
+        assertEquals(parsedTime, DataTypeConvertUtil.getTime(timeBytes, defaultZone));
 
-        // Test with invalid byte array (should throw RuntimeException)
-        byte[] invalidBytes = "invalid".getBytes();
+        // Test with invalid String (should throw RuntimeException with DateTimeParseException cause)
         try {
-            DataTypeConvertUtil.getTime(invalidBytes, null);
-            fail("Expected RuntimeException for invalid byte array");
+            DataTypeConvertUtil.getTime("25:70:99", defaultZone); // 无效时间格式
+            fail("Expected RuntimeException for invalid string time");
         } catch (RuntimeException e) {
-            // Expected exception
         }
 
-        // Test with String
-        assertEquals(parsedTime, DataTypeConvertUtil.getTime(timeString, null));
-
-        // Test with invalid String (should throw RuntimeException)
+        // Test with empty byte array
+        byte[] emptyBytes = new byte[0];
         try {
-            DataTypeConvertUtil.getTime("invalid", null);
-            fail("Expected RuntimeException for invalid string");
+            DataTypeConvertUtil.getTime(emptyBytes, defaultZone);
+            fail("Expected RuntimeException for empty byte array");
         } catch (RuntimeException e) {
-            // Expected exception
         }
     }
 
@@ -851,6 +858,263 @@ public class DataTypeConvertUtilTest {
         BigDecimal expected = new BigDecimal(instant.toEpochMilli());
         assertEquals(expected, DataTypeConvertUtil.getBigDecimal(TSDB_DATA_TYPE_TIMESTAMP, instant));
     }
+
+    // ==================== getByte - throwRangeException Tests ====================
+    @Test
+    public void testGetByte_UTINYINT_OutOfByteRange() {
+        try {
+            DataTypeConvertUtil.getByte(TSDB_DATA_TYPE_UTINYINT, (short) 128, COLUMN_INDEX);
+            fail("Expected SQLException for UTINYINT exceeding byte range");
+        } catch (SQLException e) {
+            assertTrue(e.getMessage().contains("outside valid range for the jdbcType TINYINT"));
+        }
+    }
+
+    @Test
+    public void testGetByte_SMALLINT_BelowByteMin() {
+        try {
+            DataTypeConvertUtil.getByte(TSDB_DATA_TYPE_SMALLINT, (short) -129, COLUMN_INDEX);
+            fail("Expected SQLException for SMALLINT below byte min value");
+        } catch (SQLException e) {
+            assertTrue(e.getMessage().contains("outside valid range for the jdbcType TINYINT"));
+        }
+    }
+
+    @Test
+    public void testGetByte_USMALLINT_OutOfByteRange() {
+        try {
+            DataTypeConvertUtil.getByte(TSDB_DATA_TYPE_USMALLINT, 128, COLUMN_INDEX);
+            fail("Expected SQLException for USMALLINT exceeding byte range");
+        } catch (SQLException e) {
+            assertTrue(e.getMessage().contains("outside valid range for the jdbcType TINYINT"));
+        }
+    }
+
+    @Test
+    public void testGetByte_INT_BelowByteMin() {
+        try {
+            DataTypeConvertUtil.getByte(TSDB_DATA_TYPE_INT, -129, COLUMN_INDEX);
+            fail("Expected SQLException for INT below byte min value");
+        } catch (SQLException e) {
+            assertTrue(e.getMessage().contains("outside valid range for the jdbcType TINYINT"));
+        }
+    }
+
+    @Test
+    public void testGetByte_BIGINT_OutOfByteRange() {
+        try {
+            DataTypeConvertUtil.getByte(TSDB_DATA_TYPE_BIGINT, 128L, COLUMN_INDEX);
+            fail("Expected SQLException for BIGINT exceeding byte range");
+        } catch (SQLException e) {
+            assertTrue(e.getMessage().contains("outside valid range for the jdbcType TINYINT"));
+        }
+    }
+
+    @Test
+    public void testGetByte_UINT_BelowByteMin() {
+        try {
+            DataTypeConvertUtil.getByte(TSDB_DATA_TYPE_UINT, -129L, COLUMN_INDEX);
+            fail("Expected SQLException for UINT below byte min value");
+        } catch (SQLException e) {
+            assertTrue(e.getMessage().contains("outside valid range for the jdbcType TINYINT"));
+        }
+    }
+
+    @Test
+    public void testGetByte_UBIGINT_OutOfByteRange() {
+        try {
+            DataTypeConvertUtil.getByte(TSDB_DATA_TYPE_UBIGINT, BigInteger.valueOf(128), COLUMN_INDEX);
+            fail("Expected SQLException for UBIGINT exceeding byte range");
+        } catch (SQLException e) {
+            assertTrue(e.getMessage().contains("outside valid range for the jdbcType TINYINT"));
+        }
+    }
+
+    @Test
+    public void testGetByte_FLOAT_OutOfByteRange() {
+        try {
+            DataTypeConvertUtil.getByte(TSDB_DATA_TYPE_FLOAT, 128.0f, COLUMN_INDEX);
+            fail("Expected SQLException for FLOAT exceeding byte range");
+        } catch (SQLException e) {
+            assertTrue(e.getMessage().contains("outside valid range for the jdbcType TINYINT"));
+        }
+    }
+
+    @Test
+    public void testGetByte_DOUBLE_BelowByteMin() {
+        try {
+            DataTypeConvertUtil.getByte(TSDB_DATA_TYPE_DOUBLE, -129.0, COLUMN_INDEX);
+            fail("Expected SQLException for DOUBLE below byte min value");
+        } catch (SQLException e) {
+            assertTrue(e.getMessage().contains("outside valid range for the jdbcType TINYINT"));
+        }
+    }
+
+    // ==================== getShort - throwRangeException Tests ====================
+    @Test
+    public void testGetShort_USMALLINT_OutOfShortRange() {
+        try {
+            DataTypeConvertUtil.getShort(TSDB_DATA_TYPE_USMALLINT, 32768, COLUMN_INDEX);
+            fail("Expected SQLException for USMALLINT exceeding short range");
+        } catch (SQLException e) {
+            assertTrue(e.getMessage().contains("outside valid range for the jdbcType SMALLINT"));
+        }
+    }
+
+    @Test
+    public void testGetShort_INT_BelowShortMin() {
+        try {
+            DataTypeConvertUtil.getShort(TSDB_DATA_TYPE_INT, -32769, COLUMN_INDEX);
+            fail("Expected SQLException for INT below short min value");
+        } catch (SQLException e) {
+            assertTrue(e.getMessage().contains("outside valid range for the jdbcType SMALLINT"));
+        }
+    }
+
+    @Test
+    public void testGetShort_BIGINT_OutOfShortRange() {
+        try {
+            DataTypeConvertUtil.getShort(TSDB_DATA_TYPE_BIGINT, 32768L, COLUMN_INDEX);
+            fail("Expected SQLException for BIGINT exceeding short range");
+        } catch (SQLException e) {
+            assertTrue(e.getMessage().contains("outside valid range for the jdbcType SMALLINT"));
+        }
+    }
+
+    @Test
+    public void testGetShort_UINT_BelowShortMin() {
+        try {
+            DataTypeConvertUtil.getShort(TSDB_DATA_TYPE_UINT, -32769L, COLUMN_INDEX);
+            fail("Expected SQLException for UINT below short min value");
+        } catch (SQLException e) {
+            assertTrue(e.getMessage().contains("outside valid range for the jdbcType SMALLINT"));
+        }
+    }
+
+    @Test
+    public void testGetShort_UBIGINT_OutOfShortRange() {
+        try {
+            DataTypeConvertUtil.getShort(TSDB_DATA_TYPE_UBIGINT, BigInteger.valueOf(32768), COLUMN_INDEX);
+            fail("Expected SQLException for UBIGINT exceeding short range");
+        } catch (SQLException e) {
+            assertTrue(e.getMessage().contains("outside valid range for the jdbcType SMALLINT"));
+        }
+    }
+
+    @Test
+    public void testGetShort_FLOAT_OutOfShortRange() {
+        try {
+            DataTypeConvertUtil.getShort(TSDB_DATA_TYPE_FLOAT, 32768.0f, COLUMN_INDEX);
+            fail("Expected SQLException for FLOAT exceeding short range");
+        } catch (SQLException e) {
+            assertTrue(e.getMessage().contains("outside valid range for the jdbcType SMALLINT"));
+        }
+    }
+
+    @Test
+    public void testGetShort_DOUBLE_BelowShortMin() {
+        try {
+            DataTypeConvertUtil.getShort(TSDB_DATA_TYPE_DOUBLE, -32769.0, COLUMN_INDEX);
+            fail("Expected SQLException for DOUBLE below short min value");
+        } catch (SQLException e) {
+            assertTrue(e.getMessage().contains("outside valid range for the jdbcType SMALLINT"));
+        }
+    }
+
+    // ==================== getInt - throwRangeException Tests ====================
+    @Test
+    public void testGetInt_BIGINT_OutOfIntRange() {
+        try {
+            DataTypeConvertUtil.getInt(TSDB_DATA_TYPE_BIGINT, 2147483648L, COLUMN_INDEX);
+            fail("Expected SQLException for BIGINT exceeding int range");
+        } catch (SQLException e) {
+            assertTrue(e.getMessage().contains("outside valid range for"));
+        }
+    }
+
+    @Test
+    public void testGetInt_UINT_BelowIntMin() {
+        try {
+            DataTypeConvertUtil.getInt(TSDB_DATA_TYPE_UINT, -2147483649L, COLUMN_INDEX);
+            fail("Expected SQLException for UINT below int min value");
+        } catch (SQLException e) {
+            assertTrue(e.getMessage().contains("outside valid range for"));
+        }
+    }
+
+    @Test
+    public void testGetInt_UBIGINT_OutOfIntRange() {
+        try {
+            DataTypeConvertUtil.getInt(TSDB_DATA_TYPE_UBIGINT, BigInteger.valueOf(2147483648L), COLUMN_INDEX);
+            fail("Expected SQLException for UBIGINT exceeding int range");
+        } catch (SQLException e) {
+            assertTrue(e.getMessage().contains("outside valid range for"));
+        }
+    }
+
+    @Test
+    public void testGetInt_FLOAT_OutOfIntRange() {
+        try {
+            DataTypeConvertUtil.getInt(TSDB_DATA_TYPE_FLOAT, 2148483648.0f, COLUMN_INDEX);
+            fail("Expected SQLException for FLOAT exceeding int range");
+        } catch (SQLException e) {
+            assertTrue(e.getMessage().contains("outside valid range for"));
+        }
+    }
+
+    @Test
+    public void testGetInt_DOUBLE_BelowIntMin() {
+        try {
+            DataTypeConvertUtil.getInt(TSDB_DATA_TYPE_DOUBLE, -2147483649.0, COLUMN_INDEX);
+            fail("Expected SQLException for DOUBLE below int min value");
+        } catch (SQLException e) {
+            assertTrue(e.getMessage().contains("outside valid range for"));
+        }
+    }
+
+    // ==================== getLong - throwRangeException Tests ====================
+    @Test
+    public void testGetLong_UBIGINT_OutOfLongRange() {
+        try {
+            BigInteger exceedLongMax = BigInteger.valueOf(Long.MAX_VALUE).add(BigInteger.ONE);
+            DataTypeConvertUtil.getLong(TSDB_DATA_TYPE_UBIGINT, exceedLongMax, COLUMN_INDEX, TIMESTAMP_PRECISION_MS);
+            fail("Expected SQLException for UBIGINT exceeding long range");
+        } catch (SQLException e) {
+            assertTrue(e.getMessage().contains("outside valid range for"));
+        }
+    }
+
+    @Test
+    public void testGetLong_UBIGINT_BelowLongMin() {
+        try {
+            BigInteger belowLongMin = BigInteger.valueOf(Long.MIN_VALUE).subtract(BigInteger.ONE);
+            DataTypeConvertUtil.getLong(TSDB_DATA_TYPE_UBIGINT, belowLongMin, COLUMN_INDEX, TIMESTAMP_PRECISION_MS);
+            fail("Expected SQLException for UBIGINT below long min value");
+        } catch (SQLException e) {
+            assertTrue(e.getMessage().contains("outside valid range for"));
+        }
+    }
+
+    @Test
+    public void testGetLong_FLOAT_OutOfLongRange() {
+        try {
+            DataTypeConvertUtil.getLong(TSDB_DATA_TYPE_FLOAT, Float.MAX_VALUE, COLUMN_INDEX, TIMESTAMP_PRECISION_MS);
+            fail("Expected SQLException for FLOAT exceeding long range");
+        } catch (SQLException e) {
+            assertTrue(e.getMessage().contains("outside valid range for"));
+        }
+    }
+
+    @Test
+    public void testGetLong_DOUBLE_BelowLongMin() {
+        try {
+            DataTypeConvertUtil.getLong(TSDB_DATA_TYPE_DOUBLE, -Double.MAX_VALUE, COLUMN_INDEX, TIMESTAMP_PRECISION_MS);
+            fail("Expected SQLException for DOUBLE below long min value");
+        } catch (SQLException e) {
+            assertTrue(e.getMessage().contains("outside valid range for"));
+        }
+    }
+
 
     @Before
     public void setUpAdditional() {

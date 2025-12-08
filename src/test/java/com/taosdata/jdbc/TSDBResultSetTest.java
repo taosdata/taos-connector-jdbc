@@ -683,50 +683,6 @@ public class TSDBResultSetTest {
     public void isWrapperFor() throws SQLException {
         Assert.assertTrue(rs.isWrapperFor(TSDBResultSet.class));
     }
-
-    @BeforeClass
-    public static void beforeClass() {
-        try {
-            String url = SpecifyAddress.getInstance().getJniUrl();
-            if (url == null) {
-                url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
-            }
-            Properties properties = new Properties();
-            properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
-            properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
-            conn = DriverManager.getConnection(url, properties);
-            stmt = conn.createStatement();
-            stmt.execute("create database if not exists " + DBNAME);
-            stmt.execute("use " + DBNAME);
-            stmt.execute("drop table if exists weather");
-            stmt.execute("create table if not exists weather(f1 timestamp, f2 int, f3 bigint, f4 float, f5 double, f6 binary(64), f7 smallint, f8 tinyint, f9 bool, f10 nchar(64), f11 GEOMETRY(50))");
-            stmt.execute("insert into weather values('2021-01-01 00:00:00.000', 1, 100, 3.1415, 3.1415926, 'abc', 10, 10, true, '涛思数据', 'POINT(1 2)')");
-            rs = stmt.executeQuery("select * from weather");
-            rs.next();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    @AfterClass
-    public static void afterClass() {
-        try {
-            if (rs != null)
-                rs.close();
-            if (stmt != null)
-                stmt.close();
-            if (conn != null) {
-                Statement statement = conn.createStatement();
-
-                statement.execute("drop database if exists " + DBNAME);
-                statement.close();
-                conn.close();
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
     @Test
     public void testCheckAvailability() throws SQLException {
         AbstractResultSet rs = (AbstractResultSet) this.rs;
@@ -757,6 +713,19 @@ public class TSDBResultSetTest {
         // 验证精度设置是否生效
         Timestamp ts = rs.getTimestamp(1);
         assertEquals("2021-01-01 00:00:00.0", ts.toString());
+    }
+
+
+    @Test
+    public void testGetTimestamp() throws SQLException {
+        AbstractResultSet rs = (AbstractResultSet) this.rs;
+        Timestamp ts = rs.getTimestamp(3);
+        assertEquals(100, ts.getTime());
+    }
+    @Test(expected = RuntimeException.class)
+    public void testGetTimestamp3() throws SQLException {
+        AbstractResultSet rs = (AbstractResultSet) this.rs;
+        rs.getTimestamp(6);
     }
 
     @Test
@@ -1082,5 +1051,49 @@ public class TSDBResultSetTest {
     public void getColumnClassName() throws SQLException {
         ResultSetMetaData meta = rs.getMetaData();
         Assert.assertEquals(Timestamp.class.getName(), meta.getColumnClassName(1));
+    }
+
+    @BeforeClass
+    public static void beforeClass() {
+        try {
+            String url = SpecifyAddress.getInstance().getJniUrl();
+            if (url == null) {
+                url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+            }
+            Properties properties = new Properties();
+            properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
+            properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
+            conn = DriverManager.getConnection(url, properties);
+            stmt = conn.createStatement();
+            stmt.execute("create database if not exists " + DBNAME);
+            stmt.execute("use " + DBNAME);
+            stmt.execute("drop table if exists weather");
+            stmt.execute("create table if not exists weather(f1 timestamp, f2 int, f3 bigint, f4 float, f5 double, f6 binary(64), f7 smallint, f8 tinyint, f9 bool, f10 nchar(64), f11 GEOMETRY(50))");
+            stmt.execute("insert into weather values('2021-01-01 00:00:00.000', 1, 100, 3.1415, 3.1415926, 'abc', 10, 10, true, '涛思数据', 'POINT(1 2)')");
+            rs = stmt.executeQuery("select * from weather");
+            rs.next();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @AfterClass
+    public static void afterClass() {
+        try {
+            if (rs != null){
+                rs.close();
+            }
+            if (stmt != null)
+                stmt.close();
+            if (conn != null) {
+                Statement statement = conn.createStatement();
+
+                statement.execute("drop database if exists " + DBNAME);
+                statement.close();
+                conn.close();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 }

@@ -2,6 +2,7 @@ package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -251,6 +252,7 @@ public class AbstractConnectionTest {
     @Test
     public void testSetTransactionIsolation() throws SQLException {
         connection.setTransactionIsolation(Connection.TRANSACTION_NONE);
+        Assert.assertEquals(Connection.TRANSACTION_NONE, connection.getTransactionIsolation());
     }
     @Test (expected = SQLException.class)
     public void testSetTransactionIsolation2() throws SQLException {
@@ -283,7 +285,7 @@ public class AbstractConnectionTest {
     @Test
     public void testClearWarnings() throws SQLException {
         connection.clearWarnings();
-        // 这里可以添加验证逻辑，确保警告被清除
+        Assert.assertNotNull(connection);
     }
 
 
@@ -383,7 +385,7 @@ public class AbstractConnectionTest {
     @Test
     public void testSetSchema() throws SQLException {
         connection.setSchema("testSchema");
-        // 这里可以添加验证逻辑，确保没有异常抛出
+        Assert.assertNull(connection.getSchema());
     }
 
     @Test

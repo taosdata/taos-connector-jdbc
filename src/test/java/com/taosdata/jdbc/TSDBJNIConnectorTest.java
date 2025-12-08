@@ -342,4 +342,23 @@ public class TSDBJNIConnectorTest {
 
         connector.setBindTableNameAndTags(stmt, tbname, 1, tagDataList, typeList, lengthList, isNullList);
     }
+
+
+    @Test
+    public void testLoadLibrary() throws SQLException {
+        if (System.getProperty("os.name").toLowerCase().contains("linux")) {
+            System.setProperty("TD_LIBRARY_PATH", "/usr/lib/");
+        } else if (System.getProperty("os.name").toLowerCase().contains("mac")) {
+            System.setProperty("TD_LIBRARY_PATH", "/usr/local/lib/");
+        } else {
+            return;
+        }
+        // init
+
+        Properties properties = new Properties();
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_CONFIG_DIR, "/etc/taos");
+        TSDBJNIConnector.init(properties);
+        System.setProperty("TD_LIBRARY_PATH", "");
+
+    }
 }

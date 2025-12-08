@@ -12,6 +12,8 @@ import java.util.Properties;
 import java.util.StringTokenizer;
 
 public class StringUtils {
+    private StringUtils() {
+    }
 
     public static boolean isEmpty(final CharSequence cs) {
         return cs == null || cs.length() == 0;
@@ -170,9 +172,10 @@ public class StringUtils {
             if (i2 + 1 > hex.length())
                 throw new IllegalArgumentException("Hex string has odd length");
 
-            byte nib1 = (byte)hexToInt(hex.charAt(i2));
-            byte nib0 = (byte)hexToInt(hex.charAt(i2 + 1));
-            byte b = (byte) (((nib1 << 4) & 0xff) + nib0);
+            int nib1 = hexToInt(hex.charAt(i2));
+            int nib0 = hexToInt(hex.charAt(i2 + 1));
+            byte b = (byte) ((nib1 << 4) | nib0);
+
             bytes[i] = b;
         }
         return bytes;

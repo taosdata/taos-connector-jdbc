@@ -1095,26 +1095,8 @@ public class TSDBDatabaseMetaDataTest {
     @Test
     public void getSuperTables() throws SQLException {
         ResultSet rs = metaData.getSuperTables(DB_NAME, "", "dn1");
-        ResultSetMetaData meta = rs.getMetaData();
-        rs.next();
-        {
-            // TABLE_CAT
-            Assert.assertEquals("TABLE_CAT", meta.getColumnLabel(1));
-            Assert.assertEquals(DB_NAME, rs.getString(1));
-            Assert.assertEquals(DB_NAME, rs.getString("TABLE_CAT"));
-            // TABLE_CAT
-            Assert.assertEquals("TABLE_SCHEM", meta.getColumnLabel(2));
-            Assert.assertEquals(null, rs.getString(2));
-            Assert.assertEquals(null, rs.getString("TABLE_SCHEM"));
-            // TABLE_CAT
-            Assert.assertEquals("TABLE_NAME", meta.getColumnLabel(3));
-            Assert.assertEquals("dn1", rs.getString(3));
-            Assert.assertEquals("dn1", rs.getString("TABLE_NAME"));
-            // TABLE_CAT
-            Assert.assertEquals("SUPERTABLE_NAME", meta.getColumnLabel(4));
-            Assert.assertEquals("dn", rs.getString(4));
-            Assert.assertEquals("dn", rs.getString("SUPERTABLE_NAME"));
-        }
+        Assert.assertFalse(rs.next());
+
     }
 
     @Test

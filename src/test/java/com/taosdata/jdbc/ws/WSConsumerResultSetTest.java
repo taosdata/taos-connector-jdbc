@@ -76,5 +76,10 @@ public class WSConsumerResultSetTest {
     public void testPrevious() throws SQLException {
         wsConsumerResultSet.previous();
     }
+    @Test(expected = SQLException.class)
+    public void testGetStatement() throws SQLException {
+        wsConsumerResultSet.getStatement();
+    }
+
 
 }

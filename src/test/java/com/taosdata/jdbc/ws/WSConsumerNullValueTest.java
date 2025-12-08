@@ -1,8 +1,12 @@
-package com.taosdata.jdbc.tmq;
+package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.common.Bean;
+import com.taosdata.jdbc.tmq.ConsumerRecord;
+import com.taosdata.jdbc.tmq.ConsumerRecords;
+import com.taosdata.jdbc.tmq.TMQConstants;
+import com.taosdata.jdbc.tmq.TaosConsumer;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
@@ -10,6 +14,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.*;
 import java.time.Duration;
@@ -18,18 +23,17 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
-public class ConsumerWithDiffTypeTest {
+public class WSConsumerNullValueTest {
     private static final String HOST = "127.0.0.1";
-    private static final String DB_NAME = TestUtils.camelToSnake(ConsumerWithDiffTypeTest.class);
+    private static final String DB_NAME = TestUtils.camelToSnake(WSConsumerNullValueTest.class);
     private static final String SUPER_TABLE = "tmq_type";
     private static Connection connection;
     private static Statement statement;
     private static final String[] topics = {"topic_" + DB_NAME};
     private static final byte[] expectedBinary = new byte[]{0x39, 0x38, 0x66, 0x34, 0x36, 0x33};
     private void insertOneRow() throws SQLException {
-        statement.executeUpdate("insert into " + DB_NAME + ".ct0 values(now, 1, 100, 2.2, 2.3, '1', 12, 2, true, '一', 'POINT(1 1)', '\\x0101', 1.2234, now, 255, 65535, 4294967295, 18446744073709551615, -12345678901234567890123.4567890000, 12345678.901234, '\\x393866343633')");
+        statement.executeUpdate("insert into " + DB_NAME + ".ct0 values(now, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)");
     }
-
     @Test
     public void testWSBeanObject() throws Exception {
         insertOneRow();
@@ -42,12 +46,12 @@ public class ConsumerWithDiffTypeTest {
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.CONNECT_USER, "root");
         properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
-        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, "127.0.0.1:6030");
+        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, "127.0.0.1:6041");
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
         properties.setProperty(TMQConstants.GROUP_ID, "ws_bean");
         properties.setProperty(TMQConstants.VALUE_DESERIALIZER, "com.taosdata.jdbc.common.ResultDeserializer");
-        properties.setProperty(TMQConstants.CONNECT_TYPE, "jni");
+        properties.setProperty(TMQConstants.CONNECT_TYPE, "ws");
         properties.setProperty(TMQConstants.AUTO_OFFSET_RESET, "earliest");
 
         try (TaosConsumer<Bean> consumer = new TaosConsumer<>(properties)) {
@@ -56,23 +60,23 @@ public class ConsumerWithDiffTypeTest {
                 ConsumerRecords<Bean> consumerRecords = consumer.poll(Duration.ofMillis(100));
                 for (ConsumerRecord<Bean> r : consumerRecords) {
                     Bean bean = r.value();
-                    Assert.assertEquals(1.0, bean.getC1(), 0.000001);
-                    Assert.assertEquals(100L, bean.getC2().longValue());
-                    Assert.assertEquals(2.2, bean.getC3(), 0.000001);
-                    Assert.assertEquals(2.3, bean.getC4(), 0.000001);
-                    Assert.assertArrayEquals("1".getBytes(), bean.getC5());
-                    Assert.assertEquals(12, bean.getC6().shortValue());
-                    Assert.assertEquals(2, bean.getC7().byteValue());
-                    Assert.assertTrue(bean.isC8());
-                    Assert.assertEquals("一", bean.getC9());
-                    Assert.assertEquals(1.2234, bean.getC12().doubleValue(), 0.000001);
+                    Assert.assertNull(bean.getC1());
+                    Assert.assertNull(bean.getC2());
+                    Assert.assertNull(bean.getC3());
+                    Assert.assertNull(bean.getC4());
+                    Assert.assertNull(bean.getC5());
+                    Assert.assertNull(bean.getC6());
+                    Assert.assertNull(bean.getC7());
+                    Assert.assertNull(bean.getC9());
 
-                    Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_BYTE, bean.getC14().shortValue());
-                    Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_SHORT, bean.getC15().intValue());
-                    Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_INT, bean.getC16().longValue());
-                    Assert.assertEquals(new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG), bean.getC17());
-
-                    Assert.assertArrayEquals(expectedBinary, bean.getC20().getBytes(1, (int)bean.getC20().length()));
+                    Assert.assertNull(bean.getC12());
+                    Assert.assertNull(bean.getC14());
+                    Assert.assertNull(bean.getC15());
+                    Assert.assertNull(bean.getC16());
+                    Assert.assertNull(bean.getC17());
+                    Assert.assertNull(bean.getC18());
+                    Assert.assertNull(bean.getC19());
+                    Assert.assertNull(bean.getC20());
 
                     Assert.assertEquals(1000.0, bean.getT1(), 0.000001);
                 }
@@ -80,7 +84,6 @@ public class ConsumerWithDiffTypeTest {
             consumer.unsubscribe();
         }
     }
-
     @Test
     public void testWSBeanMap() throws Exception {
         //statement.executeUpdate("insert into " + dbName + ".ct0 values(now, 1, 100, 2.2, 2.3, '1', 12, 2, true, '一', 'POINT(1 1)', '\\x0101', 1.2234, now, 255, 65535, 4294967295, 18446744073709551615)");
@@ -94,11 +97,11 @@ public class ConsumerWithDiffTypeTest {
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.CONNECT_USER, "root");
         properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
-        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, "127.0.0.1:6030");
+        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, "127.0.0.1:6041");
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
         properties.setProperty(TMQConstants.GROUP_ID, "ws_bean");
-        properties.setProperty(TMQConstants.CONNECT_TYPE, "jni");
+        properties.setProperty(TMQConstants.CONNECT_TYPE, "ws");
         properties.setProperty(TMQConstants.AUTO_OFFSET_RESET, "earliest");
 
         try (TaosConsumer<Map<String, Object>> consumer = new TaosConsumer<>(properties)) {
@@ -110,23 +113,9 @@ public class ConsumerWithDiffTypeTest {
                     Assert.assertEquals(22 , map.size());
                     Assert.assertTrue(map.get("ts") instanceof Timestamp);
 
-                    Assert.assertEquals(1, (int) map.get("c1"));
-                    Assert.assertEquals(100L, map.get("c2"));
-                    Assert.assertEquals(2.2, (float)map.get("c3"), 0.000001);
-                    Assert.assertEquals(2.3, (double)map.get("c4"), 0.000001);
-                    Assert.assertArrayEquals("1".getBytes(), (byte[]) map.get("c5"));
-                    Assert.assertEquals(12, (short)map.get("c6"));
-                    Assert.assertEquals(2, (byte)map.get("c7"));
-                    Assert.assertTrue((boolean) map.get("c8"));
-                    Assert.assertEquals("一", map.get("c9"));
-                    Assert.assertEquals(1.2234, (double)map.get("c12"), 0.000001);
-
-                    Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_BYTE, (short)map.get("c14"));
-                    Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_SHORT, (int)map.get("c15"));
-                    Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_INT, (long)map.get("c16"));
-                    Assert.assertEquals(new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG), map.get("c17"));
-
-                    Assert.assertArrayEquals(expectedBinary, ((Blob)map.get("c20")).getBytes(1, (int)((Blob)map.get("c20")).length()));
+                    for (int j = 1; j <= 20; j++) {
+                        Assert.assertNull(map.get("c" + j));
+                    }
 
                     Assert.assertEquals(1000.0, (int)map.get("t1"), 0.000001);
 
@@ -142,7 +131,7 @@ public class ConsumerWithDiffTypeTest {
 
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
