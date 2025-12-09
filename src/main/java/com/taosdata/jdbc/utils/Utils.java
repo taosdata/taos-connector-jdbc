@@ -3,17 +3,11 @@ package com.taosdata.jdbc.utils;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
-import com.taosdata.jdbc.TSDBError;
-import com.taosdata.jdbc.TSDBErrorNumbers;
-import com.taosdata.jdbc.rs.ConnectionParam;
-import com.taosdata.jdbc.ws.entity.ConnectReq;
-import com.taosdata.jdbc.ws.tmq.WSConsumer;
+import com.taosdata.jdbc.common.Endpoint;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.ResourceLeakDetector;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,17 +17,8 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
-import java.time.format.DateTimeParseException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -42,42 +27,41 @@ import java.util.stream.IntStream;
 public class Utils {
     private static final Logger log = LoggerFactory.getLogger(Utils.class);
     private static final ForkJoinPool forkJoinPool = new ForkJoinPool();
-    private static final Pattern ptn = Pattern.compile(".*?'");
 
     private static EventLoopGroup eventLoopGroup = null;
-
+    private static final Pattern VALUES_CLAUSE_PATTERN = Pattern.compile("values\\s*((?:\\([^)]*\\)|,\\s*|\\s*)*)");
+    private static final Pattern BRACKET_PATTERN = Pattern.compile("\\([^)]*\\)");
     private Utils() {}
 
     public static String escapeSingleQuota(String origin) {
-        Matcher m = ptn.matcher(origin);
+        int length = origin.length();
+        boolean singleQuoteFound = false;
         StringBuilder sb = new StringBuilder();
-        int end = 0;
-        while (m.find()) {
-            end = m.end();
-            String seg = origin.substring(m.start(), end);
-            int len = seg.length();
-            if (len == 1) {
-                if ('\'' == seg.charAt(0)) {
+        for (int i = 0; i < length; i++) {
+            char chr = origin.charAt(i);
+            if (chr == '\\') {
+                if (singleQuoteFound) {
+                    sb.append(chr);
+                }
+                if (i < length - 1 && origin.charAt(i + 1) == '\'') {
+                    i++;
+                    if (singleQuoteFound) {
+                        sb.append('\'');
+                    }
+                }
+            } else if (chr == '\'') {
+                if (!singleQuoteFound) {
+                    singleQuoteFound = true;
+                    sb.append(origin, 0, i);
                     sb.append("\\'");
                 } else {
-                    sb.append(seg);
-                }
-            } else { // len > 1
-                sb.append(seg, 0, seg.length() - 2);
-                char lastcSec = seg.charAt(seg.length() - 2);
-                if (lastcSec == '\\') {
-                    sb.append("\\'");
-                } else {
-                    sb.append(lastcSec);
                     sb.append("\\'");
                 }
+            } else if (singleQuoteFound) {
+                sb.append(chr);
             }
         }
-
-        if (end < origin.length()) {
-            sb.append(origin.substring(end));
-        }
-        return sb.toString();
+        return singleQuoteFound ? sb.toString() : origin;
     }
 
     public static String getNativeSql(String rawSql, Object[] parameters) {
@@ -98,11 +82,26 @@ public class Utils {
     }
 
     private static void findValuesClauseRangeSet(String preparedSql, RangeSet<Integer> clauseRangeSet) {
-        Matcher matcher = Pattern.compile("(values||,)\\s*(\\([^)]*\\))").matcher(preparedSql);
-        while (matcher.find()) {
-            int start = matcher.start(2);
-            int end = matcher.end(2);
-            clauseRangeSet.add(Range.closedOpen(start, end));
+        // Null/empty check to avoid invalid regex matching and NullPointerExceptions
+        if (preparedSql == null || preparedSql.isEmpty() || clauseRangeSet == null) {
+            return;
+        }
+
+        Matcher valuesMatcher = VALUES_CLAUSE_PATTERN.matcher(preparedSql);
+        while (valuesMatcher.find()) {
+            // Get the start index of the entire VALUES clause (for calculating the actual position of brackets in the original string)
+            int clauseStart = valuesMatcher.start(1);
+            // Get the part of bracket groups in the VALUES clause (e.g., "(1,2)(3,4), (5,6)")
+            String bracketPart = valuesMatcher.group(1);
+
+            // Extract each bracket from the bracket group part
+            Matcher bracketMatcher = BRACKET_PATTERN.matcher(bracketPart);
+            while (bracketMatcher.find()) {
+                // Calculate the actual start/end indices of the bracket in the original SQL
+                int realStart = clauseStart + bracketMatcher.start();
+                int realEnd = clauseStart + bracketMatcher.end();
+                clauseRangeSet.add(Range.closedOpen(realStart, realEnd));
+            }
         }
     }
 
@@ -283,5 +282,45 @@ public class Utils {
                     Integer.toHexString(System.identityHashCode(byteBuf)),
                     byteBuf.refCnt());
         }
+    }
+
+    public static String unescapeUnicode(String input) {
+        StringBuilder builder = new StringBuilder();
+        int i = 0;
+        while (i < input.length()) {
+            if (i < input.length() - 5 &&
+                    input.charAt(i) == '\\' &&
+                    input.charAt(i + 1) == 'u') {
+                // extract 4 hex code
+                String hexCode = input.substring(i + 2, i + 6);
+                try {
+                    int codePoint = Integer.parseInt(hexCode, 16);
+                    builder.append((char) codePoint);
+                    i += 6;  // skip past the unicode escape sequence
+                } catch (NumberFormatException e) {
+                    // invalid hex code, treat as normal characters
+                    builder.append(input.charAt(i));
+                    i++;
+                }
+            } else {
+                builder.append(input.charAt(i));
+                i++;
+            }
+        }
+        return builder.toString();
+    }
+
+    public static List<Endpoint> getEndpoints(String host, String port){
+        List<Endpoint> endpoints = new ArrayList<>();
+        boolean isIpv6 = host != null && host.startsWith("[");
+
+        Endpoint endpoint;
+        if (port == null) {
+            endpoint = new Endpoint(host, 0, isIpv6);
+        } else {
+            endpoint = new Endpoint(host, Integer.parseInt(port), isIpv6);
+        }
+        endpoints.add(endpoint);
+        return endpoints;
     }
 }

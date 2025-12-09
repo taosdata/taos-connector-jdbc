@@ -13,15 +13,15 @@ import java.util.Properties;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class UnsignedNumberRestfulTest {
 
-    private static final String host = "127.0.0.1";
+    private static final String HOST = "127.0.0.1";
     private static Connection conn;
     private static long ts;
-    private static final String dbname = TestUtils.camelToSnake(UnsignedNumberRestfulTest.class);
+    private static final String DBNAME = TestUtils.camelToSnake(UnsignedNumberRestfulTest.class);
 
     @Test
     public void testCase001() throws SQLException {
         try (Statement stmt = conn.createStatement()) {
-            ResultSet rs = stmt.executeQuery("select * from " + dbname + ".us_table");
+            ResultSet rs = stmt.executeQuery("select * from " + DBNAME + ".us_table");
             ResultSetMetaData meta = rs.getMetaData();
             assertResultSetMetaData(meta);
             while (rs.next()) {
@@ -149,13 +149,13 @@ public class UnsignedNumberRestfulTest {
 
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
         }
         conn = DriverManager.getConnection(url, properties);
         Statement stmt = conn.createStatement();
-        stmt.execute("drop database if exists " + dbname);
-        stmt.execute("create database if not exists " + dbname);
-        stmt.execute("use " + dbname);
+        stmt.execute("drop database if exists " + DBNAME);
+        stmt.execute("create database if not exists " + DBNAME);
+        stmt.execute("use " + DBNAME);
         stmt.execute("create table us_table(ts timestamp, f1 tinyint unsigned, f2 smallint unsigned, f3 int unsigned, f4 bigint unsigned)");
         stmt.executeUpdate("insert into us_table(ts,f1,f2,f3,f4) values(" + ts + ", 127, 32767,2147483647, 9223372036854775807)");
         stmt.close();
@@ -166,7 +166,7 @@ public class UnsignedNumberRestfulTest {
         try {
             if (conn != null) {
                 Statement statement = conn.createStatement();
-                statement.execute("drop database if exists " + dbname);
+                statement.execute("drop database if exists " + DBNAME);
                 statement.close();
                 conn.close();
             }

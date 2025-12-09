@@ -31,6 +31,8 @@ import java.util.zip.GZIPOutputStream;
 
 public class HttpClientPoolUtil {
 
+    private HttpClientPoolUtil(){}
+
     private static final String DEFAULT_CONTENT_TYPE = "application/json";
     private static final String DEFAULT_ACCEPT_ENCODING = "gzip, deflate";
     private static final int DEFAULT_MAX_RETRY_COUNT = 5;
@@ -58,6 +60,7 @@ public class HttpClientPoolUtil {
         return DEFAULT_HTTP_KEEP_TIME * 1000;
     };
 
+    @SuppressWarnings("java:S3077")
     private static volatile CloseableHttpClient httpClient;
     private static int connectTimeout = 0;
     private static int socketTimeout = 0;

@@ -2,13 +2,12 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.nio.ByteBuffer;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -18,10 +17,10 @@ import java.util.Properties;
 import static org.junit.Assert.*;
 
 public class WSSelectTest {
-    private static final String host = "127.0.0.1";
-    private static final int port = 6041;
+    private static final String HOST = "127.0.0.1";
+    private static final int PORT = 6041;
     private static Connection connection;
-    private static final String databaseName = "driver";
+    private static final String DATABASE_NAME = TestUtils.camelToSnake(WSSelectTest.class);
 
     private static void testInsert() throws SQLException {
         Statement statement = connection.createStatement();
@@ -29,7 +28,7 @@ public class WSSelectTest {
         List<String> timeList = new ArrayList<>();
         for (long i = 0L; i < 30; i++) {
             long t = cur + i;
-            timeList.add("insert into " + databaseName + ".alltype_query values(" + t + ",1,1,1,1,1,1,1,1,1,1,1,'test_binary','test_nchar', -12345678901234567890123.4567890000, 12345678.901234)");
+            timeList.add("insert into " + DATABASE_NAME + ".alltype_query values(" + t + ",1,1,1,1,1,1,1,1,1,1,1,'test_binary','test_nchar', -12345678901234567890123.4567890000, 12345678.901234)");
         }
         for (int i = 0; i < 30; i++) {
             statement.execute(timeList.get(i));
@@ -42,7 +41,7 @@ public class WSSelectTest {
         int count = 0;
         long start = System.nanoTime();
         for (int i = 0; i < 1; i++) {
-            ResultSet resultSet = statement.executeQuery("select ts,c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14,c15 from " + databaseName + ".alltype_query limit 3000");
+            ResultSet resultSet = statement.executeQuery("select ts,c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14,c15 from " + DATABASE_NAME + ".alltype_query limit 3000");
 
             ResultSetMetaData metaData = resultSet.getMetaData();
 
@@ -82,7 +81,7 @@ public class WSSelectTest {
     public void testGetObject() throws SQLException {
         Statement statement = connection.createStatement();
 
-        ResultSet resultSet = statement.executeQuery("select ts,c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14,c15 from " + databaseName + ".alltype_query limit 3000");
+        ResultSet resultSet = statement.executeQuery("select ts,c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14,c15 from " + DATABASE_NAME + ".alltype_query limit 3000");
         if (resultSet.next()) {
             // Test LocalDateTime (Timestamp)
             LocalDateTime ts = resultSet.getObject("ts", LocalDateTime.class);
@@ -144,8 +143,8 @@ public class WSSelectTest {
         }
         resultSet.close();
 
-        statement.execute("insert into " + databaseName + ".alltype_query values (NOW, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)");
-        resultSet = statement.executeQuery("select ts,c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14,c15 from " + databaseName + ".alltype_query where c1 is null");
+        statement.execute("insert into " + DATABASE_NAME + ".alltype_query values (NOW, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)");
+        resultSet = statement.executeQuery("select ts,c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14,c15 from " + DATABASE_NAME + ".alltype_query where c1 is null");
         if (resultSet.next()) {
             assertNull(resultSet.getObject("c1", Boolean.class));
             assertNull(resultSet.getObject("c2", Long.class));
@@ -163,16 +162,16 @@ public class WSSelectTest {
     public static void beforeClass() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":" + port + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + PORT + "/?user=root&password=taosdata";
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, "10000");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
         connection = DriverManager.getConnection(url, properties);
         Statement statement = connection.createStatement();
-        statement.execute("drop database if exists " + databaseName);
-        statement.execute("create database " + databaseName);
-        statement.execute("create table " + databaseName + ".alltype_query(ts timestamp, c1 bool,c2 tinyint, c3 smallint, c4 int, c5 bigint, c6 tinyint unsigned, c7 smallint unsigned, c8 int unsigned, c9 bigint unsigned, c10 float, c11 double, c12 binary(20), c13 nchar(30), c14 decimal(38, 10), c15 decimal(18, 6))");
+        statement.execute("drop database if exists " + DATABASE_NAME);
+        statement.execute("create database " + DATABASE_NAME);
+        statement.execute("create table " + DATABASE_NAME + ".alltype_query(ts timestamp, c1 bool,c2 tinyint, c3 smallint, c4 int, c5 bigint, c6 tinyint unsigned, c7 smallint unsigned, c8 int unsigned, c9 bigint unsigned, c10 float, c11 double, c12 binary(20), c13 nchar(30), c14 decimal(38, 10), c15 decimal(18, 6))");
         statement.close();
         testInsert();
     }
@@ -180,7 +179,7 @@ public class WSSelectTest {
     @AfterClass
     public static void afterClass() throws SQLException {
         try(Statement statement = connection.createStatement()) {
-            statement.execute("drop database if exists " + databaseName);
+            statement.execute("drop database if exists " + DATABASE_NAME);
         }
         connection.close();
     }

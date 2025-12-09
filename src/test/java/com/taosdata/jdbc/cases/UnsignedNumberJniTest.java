@@ -11,7 +11,7 @@ import java.util.Properties;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class UnsignedNumberJniTest {
 
-    private static final String host = "127.0.0.1";
+    private static final String HOST = "127.0.0.1";
     private static Connection conn;
     private static long ts;
 
@@ -146,7 +146,7 @@ public class UnsignedNumberJniTest {
 
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
         }
         conn = DriverManager.getConnection(url, properties);
         Statement stmt = conn.createStatement();

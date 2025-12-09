@@ -15,7 +15,6 @@ import com.taosdata.jdbc.utils.VersionUtil;
 import com.taosdata.jdbc.ws.FutureResponse;
 import com.taosdata.jdbc.ws.InFlightRequest;
 import com.taosdata.jdbc.ws.Transport;
-import com.taosdata.jdbc.ws.entity.Action;
 import com.taosdata.jdbc.ws.entity.Code;
 import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.entity.Response;
@@ -26,7 +25,6 @@ import org.slf4j.LoggerFactory;
 import java.nio.ByteOrder;
 import java.sql.SQLException;
 import java.time.Duration;
-import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -46,8 +44,7 @@ public class WSConsumer<V> implements Consumer<V> {
     public void create(Properties properties) throws SQLException {
         factory = new TMQRequestFactory();
         param = new ConsumerParam(properties);
-        InFlightRequest inFlightRequest = new InFlightRequest(param.getConnectionParam().getRequestTimeout()
-                , param.getConnectionParam().getMaxRequest());
+        InFlightRequest inFlightRequest = new InFlightRequest(param.getConnectionParam().getMaxRequest());
 
         param.getConnectionParam().setTextMessageHandler(message -> {
             try {
@@ -127,16 +124,69 @@ public class WSConsumer<V> implements Consumer<V> {
     }
 
     private boolean handleReconnect() throws SQLException {
-        if (transport.doReconnectCurNode()){
-            subscribe(this.topics);
-            return true;
-        } else {
-            transport.close();
-            return false;
-        }
+        transport.reconnectTmq();
+        subscribe(this.topics);
+        return true;
     }
 
-    @SuppressWarnings("unchecked")
+    private ConsumerRecords<V> getMeta(PollResp pollResp) throws SQLException{
+        Request fetchJsonMetaReq = factory.generateFetchJsonMeata(pollResp.getMessageId());
+        FetchJsonMetaResp fetchJsonMetaResp = (FetchJsonMetaResp) transport.send(fetchJsonMetaReq);
+        if (Code.SUCCESS.getCode() != fetchJsonMetaResp.getCode()) {
+            throw new SQLException("consumer fetch json meta error, code: (0x" + Integer.toHexString(fetchJsonMetaResp.getCode()) + "), message: " + fetchJsonMetaResp.getMessage());
+        }
+
+        if (fetchJsonMetaResp.getData() == null || fetchJsonMetaResp.getData().getMetas() == null) {
+            return ConsumerRecords.emptyRecord();
+        }
+
+        ConsumerRecords<V> records = new ConsumerRecords<>();
+        TopicPartition tp = new TopicPartition(pollResp.getTopic(), pollResp.getVgroupId());
+
+        for (Meta meta : fetchJsonMetaResp.getData().getMetas()){
+            ConsumerRecord<V> r = new ConsumerRecord.Builder<V>()
+                    .topic(pollResp.getTopic())
+                    .dbName(pollResp.getDatabase())
+                    .vGroupId(pollResp.getVgroupId())
+                    .offset(pollResp.getOffset())
+                    .messageType(TmqMessageType.TMQ_RES_TABLE_META)
+                    .meta(meta)
+                    .value(null)
+                    .build();
+            records.put(tp, r);
+        }
+        return records;
+    }
+
+    private ConsumerRecords<V> getData(PollResp pollResp, Deserializer<V> deserializer) throws SQLException{
+        ConsumerRecords<V> records = new ConsumerRecords<>();
+        try (WSConsumerResultSet rs = new WSConsumerResultSet(transport, factory, pollResp.getMessageId(), pollResp.getDatabase(), param.getConnectionParam().getZoneId())) {
+            if (deserializer instanceof MapEnhanceDeserializer){
+                ConsumerRecords<TMQEnhMap> resultRecords = rs.handleSubscribeDB(pollResp);
+                return (ConsumerRecords<V>) resultRecords;
+            }
+            String topic = pollResp.getTopic();
+            String dbName = pollResp.getDatabase();
+            int vGroupId = pollResp.getVgroupId();
+            TopicPartition tp = new TopicPartition(topic, vGroupId);
+
+            while (rs.next()) {
+                V v = deserializer.deserialize(rs, topic, dbName);
+                ConsumerRecord<V> r = new ConsumerRecord.Builder<V>()
+                        .topic(topic)
+                        .dbName(dbName)
+                        .vGroupId(vGroupId)
+                        .offset(pollResp.getOffset())
+                        .messageType(TmqMessageType.TMQ_RES_DATA)
+                        .meta(null)
+                        .value(v)
+                        .build();
+                records.put(tp, r);
+            }
+        }
+        return records;
+    }
+
     private ConsumerRecords<V> doPoll(Duration timeout, Deserializer<V> deserializer) throws SQLException{
         if (param.isAutoCommit() && (0 != messageId)) {
             long now = System.currentTimeMillis();
@@ -159,66 +209,33 @@ public class WSConsumer<V> implements Consumer<V> {
         messageId = pollResp.getMessageId();
         lastMessageId = messageId;
 
-        if (pollResp.getMessageType() == TmqMessageType.TMQ_RES_TABLE_META.getCode() || pollResp.getMessageType() == TmqMessageType.TMQ_RES_METADATA.getCode()) {
-            Request fetchJsonMetaReq = factory.generateFetchJsonMeata(pollResp.getMessageId());
-            FetchJsonMetaResp fetchJsonMetaResp = (FetchJsonMetaResp) transport.send(fetchJsonMetaReq);
-            if (Code.SUCCESS.getCode() != fetchJsonMetaResp.getCode()) {
-                throw new SQLException("consumer fetch json meta error, code: (0x" + Integer.toHexString(fetchJsonMetaResp.getCode()) + "), message: " + fetchJsonMetaResp.getMessage());
-            }
-
-            if (fetchJsonMetaResp.getData() == null || fetchJsonMetaResp.getData().getMetas() == null) {
-                return ConsumerRecords.emptyRecord();
-            }
-
-            ConsumerRecords<V> records = new ConsumerRecords<>();
-
-            for (Meta meta : fetchJsonMetaResp.getData().getMetas()){
-                TopicPartition tp = new TopicPartition(pollResp.getTopic(), pollResp.getVgroupId());
-
-                ConsumerRecord<V> r = new ConsumerRecord.Builder<V>()
-                    .topic(pollResp.getTopic())
-                    .dbName(pollResp.getDatabase())
-                    .vGroupId(pollResp.getVgroupId())
-                    .offset(pollResp.getOffset())
-                    .messageType(TmqMessageType.TMQ_RES_TABLE_META)
-                    .meta(meta)
-                    .value(null)
-                    .build();
-                    records.put(tp, r);
-            }
-            return records;
+        if (pollResp.getMessageType() == TmqMessageType.TMQ_RES_TABLE_META.getCode()){
+            return getMeta(pollResp);
         }
 
-        if (pollResp.getMessageType() != TmqMessageType.TMQ_RES_DATA.getCode()) {
-            return ConsumerRecords.emptyRecord();
+        if (pollResp.getMessageType() == TmqMessageType.TMQ_RES_DATA.getCode()){
+            return getData(pollResp, deserializer);
         }
 
-        ConsumerRecords<V> records = new ConsumerRecords<>();
-        try (WSConsumerResultSet rs = new WSConsumerResultSet(transport, factory, pollResp.getMessageId(), pollResp.getDatabase(), param.getConnectionParam().getZoneId())) {
-            if (deserializer instanceof MapEnhanceDeserializer){
-                ConsumerRecords<TMQEnhMap> resultRecords = rs.handleSubscribeDB(pollResp);
-                return (ConsumerRecords<V>) resultRecords;
+        if (pollResp.getMessageType() == TmqMessageType.TMQ_RES_METADATA.getCode()) {
+            ConsumerRecords<V> metaRecords = getMeta(pollResp);
+            ConsumerRecords<V> dataRecords = getData(pollResp, deserializer);
+            if (metaRecords.isEmpty()){
+                return dataRecords;
             }
-            while (rs.next()) {
-                String topic = pollResp.getTopic();
-                String dbName = pollResp.getDatabase();
-                int vGroupId = pollResp.getVgroupId();
-                TopicPartition tp = new TopicPartition(topic, vGroupId);
+            if (dataRecords.isEmpty()){
+                return metaRecords;
+            }
 
-                V v = deserializer.deserialize(rs, topic, dbName);
-                ConsumerRecord<V> r = new ConsumerRecord.Builder<V>()
-                        .topic(topic)
-                        .dbName(dbName)
-                        .vGroupId(vGroupId)
-                        .offset(pollResp.getOffset())
-                        .messageType(TmqMessageType.TMQ_RES_DATA)
-                        .meta(null)
-                        .value(v)
-                        .build();
-                records.put(tp, r);
+            TopicPartition tp = new TopicPartition(pollResp.getTopic(), pollResp.getVgroupId());
+
+            for (ConsumerRecord<V> r : metaRecords.get(tp)){
+                dataRecords.put(tp, r);
             }
+
+            return dataRecords;
         }
-        return records;
+        return ConsumerRecords.emptyRecord();
     }
 
     @Override

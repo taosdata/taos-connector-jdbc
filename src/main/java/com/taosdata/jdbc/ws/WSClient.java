@@ -4,39 +4,35 @@ import com.google.common.base.Strings;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.enums.WSFunction;
-import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.Utils;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.channel.*;
-import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.http.DefaultHttpHeaders;
-import io.netty.handler.codec.http.HttpClientCodec;
-import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.websocketx.*;
-import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensionHandler;
-import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensionHandshaker;
-import io.netty.handler.codec.http.websocketx.extensions.compression.DeflateFrameClientExtensionHandshaker;
-import io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateClientExtensionHandshaker;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.timeout.TimeoutException;
+import io.netty.util.concurrent.Promise;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.net.ssl.SSLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 public class WSClient implements AutoCloseable {
 
     private static final Logger log = LoggerFactory.getLogger(WSClient.class);
-    Transport transport;
+
 
     public final URI serverUri;
 
@@ -54,9 +50,8 @@ public class WSClient implements AutoCloseable {
      *
      * @param serverUri connection url
      */
-    public WSClient(URI serverUri, Transport transport, ConnectionParam connectionParam) {
-        this.transport = transport;
-        this.serverUri = serverUri;
+    public WSClient(URI serverUri, ConnectionParam connectionParam) {
+       this.serverUri = serverUri;
         this.connectionParam = connectionParam;
         this.channel = null;
 
@@ -73,73 +68,84 @@ public class WSClient implements AutoCloseable {
         }
     }
 
-    private Channel getChannel() throws SQLException {
+    private  Bootstrap createBootstrap() {
         Bootstrap b = new Bootstrap();
         b.group(Utils.getEventLoopGroup())
                 .channel(NioSocketChannel.class)
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectionParam.getConnectTimeout())
                 .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
-                .handler(new ChannelInitializer<SocketChannel>() {
-                    @Override
-                    protected void initChannel(SocketChannel ch) throws SSLException {
-                        ChannelPipeline p = ch.pipeline();
+                .handler(new WebSocketChannelInitializer(connectionParam, host, port, serverUri));
+        return b;
+    }
 
-                        if (connectionParam.isUseSsl()) {
-                            if (connectionParam.isDisableSslCertValidation()){
-                                SslContext sslCtx = SslContextBuilder.forClient()
-                                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                                        .build();
-                                p.addLast(sslCtx.newHandler(ch.alloc(), host, port));
-                            } else {
-                                SslContext sslCtx = SslContextBuilder.forClient().build();
-                                p.addLast(sslCtx.newHandler(ch.alloc(), host, port));
-                            }
-                        }
+    // Asynchronous method to obtain a Channel (reuses core logic from the original code)
+    public CompletableFuture<Channel> getChannelAsync() {
+        // CompletableFuture to hold the asynchronous result (success returns Channel, failure returns SQLException)
+        CompletableFuture<Channel> resultFuture = new CompletableFuture<>();
+        Bootstrap b = createBootstrap();
 
-                        // for debug
-                        //p.addLast(new LoggingHandler(LogLevel.DEBUG));
+        // Initiate asynchronous TCP connection, returns ChannelFuture to track connection status
+        ChannelFuture connectFuture = b.connect(host, port);
 
-                        p.addLast(new HttpClientCodec());
-                        p.addLast(new HttpObjectAggregator(8192));
+        // Register listener for connection result (executes in Netty IO thread when connection completes)
+        connectFuture.addListener(connect -> {
+            if (!connect.isSuccess()) {
+                // Handle connection failure: wrap underlying exception into business-defined SQLException and complete future exceptionally
+                Throwable cause = connect.cause();
+                SQLException ex = TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, cause.getMessage());
+                resultFuture.completeExceptionally(ex);
+                return;
+            }
 
-                        // use custom websocket client handshaker to avoid mask encode
-                        WebSocketClientHandshaker handshaker = new CustomWebSocketClientHandshaker(serverUri,
-                                WebSocketVersion.V13,
-                                null,
-                                true,
-                                new DefaultHttpHeaders(),
-                                100 * 1024 * 1024,
-                                true,
-                                false,
-                                -1L);
-                        p.addLast(new WebSocketHandshakeHandler(handshaker));
+            // Connection successful: get the established Channel and WebSocket handshake handler from the pipeline
+            Channel tmpChn = connectFuture.channel();
+            WebSocketHandshakeHandler wsHandler = tmpChn.pipeline().get(WebSocketHandshakeHandler.class);
+            ChannelFuture handshakeFuture = wsHandler.handshakeFuture();
 
-                        if (connectionParam.isEnableCompression()) {
-                            WebSocketClientExtensionHandshaker deflateHandshaker = new PerMessageDeflateClientExtensionHandshaker(
-                                    6, false,
-                                    15,       // clientMaxWindowSize (2^15 = 32KB)
-                                    true,     // clientNoContextTakeover
-                                    true    // serverNoContextTakeover
+            // Register listener for WebSocket handshake result (executes in IO thread when handshake completes)
+            handshakeFuture.addListener(handshake -> {
+                if (!handshake.isSuccess()) {
+                    // Handle handshake failure: close the channel to release resources, wrap exception, and complete future exceptionally
+                    tmpChn.close();
+                    SQLException ex = TSDBError.createSQLException(
+                            TSDBErrorNumbers.ERROR_UNKNOWN,
+                            "Handshake failed: " + handshake.cause().getMessage()
+                    );
+                    resultFuture.completeExceptionally(ex);
+                    return;
+                }
 
-                            );
+                // Handshake successful: remove the handshake handler (no longer needed after handshake) and complete future with the valid Channel
+                tmpChn.pipeline().remove(wsHandler);
+                this.channel = tmpChn;
+                resultFuture.complete(tmpChn);
+            });
 
-                            WebSocketClientExtensionHandler extensionHandler = new WebSocketClientExtensionHandler(deflateHandshaker,  new DeflateFrameClientExtensionHandshaker(false),
-                                    new DeflateFrameClientExtensionHandshaker(true));
-                            p.addLast(extensionHandler);
-                        }
+            // Asynchronous handshake timeout handling: schedule a task to check if handshake is completed within the timeout period
+            tmpChn.eventLoop().schedule(() -> {
+                if (!handshakeFuture.isDone()) {
+                    tmpChn.close();
+                    resultFuture.completeExceptionally(
+                            TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT, "Handshake timed out")
+                    );
+                }
+            }, connectionParam.getConnectTimeout(), TimeUnit.MILLISECONDS);
+        });
 
-                        p.addLast(new WebSocketFrameAggregator(100 * 1024 * 1024)); // max 100MB
+        // Asynchronous connection timeout handling: schedule a task to cancel the connection if it's not completed within the timeout period
+        connectFuture.channel().eventLoop().schedule(() -> {
+            if (!connectFuture.isDone()) {
+                connectFuture.cancel(true); // Cancel the uncompleted connection
+                resultFuture.completeExceptionally(
+                        TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT)
+                );
+            }
+        }, connectionParam.getConnectTimeout(), TimeUnit.MILLISECONDS);
 
-                        // Connect with V13 (RFC 6455 aka HyBi-17). You can change it to V08 or V00.
-                        // If you change it to V00, ping is not supported and remember to change
-                        // HttpResponseDecoder to WebSocketHttpResponseDecoder in the pipeline.
-                        final WebSocketClientHandler handler =
-                                new WebSocketClientHandler(connectionParam.getTextMessageHandler(),
-                                        connectionParam.getBinaryMessageHandler());
-                        p.addLast(handler);
-                    }
-                });
-
+        return resultFuture;
+    }
+    private Channel getChannel() throws SQLException {
+        Bootstrap b = createBootstrap();
         ChannelFuture connectFuture = b.connect(host, port);
 
         Channel tmpChn = null;
@@ -157,8 +163,32 @@ public class WSClient implements AutoCloseable {
             }
 
             tmpChn = connectFuture.channel();
+            Promise<WebSocketHandshakeHandler> wsHandlerPromise = tmpChn.eventLoop().newPromise();
 
-            WebSocketHandshakeHandler wsHandler = tmpChn.pipeline().get(WebSocketHandshakeHandler.class);
+            final Channel chn = tmpChn;
+            tmpChn.eventLoop().execute(() -> {
+                try {
+                    WebSocketHandshakeHandler wsHandler = chn.pipeline().get(WebSocketHandshakeHandler.class);
+                    if (wsHandler == null) {
+                        wsHandlerPromise.setFailure(new IllegalStateException("WebSocketHandshakeHandler not initialized，initChannel execute failed"));
+                    } else {
+                        wsHandlerPromise.setSuccess(wsHandler);
+                    }
+                } catch (Exception e) {
+                    wsHandlerPromise.setFailure(e);
+                }
+            });
+
+            // wait for the Promise to complete with timeout
+            wsHandlerPromise.awaitUninterruptibly(connectionParam.getConnectTimeout());
+            if (!wsHandlerPromise.isSuccess()) {
+                tmpChn.close().syncUninterruptibly();
+                log.error("get wsHandler failed", wsHandlerPromise.cause());
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "get wsHandler failed: " + wsHandlerPromise.cause().getMessage());
+            }
+
+            // get result from the Promise
+            WebSocketHandshakeHandler wsHandler = wsHandlerPromise.getNow();
             ChannelFuture handshakeFuture = wsHandler.handshakeFuture();
 
             if (!handshakeFuture.awaitUninterruptibly(connectionParam.getConnectTimeout())) {
@@ -181,49 +211,110 @@ public class WSClient implements AutoCloseable {
     }
 
     public boolean isOpen() {
+        if (channel == null) {
+            return false;
+        }
         return channel.isActive();
     }
 
     public boolean isClosed() {
         return !isOpen();
     }
+
+    // Extracted repeated logic: Create close frame and mark local-initiated close
+    private CloseWebSocketFrame createCloseFrameAndMark() {
+        int statusCode = 1000;
+        String reason = "Normal close";
+        CloseWebSocketFrame closeFrame = new CloseWebSocketFrame(statusCode, reason);
+        // Set flag for local-initiated close (reuse original logic)
+        channel.attr(WebSocketClientHandler.LOCAL_INITIATED_CLOSE).set(true);
+        return closeFrame;
+    }
+
+    // Extracted channel validity check (avoids duplicate judgments)
+    private boolean isChannelValid() {
+        return channel != null && channel.isOpen();
+    }
+
     @Override
     public void close() {
-        if (channel != null && channel.isOpen()) {
-            int statusCode = 1000;
-            String reason = "Normal close";
-            CloseWebSocketFrame closeFrame = new CloseWebSocketFrame(statusCode, reason);
-            ChannelFuture writeFuture = channel.writeAndFlush(closeFrame);
-            channel.attr(WebSocketClientHandler.LOCAL_INITIATED_CLOSE).set(true);
+        if (!isChannelValid()) {
+            return; // Return directly if channel is invalid
+        }
 
-            writeFuture.syncUninterruptibly();
+        // Call extracted method to create close frame
+        CloseWebSocketFrame closeFrame = createCloseFrameAndMark();
+        ChannelFuture writeFuture = channel.writeAndFlush(closeFrame);
 
-            ChannelFuture closeFuture = channel.close();
-            closeFuture.syncUninterruptibly();
-            if (closeFuture.isSuccess()) {
-                log.debug("WebSocket connection closed successfully");
-            } else {
-                log.error("WebSocket connection closed error", closeFuture.cause());
-            }
+        // Block synchronously until write completes (original sync logic retained)
+        writeFuture.syncUninterruptibly();
+
+        // Close channel synchronously (original sync logic retained)
+        ChannelFuture closeFuture = channel.close();
+        closeFuture.syncUninterruptibly();
+        if (closeFuture.isSuccess()) {
+            log.debug("WebSocket connection closed successfully");
+        } else {
+            log.error("WebSocket connection closed error", closeFuture.cause());
         }
     }
-   public boolean reconnectBlockingWithoutRetry() {
-       return connectBlocking();
+
+    /**
+     * Async close WebSocket connection (non-blocking, returns CompletableFuture)
+     * @return CompletableFuture for async result (no return on success; contains exception on failure)
+     */
+    public CompletableFuture<Void> closeAsync() {
+        CompletableFuture<Void> resultFuture = new CompletableFuture<>();
+
+        if (!isChannelValid()) {
+            resultFuture.complete(null); // Complete directly if channel is invalid
+            return resultFuture;
+        }
+
+        // Call extracted method to create close frame (reuse logic)
+        CloseWebSocketFrame closeFrame = createCloseFrameAndMark();
+        ChannelFuture writeFuture = channel.writeAndFlush(closeFrame);
+
+        // Async listener for write result (original async logic retained)
+        writeFuture.addListener(write -> {
+            if (!write.isSuccess()) {
+                log.error("Failed to write close frame", write.cause());
+                resultFuture.completeExceptionally(write.cause());
+                return;
+            }
+
+            // Async close channel and listen for result
+            ChannelFuture closeFuture = channel.close();
+            closeFuture.addListener(close -> {
+                if (close.isSuccess()) {
+                    log.debug("WebSocket connection closed successfully");
+                    resultFuture.complete(null);
+                } else {
+                    log.error("WebSocket connection closed error", close.cause());
+                    resultFuture.completeExceptionally(close.cause());
+                }
+            });
+        });
+
+        return resultFuture;
     }
 
     public boolean connectBlocking(){
-        if (channel != null && channel.isActive()){
-            return true;
-        }
-        if (channel != null){
-            channel.close().syncUninterruptibly();
-        }
+        synchronized (this) {
+            if (channel != null && channel.isActive()) {
+                return true;
+            }
+            if (channel != null) {
+                channel.close().syncUninterruptibly();
+            }
 
-        try {
-            channel = getChannel();
-            return true;
-        } catch (SQLException e){
-            return false;
+            try {
+                channel = getChannel();
+                return true;
+            } catch (SQLException e) {
+                log.error("WebSocket connect failed: ", e);
+                return false;
+            }
         }
     }
 
@@ -251,7 +342,7 @@ public class WSClient implements AutoCloseable {
     public void closeBlocking() {
         this.close();
     }
-    public static WSClient getInstance(ConnectionParam params, WSFunction function, Transport transport) throws SQLException {
+    public static WSClient getInstance(ConnectionParam params, int endpointIndex, WSFunction function) throws SQLException {
         if (Strings.isNullOrEmpty(function.getFunction())) {
             throw new SQLException("websocket url error");
         }
@@ -260,15 +351,15 @@ public class WSClient implements AutoCloseable {
             protocol = "wss";
         }
         String port = "";
-        if (null != params.getPort()) {
-            port = ":" + params.getPort();
+        if (params.getEndpoints().get(endpointIndex).getPort() != 0) {
+            port = ":" + params.getEndpoints().get(endpointIndex).getPort();
         }
 
         String wsFunction = "/ws";
         if (function.equals(WSFunction.TMQ)){
             wsFunction = "/rest/tmq";
         }
-        String loginUrl = protocol + "://" + params.getHost() + port + wsFunction;
+        String loginUrl = protocol + "://" + params.getEndpoints().get(endpointIndex).getHost() + port + wsFunction;
 
         if (null != params.getCloudToken()) {
             loginUrl = loginUrl + "?token=" + params.getCloudToken();
@@ -280,9 +371,9 @@ public class WSClient implements AutoCloseable {
         } catch (URISyntaxException e) {
             throw new SQLException("Websocket url parse error: " + loginUrl, e);
         }
-        return new WSClient(urlPath, transport, params);
+        return new WSClient(urlPath, params);
     }
-    public static WSClient getSlaveInstance(ConnectionParam params, WSFunction function, Transport transport) throws SQLException {
+    public static WSClient getSlaveInstance(ConnectionParam params, WSFunction function) throws SQLException {
         if (StringUtils.isEmpty(params.getSlaveClusterHost()) || StringUtils.isEmpty(params.getSlaveClusterHost())){
             return null;
         }
@@ -310,6 +401,6 @@ public class WSClient implements AutoCloseable {
         } catch (URISyntaxException e) {
             throw new SQLException("Slave cluster websocket url parse error: " + loginUrl, e);
         }
-        return new WSClient(urlPath, transport, params);
+        return new WSClient(urlPath, params);
     }
 }

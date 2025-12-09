@@ -18,9 +18,9 @@ import static org.junit.Assert.assertEquals;
 public class StableTest {
 
     private static Connection connection;
-    private static final String dbName = TestUtils.camelToSnake(StableTest.class);
-    private static final String stbName = "st";
-    private static final String host = "127.0.0.1";
+    private static final String DB_NAME = TestUtils.camelToSnake(StableTest.class);
+    private static final String STB_NAME = "st";
+    private static final String HOST = "127.0.0.1";
 
     @BeforeClass
     public static void createDatabase() throws SQLException {
@@ -32,13 +32,13 @@ public class StableTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
         String url = SpecifyAddress.getInstance().getJniWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":0/";
+            url = "jdbc:TAOS://" + HOST + ":0/";
         }
         connection = DriverManager.getConnection(url, properties);
         Statement statement = connection.createStatement();
-        statement.execute("drop database if exists " + dbName);
-        statement.execute("create database if not exists " + dbName);
-        statement.execute("use " + dbName);
+        statement.execute("drop database if exists " + DB_NAME);
+        statement.execute("create database if not exists " + DB_NAME);
+        statement.execute("use " + DB_NAME);
         statement.close();
 
     }
@@ -46,7 +46,7 @@ public class StableTest {
     @Test
     public void case001_createSuperTable() {
         try (Statement stmt = connection.createStatement()) {
-            final String sql = "create table " + stbName + " (ts timestamp, v1 int, v2 int) tags (tg nchar(20)) ";
+            final String sql = "create table " + STB_NAME + " (ts timestamp, v1 int, v2 int) tags (tg nchar(20)) ";
             stmt.execute(sql);
         } catch (SQLException e) {
             assert false : "error create stable" + e.getMessage();
@@ -56,7 +56,7 @@ public class StableTest {
     @Test
     public void case002_createTable() {
         try (Statement stmt = connection.createStatement()) {
-            final String sql = "create table t1 using " + stbName + " tags (\"beijing\")";
+            final String sql = "create table t1 using " + STB_NAME + " tags (\"beijing\")";
             stmt.execute(sql);
         } catch (SQLException e) {
             assert false : "error create table" + e.getMessage();
@@ -67,7 +67,7 @@ public class StableTest {
     public void case003_describeSTable() {
         int num = 0;
         try (Statement stmt = connection.createStatement()) {
-            String sql = "describe " + stbName;
+            String sql = "describe " + STB_NAME;
             ResultSet rs = stmt.executeQuery(sql);
             while (rs.next()) {
                 num++;
@@ -99,7 +99,7 @@ public class StableTest {
         try {
             if (connection != null){
                 Statement statement = connection.createStatement();
-                statement.execute("drop database if exists " + dbName);
+                statement.execute("drop database if exists " + DB_NAME);
                 statement.close();
                 connection.close();
             }

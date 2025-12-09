@@ -5,16 +5,14 @@ import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
 import java.sql.*;
-import java.util.AbstractCollection;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Properties;
 
 @FixMethodOrder
 public class WSBigQueryTest {
-    String host = "127.0.0.1";
-    String db_name = "ws_prepare";
-    String tableName = TestUtils.camelToSnake(WSBigQueryTest.class);
+    final String host = "127.0.0.1";
+    final String db_name = "ws_prepare";
+    final String tableName = TestUtils.camelToSnake(WSBigQueryTest.class);
     String superTable = "wpt_st";
     Connection connection;
 

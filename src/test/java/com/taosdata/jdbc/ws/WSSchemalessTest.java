@@ -18,10 +18,11 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
+@SuppressWarnings("java:S1874")
 public class WSSchemalessTest {
-    private static final String host = "127.0.0.1";
-    private static final String dbName = TestUtils.camelToSnake(WSSchemalessTest.class);
-    private static final String dbName_ttl = "test_schemaless_ws_ttl";
+    private static final String HOST = "127.0.0.1";
+    private static final String DB_NAME = TestUtils.camelToSnake(WSSchemalessTest.class);
+    private static final String DB_NAME_TTL = "test_schemaless_ws_ttl";
     public static SchemalessWriter writer;
     public static Connection connection;
 
@@ -29,14 +30,14 @@ public class WSSchemalessTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
         }
         connection = DriverManager.getConnection(url);
         try (Statement statement = connection.createStatement()) {
-            statement.executeUpdate("drop database if exists " + dbName);
-            statement.executeUpdate("create database " + dbName);
+            statement.executeUpdate("drop database if exists " + DB_NAME);
+            statement.executeUpdate("create database " + DB_NAME);
         }
-        writer = new SchemalessWriter(url, "root", "taosdata", dbName);
+        writer = new SchemalessWriter(url, "root", "taosdata", DB_NAME);
     }
 
     @Test
@@ -50,7 +51,7 @@ public class WSSchemalessTest {
         writer.write(lines, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS);
         // then
         Statement statement = connection.createStatement();
-        statement.executeUpdate("use " + dbName);
+        statement.executeUpdate("use " + DB_NAME);
         ResultSet rs = statement.executeQuery("show tables");
         Assert.assertNotNull(rs);
         ResultSetMetaData metaData = rs.getMetaData();
@@ -72,12 +73,12 @@ public class WSSchemalessTest {
                 "st,t1=4i64,t3=\"t4\",t2=5f64,t4=5f64 c1=3i64,c3=L\"passitagin\",c2=true,c4=5f64,c5=5f64 1626006833640000000"};
 
         // when
-        SchemalessWriter writer = new SchemalessWriter(connection, dbName);
+        SchemalessWriter writer = new SchemalessWriter(connection, DB_NAME);
         writer.write(lines, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS, 10000, 100L);
 
         // then
         Statement statement = connection.createStatement();
-        statement.executeUpdate("use " + dbName);
+        statement.executeUpdate("use " + DB_NAME);
         ResultSet rs = statement.executeQuery("show tables");
         Assert.assertNotNull(rs);
         ResultSetMetaData metaData = rs.getMetaData();
@@ -98,12 +99,12 @@ public class WSSchemalessTest {
         // given
         String line = "st,t1=3i64,t2=4f64,t3=\"t3\" c1=3i64,c3=L\"passit\",c2=false,c4=4f64 1626006833639000000";
 
-        SchemalessWriter writer = new SchemalessWriter(connection, dbName);
+        SchemalessWriter writer = new SchemalessWriter(connection, DB_NAME);
         writer.writeRaw(line, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS);
 
         // then
         Statement statement = connection.createStatement();
-        statement.executeUpdate("use " + dbName);
+        statement.executeUpdate("use " + DB_NAME);
         ResultSet rs = statement.executeQuery("show tables");
         Assert.assertNotNull(rs);
         ResultSetMetaData metaData = rs.getMetaData();
@@ -122,12 +123,12 @@ public class WSSchemalessTest {
         // given
         String line = "st,t1=3i64,t2=4f64,t3=\"t3\" c1=3i64,c3=L\"passit\",c2=false,c4=4f64 1626006833639000000";
         // when
-        SchemalessWriter writer = new SchemalessWriter(connection, dbName);
+        SchemalessWriter writer = new SchemalessWriter(connection, DB_NAME);
         writer.writeRaw(line, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS, 10000, 100L);
 
         // then
         Statement statement = connection.createStatement();
-        statement.executeUpdate("use " + dbName);
+        statement.executeUpdate("use " + DB_NAME);
         ResultSet rs = statement.executeQuery("show tables");
         Assert.assertNotNull(rs);
         ResultSetMetaData metaData = rs.getMetaData();
@@ -149,7 +150,7 @@ public class WSSchemalessTest {
                 "st,t1=4i64,t3=\"t4\",t2=5f64,t4=5f64 c1=3i64,c3=L\"passitagin\",c2=true,c4=5f64,c5=5f64 1626006833640000000"};
 
         // when
-        writer.write(lines, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS, dbName_ttl, 1000, 1L);
+        writer.write(lines, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS, DB_NAME_TTL, 1000, 1L);
         writer.close();
     }
 
@@ -169,7 +170,7 @@ public class WSSchemalessTest {
 
         // then
         Statement statement = connection.createStatement();
-        statement.executeUpdate("use " + dbName);
+        statement.executeUpdate("use " + DB_NAME);
         ResultSet rs = statement.executeQuery("show tables");
         Assert.assertNotNull(rs);
         ResultSetMetaData metaData = rs.getMetaData();
@@ -215,7 +216,7 @@ public class WSSchemalessTest {
 
         // then
         Statement statement = connection.createStatement();
-        statement.executeUpdate("use " + dbName);
+        statement.executeUpdate("use " + DB_NAME);
         ResultSet rs = statement.executeQuery("show tables");
         Assert.assertNotNull(rs);
         ResultSetMetaData metaData = rs.getMetaData();
@@ -245,7 +246,7 @@ public class WSSchemalessTest {
 
         // then
         Statement statement = connection.createStatement();
-        statement.executeUpdate("use " + dbName);
+        statement.executeUpdate("use " + DB_NAME);
         ResultSet rs = statement.executeQuery("show tables");
         Assert.assertNotNull(rs);
         ResultSetMetaData metaData = rs.getMetaData();
@@ -263,7 +264,7 @@ public class WSSchemalessTest {
     @AfterClass
     public static void after() {
         try (Statement stmt = connection.createStatement()) {
-            stmt.execute("drop database if exists " + dbName);
+            stmt.execute("drop database if exists " + DB_NAME);
             connection.close();
         } catch (SQLException e) {
             e.printStackTrace();

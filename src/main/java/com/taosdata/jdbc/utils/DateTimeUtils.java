@@ -11,13 +11,12 @@ import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
 import java.util.Calendar;
 import java.util.TimeZone;
-import java.util.regex.Pattern;
 
 public class DateTimeUtils {
+    private DateTimeUtils() {
+    }
 
-    private static final ZoneId stdZoneId = ZoneId.of("UTC");
     private static final ZoneId systemZoneId = ZoneId.systemDefault();
-    private static final Pattern ptn = Pattern.compile(".*?'");
     private static final DateTimeFormatter milliSecFormatter = new DateTimeFormatterBuilder().appendPattern("yyyy-MM-dd HH:mm:ss.SSS").toFormatter();
     private static final DateTimeFormatter microSecFormatter = new DateTimeFormatterBuilder().appendPattern("yyyy-MM-dd HH:mm:ss.SSSSSS").toFormatter();
     private static final DateTimeFormatter nanoSecFormatter = new DateTimeFormatterBuilder().appendPattern("yyyy-MM-dd HH:mm:ss.SSSSSSSSS").toFormatter();

@@ -2,6 +2,7 @@ package com.taosdata.jdbc.tmq;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
 import java.sql.Connection;
@@ -17,9 +18,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @FixMethodOrder
 public class TaosConsumerTest {
-    private static final String host = "127.0.0.1";
-    private static final String dbName = "tmq_test";
-    private static final String superTable = "st";
+    private static final String HOST = "127.0.0.1";
+    private static final String DB_NAME = TestUtils.camelToSnake(TaosConsumerTest.class);
+    private static final String SUPER_TABLE = "st";
     private static Connection connection;
     private static Statement statement;
 
@@ -127,7 +128,7 @@ public class TaosConsumerTest {
     public static void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
@@ -137,13 +138,13 @@ public class TaosConsumerTest {
         statement = connection.createStatement();
         statement.executeUpdate("drop topic if exists topic_ctb_column");
         statement.executeUpdate("drop topic if exists topic_ctb_column_with_bean");
-        statement.execute("drop database if exists " + dbName);
-        statement.execute("create database if not exists " + dbName + " WAL_RETENTION_PERIOD 3650");
-        statement.execute("use " + dbName);
-        statement.execute("create stable if not exists " + superTable
+        statement.execute("drop database if exists " + DB_NAME);
+        statement.execute("create database if not exists " + DB_NAME + " WAL_RETENTION_PERIOD 3650");
+        statement.execute("use " + DB_NAME);
+        statement.execute("create stable if not exists " + SUPER_TABLE
                 + " (ts timestamp, c1 int, c2 float, c3 nchar(10), c4 binary(10), c5 bool) tags(t1 int)");
-        statement.execute("create table if not exists ct0 using " + superTable + " tags(1000)");
-        statement.execute("create table if not exists ct1 using " + superTable + " tags(2000)");
+        statement.execute("create table if not exists ct0 using " + SUPER_TABLE + " tags(1000)");
+        statement.execute("create table if not exists ct1 using " + SUPER_TABLE + " tags(2000)");
     }
 
     @AfterClass
@@ -153,7 +154,7 @@ public class TaosConsumerTest {
                 if (statement != null) {
                     statement.executeUpdate("drop topic if exists topic_ctb_column");
                     statement.executeUpdate("drop topic if exists topic_ctb_column_with_bean");
-                    statement.executeUpdate("drop database if exists " + dbName);
+                    statement.executeUpdate("drop database if exists " + DB_NAME);
                     statement.close();
                 }
                 connection.close();

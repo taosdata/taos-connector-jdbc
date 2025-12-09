@@ -15,9 +15,9 @@ import static com.taosdata.jdbc.TSDBConstants.TIMESTAMP_DATA_OUT_OF_RANGE;
 
 @FixMethodOrder
 public class WsPstmtNsTest {
-    String host = "localhost";
-    String db_name = TestUtils.camelToSnake(WsPstmtNsTest.class);
-    String tableName = "wpt";
+    final String host = "localhost";
+    final String db_name = TestUtils.camelToSnake(WsPstmtNsTest.class);
+    final String tableName = "wpt";
     String superTable = "wpt_st";
     Connection connection;
 
@@ -146,7 +146,7 @@ public class WsPstmtNsTest {
             statement.execute("drop database if exists " + db_name);
             TestUtils.waitTransactionDone(connection);
 
-        } catch (InterruptedException e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
         connection.close();

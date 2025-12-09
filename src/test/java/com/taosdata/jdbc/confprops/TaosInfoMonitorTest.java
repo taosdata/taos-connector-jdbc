@@ -16,7 +16,7 @@ import java.util.stream.IntStream;
 public class TaosInfoMonitorTest {
 
     private static final String host = "127.0.0.1";
-    private Random random = new Random(System.currentTimeMillis());
+    private final Random random = new Random(System.currentTimeMillis());
 
     @Test
     public void testCreateTooManyConnection() throws InterruptedException {

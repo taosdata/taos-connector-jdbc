@@ -4,7 +4,6 @@ import com.taosdata.jdbc.utils.StringUtils;
 
 import java.sql.*;
 import java.util.Properties;
-import java.util.StringTokenizer;
 import java.util.logging.Logger;
 
 /**
@@ -47,6 +46,11 @@ public class TSDBDriver extends AbstractDriver {
      * passed to the driver.
      */
     public static final String PROPERTY_KEY_PORT = "port";
+    /**
+     * Key used to retrieve the endpoints value from the properties instance passed
+     * to the driver.
+     */
+    public static final String PROPERTY_KEY_ENDPOINTS = "endpoints";
     /**
      * Key used to retrieve the database value from the properties instance passed
      * to the driver.
@@ -105,6 +109,7 @@ public class TSDBDriver extends AbstractDriver {
      */
     public static final String PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT = "messageWaitTimeout";
 
+    public static final String PROPERTY_KEY_WS_KEEP_ALIVE_SECONDS = "wsKeepAlive";
     /**
      * connect mode
      */
@@ -129,7 +134,9 @@ public class TSDBDriver extends AbstractDriver {
     public static final String PROPERTY_KEY_APP_IP = "app_ip";
     public static final String PROPERTY_KEY_APP_NAME = "app_name";
 
-    // for efficient writing
+    /**
+     * for efficient writing
+     */
     public static final String PROPERTY_KEY_COPY_DATA = "copyData";
     public static final String PROPERTY_KEY_BATCH_SIZE_BY_ROW = "batchSizeByRow";
     public static final String PROPERTY_KEY_CACHE_SIZE_BY_ROW = "cacheSizeByRow";
@@ -138,7 +145,21 @@ public class TSDBDriver extends AbstractDriver {
     public static final String PROPERTY_KEY_RETRY_TIMES = "retryTimes";
     public static final String PROPERTY_KEY_ASYNC_WRITE = "asyncWrite";
 
-    // for stmt bind mode
+    /**
+     * for health check
+     */
+    public static final String PROPERTY_KEY_HEALTH_CHECK_INIT_INTERVAL = "healthCheckInitInterval";
+    public static final String PROPERTY_KEY_HEALTH_CHECK_MAX_INTERVAL = "healthCheckMaxInterval";
+    public static final String PROPERTY_KEY_HEALTH_CHECK_CON_TIMEOUT = "healthCheckConTimeout";
+    public static final String PROPERTY_KEY_HEALTH_CHECK_CMD_TIMEOUT = "healthCheckCmdTimeout";
+    public static final String PROPERTY_KEY_HEALTH_CHECK_RECOVERY_COUNT = "healthCheckRecoveryCount";
+    public static final String PROPERTY_KEY_HEALTH_CHECK_RECOVERY_INTERVAL = "healthCheckRecoveryInterval";
+    public static final String PROPERTY_KEY_REBALANCE_THRESHOLD = "rebalanceThreshold";
+    public static final String PROPERTY_KEY_REBALANCE_CON_BASE_COUNT = "rebalanceConBaseCount";
+
+    /**
+     * for stmt bind mode
+     */
     public static final String PROPERTY_KEY_PBS_MODE = "pbsMode";
 
     /**
@@ -236,7 +257,7 @@ public class TSDBDriver extends AbstractDriver {
             return new Properties();
 
         // parse properties
-        Properties urlProps = StringUtils.parseUrl(url, defaults,true);
+        Properties urlProps = StringUtils.parseUrl(url, defaults);
         this.dbMetaData = new TSDBDatabaseMetaData(url, urlProps.getProperty(TSDBDriver.PROPERTY_KEY_USER));
         return urlProps;
     }

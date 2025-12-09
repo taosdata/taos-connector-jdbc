@@ -74,6 +74,7 @@ public class RestfulStatementTest {
     public void setEscapeProcessing() throws SQLException {
         stmt.setEscapeProcessing(true);
         stmt.setEscapeProcessing(false);
+        Assert.assertNotNull(stmt);
     }
 
     @Test
@@ -100,6 +101,7 @@ public class RestfulStatementTest {
     @Test
     public void clearWarnings() throws SQLException {
         stmt.clearWarnings();
+        Assert.assertNotNull(stmt);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
@@ -223,6 +225,7 @@ public class RestfulStatementTest {
         stmt.addBatch("insert into " + dbName + ".t1 using " + dbName + ".weather tags('北京') values(now, 22.33)");
         stmt.addBatch("select * from " + dbName + ".weather");
         stmt.addBatch("drop database " + dbName);
+        Assert.assertNotNull(stmt);
     }
 
     @Test
@@ -235,6 +238,7 @@ public class RestfulStatementTest {
         stmt.addBatch("select * from " + dbName + ".weather");
         stmt.addBatch("drop database " + dbName);
         stmt.clearBatch();
+        Assert.assertNotNull(stmt);
     }
 
     @Test
@@ -315,6 +319,7 @@ public class RestfulStatementTest {
     public void setPoolable() throws SQLException {
         stmt.setPoolable(true);
         stmt.setPoolable(false);
+        Assert.assertNotNull(stmt);
     }
 
     @Test
@@ -325,6 +330,7 @@ public class RestfulStatementTest {
     @Test
     public void closeOnCompletion() throws SQLException {
         stmt.closeOnCompletion();
+        Assert.assertNotNull(stmt);
     }
 
     @Test

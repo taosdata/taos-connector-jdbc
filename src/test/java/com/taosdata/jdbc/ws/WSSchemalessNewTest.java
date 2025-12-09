@@ -19,25 +19,25 @@ import java.util.List;
 import java.util.Properties;
 
 public class WSSchemalessNewTest {
-    private static final String host = "127.0.0.1";
-    private static final String dbName = TestUtils.camelToSnake(WSSchemalessNewTest.class);
-    private static final String dbName_ttl = "test_schemaless_ws_ttl";
+    private static final String HOST = "127.0.0.1";
+    private static final String DB_NAME = TestUtils.camelToSnake(WSSchemalessNewTest.class);
+    private static final String DB_NAME_TTL = "test_schemaless_ws_ttl";
     public static Connection connection;
 
     @Before
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
 
         connection = DriverManager.getConnection(url, properties);
         try (Statement statement = connection.createStatement()) {
-            statement.executeUpdate("drop database if exists " + dbName);
-            statement.executeUpdate("create database " + dbName);
-            statement.executeUpdate("use " + dbName);
+            statement.executeUpdate("drop database if exists " + DB_NAME);
+            statement.executeUpdate("create database " + DB_NAME);
+            statement.executeUpdate("use " + DB_NAME);
         }
     }
 
@@ -52,7 +52,7 @@ public class WSSchemalessNewTest {
         ((AbstractConnection)connection).write(lines, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS);
         // then
         Statement statement = connection.createStatement();
-        statement.executeUpdate("use " + dbName);
+        statement.executeUpdate("use " + DB_NAME);
         ResultSet rs = statement.executeQuery("show tables");
         Assert.assertNotNull(rs);
         ResultSetMetaData metaData = rs.getMetaData();
@@ -77,7 +77,7 @@ public class WSSchemalessNewTest {
         ((AbstractConnection)connection).write(lines, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS, 10000, 100L);
         // then
         Statement statement = connection.createStatement();
-        statement.executeUpdate("use " + dbName);
+        statement.executeUpdate("use " + DB_NAME);
         ResultSet rs = statement.executeQuery("show tables");
         Assert.assertNotNull(rs);
         ResultSetMetaData metaData = rs.getMetaData();
@@ -121,7 +121,7 @@ public class WSSchemalessNewTest {
         ((AbstractConnection)connection).writeRaw(line, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS, 10000, 100L);
         // then
         Statement statement = connection.createStatement();
-        statement.executeUpdate("use " + dbName);
+        statement.executeUpdate("use " + DB_NAME);
         ResultSet rs = statement.executeQuery("show tables");
         Assert.assertNotNull(rs);
         ResultSetMetaData metaData = rs.getMetaData();
@@ -169,7 +169,7 @@ public class WSSchemalessNewTest {
         while (rs.next()) {
             rowCnt++;
         }
-        Assert.assertEquals(lines.length, Utils.getSqlRows(connection, dbName + ".stb1"));
+        Assert.assertEquals(lines.length, Utils.getSqlRows(connection, DB_NAME + ".stb1"));
         rs.close();
         statement.close();
     }
@@ -208,7 +208,7 @@ public class WSSchemalessNewTest {
 
         // then
         Statement statement = connection.createStatement();
-        statement.executeUpdate("use " + dbName);
+        statement.executeUpdate("use " + DB_NAME);
         ResultSet rs = statement.executeQuery("show tables");
         Assert.assertNotNull(rs);
         ResultSetMetaData metaData = rs.getMetaData();
@@ -217,7 +217,7 @@ public class WSSchemalessNewTest {
         while (rs.next()) {
             rowCnt++;
         }
-        Assert.assertEquals(lines.length, Utils.getSqlRows(connection,dbName + ".stb1"));
+        Assert.assertEquals(lines.length, Utils.getSqlRows(connection, DB_NAME + ".stb1"));
         rs.close();
         statement.close();
     }
@@ -253,7 +253,7 @@ public class WSSchemalessNewTest {
 
         // then
         Statement statement = connection.createStatement();
-        statement.executeUpdate("use " + dbName);
+        statement.executeUpdate("use " + DB_NAME);
         ResultSet rs = statement.executeQuery("show tables");
         Assert.assertNotNull(rs);
         ResultSetMetaData metaData = rs.getMetaData();
@@ -283,7 +283,7 @@ public class WSSchemalessNewTest {
 
         // then
         Statement statement = connection.createStatement();
-        statement.executeUpdate("use " + dbName);
+        statement.executeUpdate("use " + DB_NAME);
         ResultSet rs = statement.executeQuery("show tables");
         Assert.assertNotNull(rs);
         ResultSetMetaData metaData = rs.getMetaData();
@@ -300,7 +300,7 @@ public class WSSchemalessNewTest {
     @AfterClass
     public static void after() {
         try (Statement stmt = connection.createStatement()) {
-            stmt.execute("drop database if exists " + dbName);
+            stmt.execute("drop database if exists " + DB_NAME);
             connection.close();
         } catch (SQLException e) {
             e.printStackTrace();

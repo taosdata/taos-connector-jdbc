@@ -20,20 +20,20 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class WSVarcharAsStringTest {
-    private static final String host = "127.0.0.1";
-    private static final int port = 6041;
-    private final String db_name = TestUtils.camelToSnake(WSVarcharAsStringTest.class);
-    private static final String tableName = "wq";
+    private static final String HOST = "127.0.0.1";
+    private static final int PORT = 6041;
+    private final String dbName = TestUtils.camelToSnake(WSVarcharAsStringTest.class);
+    private static final String TABLE_NAME = "wq";
     private Connection connection;
     private Statement statement;
-    private static final String topic = "topic_ws_map_varchar_as_string";
-    private static final String topic_database = "topic_ws_map_varchar_as_string_db";
+    private static final String TOPIC = "topic_ws_map_varchar_as_string";
+    private static final String TOPIC_DATABASE = "topic_ws_map_varchar_as_string_db";
 
     @Description("query")
     @Test
     public void queryResult()  {
         try (Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery("show " + db_name + ".stables")) {
+             ResultSet resultSet = statement.executeQuery("show " + dbName + ".stables")) {
             ResultSetMetaData metaData = resultSet.getMetaData();
             Assert.assertEquals("stable_name", metaData.getColumnLabel(1));
             Assert.assertEquals("stable_name", metaData.getColumnName(1));
@@ -72,7 +72,7 @@ public class WSVarcharAsStringTest {
         TimeUnit.MILLISECONDS.sleep(11);
 
         // create topic
-        statement.executeUpdate("create topic if not exists " + topic + " as select ts, c1 from `中文`");
+        statement.executeUpdate("create topic if not exists " + TOPIC + " as select ts, c1 from `中文`");
 
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.CONNECT_USER, "root");
@@ -87,7 +87,7 @@ public class WSVarcharAsStringTest {
         properties.setProperty("min.poll.rows", "1000");
 
         try (TaosConsumer<Map<String, Object>> consumer = new TaosConsumer<>(properties)) {
-            consumer.subscribe(Collections.singletonList(topic));
+            consumer.subscribe(Collections.singletonList(TOPIC));
             for (int i = 0; i < 10; i++) {
                 ConsumerRecords<Map<String, Object>> consumerRecords = consumer.poll(Duration.ofMillis(100));
                 for (ConsumerRecord<Map<String, Object>> r : consumerRecords) {
@@ -105,9 +105,9 @@ public class WSVarcharAsStringTest {
     @Test
     public void testWSEhnMapDB() throws Exception {
         AtomicInteger a = new AtomicInteger(1);
-        String topic = topic_database;
+        String topic = TOPIC_DATABASE;
         // create topic
-        statement.executeUpdate("create topic if not exists " + topic + " as database " + db_name);
+        statement.executeUpdate("create topic if not exists " + topic + " as database " + dbName);
 
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.CONNECT_USER, "root");
@@ -152,16 +152,16 @@ public class WSVarcharAsStringTest {
 
     @Before
     public void before() throws SQLException {
-        String url = "jdbc:TAOS-WS://" + host + ":" + port + "/?user=root&password=taosdata&conmode=1&varcharAsString=true";
+        String url = "jdbc:TAOS-WS://" + HOST + ":" + PORT + "/?user=root&password=taosdata&conmode=1&varcharAsString=true";
         Properties properties = new Properties();
         connection = DriverManager.getConnection(url, properties);
         statement = connection.createStatement();
 
-        statement.executeQuery("drop topic if exists " + topic);
-        statement.executeQuery("drop topic if exists " + topic_database);
-        statement.executeQuery("drop database if exists " + db_name);
-        statement.executeQuery("create database " + db_name + " keep 36500");
-        statement.executeQuery("use " + db_name);
+        statement.executeQuery("drop topic if exists " + TOPIC);
+        statement.executeQuery("drop topic if exists " + TOPIC_DATABASE);
+        statement.executeQuery("drop database if exists " + dbName);
+        statement.executeQuery("create database " + dbName + " keep 36500");
+        statement.executeQuery("use " + dbName);
 
         statement.executeQuery("CREATE STABLE `中文` (ts timestamp, c1 varchar(100)) TAGS (groupId int)");
         statement.executeQuery("CREATE TABLE d1001 USING `中文` TAGS (2)");
@@ -173,9 +173,9 @@ public class WSVarcharAsStringTest {
         try {
             if (null != statement) {
                 TimeUnit.SECONDS.sleep(3);
-                statement.executeQuery("drop topic if exists " + topic);
-                statement.executeQuery("drop topic if exists " + topic_database);
-                statement.executeQuery("drop database if exists " + db_name);
+                statement.executeQuery("drop topic if exists " + TOPIC);
+                statement.executeQuery("drop topic if exists " + TOPIC_DATABASE);
+                statement.executeQuery("drop database if exists " + dbName);
                 statement.close();
             }
             if (null != connection) {

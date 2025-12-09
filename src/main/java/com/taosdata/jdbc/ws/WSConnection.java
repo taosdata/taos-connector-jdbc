@@ -7,38 +7,43 @@ import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
-import com.taosdata.jdbc.rs.ConnectionParam;
-import com.taosdata.jdbc.utils.ReqId;
+import com.taosdata.jdbc.common.ConnectionParam;
+import com.taosdata.jdbc.utils.StmtUtils;
+import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.ws.entity.*;
 import com.taosdata.jdbc.ws.schemaless.InsertReq;
 import com.taosdata.jdbc.ws.schemaless.SchemalessAction;
 import com.taosdata.jdbc.ws.stmt2.entity.Field;
-import com.taosdata.jdbc.ws.stmt2.entity.RequestFactory;
 import com.taosdata.jdbc.ws.stmt2.entity.Stmt2PrepareResp;
-import com.taosdata.jdbc.ws.stmt2.entity.Stmt2Resp;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.sql.DatabaseMetaData;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class WSConnection extends AbstractConnection {
-
-    public static boolean g_FirstConnection = true;
+    private static final Logger log = LoggerFactory.getLogger(WSConnection.class);
+    public static final AtomicBoolean g_FirstConnection = new AtomicBoolean(true);
     private final Transport transport;
     private final DatabaseMetaData metaData;
     private String database;
     private final ConnectionParam param;
     private final AtomicLong insertId = new AtomicLong(0);
+    private final String jdbcUrl;
+
+    private static final ConcurrentHashMap<String, ConCheckInfo> conCheckInfoMap = new ConcurrentHashMap<>();
+    private static final Map<String, Object> jdbcUrlLocks = new ConcurrentHashMap<>();
 
     public WSConnection(String url, Properties properties, Transport transport, ConnectionParam param, String serverVersion) {
         super(properties, serverVersion);
         this.transport = transport;
         this.database = param.getDatabase();
         this.param = param;
+        this.jdbcUrl = StringUtils.retainHostPortPart(url);
         this.metaData = new WSDatabaseMetaData(url, properties.getProperty(TSDBDriver.PROPERTY_KEY_USER), this);
     }
 
@@ -80,20 +85,7 @@ public class WSConnection extends AbstractConnection {
         }
 
         if (transport != null && !transport.isClosed()) {
-            long reqId = ReqId.getReqID();
-            Request request = com.taosdata.jdbc.ws.stmt2.entity.RequestFactory.generateInit(reqId, true, true);
-            Stmt2Resp resp = (Stmt2Resp) transport.send(request);
-            if (Code.SUCCESS.getCode() != resp.getCode()) {
-                throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
-            }
-            long stmtId = resp.getStmtId();
-            Request prepare = RequestFactory.generatePrepare(stmtId, reqId, sql);
-            Stmt2PrepareResp prepareResp = (Stmt2PrepareResp) transport.send(prepare);
-            if (Code.SUCCESS.getCode() != prepareResp.getCode()) {
-                Request close = RequestFactory.generateClose(stmtId, reqId);
-                transport.sendWithoutResponse(close);
-                throw new SQLException("(0x" + Integer.toHexString(prepareResp.getCode()) + "):" + prepareResp.getMessage());
-            }
+            Stmt2PrepareResp prepareResp = StmtUtils.initStmtWithRetry(transport, sql, param.getRetryTimes());
 
             boolean isInsert = prepareResp.isInsert();
             boolean isSuperTable = false;
@@ -163,19 +155,6 @@ public class WSConnection extends AbstractConnection {
         }
         return this.metaData;
     }
-
-    public static void reInitTransport(Transport transport, ConnectionParam param, String db) throws SQLException {
-        transport.disconnectAndReconnect();
-
-        ConnectReq connectReq = new ConnectReq(param);
-        ConnectResp auth = (ConnectResp) transport.send(new Request(Action.CONN.getAction(), connectReq));
-
-        if (Code.SUCCESS.getCode() != auth.getCode()) {
-            transport.close();
-            throw new SQLException("(0x" + Integer.toHexString(auth.getCode()) + "):" + "auth failure:" + auth.getMessage());
-        }
-    }
-
     public ConnectionParam getParam() {
         return param;
     }
@@ -192,7 +171,7 @@ public class WSConnection extends AbstractConnection {
                 insertReq.setTtl(ttl);
             if (reqId != null)
                 insertReq.setReqId(reqId);
-            CommonResp response = (CommonResp) transport.send(new Request(SchemalessAction.INSERT.getAction(), insertReq));
+            CommonResp response = (CommonResp) transport.send(new Request(SchemalessAction.INSERT.getAction(), insertReq), param.getRequestTimeout());
             if (Code.SUCCESS.getCode() != response.getCode()) {
                 throw new SQLException("0x" + Integer.toHexString(response.getCode()) + ":" + response.getMessage());
             }
@@ -210,11 +189,62 @@ public class WSConnection extends AbstractConnection {
             insertReq.setTtl(ttl);
         if (reqId != null)
             insertReq.setReqId(reqId);
-        CommonResp response = (CommonResp) transport.send(new Request(SchemalessAction.INSERT.getAction(), insertReq));
+        CommonResp response = (CommonResp) transport.send(new Request(SchemalessAction.INSERT.getAction(), insertReq), param.getRequestTimeout());
         if (Code.SUCCESS.getCode() != response.getCode()) {
             throw new SQLException("(0x" + Integer.toHexString(response.getCode()) + "):" + response.getMessage());
         }
         // websocket don't return the num of schemaless insert
         return 0;
+    }
+
+    private boolean noNeedCheck(){
+        ConCheckInfo conCheckInfo = conCheckInfoMap.get(jdbcUrl);
+        return conCheckInfo != null
+                && conCheckInfo.isValid()
+                && !transport.isConnectionLost()
+                && (!conCheckInfo.isExpired(param.getWsKeepAlive()));
+    }
+    @Override
+    public boolean isValid(int timeout) throws SQLException {
+        //true if the connection is valid, false otherwise
+        if (isClosed())
+            return false;
+        if (timeout < 0)    //SQLException - if the value supplied for timeout is less than 0
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE);
+
+        if (noNeedCheck()){
+            return true;
+        }
+
+        Object lock = jdbcUrlLocks.computeIfAbsent(jdbcUrl, k -> new Object());
+        synchronized (lock) {
+            if (noNeedCheck()){
+                return true;
+            }
+
+            int status;
+            Statement stmt = null;
+            ResultSet resultSet = null;
+            try {
+                stmt = createStatement();
+                stmt.setQueryTimeout(timeout);
+                resultSet = stmt.executeQuery("SHOW CLUSTER ALIVE");
+                resultSet.next();
+                status = resultSet.getInt(1);
+                conCheckInfoMap.put(jdbcUrl, new ConCheckInfo(System.currentTimeMillis(), status != 0));
+                return status != 0;
+            } catch (SQLException e) {
+                conCheckInfoMap.put(jdbcUrl, new ConCheckInfo(System.currentTimeMillis(), false));
+                log.error("check connection failed", e);
+                return false;
+            } finally {
+                if (resultSet != null) {
+                    resultSet.close();
+                }
+                if (stmt != null) {
+                    stmt.close();
+                }
+            }
+        }
     }
 }

@@ -1,9 +1,9 @@
 package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.common.TDBlob;
-import com.taosdata.jdbc.utils.DataTypeConverUtil;
+import com.taosdata.jdbc.utils.BlockUtil;
+import com.taosdata.jdbc.utils.DataTypeConvertUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
-import com.taosdata.jdbc.utils.Utils;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
@@ -29,7 +29,7 @@ public class TSDBResultSetBlockData {
 
     private int timestampPrecision;
     private ByteBuffer buffer;
-    Semaphore semaphore = new Semaphore(0);
+    final Semaphore semaphore = new Semaphore(0);
     public int returnCode = 0;
 
     public TSDBResultSetBlockData(List<ColumnMetaData> colMeta, int numOfCols, int timestampPrecision) {
@@ -113,7 +113,7 @@ public class TSDBResultSetBlockData {
                     buffer.get(tmp);
                     for (int j = 0; j < numOfRows; j++) {
                         byte b = buffer.get();
-                        if (isNull(tmp, j)) {
+                        if (BlockUtil.isNull(tmp, j)) {
                             col.add(null);
                         } else {
                             col.add(b);
@@ -128,7 +128,7 @@ public class TSDBResultSetBlockData {
                     buffer.get(tmp);
                     for (int j = 0; j < numOfRows; j++) {
                         short s = buffer.getShort();
-                        if (isNull(tmp, j)) {
+                        if (BlockUtil.isNull(tmp, j)) {
                             col.add(null);
                         } else {
                             col.add(s);
@@ -143,7 +143,7 @@ public class TSDBResultSetBlockData {
                     buffer.get(tmp);
                     for (int j = 0; j < numOfRows; j++) {
                         int in = buffer.getInt();
-                        if (isNull(tmp, j)) {
+                        if (BlockUtil.isNull(tmp, j)) {
                             col.add(null);
                         } else {
                             col.add(in);
@@ -158,7 +158,7 @@ public class TSDBResultSetBlockData {
                     buffer.get(tmp);
                     for (int j = 0; j < numOfRows; j++) {
                         long l = buffer.getLong();
-                        if (isNull(tmp, j)) {
+                        if (BlockUtil.isNull(tmp, j)) {
                             col.add(null);
                         } else {
                             col.add(l);
@@ -172,7 +172,7 @@ public class TSDBResultSetBlockData {
                     buffer.get(tmp);
                     for (int j = 0; j < numOfRows; j++) {
                         long l = buffer.getLong();
-                        if (isNull(tmp, j)) {
+                        if (BlockUtil.isNull(tmp, j)) {
                             col.add(null);
                         } else {
                             col.add(DateTimeUtils.parseTimestampColumnData(l, this.timestampPrecision));
@@ -186,7 +186,7 @@ public class TSDBResultSetBlockData {
                     buffer.get(tmp);
                     for (int j = 0; j < numOfRows; j++) {
                         float f = buffer.getFloat();
-                        if (isNull(tmp, j)) {
+                        if (BlockUtil.isNull(tmp, j)) {
                             col.add(null);
                         } else {
                             col.add(f);
@@ -200,7 +200,7 @@ public class TSDBResultSetBlockData {
                     buffer.get(tmp);
                     for (int j = 0; j < numOfRows; j++) {
                         double d = buffer.getDouble();
-                        if (isNull(tmp, j)) {
+                        if (BlockUtil.isNull(tmp, j)) {
                             col.add(null);
                         } else {
                             col.add(d);
@@ -299,7 +299,7 @@ public class TSDBResultSetBlockData {
             return null;
         }
         wasNull = false;
-        return DataTypeConverUtil.getString(obj);
+        return DataTypeConvertUtil.getString(obj);
     }
 
     public byte[] getBytes(int col) throws SQLException {
@@ -310,7 +310,7 @@ public class TSDBResultSetBlockData {
             return null;
         }
         wasNull = false;
-        return DataTypeConverUtil.getBytes(obj);
+        return DataTypeConvertUtil.getBytes(obj);
     }
 
     public int getInt(int col) throws SQLException {
@@ -321,7 +321,7 @@ public class TSDBResultSetBlockData {
         }
         wasNull = false;
         int type = this.columnMetaDataList.get(col).getColType();
-        return DataTypeConverUtil.getInt(type, obj, col);
+        return DataTypeConvertUtil.getInt(type, obj, col);
     }
 
     public boolean getBoolean(int col) throws SQLException {
@@ -337,7 +337,7 @@ public class TSDBResultSetBlockData {
 
         wasNull = false;
         int type = this.columnMetaDataList.get(col).getColType();
-        return DataTypeConverUtil.getBoolean(type, obj);
+        return DataTypeConvertUtil.getBoolean(type, obj);
     }
 
     public long getLong(int col) throws SQLException {
@@ -351,7 +351,7 @@ public class TSDBResultSetBlockData {
             return (long) obj;
         }
         int type = this.columnMetaDataList.get(col).getColType();
-        return DataTypeConverUtil.getLong(type, obj, col, this.timestampPrecision);
+        return DataTypeConvertUtil.getLong(type, obj, col, this.timestampPrecision);
     }
 
     private void throwRangeException(String valueAsString, int columnIndex, int jdbcType) throws SQLException {
@@ -394,7 +394,7 @@ public class TSDBResultSetBlockData {
         }
         wasNull = false;
         int type = this.columnMetaDataList.get(col).getColType();
-        return DataTypeConverUtil.getDouble(type, obj, col, this.timestampPrecision);
+        return DataTypeConvertUtil.getDouble(type, obj, col, this.timestampPrecision);
     }
 
     public Object get(int col) {
@@ -454,12 +454,6 @@ public class TSDBResultSetBlockData {
     // ceil(numOfRows/8.0)
     private int BitmapLen(int n) {
         return (n + 0x7) >> 3;
-    }
-
-    private boolean isNull(byte[] c, int n) {
-        int position = n >>> 3;
-        int index = n & 0x7;
-        return (c[position] & (1 << (7 - index))) == (1 << (7 - index));
     }
 
 }

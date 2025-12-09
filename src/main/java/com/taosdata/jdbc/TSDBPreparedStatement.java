@@ -21,14 +21,14 @@ import java.util.*;
  */
 public class TSDBPreparedStatement extends TSDBStatement implements TaosPrepareStatement {
     // for jdbc preparedStatement interface
-    private String rawSql;
+    private final String rawSql;
     private Object[] parameters = new Object[0];
     // for parameter binding
     private long nativeStmtHandle;
     private String tableName;
     private List<TableTagInfo> tableTags;
     private int tagValueLength;
-    private PriorityQueue<ColumnInfo> queue = new PriorityQueue<>();
+    private final PriorityQueue<ColumnInfo> queue = new PriorityQueue<>();
 
 
 

@@ -20,9 +20,9 @@ import java.util.Properties;
 import java.util.TimeZone;
 
 public class WsPStmtLineModeNullTest {
-    String host = "127.0.0.1";
-    String db_name = TestUtils.camelToSnake(WsPStmtLineModeNullTest.class);
-    String tableName = "wpt";
+    final String host = "127.0.0.1";
+    final String db_name = TestUtils.camelToSnake(WsPStmtLineModeNullTest.class);
+    final String tableName = "wpt";
     String stableName = "swpt";
     Connection connection;
     PreparedStatement preparedStatement;

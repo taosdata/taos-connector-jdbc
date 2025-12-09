@@ -19,11 +19,12 @@ public class TSDBResultSet extends AbstractResultSet {
     private final long resultSetPointer;
     private List<ColumnMetaData> columnMetaDataList = new ArrayList<>();
     private final int cacheSize = 5;
-    BlockingQueue<TSDBResultSetBlockData> blockingQueueOut = new LinkedBlockingQueue<>(cacheSize);
+    final BlockingQueue<TSDBResultSetBlockData> blockingQueueOut = new LinkedBlockingQueue<>(cacheSize);
     private TSDBResultSetBlockData blockData;
     private volatile boolean isClosed;
+    private int fetchBlockNum = 0;
     ThreadPoolExecutor backFetchExecutor;
-    ForkJoinPool dataHandleExecutor = getForkJoinPool();
+    final ForkJoinPool dataHandleExecutor = getForkJoinPool();
 
 
     public void setColumnMetaDataList(List<ColumnMetaData> columnMetaDataList) {
@@ -49,6 +50,9 @@ public class TSDBResultSet extends AbstractResultSet {
         this.timestampPrecision = timestampPrecision;
         this.blockData = new TSDBResultSetBlockData();
 
+    }
+
+    private void startBackendFetch() {
         backFetchExecutor = (ThreadPoolExecutor)Executors.newFixedThreadPool(1);
         backFetchExecutor.submit(() -> {
             try {
@@ -73,7 +77,6 @@ public class TSDBResultSet extends AbstractResultSet {
             }
         });
     }
-
     public boolean next() throws SQLException {
         if (isClosed){
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);
@@ -82,14 +85,34 @@ public class TSDBResultSet extends AbstractResultSet {
         if (this.blockData.forward())
             return true;
 
-        try {
-            this.blockData = blockingQueueOut.take();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-        this.blockData.waitTillOK();
+        fetchBlockNum++;
 
-        int code = this.blockData.returnCode;
+        int code;
+        if (fetchBlockNum > START_BACKEND_FETCH_BLOCK_NUM) {
+            if (backFetchExecutor == null) {
+                startBackendFetch();
+            }
+
+            try {
+                this.blockData = blockingQueueOut.take();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new SQLException("Thread was interrupted while waiting for data", e);
+            }
+            this.blockData.waitTillOK();
+
+            code = this.blockData.returnCode;
+        } else {
+            TSDBResultSetBlockData tsdbResultSetBlockData = new TSDBResultSetBlockData(this.columnMetaDataList, this.columnMetaDataList.size(), timestampPrecision);
+
+            code = this.jniConnector.fetchBlock(this.resultSetPointer, tsdbResultSetBlockData);
+            this.blockData = tsdbResultSetBlockData;
+            if (code == JNI_SUCCESS) {
+                this.blockData.doSetByteArray();
+            }
+            this.blockData.reset();
+        }
+
         if (code == TSDBConstants.JNI_CONNECTION_NULL) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_JNI_CONNECTION_NULL);
         } else if (code == TSDBConstants.JNI_RESULT_SET_NULL) {
@@ -104,15 +127,17 @@ public class TSDBResultSet extends AbstractResultSet {
             return;
         isClosed = true;
 
-        while (backFetchExecutor.getActiveCount() != 0) {
-            try {
-                Thread.sleep(1);
-            } catch (InterruptedException ignored) {
-                Thread.currentThread().interrupt();
+        if (backFetchExecutor != null) {
+            while (backFetchExecutor.getActiveCount() != 0) {
+                try {
+                    Thread.sleep(1);
+                } catch (InterruptedException ignored) {
+                    Thread.currentThread().interrupt();
+                }
             }
-        }
-        if (!backFetchExecutor.isShutdown()){
-            backFetchExecutor.shutdown();
+            if (!backFetchExecutor.isShutdown()) {
+                backFetchExecutor.shutdown();
+            }
         }
 
         if (this.statement == null)
@@ -222,94 +247,6 @@ public class TSDBResultSet extends AbstractResultSet {
         throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
     }
 
-    @Override
-    public boolean isAfterLast() throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);
-
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
-    }
-
-    @Override
-    public boolean isFirst() throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);
-
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
-    }
-
-    @Override
-    public boolean isLast() throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);
-
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
-    }
-
-    @Override
-    public void beforeFirst() throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);
-
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
-    }
-
-    @Override
-    public void afterLast() throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);
-
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
-    }
-
-    @Override
-    public boolean first() throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);
-
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
-    }
-
-    @Override
-    public boolean last() throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);
-
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
-    }
-
-    @Override
-    public int getRow() throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);
-
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
-    }
-
-    @Override
-    public boolean absolute(int row) throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);
-
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
-    }
-
-    @Override
-    public boolean relative(int rows) throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);
-
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
-    }
-
-    @Override
-    public boolean previous() throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);
-
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
-    }
-
     public Statement getStatement() throws SQLException {
         if (isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESULTSET_CLOSED);
@@ -330,5 +267,4 @@ public class TSDBResultSet extends AbstractResultSet {
     public String getNString(int columnIndex) throws SQLException {
         return getString(columnIndex);
     }
-
 }

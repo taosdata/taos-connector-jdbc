@@ -14,11 +14,11 @@ import java.util.Properties;
 @TestTarget(alias = "websocket query test", author = "huolibo", version = "2.0.38")
 @FixMethodOrder
 public class WSAppInfoTest {
-    private static final String host = "127.0.0.1";
-    private static final int port = 6041;
+    private static final String HOST = "127.0.0.1";
+    private static final int PORT = 6041;
     private Connection connection;
-    private static final String appName = "jdbc_appName";
-    private static final String appIp = "192.168.1.1";
+    private static final String APP_NAME = "jdbc_appName";
+    private static final String APP_IP = "192.168.1.1";
 
     @Test
     public void AppInfoTest() throws SQLException, InterruptedException {
@@ -33,8 +33,8 @@ public class WSAppInfoTest {
                     String ip = resultSet.getString("user_ip");
 
                     System.out.println("name: " + name + " ip: " + ip);
-                    if (appName.equals(name)
-                            && appIp.equals(ip)) {
+                    if (APP_NAME.equals(name)
+                            && APP_IP.equals(ip)) {
                         return;
                     }
                 }
@@ -50,14 +50,14 @@ public class WSAppInfoTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + host + ":" + port + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST + ":" + PORT + "/?user=root&password=taosdata";
         } else {
             url += "?user=root&password=taosdata";
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "Asia/Shanghai");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_APP_NAME, appName);
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_APP_IP, appIp);
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_APP_NAME, APP_NAME);
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_APP_IP, APP_IP);
         connection = DriverManager.getConnection(url, properties);
    }
 

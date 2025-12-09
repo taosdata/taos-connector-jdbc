@@ -11,12 +11,13 @@ public class SyncObj {
     public void signal() {
         lock.lock();
         try {
-            condition.signal();
+            condition.signalAll();
         } finally {
             lock.unlock();
         }
     }
 
+    @SuppressWarnings({"java:S2274","java:S899"})
     public void await() throws InterruptedException {
         lock.lock();
         try {

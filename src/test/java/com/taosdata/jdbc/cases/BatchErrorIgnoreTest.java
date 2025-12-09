@@ -8,14 +8,14 @@ import java.util.stream.IntStream;
 
 public class BatchErrorIgnoreTest {
 
-    private static final String host = "127.0.0.1";
+    private static final String HOST = "127.0.0.1";
 
     @Test
     public void batchErrorThrowException() throws SQLException {
         // given
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
         }
         Connection conn = DriverManager.getConnection(url);
 
@@ -25,6 +25,7 @@ public class BatchErrorIgnoreTest {
                 try {
                     stmt.addBatch(sql);
                 } catch (SQLException ignored) {
+                    // do nothing
                 }
             });
             stmt.addBatch("insert into t11 values(now, 11)");
@@ -32,6 +33,7 @@ public class BatchErrorIgnoreTest {
                 try {
                     stmt.addBatch(sql);
                 } catch (SQLException ignored) {
+                    // do nothing
                 }
             });
             stmt.addBatch("select count(*) from test.weather");
@@ -54,7 +56,7 @@ public class BatchErrorIgnoreTest {
         // given
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata&batchErrorIgnore=true";
+            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata&batchErrorIgnore=true";
         } else {
             url += "&batchErrorIgnore=true";
         }
@@ -67,6 +69,7 @@ public class BatchErrorIgnoreTest {
                 try {
                     stmt.addBatch(sql);
                 } catch (SQLException ignored) {
+                    // do nothing
                 }
             });
             stmt.addBatch("insert into t11 values(now, 11)");
@@ -74,6 +77,7 @@ public class BatchErrorIgnoreTest {
                 try {
                     stmt.addBatch(sql);
                 } catch (SQLException ignored) {
+                    // do nothing
                 }
             });
             stmt.addBatch("select count(*) from test.weather");
@@ -102,10 +106,10 @@ public class BatchErrorIgnoreTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
         }
         try (Connection conn = DriverManager.getConnection(url);
-             Statement stmt = conn.createStatement();) {
+             Statement stmt = conn.createStatement()) {
 
             stmt.execute("use test");
             stmt.execute("drop table if exists weather");
@@ -124,7 +128,7 @@ public class BatchErrorIgnoreTest {
     public static void beforeClass() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
         }
         try (Connection conn = DriverManager.getConnection(url);
              Statement stmt = conn.createStatement()) {
@@ -138,7 +142,7 @@ public class BatchErrorIgnoreTest {
     public static void afterClass() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
         }
         try (Connection conn = DriverManager.getConnection(url);
              Statement stmt = conn.createStatement()) {

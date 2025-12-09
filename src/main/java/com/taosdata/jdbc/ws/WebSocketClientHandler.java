@@ -1,8 +1,9 @@
 package com.taosdata.jdbc.ws;
 
-import com.taosdata.jdbc.utils.StringUtils;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.websocketx.*;
 import io.netty.util.AttributeKey;
@@ -11,7 +12,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.util.function.Consumer;
 
 public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> {
@@ -36,7 +36,7 @@ public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> 
         }
 
         Boolean isLocalInitiated = ctx.channel().attr(LOCAL_INITIATED_CLOSE).get();
-        isLocalInitiated = isLocalInitiated != null && isLocalInitiated; // 默认非本地发起
+        isLocalInitiated = isLocalInitiated != null && isLocalInitiated;
 
         Integer code = ctx.channel().attr(CLOSE_CODE_KEY).get();
         code = code != null ? code : 1000; // default close code

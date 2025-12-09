@@ -6,7 +6,7 @@ public enum WSFunction {
     // tmq
     TMQ("tmq"),
     //schemaless
-    SCHEMALESS("schemaless");;
+    SCHEMALESS("schemaless");
 
     final String function;
 

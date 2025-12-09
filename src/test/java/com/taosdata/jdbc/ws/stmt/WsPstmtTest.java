@@ -20,9 +20,9 @@ import java.util.Properties;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class WsPstmtTest {
-    String host = "127.0.0.1";
-    String db_name = TestUtils.camelToSnake(WsPstmtTest.class);
-    String tableName = "wpt";
+    final String host = "127.0.0.1";
+    final String db_name = TestUtils.camelToSnake(WsPstmtTest.class);
+    final String tableName = "wpt";
     String superTable = "wpt_st";
     Connection connection;
 
@@ -93,7 +93,6 @@ public class WsPstmtTest {
             System.out.println(resultSet.getTimestamp(1) + " " + resultSet.getInt(2));
         }
     }
-
     @Test
     public void test005_NormalQuery() throws SQLException {
         pstmt.execute("insert into " + db_name + "." + tableName + " values  (now, 1)");
@@ -102,6 +101,18 @@ public class WsPstmtTest {
         try (PreparedStatement statement = connection.prepareStatement(sql);
         ResultSet resultSet = statement.executeQuery()){
            Assert.assertTrue(resultSet.next());
+        }
+    }
+
+    @Test(expected = SQLException.class)
+    public void test006_QuerySyntaxError() throws SQLException {
+        String sql = "select * from " + db_name + "." + tableName + " wheree ts > ? and ts < ?";
+        PreparedStatement statement = connection.prepareStatement(sql);
+        statement.setTimestamp(1, new Timestamp(System.currentTimeMillis() - 1000));
+        statement.setTimestamp(2, new Timestamp(System.currentTimeMillis() + 1000));
+        ResultSet resultSet = statement.executeQuery();
+        while (resultSet.next()) {
+            System.out.println(resultSet.getTimestamp(1) + " " + resultSet.getInt(2));
         }
     }
 

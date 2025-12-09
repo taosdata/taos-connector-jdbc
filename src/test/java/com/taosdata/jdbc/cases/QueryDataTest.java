@@ -16,9 +16,9 @@ public class QueryDataTest {
 
     static Connection connection;
     static Statement statement;
-    static String dbName = TestUtils.camelToSnake(QueryDataTest.class);
-    static String stbName = "meters";
-    static String host = "127.0.0.1";
+    static final String DB_NAME = TestUtils.camelToSnake(QueryDataTest.class);
+    static final String STB_NAME = "meters";
+    static final String HOST = "127.0.0.1";
 
     @Before
     public void createDatabase() throws SQLException {
@@ -30,25 +30,25 @@ public class QueryDataTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
         String url = SpecifyAddress.getInstance().getJniWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":0/";
+            url = "jdbc:TAOS://" + HOST + ":0/";
         }
         connection = DriverManager.getConnection(url, properties);
 
         statement = connection.createStatement();
-        statement.executeUpdate("drop database if exists " + dbName);
-        statement.executeUpdate("create database if not exists " + dbName);
-        statement.executeUpdate("use " + dbName);
+        statement.executeUpdate("drop database if exists " + DB_NAME);
+        statement.executeUpdate("create database if not exists " + DB_NAME);
+        statement.executeUpdate("use " + DB_NAME);
 
-        String createTableSql = "create table " + stbName + "(ts timestamp, name binary(64))";
+        String createTableSql = "create table " + STB_NAME + "(ts timestamp, name binary(64))";
         statement.executeUpdate(createTableSql);
     }
 
     @Test
     public void testQueryBinaryData() throws SQLException {
-        String insertSql = "insert into " + stbName + " values(now, 'taosdata')";
+        String insertSql = "insert into " + STB_NAME + " values(now, 'taosdata')";
         statement.executeUpdate(insertSql);
 
-        String querySql = "select * from " + stbName;
+        String querySql = "select * from " + STB_NAME;
         ResultSet rs = statement.executeQuery(querySql);
 
         while (rs.next()) {
@@ -61,7 +61,7 @@ public class QueryDataTest {
     @After
     public void close() throws SQLException {
         if (statement != null) {
-            statement.execute("drop database if exists " + dbName);
+            statement.execute("drop database if exists " + DB_NAME);
             statement.close();
         }
         if (connection != null)

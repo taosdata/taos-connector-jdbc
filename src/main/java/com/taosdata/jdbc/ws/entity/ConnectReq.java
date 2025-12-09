@@ -1,7 +1,7 @@
 package com.taosdata.jdbc.ws.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.utils.ReqId;
 
 /**

@@ -3,7 +3,7 @@ package com.taosdata.jdbc.ws.tmq.entity;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
-import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.tmq.TMQConstants;
 import com.taosdata.jdbc.utils.StringUtils;
 
@@ -20,6 +20,7 @@ public class ConsumerParam {
         knownKeys.add(TSDBDriver.PROPERTY_KEY_PASSWORD);
         knownKeys.add(TSDBDriver.PROPERTY_KEY_HOST);
         knownKeys.add(TSDBDriver.PROPERTY_KEY_PORT);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_ENDPOINTS);
         knownKeys.add(TSDBDriver.PROPERTY_KEY_TOKEN);
         knownKeys.add(TSDBDriver.PROPERTY_KEY_PRODUCT_NAME);
         knownKeys.add(TSDBDriver.PROPERTY_KEY_DBNAME);
@@ -42,6 +43,15 @@ public class ConsumerParam {
         knownKeys.add(TSDBDriver.PROPERTY_KEY_APP_IP);
         knownKeys.add(TSDBDriver.PROPERTY_KEY_APP_NAME);
         knownKeys.add(TSDBDriver.PROPERTY_KEY_TIME_ZONE);
+
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_RECOVERY_COUNT);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_INIT_INTERVAL);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_MAX_INTERVAL);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_CON_TIMEOUT);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_CMD_TIMEOUT);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_RECOVERY_INTERVAL);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_REBALANCE_THRESHOLD);
+        knownKeys.add(TSDBDriver.PROPERTY_KEY_REBALANCE_CON_BASE_COUNT);
 
         knownKeys.add(TSDBDriver.HTTP_POOL_SIZE);
         knownKeys.add(TSDBDriver.HTTP_KEEP_ALIVE);
@@ -75,12 +85,12 @@ public class ConsumerParam {
     private String msgWithTableName;
     private String enableBatchMeta;
 
-    private HashMap<String, String> config = new HashMap<>();
+    private final HashMap<String, String> config = new HashMap<>();
 
     public ConsumerParam(Properties properties) throws SQLException {
         if (null != properties.getProperty(TMQConstants.CONNECT_URL)) {
             String url = properties.getProperty(TMQConstants.CONNECT_URL);
-            StringUtils.parseUrl(url, properties, false);
+            StringUtils.parseUrl(url, properties);
         }
         if (null != properties.getProperty(TMQConstants.CONNECT_USER))
             properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, properties.getProperty(TMQConstants.CONNECT_USER));

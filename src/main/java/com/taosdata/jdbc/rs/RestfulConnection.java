@@ -21,8 +21,6 @@ public class RestfulConnection extends AbstractConnection {
     private final boolean useSsl;
     private final String token;
     private final String tz;
-
-    private boolean isClosed;
     private final DatabaseMetaData metadata;
 
     public RestfulConnection(String host, String port, Properties props, String database, String url, String auth, boolean useSsl, String token, String tz) {

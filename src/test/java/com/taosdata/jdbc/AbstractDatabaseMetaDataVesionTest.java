@@ -13,7 +13,7 @@ import java.util.Properties;
 
 public class AbstractDatabaseMetaDataVesionTest {
     Connection connection;
-    String host = "127.0.0.1";
+    final String host = "127.0.0.1";
 
     @Test
     public void testJni() throws IOException, SQLException {
@@ -32,6 +32,7 @@ public class AbstractDatabaseMetaDataVesionTest {
         Assert.assertEquals(driverVersion, metaData.getDriverVersion());
         Assert.assertNotEquals(0, metaData.getDriverMajorVersion());
         Assert.assertNotEquals(0, metaData.getDriverMinorVersion());
+        connection.close();
     }
 
     @Test
@@ -51,6 +52,7 @@ public class AbstractDatabaseMetaDataVesionTest {
         Assert.assertEquals(driverVersion, metaData.getDriverVersion());
         Assert.assertNotEquals(0, metaData.getDriverMajorVersion());
         Assert.assertNotEquals(0, metaData.getDriverMinorVersion());
+        connection.close();
     }
 
     @Test
@@ -72,6 +74,7 @@ public class AbstractDatabaseMetaDataVesionTest {
         Assert.assertEquals(driverVersion, metaData.getDriverVersion());
         Assert.assertNotEquals(0, metaData.getDriverMajorVersion());
         Assert.assertNotEquals(0, metaData.getDriverMinorVersion());
+        connection.close();
     }
 
 }

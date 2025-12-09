@@ -1,22 +1,55 @@
 package com.taosdata.jdbc.ws;
 
-import java.io.*;
-import java.net.*;
-import java.util.concurrent.*;
+import com.taosdata.jdbc.utils.StringUtils;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.SocketException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class TaosAdapterMock {
+    private String cmd = "";
+    private int downInCmdCount = 0;
+
     private final String targetHost;
     private final int targetPort;
-    private final int listenPort;
+    private int listenPort;
     private volatile boolean isRunning = false;
     private ServerSocket serverSocket;
     private ExecutorService executor;
+    private final AtomicInteger delayMillis = new AtomicInteger(0);
     private final ConcurrentHashMap<Socket, Boolean> activeConnections = new ConcurrentHashMap<>();
+
+    public TaosAdapterMock() {
+        this.targetHost = "localhost";
+        this.targetPort = 6041;
+    }
+
+    public TaosAdapterMock(String cmd, int downInCmdCount) {
+        this.targetHost = "localhost";
+        this.targetPort = 6041;
+        this.cmd = cmd;
+        this.downInCmdCount = downInCmdCount;
+    }
 
     public TaosAdapterMock(int listenPort) {
         this.targetHost = "localhost";
         this.targetPort = 6041;
         this.listenPort = listenPort;
+    }
+    public int getListenPort() {
+        return listenPort;
+    }
+
+    public void setDelayMillis(int delayMillis) {
+        this.delayMillis.set(delayMillis);
     }
 
     public synchronized void start() throws IOException {
@@ -24,7 +57,12 @@ public class TaosAdapterMock {
             throw new IllegalStateException("Service is already running");
         }
 
-        serverSocket = new ServerSocket(listenPort);
+        serverSocket = new ServerSocket();
+        serverSocket.bind(new java.net.InetSocketAddress(listenPort));
+        if (listenPort == 0){
+            listenPort = serverSocket.getLocalPort();
+        }
+
         executor = Executors.newCachedThreadPool();
         isRunning = true;
 
@@ -36,7 +74,7 @@ public class TaosAdapterMock {
                 try {
                     Socket clientSocket = serverSocket.accept();
                     activeConnections.put(clientSocket, true);
-                    executor.execute(new ClientHandler(clientSocket));
+                    executor.execute(new ClientHandler(clientSocket, cmd, downInCmdCount));
                 } catch (SocketException e) {
                     // exception in normal stop
                 } catch (IOException e) {
@@ -75,9 +113,13 @@ public class TaosAdapterMock {
 
     private class ClientHandler implements Runnable {
         private final Socket clientSocket;
+        private final String cmd;
+        private int downInCmdCount;
 
-        ClientHandler(Socket clientSocket) {
+        ClientHandler(Socket clientSocket, String cmd, int downInCmdCount) {
             this.clientSocket = clientSocket;
+            this.cmd = cmd;
+            this.downInCmdCount = downInCmdCount;
         }
 
         @Override
@@ -90,11 +132,11 @@ public class TaosAdapterMock {
 
                 // start two threads to forward data
                 Future<?> clientToTarget = executor.submit(
-                        () -> forwardData(clientInput, targetOutput, "client->target")
+                        () -> forwardData(clientInput, targetOutput, "client->target", false)
                 );
 
                 Future<?> targetToClient = executor.submit(
-                        () -> forwardData(targetInput, clientOutput, "target->client")
+                        () -> forwardData(targetInput, clientOutput, "target->client", true)
                 );
 
                 // wait for both threads to finish
@@ -111,17 +153,39 @@ public class TaosAdapterMock {
             }
         }
 
-        private void forwardData(InputStream input, OutputStream output, String direction) {
+        private void forwardData(InputStream input, OutputStream output, String direction, boolean withDelay) {
             byte[] buffer = new byte[4096];
             int bytesRead;
 
             try {
                 while ((bytesRead = input.read(buffer)) != -1) {
+                    if (!StringUtils.isEmpty(cmd) && direction.equalsIgnoreCase("target->client") && bytesRead >= cmd.length()) {
+                        String readStr = new String(buffer, 0, bytesRead);
+                        if (readStr.contains(cmd)) {
+                            downInCmdCount--;
+                        }
+                        if (downInCmdCount == 0) {
+                            System.out.printf("Simulating server down after command '%s'%n", cmd);
+                            stop();
+                            throw new IOException("Simulated server down");
+                        }
+                    }
+
+                    if (withDelay && delayMillis.get() > 0) {
+                        try {
+                            Thread.sleep(delayMillis.get());
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            return;
+                        }
+                    }
                     output.write(buffer, 0, bytesRead);
                     output.flush();
                 }
             } catch (IOException e) {
-                if (!isRunning) return; // ignore if service is stopped
+                if (!isRunning) {
+                    return; // ignore if service is stopped
+                }
                 System.err.printf("[%s] Forward error: %s%n", direction, e.getMessage());
             }
         }

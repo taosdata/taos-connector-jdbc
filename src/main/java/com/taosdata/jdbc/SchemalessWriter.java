@@ -7,15 +7,19 @@ import com.taosdata.jdbc.enums.ConnectionType;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.enums.WSFunction;
-import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.rs.RestfulDriver;
 import com.taosdata.jdbc.utils.HttpClientPoolUtil;
 import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.StringUtils;
+import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.FutureResponse;
 import com.taosdata.jdbc.ws.InFlightRequest;
 import com.taosdata.jdbc.ws.Transport;
-import com.taosdata.jdbc.ws.entity.*;
+import com.taosdata.jdbc.ws.entity.Code;
+import com.taosdata.jdbc.ws.entity.CommonResp;
+import com.taosdata.jdbc.ws.entity.Request;
+import com.taosdata.jdbc.ws.entity.Response;
 import com.taosdata.jdbc.ws.schemaless.ConnReq;
 import com.taosdata.jdbc.ws.schemaless.InsertReq;
 import com.taosdata.jdbc.ws.schemaless.SchemalessAction;
@@ -98,10 +102,10 @@ public class SchemalessWriter implements AutoCloseable {
 
         if (url.startsWith(TSDBDriver.URL_PREFIX)) {
             t = "jni";
-            properties = StringUtils.parseUrl(url, null, true);
+            properties = StringUtils.parseUrl(url, null);
         } else if (url.startsWith(RestfulDriver.URL_PREFIX)) {
             t = "ws";
-            properties = StringUtils.parseUrl(url, null, false);
+            properties = StringUtils.parseUrl(url, null);
         } else {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "unknown url：" + url);
         }
@@ -118,7 +122,7 @@ public class SchemalessWriter implements AutoCloseable {
             properties.setProperty(TSDBDriver.PROPERTY_KEY_USE_SSL, String.valueOf(useSSL));
         ConnectionParam param = ConnectionParam.getParam(properties);
 
-        this.init(param.getHost(), param.getPort(), param.getUser(), param.getPassword(), param.getDatabase(), param.getCloudToken(), t, param.isUseSsl());
+        this.init(param.getEndpoints().get(0).getHost(), String.valueOf(param.getEndpoints().get(0).getPort()), param.getUser(), param.getPassword(), param.getDatabase(), param.getCloudToken(), t, param.isUseSsl());
     }
 
     public SchemalessWriter(String host, String port, String cloudToken, String dbName, Boolean useSSL) throws SQLException {
@@ -144,7 +148,7 @@ public class SchemalessWriter implements AutoCloseable {
             this.type = ConnectionType.WS;
             int timeout = Integer.parseInt(HttpClientPoolUtil.DEFAULT_SOCKET_TIMEOUT);
             int connectTime = Integer.parseInt(HttpClientPoolUtil.DEFAULT_CONNECT_TIMEOUT);
-            ConnectionParam param = new ConnectionParam.Builder(host, port)
+            ConnectionParam param = new ConnectionParam.Builder(Utils.getEndpoints(host, port))
                     .setUserAndPassword(user, password)
                     .setDatabase(dbName)
                     .setCloudToken(cloudToken)
@@ -152,7 +156,7 @@ public class SchemalessWriter implements AutoCloseable {
                     .setRequestTimeout(timeout)
                     .setUseSsl(useSSL)
                     .build();
-            InFlightRequest inFlightRequest = new InFlightRequest(timeout, 20);
+            InFlightRequest inFlightRequest = new InFlightRequest(20);
             param.setTextMessageHandler(message -> {
                 try {
                     JsonNode jsonObject = JsonUtil.getObjectReader().readTree(message);

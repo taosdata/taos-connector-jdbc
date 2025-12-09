@@ -38,13 +38,7 @@ public class TaosConsumer<V> implements AutoCloseable {
 
         String servers = properties.getProperty(TMQConstants.BOOTSTRAP_SERVERS);
         if (!StringUtils.isEmpty(servers)) {
-            Properties tempProp = StringUtils.parseHostPort(servers, false);
-            if (!StringUtils.isEmpty(tempProp.getProperty(TSDBDriver.PROPERTY_KEY_HOST))) {
-                properties.setProperty(TMQConstants.CONNECT_IP, tempProp.getProperty(TSDBDriver.PROPERTY_KEY_HOST));
-            }
-            if (!StringUtils.isEmpty(tempProp.getProperty(TSDBDriver.PROPERTY_KEY_PORT))) {
-                properties.setProperty(TMQConstants.CONNECT_PORT, tempProp.getProperty(TSDBDriver.PROPERTY_KEY_PORT));
-            }
+            properties.setProperty(TSDBDriver.PROPERTY_KEY_ENDPOINTS, servers);
         }
 
         String s = properties.getProperty(TMQConstants.VALUE_DESERIALIZER);

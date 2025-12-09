@@ -14,9 +14,9 @@ import static org.junit.Assert.assertEquals;
 
 public class SelectTest {
     Connection connection;
-    String dbName = TestUtils.camelToSnake(SelectTest.class);
-    String tName = "t0";
-    String host = "127.0.0.1";
+    final String dbName = TestUtils.camelToSnake(SelectTest.class);
+    final String tName = "t0";
+    final String host = "127.0.0.1";
 
     @Before
     public void createDatabaseAndTable() throws SQLException {
@@ -41,7 +41,7 @@ public class SelectTest {
 
     @Test
     public void selectData() throws SQLException {
-        long ts = 1496732686000l;
+        long ts = 1496732686000L;
 
         try (Statement stmt = connection.createStatement()) {
             for (int i = 0; i < 50; i++) {

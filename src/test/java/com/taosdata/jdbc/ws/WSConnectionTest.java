@@ -5,11 +5,14 @@ import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.StringUtils;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.io.IOException;
 import java.sql.*;
 import java.util.Properties;
 
@@ -23,7 +26,7 @@ public class WSConnectionTest {
     private static String host = "127.0.0.1";
     private static String port = "6041";
     private Connection connection;
-    private String db_name = "information_schema";
+    private final String db_name = "information_schema";
 
     @Test
     @Ignore
@@ -62,6 +65,60 @@ public class WSConnectionTest {
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
         connection = DriverManager.getConnection(url, properties);
+    }
+
+    @Test
+    public void isValid() throws SQLException, IOException {
+        String url = "jdbc:TAOS-WS://" + host + ":" + port + "/?user=root&password=taosdata";
+        connection = DriverManager.getConnection(url);
+
+        Assert.assertTrue(connection.isValid(10));
+        Assert.assertTrue(connection.isValid(0));
+    }
+
+    @Test(expected = SQLException.class)
+    public void isValidException() throws SQLException {
+        String url = "jdbc:TAOS-WS://" + host + ":" + port + "/?user=root&password=taosdata";
+        connection = DriverManager.getConnection(url);
+        connection.isValid(-1);
+    }
+
+    @Test
+    public void testRetainHostPortPart() {
+        // Test case 1: Full URL with multiple hosts, database and parameters
+        String url1 = "jdbc:TAOS://host1:6030,host2:6030/mydb?user=root&password=taosdata";
+        Assert.assertEquals("jdbc:TAOS://host1:6030,host2:6030",
+                StringUtils.retainHostPortPart(url1));
+
+        // Test case 2: URL with single host, database and no parameters
+        String url2 = "jdbc:TAOS-WS://singlehost:6041/mydb2";
+        Assert.assertEquals("jdbc:TAOS-WS://singlehost:6041",
+                StringUtils.retainHostPortPart(url2));
+
+        // Test case 3: URL with single host, database and charset parameter
+        String url3 = "jdbc:TAOS-RS://h1:6030/db3?charset=utf8";
+        Assert.assertEquals("jdbc:TAOS-RS://h1:6030",
+                StringUtils.retainHostPortPart(url3));
+
+        // Test case 4: URL with single host, no database and no parameters
+        String url4 = "jdbc:TAOS://onlyhost:6030";
+        Assert.assertEquals("jdbc:TAOS://onlyhost:6030",
+                StringUtils.retainHostPortPart(url4));
+
+        // Test case 5: URL with multiple hosts, no database and no parameters
+        String url5 = "jdbc:TAOS-WS://h1:p1,h2:p2";
+        Assert.assertEquals("jdbc:TAOS-WS://h1:p1,h2:p2",
+                StringUtils.retainHostPortPart(url5));
+
+        // Test case 6: URL with empty host/port (valid configuration)
+        String url7 = "jdbc:TAOS-WS:///";
+        Assert.assertEquals("jdbc:TAOS-WS://",
+                StringUtils.retainHostPortPart(url7));
+
+        // Test case 7: URL with host:port and empty database name
+        String url8 = "jdbc:TAOS-RS://host:6030/";
+        Assert.assertEquals("jdbc:TAOS-RS://host:6030",
+                StringUtils.retainHostPortPart(url8));
     }
 
     @Test

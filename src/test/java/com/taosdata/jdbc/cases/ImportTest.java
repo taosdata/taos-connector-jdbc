@@ -14,9 +14,9 @@ import static org.junit.Assert.assertEquals;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class ImportTest {
     private static Connection connection;
-    static String dbName = TestUtils.camelToSnake(ImportTest.class);
-    static String tName = "t0";
-    static String host = "127.0.0.1";
+    static final String DB_NAME = TestUtils.camelToSnake(ImportTest.class);
+    static final String T_NAME = "t0";
+    static final String HOST = "127.0.0.1";
     private static long ts;
 
     @Test
@@ -24,7 +24,7 @@ public class ImportTest {
         try (Statement stmt = connection.createStatement()) {
             for (int i = 0; i < 50; i++) {
                 ts++;
-                int row = stmt.executeUpdate("import into " + dbName + "." + tName + " values (" + ts + ", " + (100 + i) + ", " + i + ")");
+                int row = stmt.executeUpdate("import into " + DB_NAME + "." + T_NAME + " values (" + ts + ", " + (100 + i) + ", " + i + ")");
                 assertEquals(1, row);
             }
         }
@@ -38,7 +38,7 @@ public class ImportTest {
     private int select() throws SQLException {
         int count = 0;
         try (Statement stmt = connection.createStatement()) {
-            String sql = "select * from " + dbName + "." + tName;
+            String sql = "select * from " + DB_NAME + "." + T_NAME;
             ResultSet rs = stmt.executeQuery(sql);
             while (rs.next()) {
                 count++;
@@ -52,7 +52,7 @@ public class ImportTest {
     public void case003_importData() throws SQLException {
         // 避免时间重复
         try (Statement stmt = connection.createStatement()) {
-            StringBuilder sqlBuilder = new StringBuilder("import into ").append(dbName).append(".").append(tName).append(" values ");
+            StringBuilder sqlBuilder = new StringBuilder("import into ").append(DB_NAME).append(".").append(T_NAME).append(" values ");
             for (int i = 0; i < 50; i++) {
                 int a = i / 5;
                 long t = (++ts) + a;
@@ -79,13 +79,13 @@ public class ImportTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
         String url = SpecifyAddress.getInstance().getJniWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":0/";
+            url = "jdbc:TAOS://" + HOST + ":0/";
         }
         connection = DriverManager.getConnection(url, properties);
 
         Statement stmt = connection.createStatement();
-        stmt.execute("create database if not exists " + dbName);
-        stmt.execute("create table if not exists " + dbName + "." + tName + " (ts timestamp, k int, v int)");
+        stmt.execute("create database if not exists " + DB_NAME);
+        stmt.execute("create table if not exists " + DB_NAME + "." + T_NAME + " (ts timestamp, k int, v int)");
         stmt.close();
 
         ts = System.currentTimeMillis();
@@ -96,7 +96,7 @@ public class ImportTest {
         if (connection != null) {
             try {
                 Statement statement = connection.createStatement();
-                statement.executeUpdate("drop database " + dbName);
+                statement.executeUpdate("drop database " + DB_NAME);
                 statement.close();
                 connection.close();
             } catch (SQLException e) {

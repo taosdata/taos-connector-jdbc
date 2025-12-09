@@ -2,13 +2,9 @@ package com.taosdata.jdbc.confprops;
 
 
 import com.taosdata.jdbc.TSDBDriver;
-import com.taosdata.jdbc.rs.RestfulResultSetMetaDataTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.*;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -19,8 +15,8 @@ import java.util.Properties;
 @Ignore
 public class BadLocaleSettingTest {
 
-    private static final String host = "127.0.0.1";
-    private static final String dbName = TestUtils.camelToSnake(BadLocaleSettingTest.class);
+    private static final String HOST = "127.0.0.1";
+    private static final String DB_NAME = TestUtils.camelToSnake(BadLocaleSettingTest.class);
     private static Connection conn;
 
     @Test
@@ -32,13 +28,14 @@ public class BadLocaleSettingTest {
 
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
         }
         conn = DriverManager.getConnection(url, properties);
         Statement stmt = conn.createStatement();
-        stmt.execute("drop database if exists " + dbName);
-        stmt.execute("create database if not exists " + dbName);
-        stmt.execute("use " + dbName);
+        Assert.assertNotNull(stmt);
+        stmt.execute("drop database if exists " + DB_NAME);
+        stmt.execute("create database if not exists " + DB_NAME);
+        stmt.execute("use " + DB_NAME);
         stmt.execute("drop table if exists weather");
         stmt.execute("create table weather(ts timestamp, temperature float, humidity int)");
         stmt.executeUpdate("insert into weather values(1624071506435, 12.3, 4)");
@@ -55,7 +52,7 @@ public class BadLocaleSettingTest {
     public void afterClass() throws SQLException {
         if (conn != null) {
             Statement statement = conn.createStatement();
-            statement.execute("drop database " + dbName);
+            statement.execute("drop database " + DB_NAME);
             statement.close();
             conn.close();
         }

@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.utils.JsonUtil;
+import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.TaosInfo;
 
 import java.io.UnsupportedEncodingException;
@@ -186,13 +187,17 @@ public class TSDBJNIConnector {
             this.taos = TSDBConstants.JNI_NULL_POINTER;
         }
 
+        if (!StringUtils.isEmpty(host) && host.contains("[")) {
+            host = host.replace("[", "").replace("]", "");
+        }
+
         this.taos = this.connectImp(host, port, dbName, user, password);
         if (this.taos == TSDBConstants.JNI_NULL_POINTER) {
             String errMsg = this.getErrMsg(0);
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_JNI_CONNECTION_NULL, errMsg);
         }
         // invoke connectImp only here
-        taosInfo.conn_open_increment();
+        taosInfo.connOpenIncrement();
         return true;
     }
 
@@ -214,7 +219,7 @@ public class TSDBJNIConnector {
                 pSql = this.executeQueryImp(sql.getBytes(TaosGlobalConfig.getCharset()), this.taos);
             else
                 pSql = this.executeQueryWithReqId(sql.getBytes(TaosGlobalConfig.getCharset()), this.taos, reqId);
-            taosInfo.stmt_count_increment();
+            taosInfo.stmtCountIncrement();
         } catch (UnsupportedEncodingException e) {
             this.freeResultSetImp(this.taos, pSql);
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_ENCODING);
@@ -360,7 +365,7 @@ public class TSDBJNIConnector {
         }
 
         // invoke closeConnectionImpl only here
-        taosInfo.connect_close_increment();
+        taosInfo.connectCloseIncrement();
     }
 
     private native int closeConnectionImp(long connection);

@@ -8,11 +8,11 @@ import java.sql.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
-
+@SuppressWarnings("java:S4144")
 public abstract class AbstractConnection extends WrapperImpl implements Connection {
 
-    protected  AtomicLong idGenerator = new AtomicLong(0);
-    protected ConcurrentHashMap<Long, Statement> statementsMap = new ConcurrentHashMap<>();
+    protected final AtomicLong idGenerator = new AtomicLong(0);
+    protected final ConcurrentHashMap<Long, Statement> statementsMap = new ConcurrentHashMap<>();
 
 
     protected volatile boolean isClosed;
@@ -42,14 +42,12 @@ public abstract class AbstractConnection extends WrapperImpl implements Connecti
         this.statementsMap.put(stmtId, stmt);
     }
 
-    @Override
-    public abstract Statement createStatement() throws SQLException;
-
-    @Override
-    public abstract PreparedStatement prepareStatement(String sql) throws SQLException;
-
+    public boolean canRebalanced() {
+        return this.statementsMap.isEmpty();
+    }
     @Override
     public CallableStatement prepareCall(String sql) throws SQLException {
+        checkClosed();
         throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
     }
 
@@ -94,16 +92,6 @@ public abstract class AbstractConnection extends WrapperImpl implements Connecti
 
         // do nothing
     }
-
-    @Override
-    public abstract void close() throws SQLException;
-
-    @Override
-    public abstract boolean isClosed() throws SQLException;
-
-    @Override
-    public abstract DatabaseMetaData getMetaData() throws SQLException;
-
     @Override
     public void setReadOnly(boolean readOnly) throws SQLException {
         if (isClosed())
@@ -217,25 +205,19 @@ public abstract class AbstractConnection extends WrapperImpl implements Connecti
 
     @Override
     public CallableStatement prepareCall(String sql, int resultSetType, int resultSetConcurrency) throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
-
+        checkClosed();
         throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
     }
 
     @Override
     public Map<String, Class<?>> getTypeMap() throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
-
+        checkClosed();
         throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
     }
 
     @Override
     public void setTypeMap(Map<String, Class<?>> map) throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
-
+        checkClosed();
         throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
     }
 
@@ -265,33 +247,24 @@ public abstract class AbstractConnection extends WrapperImpl implements Connecti
 
     @Override
     public Savepoint setSavepoint() throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
-
+        checkClosed();
         throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
     }
 
     @Override
     public Savepoint setSavepoint(String name) throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
-
+        checkClosed();
         throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
     }
 
     @Override
     public void rollback(Savepoint savepoint) throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
-
+        checkClosed();
         throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
     }
-
     @Override
     public void releaseSavepoint(Savepoint savepoint) throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
-
+        checkClosed();
         throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
     }
 
@@ -324,9 +297,7 @@ public abstract class AbstractConnection extends WrapperImpl implements Connecti
 
     @Override
     public CallableStatement prepareCall(String sql, int resultSetType, int resultSetConcurrency, int resultSetHoldability) throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
-
+        checkClosed();
         throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
     }
 
@@ -346,49 +317,39 @@ public abstract class AbstractConnection extends WrapperImpl implements Connecti
 
     @Override
     public PreparedStatement prepareStatement(String sql, int[] columnIndexes) throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
-
+        checkClosed();
         throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
     }
 
     @Override
     public PreparedStatement prepareStatement(String sql, String[] columnNames) throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
-
+        checkClosed();
         throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
     }
 
     @Override
     public Clob createClob() throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
-
+        checkClosed();
         throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
     }
 
     @Override
     public Blob createBlob() throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
-
+        checkClosed();
         throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
+
     }
 
     @Override
     public NClob createNClob() throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
-
+        checkClosed();
         throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
+
     }
 
     @Override
     public SQLXML createSQLXML() throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
-
+        checkClosed();
         throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
     }
 
@@ -418,9 +379,13 @@ public abstract class AbstractConnection extends WrapperImpl implements Connecti
                 status = future.get();
             else
                 status = future.get(timeout, TimeUnit.SECONDS);
-        } catch (InterruptedException | ExecutionException ignored) {
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            future.cancel(true);
         } catch (TimeoutException e) {
             future.cancel(true);
+        } catch (ExecutionException ignored) {
+            future.cancel(false);
         } finally {
             executor.shutdownNow();
         }
@@ -464,17 +429,13 @@ public abstract class AbstractConnection extends WrapperImpl implements Connecti
 
     @Override
     public Array createArrayOf(String typeName, Object[] elements) throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
-
+        checkClosed();
         throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
     }
 
     @Override
     public Struct createStruct(String typeName, Object[] attributes) throws SQLException {
-        if (isClosed())
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
-
+        checkClosed();
         throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
     }
 
@@ -555,4 +516,10 @@ public abstract class AbstractConnection extends WrapperImpl implements Connecti
     }
 
     public abstract int writeRaw(String line, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, Integer ttl, Long reqId) throws SQLException;
+    
+    private void checkClosed() throws SQLException {
+        if (this.isClosed) {
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
+        }
+    }
 }

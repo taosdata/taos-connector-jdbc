@@ -1,7 +1,6 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.TSDBDriver;
-import com.taosdata.jdbc.cloud.CloudSchemalessTest;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.After;
@@ -19,13 +18,13 @@ import static org.junit.Assert.assertEquals;
 
 public class BatchInsertTest {
 
-    static String host = "127.0.0.1";
-    static String dbName = TestUtils.camelToSnake(BatchInsertTest.class);
-    static String stbName = "meters";
-    static int numOfTables = 30;
-    final static int numOfRecordsPerTable = 1000;
-    static long ts = 1496732686000l;
-    final static String tablePrefix = "t";
+    static final String HOST = "127.0.0.1";
+    static final String DB_NAME = TestUtils.camelToSnake(BatchInsertTest.class);
+    static final String STB_NAME = "meters";
+    static final int NUM_OF_TABLES = 30;
+    static final int NUM_OF_RECORDS_PER_TABLE = 1000;
+    static final long TS = 1496732686000L;
+    static final String TABLE_PREFIX = "t";
     private Connection connection;
 
     @Before
@@ -39,21 +38,21 @@ public class BatchInsertTest {
             properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
             String url = SpecifyAddress.getInstance().getJniWithoutUrl();
             if (url == null) {
-                url = "jdbc:TAOS://" + host + ":0/";
+                url = "jdbc:TAOS://" + HOST + ":0/";
             }
             connection = DriverManager.getConnection(url, properties);
 
             Statement statement = connection.createStatement();
-            statement.executeUpdate("drop database if exists " + dbName);
-            statement.executeUpdate("create database if not exists " + dbName);
-            statement.executeUpdate("use " + dbName);
+            statement.executeUpdate("drop database if exists " + DB_NAME);
+            statement.executeUpdate("create database if not exists " + DB_NAME);
+            statement.executeUpdate("use " + DB_NAME);
             // create stable
-            String createTableSql = "create table " + stbName + "(ts timestamp, f1 int, f2 int, f3 int) tags(areaid int, loc binary(20))";
+            String createTableSql = "create table " + STB_NAME + "(ts timestamp, f1 int, f2 int, f3 int) tags(areaid int, loc binary(20))";
             statement.executeUpdate(createTableSql);
             // create tables
-            for (int i = 0; i < numOfTables; i++) {
+            for (int i = 0; i < NUM_OF_TABLES; i++) {
                 String loc = i % 2 == 0 ? "beijing" : "shanghai";
-                String createSubTalbesSql = "create table " + tablePrefix + i + " using " + stbName + " tags(" + i + ", '" + loc + "')";
+                String createSubTalbesSql = "create table " + TABLE_PREFIX + i + " using " + STB_NAME + " tags(" + i + ", '" + loc + "')";
                 statement.executeUpdate(createSubTalbesSql);
             }
             statement.close();
@@ -64,17 +63,17 @@ public class BatchInsertTest {
 
     @Test
     public void testBatchInsert() {
-        ExecutorService executorService = Executors.newFixedThreadPool(numOfTables);
-        for (int i = 0; i < numOfTables; i++) {
+        ExecutorService executorService = Executors.newFixedThreadPool(NUM_OF_TABLES);
+        for (int i = 0; i < NUM_OF_TABLES; i++) {
             final int index = i;
             executorService.execute(() -> {
                 try {
                     Statement statement = connection.createStatement(); // get statement
                     StringBuilder sb = new StringBuilder();
-                    sb.append("INSERT INTO " + tablePrefix + index + " VALUES");
+                    sb.append("INSERT INTO " + TABLE_PREFIX + index + " VALUES");
                     Random rand = new Random();
-                    for (int j = 1; j <= numOfRecordsPerTable; j++) {
-                        sb.append("(" + (ts + j) + ", ");
+                    for (int j = 1; j <= NUM_OF_RECORDS_PER_TABLE; j++) {
+                        sb.append("(" + (TS + j) + ", ");
                         sb.append(rand.nextInt(100) + ", ");
                         sb.append(rand.nextInt(100) + ", ");
                         sb.append(rand.nextInt(100) + ")");
@@ -103,7 +102,7 @@ public class BatchInsertTest {
             while (rs.next()) {
                 num++;
             }
-            assertEquals(num, numOfTables * numOfRecordsPerTable);
+            assertEquals(num, NUM_OF_TABLES * NUM_OF_RECORDS_PER_TABLE);
             rs.close();
         } catch (Exception e) {
             e.printStackTrace();
@@ -115,7 +114,7 @@ public class BatchInsertTest {
         try {
             if (connection != null) {
                 Statement statement = connection.createStatement();
-                statement.execute("drop database if exists " + dbName);
+                statement.execute("drop database if exists " + DB_NAME);
                 statement.close();
                 connection.close();
             }

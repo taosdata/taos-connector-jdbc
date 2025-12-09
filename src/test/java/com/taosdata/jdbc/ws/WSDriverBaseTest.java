@@ -11,8 +11,6 @@ import org.junit.runner.RunWith;
 
 import java.sql.*;
 import java.util.Properties;
-import java.util.concurrent.CountDownLatch;
-import java.util.stream.IntStream;
 
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "websocket query test", author = "huolibo", version = "2.0.38")

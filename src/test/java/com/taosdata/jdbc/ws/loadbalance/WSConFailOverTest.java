@@ -1,16 +1,14 @@
-package com.taosdata.jdbc.ws;
+package com.taosdata.jdbc.ws.loadbalance;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
-import com.taosdata.jdbc.annotation.TestTarget;
+import com.taosdata.jdbc.common.Endpoint;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
+import com.taosdata.jdbc.ws.TaosAdapterMock;
+import org.junit.*;
 import org.junit.runner.RunWith;
 
 import java.io.IOException;
@@ -20,16 +18,15 @@ import java.util.Properties;
 
 
 @RunWith(CatalogRunner.class)
-@TestTarget(alias = "websocket master slave test", author = "yjshe", version = "3.2.11")
 @FixMethodOrder
 public class WSConFailOverTest {
-    private static final String hostA = "127.0.0.1";
-    private static final int portA = 6041;
+    private static final String HOST_A = "127.0.0.1";
+    private static final int PORT_A = 6041;
 
-    private static final String hostB = "127.0.0.1";
-    private static final int portB = 9041;
-    private final String db_name = TestUtils.camelToSnake(WSConFailOverTest.class);
-    private static final String tableName = "meters";
+    private static final String HOST_B = "127.0.0.1";
+    private static final int PORT_B = 9041;
+    private final String dbName = TestUtils.camelToSnake(WSConFailOverTest.class);
+    private static final String TABLE_NAME = "meters";
     private Connection connection;
     private TaosAdapterMock taosAdapterMock;
 
@@ -44,7 +41,7 @@ public class WSConFailOverTest {
                     if (i == 2){
                         taosAdapterMock.stop();
                     }
-                    resultSet = statement.executeQuery("select ts from " + db_name + "." + tableName + " limit 1;");
+                    resultSet = statement.executeQuery("select ts from " + dbName + "." + TABLE_NAME + " limit 1;");
 
                 }catch (SQLException e){
                     if (e.getErrorCode() == TSDBErrorNumbers.ERROR_RESULTSET_CLOSED){
@@ -69,6 +66,9 @@ public class WSConFailOverTest {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+
+        taosAdapterMock.start();
+        RebalanceTestUtil.waitHealthCheckFinishedIgnoreException(new Endpoint(HOST_A, taosAdapterMock.getListenPort(), false));
     }
 
     @Before
@@ -79,43 +79,52 @@ public class WSConFailOverTest {
         String url;
         url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + hostA + ":" + portA + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST_A + ":" + PORT_A + "/?user=root&password=taosdata";
         } else {
             url += "?user=root&password=taosdata";
         }
         Properties properties = new Properties();
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_INIT_INTERVAL, "1");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_MAX_INTERVAL, "1");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_RECOVERY_COUNT, "1");
 
         connection = DriverManager.getConnection(url, properties);
         Statement statement = connection.createStatement();
-        statement.execute("drop database if exists " + db_name);
-        statement.execute("create database " + db_name);
-        statement.execute("use " + db_name);
-        statement.execute("create table if not exists " + db_name + "." + tableName + "(ts timestamp, f int)");
-        statement.execute("insert into " + db_name + "." + tableName + " values (now, 1)");
+        statement.execute("drop database if exists " + dbName);
+        statement.execute("create database " + dbName);
+        statement.execute("use " + dbName);
+        statement.execute("create table if not exists " + dbName + "." + TABLE_NAME + "(ts timestamp, f int)");
+        statement.execute("insert into " + dbName + "." + TABLE_NAME + " values (now, 1)");
         statement.close();
         connection.close();
 
         url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + hostB + ":" + portB + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST_B + ":" + PORT_B + "/?user=root&password=taosdata";
         } else {
             url += "?user=root&password=taosdata";
         }
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_HOST, hostA);
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_PORT, String.valueOf(portA));
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_HOST, HOST_A);
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_PORT, String.valueOf(PORT_A));
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_INTERVAL_MS, "2000");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_RETRY_COUNT, "3");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, "10000");
         connection = DriverManager.getConnection(url, properties);
+        Assert.assertEquals(0, RebalanceManager.getInstance().getBgHealthCheckInstanceCount());
     }
 
     @After
     public void after() throws SQLException {
         if (null != connection) {
             Statement statement = connection.createStatement();
-            statement.execute("drop database if exists " + db_name);
+            statement.setQueryTimeout(60);
+            statement.execute("drop database if exists " + dbName);
             statement.close();
             connection.close();
         }
+        taosAdapterMock.stop();
+        Assert.assertEquals(0, RebalanceManager.getInstance().getBgHealthCheckInstanceCount());
+        RebalanceManager.getInstance().clearAllForTest();
     }
 }

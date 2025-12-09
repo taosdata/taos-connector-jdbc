@@ -2,7 +2,6 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.tmq.*;
-import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import io.netty.util.ResourceLeakDetector;
@@ -18,21 +17,21 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class WSConsumerSubscribeDBTest {
-    private static final String host = "127.0.0.1";
-    private final String dbName = TestUtils.camelToSnake(WSConsumerSubscribeDBTest.class);
-    private static final String superTable1 = "st1";
-    private static final String superTable2 = "st2";
-    private static final String superTableFullType = "st3";
+    private static final String HOST = "127.0.0.1";
+    private static final String DB_NAME = TestUtils.camelToSnake(WSConsumerSubscribeDBTest.class);
+    private static final String SUPER_TABLE_1 = "st1";
+    private static final String SUPER_TABLE_2 = "st2";
+    private static final String SUPER_TABLE_FULL_TYPE = "st3";
     private static Connection connection;
     private static Statement statement;
-    private static String[] topics = {"topic_ws_map"};
+    private static final String[] topics = {"topic_" + DB_NAME};
 
     @Test
     public void testWSEhnMapDB() throws Exception {
         AtomicInteger a = new AtomicInteger(1);
         String topic = topics[0];
         // create topic
-        statement.executeUpdate("create topic if not exists " + topic + " as database " + dbName);
+        statement.executeUpdate("create topic if not exists " + topic + " as database " + DB_NAME);
 
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.CONNECT_USER, "root");
@@ -54,12 +53,12 @@ public class WSConsumerSubscribeDBTest {
                 ConsumerRecords<TMQEnhMap> consumerRecords = consumer.poll(Duration.ofMillis(100));
                 if (i == 0){
                     statement.executeUpdate(
-                            "insert into subtb1 using "+ superTable1 + " tags(1) values(now, " + a.getAndIncrement() + ", 0.2, 'a','一', true)" +
+                            "insert into subtb1 using "+ SUPER_TABLE_1 + " tags(1) values(now, " + a.getAndIncrement() + ", 0.2, 'a','一', true)" +
                                     "(now+1s," + a.getAndIncrement() + ",0.4,'b','二', false)" +
                                     "(now+2s," + a.getAndIncrement() + ",0.6,'c','三', false)");
 
                     statement.executeUpdate(
-                            "insert into subtb2 using "+ superTable2 + " tags(1, 2) values(now, " + a.getAndIncrement() + ")" +
+                            "insert into subtb2 using "+ SUPER_TABLE_2 + " tags(1, 2) values(now, " + a.getAndIncrement() + ")" +
                                     "(now+1s," + a.getAndIncrement() + ")");
                 }
                 if (consumerRecords.isEmpty()){
@@ -88,7 +87,7 @@ public class WSConsumerSubscribeDBTest {
         AtomicInteger a = new AtomicInteger(1);
         String topic = topics[0];
         // create topic
-        statement.executeUpdate("create topic if not exists " + topic + " as database " + dbName);
+        statement.executeUpdate("create topic if not exists " + topic + " as database " + DB_NAME);
 
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.CONNECT_USER, "root");
@@ -108,7 +107,7 @@ public class WSConsumerSubscribeDBTest {
             for (int i = 0; i < 10; i++) {
                 ConsumerRecords<TMQEnhMap> consumerRecords = consumer.poll(Duration.ofMillis(100));
                 if (i == 0){
-                    statement.executeUpdate("insert into " + dbName + ".ct0 values(1747474225447, 1, 100, 2.2, 2.3, '1', 12, 2, true, '一', 'POINT(1 1)', '\\x0101', 1.2234, 1747474225448, 255, 65535, 4294967295, 18446744073709551615, -12345678901234567890123.4567890000, 12345678.901234)");
+                    statement.executeUpdate("insert into " + DB_NAME + ".ct0 values(1747474225447, 1, 100, 2.2, 2.3, '1', 12, 2, true, '一', 'POINT(1 1)', '\\x0101', 1.2234, 1747474225448, 255, 65535, 4294967295, 18446744073709551615, -12345678901234567890123.4567890000, 12345678.901234)");
                 }
                 if (consumerRecords.isEmpty()){
                     continue;
@@ -172,7 +171,7 @@ public class WSConsumerSubscribeDBTest {
         AtomicInteger a = new AtomicInteger(1);
         String topic = topics[0];
         // create topic
-        statement.executeUpdate("create topic if not exists " + topic + " as STABLE " + superTable1);
+        statement.executeUpdate("create topic if not exists " + topic + " as STABLE " + SUPER_TABLE_1);
 
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.CONNECT_USER, "root");
@@ -194,16 +193,16 @@ public class WSConsumerSubscribeDBTest {
                 ConsumerRecords<TMQEnhMap> consumerRecords = consumer.poll(Duration.ofMillis(100));
                 if (i == 0){
                     statement.executeUpdate(
-                            "insert into subtb1 using "+ superTable1 + " tags(1) values(now, " + a.getAndIncrement() + ", 0.2, 'a','一', true)" +
+                            "insert into subtb1 using "+ SUPER_TABLE_1 + " tags(1) values(now, " + a.getAndIncrement() + ", 0.2, 'a','一', true)" +
                                     "(now+1s," + a.getAndIncrement() + ",0.4,'b','二', false)" +
                                     "(now+2s," + a.getAndIncrement() + ",0.6,'c','三', false)");
 
 
                     statement.executeUpdate(
-                            "ALTER STABLE " + superTable1 + " ADD COLUMN c6 int");
+                            "ALTER STABLE " + SUPER_TABLE_1 + " ADD COLUMN c6 int");
 
                     statement.executeUpdate(
-                            "insert into subtb1 using "+ superTable1 + " tags(1) values(now, " + a.getAndIncrement() + ", 0.2, 'a','一', true, 6)" +
+                            "insert into subtb1 using "+ SUPER_TABLE_1 + " tags(1) values(now, " + a.getAndIncrement() + ", 0.2, 'a','一', true, 6)" +
                                     "(now+1s," + a.getAndIncrement() + ",0.4,'b','二', false, 7)");
                 }
                 if (consumerRecords.isEmpty()){
@@ -228,7 +227,7 @@ public class WSConsumerSubscribeDBTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
@@ -239,20 +238,20 @@ public class WSConsumerSubscribeDBTest {
         for (String topic : topics) {
             statement.executeUpdate("drop topic if exists " + topic);
         }
-        statement.execute("drop database if exists " + dbName);
-        statement.execute("create database if not exists " + dbName + " WAL_RETENTION_PERIOD 3650");
-        statement.execute("use " + dbName);
-        statement.execute("create stable if not exists " + superTable1
+        statement.execute("drop database if exists " + DB_NAME);
+        statement.execute("create database if not exists " + DB_NAME + " WAL_RETENTION_PERIOD 3650");
+        statement.execute("use " + DB_NAME);
+        statement.execute("create stable if not exists " + SUPER_TABLE_1
                 + " (ts timestamp, c1 int, c2 float, c3 nchar(10), c4 binary(10), c5 bool) tags(t1 int)");
 
-        statement.execute("create stable if not exists " + superTable2
+        statement.execute("create stable if not exists " + SUPER_TABLE_2
                 + " (ts timestamp, cc1 int) tags(t1 int, t2 int)");
 
-        statement.execute("create stable if not exists " + superTableFullType
+        statement.execute("create stable if not exists " + SUPER_TABLE_FULL_TYPE
                 + " (ts timestamp, c1 int, c2 bigint, c3 float, c4 double, c5 binary(10), c6 SMALLINT, c7 TINYINT, " +
                 "c8 BOOL, c9 nchar(100), c10 GEOMETRY(100), c11 VARBINARY(100), c12 double, c13 timestamp, " +
                 "c14 tinyint unsigned, c15 smallint unsigned, c16 int unsigned, c17 bigint unsigned, c18 decimal(38, 10), c19 decimal(18, 6)) tags(t1 int)");
-        statement.execute("create table if not exists ct0 using " + superTableFullType + " tags(1000)");
+        statement.execute("create table if not exists ct0 using " + SUPER_TABLE_FULL_TYPE + " tags(1000)");
     }
 
     @After
@@ -264,7 +263,7 @@ public class WSConsumerSubscribeDBTest {
                         TimeUnit.SECONDS.sleep(3);
                         statement.executeUpdate("drop topic if exists " + topic);
                     }
-                    statement.executeUpdate("drop database if exists " + dbName);
+                    statement.executeUpdate("drop database if exists " + DB_NAME);
                     statement.close();
                 }
                 connection.close();

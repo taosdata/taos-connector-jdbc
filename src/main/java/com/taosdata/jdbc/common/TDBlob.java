@@ -97,7 +97,7 @@ public class TDBlob implements java.sql.Blob {
 
             if (j < 0) {
                 // Match found
-                return i + 1; // Convert to JDBC 1-based position
+                return i + 1L; // Convert to JDBC 1-based position
             } else {
                 // Shift by bad character rule
                 int shift = badCharShift[data[i + j] & 0xFF];

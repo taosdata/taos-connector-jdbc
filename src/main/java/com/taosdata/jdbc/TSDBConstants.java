@@ -90,15 +90,14 @@ public abstract class TSDBConstants {
     public static final int DOUBLE_SCALE = 31;
 
     public static final String DEFAULT_PRECISION = "ms";
-
+    public static final int DEFAULT_MESSAGE_WAIT_TIMEOUT = 60_000;
     public static final boolean DEFAULT_BATCH_ERROR_IGNORE = false;
-
 
     public static final short MAX_UNSIGNED_BYTE = 255;
     public static final int MAX_UNSIGNED_SHORT = 65535;
     public static final long MAX_UNSIGNED_INT = 4294967295L;
     public static final String MAX_UNSIGNED_LONG = "18446744073709551615";
-    public static final String MIN_SUPPORT_VERSION = "3.3.6.0";
+    public static final String MIN_SUPPORT_VERSION = "3.3.6.0";  // NOSONAR
     public static final String MIN_BLOB_SUPPORT_VERSION = "3.3.7.0.alpha";
     public static final String UNKNOWN_VERSION = "unknown";
 
