@@ -24,7 +24,7 @@ import java.util.List;
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "Schemaless", author = "huolibo", version = "2.0.36")
 public class SchemalessInsertNewTest {
-    private static String host = "127.0.0.1";
+    private static final String HOST = "127.0.0.1";
     private final String dbname = TestUtils.camelToSnake(SchemalessInsertNewTest.class);
     private Connection conn;
 
@@ -278,7 +278,7 @@ public class SchemalessInsertNewTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
         }
         conn = DriverManager.getConnection(url);
         Statement stmt = conn.createStatement();

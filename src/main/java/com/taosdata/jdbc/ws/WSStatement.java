@@ -17,11 +17,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static com.taosdata.jdbc.utils.SqlSyntaxValidator.getDatabaseName;
 
 public class WSStatement extends AbstractStatement {
-    protected Transport transport;
+    protected final Transport transport;
     protected String database;
     private final AbstractConnection connection;
 
-    protected AtomicBoolean closed = new AtomicBoolean(false);
+
+    protected final AtomicBoolean closed = new AtomicBoolean(false);
     protected ResultSet resultSet;
     private volatile int queryTimeoutInSeconds;
     private volatile long queryTimeoutInMs;

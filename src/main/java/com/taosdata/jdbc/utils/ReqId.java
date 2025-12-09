@@ -15,7 +15,7 @@ public class ReqId {
 
     private static final long tUUIDHashId;
     private static final long pid;
-    private static AtomicLong serialNo = new AtomicLong(0);
+    private static final AtomicLong serialNo = new AtomicLong(0);
 
     static {
         String uuid = UUID.randomUUID().toString();
@@ -57,9 +57,9 @@ public class ReqId {
         int k = 0;
         // TODO : check this
         switch (length & 3) {
-            case 3:
+            case 3: // NOSONAR
                 k ^= data[length - 3] << 16;
-            case 2:
+            case 2: // NOSONAR
                 k ^= data[length - 2] << 8;
             case 1:
                 k ^= data[length - 1];

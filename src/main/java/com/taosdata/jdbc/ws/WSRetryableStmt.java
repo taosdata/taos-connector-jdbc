@@ -2,7 +2,7 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.AbstractConnection;
 import com.taosdata.jdbc.TSDBErrorNumbers;
-import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.utils.StmtUtils;
 import com.taosdata.jdbc.utils.Utils;
@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 
 import java.sql.SQLException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class WSRetryableStmt extends WSStatement {
     private static final Logger log = LoggerFactory.getLogger(WSRetryableStmt.class);
@@ -26,8 +27,8 @@ public class WSRetryableStmt extends WSStatement {
 
     protected final ConnectionParam param;
     protected StmtInfo stmtInfo;
-    protected volatile SQLException lastError = null;
-    protected final AtomicInteger batchInsertedRows;
+    protected final AtomicReference<SQLException> lastError = new AtomicReference<>(null);
+    protected final AtomicInteger batchInsertedRowsInner;
     private long reconnectCount;
 
     public WSRetryableStmt(AbstractConnection connection,
@@ -40,7 +41,7 @@ public class WSRetryableStmt extends WSStatement {
         super(transport, database, connection, instanceId, param.getZoneId());
         this.param = param;
         this.stmtInfo = stmtInfo;
-        this.batchInsertedRows = batchInsertedRows;
+        this.batchInsertedRowsInner = batchInsertedRows;
         this.reconnectCount = transport.getReconnectCount();
     }
 
@@ -73,9 +74,9 @@ public class WSRetryableStmt extends WSStatement {
         Utils.retainByteBuf(rawBlock);
         try {
             executeWithRetry(rawBlock, OPERATION_TYPE_WRITE, param.isEnableAutoConnect());
-            if (lastError != null) {
-                SQLException e = lastError;
-                lastError = null;
+            if (lastError.get() != null) {
+                SQLException e = lastError.get();
+                lastError.set(null);
                 throw e;
             }
         } finally {
@@ -87,9 +88,9 @@ public class WSRetryableStmt extends WSStatement {
         Utils.retainByteBuf(rawBlock);
         try {
             ResultResp resultResp = (ResultResp) executeWithRetry(rawBlock, OPERATION_TYPE_QUERY, param.isEnableAutoConnect());
-            if (lastError != null) {
-                SQLException e = lastError;
-                lastError = null;
+            if (lastError.get() != null) {
+                SQLException e = lastError.get();
+                lastError.set(null);
                 throw e;
             }
             return resultResp;
@@ -141,7 +142,7 @@ public class WSRetryableStmt extends WSStatement {
                 // Process result based on operation type
                 if (operationType == OPERATION_TYPE_WRITE) {
                     int affectedRows = resp.getAffected();
-                    batchInsertedRows.addAndGet(affectedRows);
+                    batchInsertedRowsInner.addAndGet(affectedRows);
                     return affectedRows;
                 } else if (operationType == OPERATION_TYPE_QUERY) {
                     // Get query result
@@ -159,7 +160,7 @@ public class WSRetryableStmt extends WSStatement {
                 // Handle exception based on operation type
                 boolean shouldContinue = handleException(e, i, reconnectCount, operationType);
                 if (!shouldContinue) {
-                    lastError = e;
+                    lastError.set(e);
                     break;
                 }
 
@@ -181,7 +182,7 @@ public class WSRetryableStmt extends WSStatement {
         String operationName = (operationType == OPERATION_TYPE_WRITE) ? "writeBlockWithRetry" : "queryWithRetry";
 
         if (retryCount == param.getRetryTimes() - 1) {
-            lastError = e;
+            lastError.set(e);
             return false; // Exception will be thrown externally
         }
 

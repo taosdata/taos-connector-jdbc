@@ -2,7 +2,7 @@ package com.taosdata.jdbc.ws.loadbalance;
 
 import com.taosdata.jdbc.common.Endpoint;
 import com.taosdata.jdbc.enums.WSFunction;
-import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.ws.InFlightRequest;
 import com.taosdata.jdbc.ws.WSClient;
 import org.slf4j.Logger;
@@ -12,7 +12,7 @@ import java.util.List;
 
 // Health check node context: manages node state, health check parameters, and timer tasks
 public class BgHealthCheck {
-    static Logger log = org.slf4j.LoggerFactory.getLogger(BgHealthCheck.class);
+    static final Logger log = org.slf4j.LoggerFactory.getLogger(BgHealthCheck.class);
     private WSClient wsClient; // Reference to the WebSocket client for connection handling
     private final ConnectionParam param;
     private final int endpointIndex;

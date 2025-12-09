@@ -34,7 +34,7 @@ import java.util.regex.Pattern;
 @Deprecated
 public class RestfulResultSet extends AbstractResultSet {
 
-    public static DateTimeFormatter rfc3339Parser = new DateTimeFormatterBuilder()
+    public static final DateTimeFormatter rfc3339Parser = new DateTimeFormatterBuilder()
             .parseCaseInsensitive()
             .appendValue(ChronoField.YEAR, 4)
             .appendLiteral('-')
@@ -53,9 +53,7 @@ public class RestfulResultSet extends AbstractResultSet {
             .appendOffset("+HHMM", "Z").toFormatter()
             .withResolverStyle(ResolverStyle.STRICT)
             .withChronology(IsoChronology.INSTANCE);
-
-    Pattern pattern = Pattern.compile("^[0-9a-zT\\-:]+\\.([0-9]+).*$");
-
+    private static final Pattern pattern = Pattern.compile("\\.(\\d++)");
     private final Statement statement;
     // data
     private final List<List<Object>> resultSet = new ArrayList<>();
@@ -81,7 +79,7 @@ public class RestfulResultSet extends AbstractResultSet {
         JsonNode data = resultJson.get("data");
 
         // parse column_meta
-        parseColumnMeta_new(columnMeta);
+        parseColumnMetaNew(columnMeta);
         this.metaData = new RestfulResultSetMetaData(database, columns, false);
 
         if (data == null || !data.isArray() || data.size() == 0)
@@ -100,23 +98,23 @@ public class RestfulResultSet extends AbstractResultSet {
      * use this method after TDengine-2.0.18.0 to parse column meta, restful add column_meta in resultSet
      * @Param columnMeta
      */
-    private void parseColumnMeta_new(JsonNode columnMeta) {
+    private void parseColumnMetaNew(JsonNode columnMeta) {
         columnNames.clear();
         columns.clear();
         for (int colIndex = 0; colIndex < columnMeta.size(); colIndex++) {
             JsonNode col = columnMeta.get(colIndex);
-            String col_name = col.get(0).asText();
+            String colName = col.get(0).asText();
             String typeName = col.get(1).asText();
             DataType type = DataType.getDataType(typeName);
-            int col_type = type.getJdbcTypeValue();
-            int col_length = col.get(2).asInt();
-            columnNames.add(col_name);
-            columns.add(new Field(col_name, col_type, col_length, "", type.getTaosTypeValue(), 0, 0));
+            int colType = type.getJdbcTypeValue();
+            int colLength = col.get(2).asInt();
+            columnNames.add(colName);
+            columns.add(new Field(colName, colType, colLength, "", type.getTaosTypeValue(), 0, 0));
         }
     }
 
     private Object parseColumnData(JsonNode row, int colIndex, Field field) throws SQLException {
-        int taosType = field.taos_type;
+        int taosType = field.taosType;
         if (row.get(colIndex).isNull()) {
             return null;
         }
@@ -197,26 +195,26 @@ public class RestfulResultSet extends AbstractResultSet {
     }
 
     public static class Field {
-        String name;
-        int type;
-        int length;
-        String note;
-        int taos_type;
-        int scale;
-        int precision;
+        final String name;
+        final int type;
+        final int length;
+        final String note;
+        final int taosType;
+        final int scale;
+        final int precision;
 
-        public Field(String name, int type, int length, String note, int taos_type, int scale, int precision) {
+        public Field(String name, int type, int length, String note, int taosType, int scale, int precision) {
             this.name = name;
             this.type = type;
             this.length = length;
             this.note = note;
-            this.taos_type = taos_type;
+            this.taosType = taosType;
             this.scale = scale;
             this.precision = precision;
         }
 
         public int getTaosType() {
-            return taos_type;
+            return taosType;
         }
         public String getName() {return name;}
 

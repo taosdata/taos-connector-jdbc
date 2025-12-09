@@ -23,12 +23,12 @@ import java.util.Set;
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "JsonTag", author = "huolibo", version = "2.0.37")
 public class RestfulJsonTagTest {
-    private static String host = "127.0.0.1";
-    private static final String dbName = TestUtils.camelToSnake(RestfulJsonTagTest.class);
+    private static final String HOST = "127.0.0.1";
+    private static final String DB_NAME = TestUtils.camelToSnake(RestfulJsonTagTest.class);
     private static Connection connection;
     private static Statement statement;
-    private static final String superSql = "create table if not exists jsons1(ts timestamp, dataInt int, dataBool bool, dataStr nchar(50), dataStrBin binary(150)) tags(jtag json)";
-    private static final String[] sql = {
+    private static final String SUPER_SQL = "create table if not exists jsons1(ts timestamp, dataInt int, dataBool bool, dataStr nchar(50), dataStrBin binary(150)) tags(jtag json)";
+    private static final String[] sqlArray = {
             "insert into jsons1_1 using jsons1 tags('{\"tag1\":\"fff\",\"tag2\":5, \"tag3\":true}') values(now, 1, false, 'json1', '你是') (1591060608000, 23, true, '等等', 'json')",
             "insert into jsons1_2 using jsons1 tags('{\"tag1\":5,\"tag2\":\"beijing\"}') values (1591060628000, 2, true, 'json2', 'sss')",
             "insert into jsons1_3 using jsons1 tags('{\"tag1\":false,\"tag2\":\"beijing\"}') values (1591060668000, 3, false, 'json3', 'efwe')",
@@ -78,7 +78,7 @@ public class RestfulJsonTagTest {
     @Test
     @Description("insert json tag")
     public void case01_InsertTest() throws SQLException {
-        for (String sql : sql) {
+        for (String sql : sqlArray) {
             statement.execute(sql);
         }
         for (String sql : invalidJsonInsertSql) {
@@ -1126,15 +1126,15 @@ public class RestfulJsonTagTest {
     public static void beforeClass() {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
         }
         try {
             connection = DriverManager.getConnection(url);
             statement = connection.createStatement();
-            statement.execute("drop database if exists " + dbName);
-            statement.execute("create database if not exists " + dbName);
-            statement.execute("use " + dbName);
-            statement.execute(superSql);
+            statement.execute("drop database if exists " + DB_NAME);
+            statement.execute("create database if not exists " + DB_NAME);
+            statement.execute("use " + DB_NAME);
+            statement.execute(SUPER_SQL);
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -1144,7 +1144,7 @@ public class RestfulJsonTagTest {
     public static void afterClass() {
         try {
             if (null != statement) {
-                statement.execute("drop database " + dbName);
+                statement.execute("drop database " + DB_NAME);
                 statement.close();
             }
             if (null != connection) {

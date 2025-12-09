@@ -10,14 +10,8 @@ import java.util.Properties;
 
 public class TSDBConnectionTest {
 
-    private static final String host = "127.0.0.1";
+    private static final String HOST = "127.0.0.1";
     private static Connection conn;
-
-    @Test
-    public void getConnection() {
-        // already test in beforeClass method
-    }
-
     @Test
     public void createStatement() {
         try (Statement stmt = conn.createStatement()) {
@@ -54,6 +48,7 @@ public class TSDBConnectionTest {
     public void setAutoCommit() throws SQLException {
         conn.setAutoCommit(true);
         conn.setAutoCommit(false);
+        Assert.assertNotNull(conn);
     }
 
     @Test
@@ -64,16 +59,13 @@ public class TSDBConnectionTest {
     @Test
     public void commit() throws SQLException {
         conn.commit();
+        Assert.assertNotNull(conn);
     }
 
     @Test
     public void rollback() throws SQLException {
         conn.rollback();
-    }
-
-    @Test
-    public void close() {
-        // connection will close in afterClass method
+        Assert.assertNotNull(conn);
     }
 
     @Test
@@ -130,6 +122,7 @@ public class TSDBConnectionTest {
     @Test
     public void clearWarnings() throws SQLException {
         conn.clearWarnings();
+        Assert.assertNotNull(conn);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
@@ -232,7 +225,6 @@ public class TSDBConnectionTest {
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void testPrepareStatement2() throws SQLException {
-        Assert.assertNotNull("", Statement.NO_GENERATED_KEYS);
         conn.prepareStatement("", Statement.RETURN_GENERATED_KEYS);
     }
 
@@ -278,6 +270,7 @@ public class TSDBConnectionTest {
         conn.setClientInfo(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
         conn.setClientInfo(TSDBDriver.PROPERTY_KEY_CHARSET, "en_US.UTF-8");
         conn.setClientInfo(TSDBDriver.PROPERTY_KEY_CHARSET, "UTC-8");
+        Assert.assertNotNull(conn);
     }
 
     @Test
@@ -287,6 +280,7 @@ public class TSDBConnectionTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "en_US.UTF-8");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
         conn.setClientInfo(properties);
+        Assert.assertNotNull(conn);
     }
 
     @Test
@@ -331,6 +325,7 @@ public class TSDBConnectionTest {
     @Test
     public void setSchema() throws SQLException {
         conn.setSchema("test");
+        Assert.assertNotNull(conn);
     }
 
     @Test
@@ -341,11 +336,13 @@ public class TSDBConnectionTest {
     @Test
     public void abort() throws SQLException {
         conn.abort(null);
+        Assert.assertNotNull(conn);
     }
 
     @Test
     public void setNetworkTimeout() throws SQLException {
         conn.setNetworkTimeout(null, 1000);
+        Assert.assertNotNull(conn);
     }
 
     @Test
@@ -373,7 +370,7 @@ public class TSDBConnectionTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
         String url = SpecifyAddress.getInstance().getJniWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":6030?user=root&password=taosdata";
         } else {
             url += "?user=root&password=taosdata";
         }

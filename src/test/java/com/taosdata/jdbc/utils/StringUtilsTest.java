@@ -102,5 +102,12 @@ public class StringUtilsTest {
         Assert.assertEquals("[fe80::1%eth0]:6041", result.getProperty("endpoints"));
         Assert.assertEquals("db", result.getProperty("dbname"));
     }
+    @Test
+    public void bytesToHexTest() {
+        byte[] bytes = new byte[]{0x0A, 0x1B, 0x2C, 0x3D, (byte) 0xFE, (byte) 0xFF};
+        String hexString = StringUtils.bytesToHex(bytes);
+        Assert.assertEquals("0A1B2C3DFEFF", hexString);
+    }
+
 
 }

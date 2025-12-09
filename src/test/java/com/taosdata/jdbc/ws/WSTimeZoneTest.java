@@ -1,8 +1,6 @@
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
-import com.taosdata.jdbc.annotation.CatalogRunner;
-import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.SpecifyAddress;
@@ -16,27 +14,24 @@ import java.sql.Date;
 import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.concurrent.CountDownLatch;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 @RunWith(Parameterized.class)
 @TestTarget(alias = "websocket timezon test", author = "sheyj", version = "3.5.0")
 public class WSTimeZoneTest {
 
     // 定义参数
-    private String precision;
+    private final String precision;
 
     // 构造函数
     public WSTimeZoneTest(String precision) {
         this.precision = precision;
     }
 
-    private static final String host = "127.0.0.1";
-    private static final int port = 6041;
-    private final String db_name = TestUtils.camelToSnake(WSTimeZoneTest.class) + "_" + UUID.randomUUID().toString().replace("-", "_");
-    private static final String tableName = "simple_t";
-    private static final String fullTableName = "full_t";
+    private static final String HOST = "127.0.0.1";
+    private static final int PORT = 6041;
+    private final String dbName = TestUtils.camelToSnake(WSTimeZoneTest.class) + "_" + UUID.randomUUID().toString().replace("-", "_");
+    private static final String TABLE_NAME = "simple_t";
+    private static final String FULL_TABLE_NAME = "full_t";
     private Connection connection;
 
     // 提供参数
@@ -45,7 +40,7 @@ public class WSTimeZoneTest {
         return Arrays.asList("'ms'", "'us'", "'ns'");
     }
 
-    private static HashMap<String, String> precisionMap = new HashMap<String, String>() {{
+    private static final HashMap<String, String> precisionMap = new HashMap<String, String>() {{
         put("'ms'", "123");
         put("'us'", "123456");
         put("'ns'", "123456789");
@@ -54,7 +49,7 @@ public class WSTimeZoneTest {
     @Test
     public void TimeZoneQueryTest() throws SQLException, InterruptedException {
         try (Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery("select * from "  + db_name + "." + tableName + " limit 1")) {
+             ResultSet resultSet = statement.executeQuery("select * from "  + dbName + "." + TABLE_NAME + " limit 1")) {
             while (resultSet.next()) {
 
                 Timestamp ts = resultSet.getTimestamp("ts");
@@ -71,7 +66,7 @@ public class WSTimeZoneTest {
 
     @Test
     public void TimeZoneStmtTimestampTest() throws SQLException, InterruptedException {
-        String sql = "insert into " + db_name + "." + tableName + " values(?, ?)";
+        String sql = "insert into " + dbName + "." + TABLE_NAME + " values(?, ?)";
         PreparedStatement statement = connection.prepareStatement(sql);
 
         LocalDateTime localDateTime = LocalDateTime.of(2024, 1, 2, 1, 2, 3, 123456789);
@@ -88,7 +83,7 @@ public class WSTimeZoneTest {
         statement.close();
 
         try (Statement qStmt = connection.createStatement();
-             ResultSet resultSet = qStmt.executeQuery("select * from "  + db_name + "." + tableName + " where f = 2 limit 1")) {
+             ResultSet resultSet = qStmt.executeQuery("select * from "  + dbName + "." + TABLE_NAME + " where f = 2 limit 1")) {
             while (resultSet.next()) {
 
                 Timestamp ts = resultSet.getTimestamp("ts");
@@ -120,7 +115,7 @@ public class WSTimeZoneTest {
 
     @Test
     public void TimeZoneStmtAllTimeTypeTest() throws SQLException, InterruptedException {
-        String sql = "insert into " + db_name + "." + fullTableName + " values(?, ?, ?, ?, ?, ?)";
+        String sql = "insert into " + dbName + "." + FULL_TABLE_NAME + " values(?, ?, ?, ?, ?, ?)";
         PreparedStatement statement = connection.prepareStatement(sql);
 
         // 创建一个 LocalDateTime 对象，表示特定的日期和时间
@@ -151,7 +146,7 @@ public class WSTimeZoneTest {
         statement.close();
 
         try (Statement qStmt = connection.createStatement();
-             ResultSet resultSet = qStmt.executeQuery("select * from "  + db_name + "." + fullTableName + " limit 1")) {
+             ResultSet resultSet = qStmt.executeQuery("select * from "  + dbName + "." + FULL_TABLE_NAME + " limit 1")) {
             while (resultSet.next()) {
 
                 Timestamp ts1 = resultSet.getTimestamp("ts1");
@@ -198,7 +193,7 @@ public class WSTimeZoneTest {
     public void InvalidTimeZoneTest() throws SQLException, InterruptedException {
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + host + ":" + port + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST + ":" + PORT + "/?user=root&password=taosdata";
         } else {
             url += "?user=root&password=taosdata";
         }
@@ -211,7 +206,7 @@ public class WSTimeZoneTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + host + ":" + port + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST + ":" + PORT + "/?user=root&password=taosdata";
         } else {
             url += "?user=root&password=taosdata";
         }
@@ -219,14 +214,14 @@ public class WSTimeZoneTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "Asia/Tokyo");
         connection = DriverManager.getConnection(url, properties);
         Statement statement = connection.createStatement();
-        statement.execute("drop database if exists " + db_name);
-        statement.execute("create database " + db_name + " precision " + precision);
-        statement.execute("use " + db_name);
-        statement.execute("create table if not exists " + db_name + "." + tableName + " (ts timestamp, f int)");
-        statement.execute("create table if not exists " + db_name + "." + fullTableName + " (ts1 timestamp, ts2 timestamp, ts3 timestamp, ts4 timestamp, ts5 timestamp, ts6 timestamp)");
+        statement.execute("drop database if exists " + dbName);
+        statement.execute("create database " + dbName + " precision " + precision);
+        statement.execute("use " + dbName);
+        statement.execute("create table if not exists " + dbName + "." + TABLE_NAME + " (ts timestamp, f int)");
+        statement.execute("create table if not exists " + dbName + "." + FULL_TABLE_NAME + " (ts1 timestamp, ts2 timestamp, ts3 timestamp, ts4 timestamp, ts5 timestamp, ts6 timestamp)");
 
         // Asia/Shanghai +08:00, 2024-01-01 00:00:00
-        statement.execute("insert into " + db_name + "." + tableName + " values (\"2024-01-01T00:00:00.123456789+08:00\", 1)");
+        statement.execute("insert into " + dbName + "." + TABLE_NAME + " values (\"2024-01-01T00:00:00.123456789+08:00\", 1)");
 
         statement.close();
     }
@@ -235,7 +230,7 @@ public class WSTimeZoneTest {
     public void after() throws SQLException {
         if (null != connection) {
             try (Statement statement = connection.createStatement()) {
-                statement.executeUpdate("drop database if exists " + db_name);
+                statement.executeUpdate("drop database if exists " + dbName);
             } catch (SQLException e) {
                 // do nothing
             }

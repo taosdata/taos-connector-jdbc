@@ -1,7 +1,7 @@
 package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.enums.TimestampPrecision;
-import com.taosdata.jdbc.utils.DataTypeConverUtil;
+import com.taosdata.jdbc.utils.DataTypeConvertUtil;
 
 import java.io.UnsupportedEncodingException;
 import java.sql.SQLException;
@@ -54,7 +54,7 @@ public class TSDBResultSetRowData {
         if (obj instanceof Boolean)
             return (boolean) obj;
 
-        return DataTypeConverUtil.getBoolean(nativeType, obj);
+        return DataTypeConvertUtil.getBoolean(nativeType, obj);
     }
 
     /**
@@ -104,7 +104,7 @@ public class TSDBResultSetRowData {
         if (obj == null)
             return 0;
 
-        return DataTypeConverUtil.getInt(nativeType, obj, col);
+        return DataTypeConvertUtil.getInt(nativeType, obj, col);
     }
 
     /**
@@ -131,7 +131,7 @@ public class TSDBResultSetRowData {
             return (long) obj;
         }
 
-        return DataTypeConverUtil.getLong(nativeType, obj, col, TimestampPrecision.MS);
+        return DataTypeConvertUtil.getLong(nativeType, obj, col, TimestampPrecision.MS);
     }
 
     /**
@@ -154,7 +154,7 @@ public class TSDBResultSetRowData {
             return 0;
         if (obj instanceof Float)
             return (float) obj;
-        return DataTypeConverUtil.getFloat(nativeType, obj, col);
+        return DataTypeConvertUtil.getFloat(nativeType, obj, col);
     }
 
     /**
@@ -175,7 +175,7 @@ public class TSDBResultSetRowData {
         Object obj = data.get(col - 1);
         if (obj == null)
             return 0;
-        return DataTypeConverUtil.getDouble(nativeType, obj, col, TimestampPrecision.MS);
+        return DataTypeConvertUtil.getDouble(nativeType, obj, col, TimestampPrecision.MS);
     }
 
     /**
@@ -225,7 +225,7 @@ public class TSDBResultSetRowData {
         if (obj == null)
             return null;
 
-        return DataTypeConverUtil.getString(obj);
+        return DataTypeConvertUtil.getString(obj);
     }
 
     /**

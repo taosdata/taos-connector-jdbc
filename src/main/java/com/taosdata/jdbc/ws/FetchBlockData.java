@@ -27,9 +27,9 @@ public class FetchBlockData {
     private final long queryId;
     private final long reqId;
     private static final int CACHE_SIZE = 5;
-    private BlockingQueue<BlockData> blockingQueue = new LinkedBlockingQueue<>(CACHE_SIZE);
-    private ForkJoinPool dataHandleExecutor = Utils.getForkJoinPool();
-    private List<RestfulResultSet.Field> fields;
+    private final BlockingQueue<BlockData> blockingQueue = new LinkedBlockingQueue<>(CACHE_SIZE);
+    private final ForkJoinPool dataHandleExecutor = Utils.getForkJoinPool();
+    private final List<RestfulResultSet.Field> fields;
     private volatile FetchState fetchState = FetchState.STOPPED;
     private final long timeoutMs;
     private final int precision;
@@ -73,7 +73,7 @@ public class FetchBlockData {
         blockingQueue.put(blockData);
         dataHandleExecutor.submit(blockData::handleData);
 
-        if (blockingQueue.remainingCapacity() > 0){
+        if (blockingQueue.remainingCapacity() > 0 && FetchDataUtil.getFetchMap().get(reqId) != null){
             try {
                 transport.sendFetchBlockAsync(reqId, queryId);
                 return;

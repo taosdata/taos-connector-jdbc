@@ -19,8 +19,8 @@ import java.util.Set;
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "JsonTag", author = "huolibo", version = "2.0.38")
 public class WSJsonTagTest {
-    private static String host = "127.0.0.1";
-    private static final String dbName = TestUtils.camelToSnake(WSJsonTagTest.class);
+    private static final String HOST = "127.0.0.1";
+    private static final String DB_NAME = TestUtils.camelToSnake(WSJsonTagTest.class);
     private static Connection connection;
     private static Statement statement;
     private static final String superSql = "create table if not exists jsons1(ts timestamp, dataInt int, dataBool bool, dataStr nchar(50), dataStrBin binary(150)) tags(jtag json)";
@@ -1122,7 +1122,7 @@ public class WSJsonTagTest {
     public static void beforeClass() {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
         }
         try {
             Properties properties = new Properties();
@@ -1130,9 +1130,9 @@ public class WSJsonTagTest {
             properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
             connection = DriverManager.getConnection(url, properties);
             statement = connection.createStatement();
-            statement.execute("drop database if exists " + dbName);
-            statement.execute("create database if not exists " + dbName);
-            statement.execute("use " + dbName);
+            statement.execute("drop database if exists " + DB_NAME);
+            statement.execute("create database if not exists " + DB_NAME);
+            statement.execute("use " + DB_NAME);
             statement.execute(superSql);
         } catch (SQLException e) {
             e.printStackTrace();
@@ -1143,7 +1143,7 @@ public class WSJsonTagTest {
     public static void afterClass() {
         try {
             if (null != statement) {
-                statement.execute("drop database " + dbName);
+                statement.execute("drop database " + DB_NAME);
                 statement.close();
             }
             if (null != connection) {

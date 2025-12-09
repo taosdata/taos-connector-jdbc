@@ -11,7 +11,7 @@ import java.sql.*;
 
 
 public class QueryTimeoutTest {
-    private String host = "127.0.0.1";
+    private final String host = "127.0.0.1";
     private Connection conn;
 
 

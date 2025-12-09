@@ -2,12 +2,12 @@ package com.taosdata.jdbc.utils;
 
 public interface TaosInfoMBean {
 
-    long getConnect_open();
+    long getConnectOpen();
 
-    long getConnect_close();
+    long getConnectClose();
 
     long getConnect_active();
 
-    long getStatement_count();
+    long getStatementCount();
 
 }

@@ -104,7 +104,7 @@ public class RestfulResultSetMetaData extends WrapperImpl implements ResultSetMe
 
     @Override
     public int getPrecision(int column) throws SQLException {
-        int type = this.fields.get(column - 1).taos_type;
+        int type = this.fields.get(column - 1).taosType;
         switch (type) {
             case TSDBConstants.TSDB_DATA_TYPE_BINARY:
             case TSDBConstants.TSDB_DATA_TYPE_NCHAR:
@@ -123,7 +123,7 @@ public class RestfulResultSetMetaData extends WrapperImpl implements ResultSetMe
 
     @Override
     public int getScale(int column) throws SQLException {
-        int type = this.fields.get(column - 1).taos_type;
+        int type = this.fields.get(column - 1).taosType;
         switch (type) {
             case TSDBConstants.TSDB_DATA_TYPE_DECIMAL64:
             case TSDBConstants.TSDB_DATA_TYPE_DECIMAL128:
@@ -150,7 +150,7 @@ public class RestfulResultSetMetaData extends WrapperImpl implements ResultSetMe
 
     @Override
     public String getColumnTypeName(int column) throws SQLException {
-        int taosType = fields.get(column - 1).taos_type;
+        int taosType = fields.get(column - 1).taosType;
         if (taosType == TSDBConstants.TSDB_DATA_TYPE_BINARY && varcharAsString){
             return "VARCHAR";
         }
@@ -174,7 +174,7 @@ public class RestfulResultSetMetaData extends WrapperImpl implements ResultSetMe
 
     @Override
     public String getColumnClassName(int column) throws SQLException {
-        int type = this.fields.get(column - 1).taos_type;
+        int type = this.fields.get(column - 1).taosType;
         if (type == TSDBConstants.TSDB_DATA_TYPE_BINARY && varcharAsString) {
             return String.class.getName();
         }

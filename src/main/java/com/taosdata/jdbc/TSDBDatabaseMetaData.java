@@ -41,6 +41,7 @@ public class TSDBDatabaseMetaData extends AbstractDatabaseMetaData {
      * @Param tableNamePattern : 表名满足tableNamePattern的表, null表示返回所有表
      * @Param types : 表类型，null表示返回所有类型
      */
+    @Override
     public ResultSet getTables(String catalog, String schemaPattern, String tableNamePattern, String[] types) throws SQLException {
         if (conn == null || conn.isClosed()) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
@@ -48,30 +49,35 @@ public class TSDBDatabaseMetaData extends AbstractDatabaseMetaData {
         return super.getTables(catalog, schemaPattern, tableNamePattern, types, conn);
     }
 
+    @Override
     public ResultSet getCatalogs() throws SQLException {
         if (conn == null || conn.isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
         return super.getCatalogs(conn);
     }
 
+    @Override
     public ResultSet getTableTypes() throws SQLException {
         if (conn == null || conn.isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
         return super.getTableTypes();
     }
 
+    @Override
     public ResultSet getColumns(String catalog, String schemaPattern, String tableNamePattern, String columnNamePattern) throws SQLException {
         if (conn == null || conn.isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
         return super.getColumns(catalog, schemaPattern, tableNamePattern, columnNamePattern, conn);
     }
 
+    @Override
     public ResultSet getPrimaryKeys(String catalog, String schema, String table) throws SQLException {
         if (conn == null || conn.isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
         return super.getPrimaryKeys(catalog, schema, table, conn);
     }
 
+    @Override
     public ResultSet getSuperTables(String catalog, String schemaPattern, String tableNamePattern) throws SQLException {
         if (conn == null || conn.isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);

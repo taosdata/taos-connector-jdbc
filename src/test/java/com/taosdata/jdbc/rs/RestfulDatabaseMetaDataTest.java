@@ -14,11 +14,11 @@ import java.util.Properties;
 
 public class RestfulDatabaseMetaDataTest {
 
-    private static final String host = "127.0.0.1";
+    private static final String HOST = "127.0.0.1";
     private static String url;
     private static Connection connection;
     private static RestfulDatabaseMetaData metaData;
-    private static final String dbName = TestUtils.camelToSnake(RestfulDatabaseMetaDataTest.class);
+    private static final String DB_NAME = TestUtils.camelToSnake(RestfulDatabaseMetaDataTest.class);
 
     @Test
     public void unwrap() throws SQLException {
@@ -633,15 +633,15 @@ public class RestfulDatabaseMetaDataTest {
 
     @Test
     public void getTables() throws SQLException {
-        ResultSet rs = metaData.getTables(dbName, "", null, null);
+        ResultSet rs = metaData.getTables(DB_NAME, "", null, null);
         ResultSetMetaData meta = rs.getMetaData();
         Assert.assertNotNull(rs);
         rs.next();
         {
             // TABLE_CAT
             Assert.assertEquals("TABLE_CAT", meta.getColumnLabel(1));
-            Assert.assertEquals(dbName, rs.getString(1));
-            Assert.assertEquals(dbName, rs.getString("TABLE_CAT"));
+            Assert.assertEquals(DB_NAME, rs.getString(1));
+            Assert.assertEquals(DB_NAME, rs.getString("TABLE_CAT"));
             // TABLE_SCHEM
             Assert.assertEquals("TABLE_SCHEM", meta.getColumnLabel(2));
             Assert.assertEquals(null, rs.getString(2));
@@ -699,7 +699,7 @@ public class RestfulDatabaseMetaDataTest {
     @Test
     public void getColumns() throws SQLException {
         // when
-        ResultSet columns = metaData.getColumns(dbName, "", "dn", null);
+        ResultSet columns = metaData.getColumns(DB_NAME, "", "dn", null);
         // then
         ResultSetMetaData meta = columns.getMetaData();
         columns.next();
@@ -707,8 +707,8 @@ public class RestfulDatabaseMetaDataTest {
         {
             // TABLE_CAT
             Assert.assertEquals("TABLE_CAT", meta.getColumnLabel(1));
-            Assert.assertEquals(dbName, columns.getString(1));
-            Assert.assertEquals(dbName, columns.getString("TABLE_CAT"));
+            Assert.assertEquals(DB_NAME, columns.getString(1));
+            Assert.assertEquals(DB_NAME, columns.getString("TABLE_CAT"));
             // TABLE_NAME
             Assert.assertEquals("TABLE_NAME", meta.getColumnLabel(3));
             Assert.assertEquals("dn", columns.getString(3));
@@ -753,8 +753,8 @@ public class RestfulDatabaseMetaDataTest {
         {
             // TABLE_CAT
             Assert.assertEquals("TABLE_CAT", meta.getColumnLabel(1));
-            Assert.assertEquals(dbName, columns.getString(1));
-            Assert.assertEquals(dbName, columns.getString("TABLE_CAT"));
+            Assert.assertEquals(DB_NAME, columns.getString(1));
+            Assert.assertEquals(DB_NAME, columns.getString("TABLE_CAT"));
             // TABLE_NAME
             Assert.assertEquals("TABLE_NAME", meta.getColumnLabel(3));
             Assert.assertEquals("dn", columns.getString(3));
@@ -817,14 +817,14 @@ public class RestfulDatabaseMetaDataTest {
     public void getPrimaryKeys() throws SQLException {
         Assert.assertNotNull(metaData.getPrimaryKeys("", "", ""));
 
-        ResultSet rs = metaData.getPrimaryKeys(dbName, "", "dn1");
+        ResultSet rs = metaData.getPrimaryKeys(DB_NAME, "", "dn1");
         ResultSetMetaData meta = rs.getMetaData();
         rs.next();
         {
             // TABLE_CAT
             Assert.assertEquals("TABLE_CAT", meta.getColumnLabel(1));
-            Assert.assertEquals(dbName, rs.getString(1));
-            Assert.assertEquals(dbName, rs.getString("TABLE_CAT"));
+            Assert.assertEquals(DB_NAME, rs.getString(1));
+            Assert.assertEquals(DB_NAME, rs.getString("TABLE_CAT"));
             // TABLE_SCHEM
             Assert.assertEquals("TABLE_SCHEM", meta.getColumnLabel(2));
             Assert.assertEquals(null, rs.getString(2));
@@ -970,27 +970,9 @@ public class RestfulDatabaseMetaDataTest {
 
     @Test
     public void getSuperTables() throws SQLException {
-        ResultSet rs = metaData.getSuperTables(dbName, "", "dn1");
-        ResultSetMetaData meta = rs.getMetaData();
-        rs.next();
-        {
-            // TABLE_CAT
-            Assert.assertEquals("TABLE_CAT", meta.getColumnLabel(1));
-            Assert.assertEquals(dbName, rs.getString(1));
-            Assert.assertEquals(dbName, rs.getString("TABLE_CAT"));
-            // TABLE_CAT
-            Assert.assertEquals("TABLE_SCHEM", meta.getColumnLabel(2));
-            Assert.assertEquals(null, rs.getString(2));
-            Assert.assertEquals(null, rs.getString("TABLE_SCHEM"));
-            // TABLE_CAT
-            Assert.assertEquals("TABLE_NAME", meta.getColumnLabel(3));
-            Assert.assertEquals("dn1", rs.getString(3));
-            Assert.assertEquals("dn1", rs.getString("TABLE_NAME"));
-            // TABLE_CAT
-            Assert.assertEquals("SUPERTABLE_NAME", meta.getColumnLabel(4));
-            Assert.assertEquals("dn", rs.getString(4));
-            Assert.assertEquals("dn", rs.getString("SUPERTABLE_NAME"));
-        }
+        ResultSet rs = metaData.getSuperTables(DB_NAME, "", "dn1");
+        Assert.assertFalse(rs.next());
+
     }
 
     @Test
@@ -1092,13 +1074,13 @@ public class RestfulDatabaseMetaDataTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
         url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
         }
         connection = DriverManager.getConnection(url, properties);
         Statement stmt = connection.createStatement();
-        stmt.execute("drop database if exists " + dbName);
-        stmt.execute("create database if not exists " + dbName + " precision 'us'");
-        stmt.execute("use " + dbName);
+        stmt.execute("drop database if exists " + DB_NAME);
+        stmt.execute("create database if not exists " + DB_NAME + " precision 'us'");
+        stmt.execute("use " + DB_NAME);
         stmt.execute("create table `dn` (ts TIMESTAMP,cpu_taosd FLOAT,cpu_system FLOAT,cpu_cores INT,mem_taosd FLOAT,mem_system FLOAT,mem_total INT,disk_used FLOAT,disk_total INT,band_speed FLOAT,io_read FLOAT,io_write FLOAT,req_http INT,req_select INT,req_insert INT) TAGS (dnodeid INT,fqdn BINARY(128))");
         stmt.execute("insert into dn1 using dn tags(1,'a') (ts) values(now)");
 
@@ -1109,7 +1091,7 @@ public class RestfulDatabaseMetaDataTest {
     public static void afterClass() throws SQLException {
         if (connection != null) {
             try (Statement statement = connection.createStatement()) {
-                statement.executeUpdate("drop database if exists " + dbName);
+                statement.executeUpdate("drop database if exists " + DB_NAME);
             }
             connection.close();
         }

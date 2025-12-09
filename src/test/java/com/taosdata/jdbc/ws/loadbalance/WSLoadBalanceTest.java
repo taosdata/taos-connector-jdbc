@@ -19,10 +19,10 @@ import java.util.Properties;
 @RunWith(CatalogRunner.class)
 @FixMethodOrder
 public class WSLoadBalanceTest {
-    private static final String host = "127.0.0.1";
-    private static final int portA = 6041;
-    private static final String db_name = TestUtils.camelToSnake(WSLoadBalanceTest.class);
-    private static final String tableName = "meters";
+    private static final String HOST = "127.0.0.1";
+    private static final int PORT_A = 6041;
+    private static final String DB_NAME = TestUtils.camelToSnake(WSLoadBalanceTest.class);
+    private static final String TABLE_NAME = "meters";
     static  private Connection connection;
     @Description("query")
     @Test
@@ -36,7 +36,7 @@ public class WSLoadBalanceTest {
         Properties properties = new Properties();
         String url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + host + ":" + mockB.getListenPort() + "," + host + ":" + mockC.getListenPort() + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST + ":" + mockB.getListenPort() + "," + HOST + ":" + mockC.getListenPort() + "/?user=root&password=taosdata";
         } else {
             url += "?user=root&password=taosdata";
         }
@@ -54,7 +54,7 @@ public class WSLoadBalanceTest {
                     if (i == 2){
                         mockB.stop();
                     }
-                    resultSet = statement.executeQuery("select ts from " + db_name + "." + tableName + " limit 1;");
+                    resultSet = statement.executeQuery("select ts from " + DB_NAME + "." + TABLE_NAME + " limit 1;");
 
                 }catch (SQLException e){
                     if (e.getErrorCode() == TSDBErrorNumbers.ERROR_RESULTSET_CLOSED){
@@ -95,7 +95,7 @@ public class WSLoadBalanceTest {
         Properties properties = new Properties();
         String url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + host + ":" + mockB.getListenPort() + "," + host + ":" + mockC.getListenPort() + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST + ":" + mockB.getListenPort() + "," + HOST + ":" + mockC.getListenPort() + "/?user=root&password=taosdata";
         } else {
             url += "?user=root&password=taosdata";
         }
@@ -106,7 +106,7 @@ public class WSLoadBalanceTest {
 
         try (Connection connection = DriverManager.getConnection(url, properties);
              Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery("select ts from " + db_name + "." + tableName + " limit 1;")) {
+             ResultSet resultSet = statement.executeQuery("select ts from " + DB_NAME + "." + TABLE_NAME + " limit 1;")) {
              resultSet.next();
              System.out.println(resultSet.getLong(1));
         }
@@ -128,7 +128,7 @@ public class WSLoadBalanceTest {
         Properties properties = new Properties();
         String url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + host + ":" + mockB.getListenPort() + "," + host + ":" + mockC.getListenPort() + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST + ":" + mockB.getListenPort() + "," + HOST + ":" + mockC.getListenPort() + "/?user=root&password=taosdata";
         } else {
             url += "?user=root&password=taosdata";
         }
@@ -139,7 +139,7 @@ public class WSLoadBalanceTest {
 
         try (Connection connection = DriverManager.getConnection(url, properties);
              Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery("select ts from " + db_name + "." + tableName + " limit 1;")) {
+             ResultSet resultSet = statement.executeQuery("select ts from " + DB_NAME + "." + TABLE_NAME + " limit 1;")) {
             resultSet.next();
             System.out.println(resultSet.getLong(1));
         }
@@ -174,7 +174,7 @@ public class WSLoadBalanceTest {
         String url;
         url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + host + ":" + portA + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST + ":" + PORT_A + "/?user=root&password=taosdata";
         } else {
             url += "?user=root&password=taosdata";
         }
@@ -182,11 +182,11 @@ public class WSLoadBalanceTest {
 
         connection = DriverManager.getConnection(url, properties);
         Statement statement = connection.createStatement();
-        statement.execute("drop database if exists " + db_name);
-        statement.execute("create database " + db_name);
-        statement.execute("use " + db_name);
-        statement.execute("create table if not exists " + db_name + "." + tableName + "(ts timestamp, f int)");
-        statement.execute("insert into " + db_name + "." + tableName + " values (now, 1)");
+        statement.execute("drop database if exists " + DB_NAME);
+        statement.execute("create database " + DB_NAME);
+        statement.execute("use " + DB_NAME);
+        statement.execute("create table if not exists " + DB_NAME + "." + TABLE_NAME + "(ts timestamp, f int)");
+        statement.execute("insert into " + DB_NAME + "." + TABLE_NAME + " values (now, 1)");
         statement.close();
     }
 
@@ -194,7 +194,7 @@ public class WSLoadBalanceTest {
     static public void after() throws SQLException {
         if (null != connection) {
             Statement statement = connection.createStatement();
-            statement.execute("drop database if exists " + db_name);
+            statement.execute("drop database if exists " + DB_NAME);
             statement.close();
             connection.close();
         }

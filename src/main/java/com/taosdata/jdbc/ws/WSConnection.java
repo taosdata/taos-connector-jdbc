@@ -7,7 +7,7 @@ import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
-import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.utils.StmtUtils;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.ws.entity.*;

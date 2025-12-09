@@ -11,20 +11,20 @@ import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 
 public class WebSocketDriverTest {
-    private static final String host = "127.0.0.1";
+    private static final String HOST = "127.0.0.1";
 
     @Test
     public void acceptsURL() throws SQLException {
         Driver driver = new WebSocketDriver();
         String url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + host + ":6041";
+            url = "jdbc:TAOS-WS://" + HOST + ":6041";
         }
         boolean isAccept = driver.acceptsURL(url);
         Assert.assertTrue(isAccept);
         String specifyHost = SpecifyAddress.getInstance().getHost();
         if (specifyHost == null) {
-            url = "jdbc:TAOS://" + host + ":6041";
+            url = "jdbc:TAOS://" + HOST + ":6041";
         } else {
             url = "jdbc:TAOS://" + specifyHost + ":6041";
         }
@@ -41,16 +41,19 @@ public class WebSocketDriverTest {
     }
 
     @Test
+    @SuppressWarnings("java:S1874")
     public void getMajorVersion() {
         Assert.assertEquals(3, new RestfulDriver().getMajorVersion());
     }
 
     @Test
+    @SuppressWarnings("java:S1874")
     public void getMinorVersion() {
         Assert.assertEquals(0, new RestfulDriver().getMinorVersion());
     }
 
     @Test
+    @SuppressWarnings("java:S1874")
     public void jdbcCompliant() {
         Assert.assertFalse(new RestfulDriver().jdbcCompliant());
     }

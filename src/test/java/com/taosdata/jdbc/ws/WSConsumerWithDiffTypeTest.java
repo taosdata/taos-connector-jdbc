@@ -21,15 +21,15 @@ import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
 public class WSConsumerWithDiffTypeTest {
-    private static final String host = "127.0.0.1";
-    private static final String dbName = TestUtils.camelToSnake(WSConsumerWithDiffTypeTest.class);
-    private static final String superTable = "tmq_type";
+    private static final String HOST = "127.0.0.1";
+    private static final String DB_NAME = TestUtils.camelToSnake(WSConsumerWithDiffTypeTest.class);
+    private static final String SUPER_TABLE = "tmq_type";
     private static Connection connection;
     private static Statement statement;
-    private static String[] topics = {"topic_" + dbName};
-    private static byte[] expectedBinary = new byte[]{0x39, 0x38, 0x66, 0x34, 0x36, 0x33};
+    private static final String[] topics = {"topic_" + DB_NAME};
+    private static final byte[] expectedBinary = new byte[]{0x39, 0x38, 0x66, 0x34, 0x36, 0x33};
     private void insertOneRow() throws SQLException {
-        statement.executeUpdate("insert into " + dbName + ".ct0 values(now, 1, 100, 2.2, 2.3, '1', 12, 2, true, '一', 'POINT(1 1)', '\\x0101', 1.2234, now, 255, 65535, 4294967295, 18446744073709551615, -12345678901234567890123.4567890000, 12345678.901234, '\\x393866343633')");
+        statement.executeUpdate("insert into " + DB_NAME + ".ct0 values(now, 1, 100, 2.2, 2.3, '1', 12, 2, true, '一', 'POINT(1 1)', '\\x0101', 1.2234, now, 255, 65535, 4294967295, 18446744073709551615, -12345678901234567890123.4567890000, 12345678.901234, '\\x393866343633')");
     }
     @Test
     public void testWSBeanObject() throws Exception {
@@ -38,7 +38,7 @@ public class WSConsumerWithDiffTypeTest {
         String topic = topics[0];
         // create topic
         statement.executeUpdate("create topic if not exists " + topic +
-                " as select ts, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, c18, c19, c20, t1 from " + dbName + ".ct0");
+                " as select ts, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, c18, c19, c20, t1 from " + DB_NAME + ".ct0");
 
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.CONNECT_USER, "root");
@@ -58,19 +58,19 @@ public class WSConsumerWithDiffTypeTest {
                 for (ConsumerRecord<Bean> r : consumerRecords) {
                     Bean bean = r.value();
                     Assert.assertEquals(1.0, bean.getC1(), 0.000001);
-                    Assert.assertEquals(100L, bean.getC2());
+                    Assert.assertEquals(100L, bean.getC2().longValue());
                     Assert.assertEquals(2.2, bean.getC3(), 0.000001);
                     Assert.assertEquals(2.3, bean.getC4(), 0.000001);
                     Assert.assertArrayEquals("1".getBytes(), bean.getC5());
-                    Assert.assertEquals(12, bean.getC6());
-                    Assert.assertEquals(2, bean.getC7());
+                    Assert.assertEquals(12, bean.getC6().shortValue());
+                    Assert.assertEquals(2, bean.getC7().byteValue());
                     Assert.assertTrue(bean.isC8());
                     Assert.assertEquals("一", bean.getC9());
                     Assert.assertEquals(1.2234, bean.getC12().doubleValue(), 0.000001);
 
-                    Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_BYTE, bean.getC14());
-                    Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_SHORT, bean.getC15());
-                    Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_INT, bean.getC16());
+                    Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_BYTE, bean.getC14().shortValue());
+                    Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_SHORT, bean.getC15().intValue());
+                    Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_INT, bean.getC16().longValue());
                     Assert.assertEquals(new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG), bean.getC17());
 
                     Assert.assertEquals(new BigDecimal("-12345678901234567890123.4567890000"), bean.getC18());
@@ -92,7 +92,7 @@ public class WSConsumerWithDiffTypeTest {
         String topic = topics[0];
         // create topic
         statement.executeUpdate("create topic if not exists " + topic +
-                " as select ts, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, c18, c19, c20, t1 from " + dbName + ".ct0");
+                " as select ts, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, c18, c19, c20, t1 from " + DB_NAME + ".ct0");
 
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.CONNECT_USER, "root");
@@ -147,7 +147,7 @@ public class WSConsumerWithDiffTypeTest {
 
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
@@ -157,14 +157,14 @@ public class WSConsumerWithDiffTypeTest {
         statement = connection.createStatement();
 
         statement.executeUpdate("drop topic if exists " + topics[0]);
-        statement.execute("drop database if exists " + dbName);
-        statement.execute("create database if not exists " + dbName + " WAL_RETENTION_PERIOD 3650");
-        statement.execute("use " + dbName);
-        statement.execute("create stable if not exists " + superTable
+        statement.execute("drop database if exists " + DB_NAME);
+        statement.execute("create database if not exists " + DB_NAME + " WAL_RETENTION_PERIOD 3650");
+        statement.execute("use " + DB_NAME);
+        statement.execute("create stable if not exists " + SUPER_TABLE
                 + " (ts timestamp, c1 int, c2 bigint, c3 float, c4 double, c5 binary(10), c6 SMALLINT, c7 TINYINT, " +
                 "c8 BOOL, c9 nchar(100), c10 GEOMETRY(100), c11 VARBINARY(100), c12 double, c13 timestamp, " +
                 "c14 tinyint unsigned, c15 smallint unsigned, c16 int unsigned, c17 bigint unsigned, c18 decimal(38, 10), c19 decimal(18, 6), c20 blob) tags(t1 int)");
-        statement.execute("create table if not exists ct0 using " + superTable + " tags(1000)");
+        statement.execute("create table if not exists ct0 using " + SUPER_TABLE + " tags(1000)");
     }
 
     @AfterClass
@@ -175,7 +175,7 @@ public class WSConsumerWithDiffTypeTest {
                     for (String topic : topics) {
                         TimeUnit.SECONDS.sleep(3);
                         statement.executeUpdate("drop topic " + topic);
-                        statement.executeUpdate("drop database if exists " + dbName);
+                        statement.executeUpdate("drop database if exists " + DB_NAME);
                     }
                     statement.close();
                 }

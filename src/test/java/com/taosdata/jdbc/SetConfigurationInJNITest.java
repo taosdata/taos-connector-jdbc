@@ -1,6 +1,7 @@
 package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.sql.Connection;
@@ -12,8 +13,8 @@ import java.util.Properties;
 
 public class SetConfigurationInJNITest {
 
-    private String host = "127.0.0.1";
-    private String dbname = "test_set_config";
+    private final String host = "127.0.0.1";
+    private final String dbname = "test_set_config";
 
     @Test
     public void setConfigInUrl() {
@@ -26,6 +27,7 @@ public class SetConfigurationInJNITest {
             }
             Connection conn = DriverManager.getConnection(url);
             Statement stmt = conn.createStatement();
+            Assert.assertNotNull(stmt);
 
             stmt.execute("drop database if exists " + dbname);
             stmt.execute("create database if not exists " + dbname);
@@ -51,8 +53,8 @@ public class SetConfigurationInJNITest {
                 url = "jdbc:TAOS://" + host + ":0/?user=root&password=taosdata";
             }
             Connection conn = DriverManager.getConnection(url, props);
-
             Statement stmt = conn.createStatement();
+            Assert.assertNotNull(stmt);
             stmt.execute("drop database if exists " + dbname);
             stmt.execute("create database if not exists " + dbname);
             stmt.execute("use " + dbname);
@@ -80,8 +82,8 @@ public class SetConfigurationInJNITest {
                 url = "jdbc:TAOS://" + host + ":0/?user=root&password=taosdata";
             }
             Connection conn = DriverManager.getConnection(url, props);
-
             Statement stmt = conn.createStatement();
+            Assert.assertNotNull(stmt);
             stmt.execute("drop database if exists " + dbname);
             stmt.execute("create database if not exists " + dbname);
             stmt.execute("use " + dbname);
@@ -109,8 +111,8 @@ public class SetConfigurationInJNITest {
                 url = "jdbc:TAOS://" + host + ":0/?user=root&password=taosdata";
             }
             Connection conn = DriverManager.getConnection(url, props);
-
             Statement stmt = conn.createStatement();
+            Assert.assertNotNull(stmt);
             stmt.execute("drop database if exists " + dbname);
             stmt.execute("create database if not exists " + dbname);
             stmt.execute("use " + dbname);
@@ -138,8 +140,8 @@ public class SetConfigurationInJNITest {
                 url = "jdbc:TAOS://" + host + ":0/?user=root&password=taosdata";
             }
             Connection conn = DriverManager.getConnection(url, props);
-
             Statement stmt = conn.createStatement();
+            Assert.assertNotNull(stmt);
             stmt.execute("drop database if exists " + dbname);
             stmt.execute("create database if not exists " + dbname);
             stmt.execute("use " + dbname);
@@ -167,8 +169,8 @@ public class SetConfigurationInJNITest {
                 url = "jdbc:TAOS://" + host + ":0/?user=root&password=taosdata";
             }
             Connection conn = DriverManager.getConnection(url, props);
-
             Statement stmt = conn.createStatement();
+            Assert.assertNotNull(stmt);
             stmt.execute("drop database if exists " + dbname);
             stmt.execute("create database if not exists " + dbname);
             stmt.execute("use " + dbname);
@@ -196,8 +198,8 @@ public class SetConfigurationInJNITest {
                 url = "jdbc:TAOS://" + host + ":0/?user=root&password=taosdata";
             }
             Connection conn = DriverManager.getConnection(url, props);
-
             Statement stmt = conn.createStatement();
+            Assert.assertNotNull(stmt);
             stmt.execute("drop database if exists " + dbname);
             stmt.execute("create database if not exists " + dbname);
             stmt.execute("use " + dbname);
@@ -225,8 +227,8 @@ public class SetConfigurationInJNITest {
                 url = "jdbc:TAOS://" + host + ":0/?user=root&password=taosdata";
             }
             Connection conn = DriverManager.getConnection(url, props);
-
             Statement stmt = conn.createStatement();
+            Assert.assertNotNull(stmt);
             stmt.execute("drop database if exists " + dbname);
             stmt.execute("create database if not exists " + dbname);
             stmt.execute("use " + dbname);
@@ -256,8 +258,8 @@ public class SetConfigurationInJNITest {
                 url = "jdbc:TAOS://" + host + ":0/?user=root&password=taosdata";
             }
             Connection conn = DriverManager.getConnection(url, props);
-
             Statement stmt = conn.createStatement();
+            Assert.assertNotNull(stmt);
             stmt.execute("drop database if exists " + dbname);
             stmt.execute("create database if not exists " + dbname);
             stmt.execute("use " + dbname);
@@ -285,7 +287,7 @@ public class SetConfigurationInJNITest {
             }
             Connection conn = DriverManager.getConnection(url);
             Statement stmt = conn.createStatement();
-
+            Assert.assertNotNull(stmt);
             stmt.execute("drop database if exists " + dbname);
             stmt.execute("create database if not exists " + dbname);
             stmt.execute("use " + dbname);

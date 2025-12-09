@@ -13,15 +13,15 @@ import java.util.Properties;
 import static com.taosdata.jdbc.TSDBConstants.*;
 
 public class WsPStmtAllTypeNullTest {
-    String host = "127.0.0.1";
-    String db_name = TestUtils.camelToSnake(WsPStmtAllTypeNullTest.class);
-    String tableName = "wpt";
-    String stableName = "swpt";
+    final String host = "127.0.0.1";
+    final String dbName = TestUtils.camelToSnake(WsPStmtAllTypeNullTest.class);
+    final String tableName = "wpt";
+    final String stableName = "swpt";
     Connection connection;
 
     @Test
     public void testExecuteUpdate() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "insert into " + dbName + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         PreparedStatement statement = connection.prepareStatement(sql);
         long current = System.currentTimeMillis();
         statement.setTimestamp(1, new Timestamp(current));
@@ -40,7 +40,7 @@ public class WsPStmtAllTypeNullTest {
         statement.setNull(13, Types.VARBINARY);
         statement.executeUpdate();
 
-        ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + tableName);
+        ResultSet resultSet = statement.executeQuery("select * from " + dbName + "." + tableName);
         resultSet.next();
         Assert.assertEquals(resultSet.getTimestamp(1), new Timestamp(current));
 
@@ -78,7 +78,7 @@ public class WsPStmtAllTypeNullTest {
 
     @Test
     public void testExecuteUpdate2() throws SQLException {
-        String sql = "insert into stb_1 using " + db_name + "." + stableName + " tags (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) values (?, ?)";
+        String sql = "insert into stb_1 using " + dbName + "." + stableName + " tags (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) values (?, ?)";
         TSWSPreparedStatement statement = connection.prepareStatement(sql).unwrap(TSWSPreparedStatement.class);
         long current = System.currentTimeMillis();
 
@@ -110,7 +110,7 @@ public class WsPStmtAllTypeNullTest {
         statement.columnDataAddBatch();
         statement.columnDataExecuteBatch();
 
-        ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + stableName);
+        ResultSet resultSet = statement.executeQuery("select * from " + dbName + "." + stableName);
         resultSet.next();
 
 
@@ -179,14 +179,14 @@ public class WsPStmtAllTypeNullTest {
         Properties properties = new Properties();
         connection = DriverManager.getConnection(url, properties);
         Statement statement = connection.createStatement();
-        statement.execute("drop database if exists " + db_name);
-        statement.execute("create database " + db_name + " keep 36500");
-        statement.execute("use " + db_name);
-        statement.execute("create table if not exists " + db_name + "." + tableName +
+        statement.execute("drop database if exists " + dbName);
+        statement.execute("create database " + dbName + " keep 36500");
+        statement.execute("use " + dbName);
+        statement.execute("create table if not exists " + dbName + "." + tableName +
                 "(ts timestamp, c1 tinyint, c2 smallint, c3 int, c4 bigint, " +
                 "c5 float, c6 double, c7 bool, c8 binary(10), c9 nchar(10), c10 varchar(20), c11 varbinary(100), c12 geometry(100))");
 
-        statement.execute("create stable if not exists " + db_name + "." + stableName +
+        statement.execute("create stable if not exists " + dbName + "." + stableName +
                 "(ts timestamp, c1 tinyint) tags (t1 timestamp, t2 tinyint, t3 smallint, t4 int, t5 bigint, " +
                 "t6 float, t7 double, t8 bool, t9 binary(10), t10 nchar(10), t11 varchar(20), t12 varbinary(100), t13 geometry(100)," +
                 " t14 tinyint unsigned, t15 smallint unsigned, t16 int unsigned, t17 bigint unsigned)");
@@ -197,7 +197,7 @@ public class WsPStmtAllTypeNullTest {
     @After
     public void after() throws SQLException {
         try (Statement statement = connection.createStatement()){
-            statement.execute("drop database if exists " + db_name);
+            statement.execute("drop database if exists " + dbName);
         }
         connection.close();
     }

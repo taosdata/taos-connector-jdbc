@@ -3,7 +3,6 @@ import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.utils.Utils;
 import io.netty.buffer.*;
-import io.netty.util.ReferenceCountUtil;
 
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;

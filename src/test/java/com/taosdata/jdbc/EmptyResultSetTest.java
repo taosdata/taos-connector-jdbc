@@ -1,16 +1,15 @@
 package com.taosdata.jdbc;
 
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
-import java.net.URL;
 import java.sql.*;
 import java.util.Calendar;
 import java.util.HashMap;
-import java.util.Map;
 
 import static org.junit.Assert.*;
 
@@ -205,11 +204,13 @@ public class EmptyResultSetTest {
     @Test
     public void testBeforeFirst() throws SQLException {
         emptyResultSet.beforeFirst();
+        Assert.assertNotNull(emptyResultSet);
     }
 
     @Test
     public void testAfterLast() throws SQLException {
         emptyResultSet.afterLast();
+        Assert.assertNotNull(emptyResultSet);
     }
 
     @Test
@@ -245,6 +246,7 @@ public class EmptyResultSetTest {
     @Test
     public void testSetFetchDirection() throws SQLException {
          emptyResultSet.setFetchDirection(ResultSet.FETCH_FORWARD);
+        Assert.assertEquals(ResultSet.FETCH_FORWARD, emptyResultSet.getFetchDirection());
     }
 
     @Test
@@ -252,7 +254,7 @@ public class EmptyResultSetTest {
         assertEquals(ResultSet.FETCH_FORWARD, emptyResultSet.getFetchDirection());
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testSetFetchSize() throws SQLException {
         emptyResultSet.setFetchSize(10);
     }
@@ -287,77 +289,77 @@ public class EmptyResultSetTest {
         assertFalse(emptyResultSet.rowDeleted());
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateNull() throws SQLException {
         emptyResultSet.updateNull(1);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateBoolean() throws SQLException {
         emptyResultSet.updateBoolean(1, true);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateByte() throws SQLException {
         emptyResultSet.updateByte(1, (byte) 1);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateShort() throws SQLException {
         emptyResultSet.updateShort(1, (short) 1);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateInt() throws SQLException {
         emptyResultSet.updateInt(1, 1);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateLong() throws SQLException {
         emptyResultSet.updateLong(1, 1L);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateFloatByColumnIndex() throws SQLException {
         emptyResultSet.updateFloat(1, 1.0f);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateDoubleByColumnIndex() throws SQLException {
         emptyResultSet.updateDouble(1, 1.0);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateBigDecimalByColumnIndex() throws SQLException {
         emptyResultSet.updateBigDecimal(1, new BigDecimal("1.0"));
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateStringByColumnIndex() throws SQLException {
         emptyResultSet.updateString(1, "test");
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateBytesByColumnIndex() throws SQLException {
         emptyResultSet.updateBytes(1, new byte[]{1, 2, 3});
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateDateByColumnIndex() throws SQLException {
         emptyResultSet.updateDate(1, new Date(System.currentTimeMillis()));
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateTimeByColumnIndex() throws SQLException {
         emptyResultSet.updateTime(1, new Time(System.currentTimeMillis()));
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateTimestampByColumnIndex() throws SQLException {
         emptyResultSet.updateTimestamp(1, new Timestamp(System.currentTimeMillis()));
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateAsciiStreamByColumnIndex() throws SQLException {
         emptyResultSet.updateAsciiStream(1, new InputStream() {
             @Override
@@ -365,7 +367,7 @@ public class EmptyResultSetTest {
         }, 0);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateBinaryStreamByColumnIndex() throws SQLException {
         emptyResultSet.updateBinaryStream(1, new InputStream() {
             @Override
@@ -373,97 +375,99 @@ public class EmptyResultSetTest {
         }, 0);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateCharacterStreamByColumnIndex() throws SQLException {
         emptyResultSet.updateCharacterStream(1, new Reader() {
             @Override
             public int read(char[] cbuf, int off, int len) { return -1; }
             @Override
-            public void close() {}
+            public void close() {
+                // do nothing
+            }
         }, 0);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateObjectByColumnIndexWithScale() throws SQLException {
         emptyResultSet.updateObject(1, new Object(), 1);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateObjectByColumnIndex() throws SQLException {
         emptyResultSet.updateObject(1, new Object());
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateNullByColumnLabel() throws SQLException {
         emptyResultSet.updateNull("column");
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateBooleanByColumnLabel() throws SQLException {
         emptyResultSet.updateBoolean("column", true);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateByteByColumnLabel() throws SQLException {
         emptyResultSet.updateByte("column", (byte)1);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateShortByColumnLabel() throws SQLException {
         emptyResultSet.updateShort("column", (short)1);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateIntByColumnLabel() throws SQLException {
         emptyResultSet.updateInt("column", 1);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateLongByColumnLabel() throws SQLException {
         emptyResultSet.updateLong("column", 1L);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateFloatByColumnLabel() throws SQLException {
         emptyResultSet.updateFloat("column", 1.0f);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateDoubleByColumnLabel() throws SQLException {
         emptyResultSet.updateDouble("column", 1.0);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateBigDecimalByColumnLabel() throws SQLException {
         emptyResultSet.updateBigDecimal("column", new BigDecimal("1.0"));
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateStringByColumnLabel() throws SQLException {
         emptyResultSet.updateString("column", "test");
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateBytesByColumnLabel() throws SQLException {
         emptyResultSet.updateBytes("column", new byte[]{1, 2, 3});
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateDateByColumnLabel() throws SQLException {
         emptyResultSet.updateDate("column", new Date(System.currentTimeMillis()));
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateTimeByColumnLabel() throws SQLException {
         emptyResultSet.updateTime("column", new Time(System.currentTimeMillis()));
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateTimestampByColumnLabel() throws SQLException {
         emptyResultSet.updateTimestamp("column", new Timestamp(System.currentTimeMillis()));
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateAsciiStreamByColumnLabel() throws SQLException {
         emptyResultSet.updateAsciiStream("column", new InputStream() {
             @Override
@@ -471,7 +475,7 @@ public class EmptyResultSetTest {
         }, 0);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateBinaryStreamByColumnLabel() throws SQLException {
         emptyResultSet.updateBinaryStream("column", new InputStream() {
             @Override
@@ -479,57 +483,59 @@ public class EmptyResultSetTest {
         }, 0);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateCharacterStreamByColumnLabel() throws SQLException {
         emptyResultSet.updateCharacterStream("column", new Reader() {
             @Override
             public int read(char[] cbuf, int off, int len) { return -1; }
             @Override
-            public void close() {}
+            public void close() {
+                // do nothing
+            }
         }, 0);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateObjectByColumnLabelWithScale() throws SQLException {
         emptyResultSet.updateObject("column", new Object(), 1);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateObjectByColumnLabel() throws SQLException {
         emptyResultSet.updateObject("column", new Object());
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testInsertRow() throws SQLException {
         emptyResultSet.insertRow();
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateRow() throws SQLException {
         emptyResultSet.updateRow();
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testDeleteRow() throws SQLException {
         emptyResultSet.deleteRow();
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testRefreshRow() throws SQLException {
         emptyResultSet.refreshRow();
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testCancelRowUpdates() throws SQLException {
         emptyResultSet.cancelRowUpdates();
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testMoveToInsertRow() throws SQLException {
         emptyResultSet.moveToInsertRow();
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testMoveToCurrentRow() throws SQLException {
         emptyResultSet.moveToCurrentRow();
     }
@@ -623,42 +629,42 @@ public class EmptyResultSetTest {
         assertNull(emptyResultSet.getURL("column"));
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateRefByColumnIndex() throws SQLException {
         emptyResultSet.updateRef(1, null);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateRefByColumnLabel() throws SQLException {
         emptyResultSet.updateRef("column", null);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateBlobByColumnIndex() throws SQLException {
         emptyResultSet.updateBlob(1, (Blob) null);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateBlobByColumnLabel() throws SQLException {
         emptyResultSet.updateBlob("column", (Blob) null);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateClobByColumnIndex() throws SQLException {
         emptyResultSet.updateClob(1, (Clob) null);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateClobByColumnLabel() throws SQLException {
         emptyResultSet.updateClob("column", (Clob) null);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateArrayByColumnIndex() throws SQLException {
         emptyResultSet.updateArray(1, (Array) null);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateArrayByColumnLabel() throws SQLException {
         emptyResultSet.updateArray("column", (Array) null);
     }
@@ -673,32 +679,32 @@ public class EmptyResultSetTest {
         assertNull(emptyResultSet.getRowId("column"));
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateRowIdByColumnIndex() throws SQLException {
         emptyResultSet.updateRowId(1, null);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateRowIdByColumnLabel() throws SQLException {
         emptyResultSet.updateRowId("column", null);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateNStringByColumnIndex() throws SQLException {
         emptyResultSet.updateNString(1, "test");
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateNStringByColumnLabel() throws SQLException {
         emptyResultSet.updateNString("column", "test");
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateNClobByColumnIndex() throws SQLException {
         emptyResultSet.updateNClob(1, (NClob) null);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateNClobByColumnLabel() throws SQLException {
         emptyResultSet.updateNClob("column", (NClob) null);
     }
@@ -723,12 +729,12 @@ public class EmptyResultSetTest {
         assertNull(emptyResultSet.getSQLXML("column"));
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateSQLXMLByColumnIndex() throws SQLException {
         emptyResultSet.updateSQLXML(1, null);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateSQLXMLByColumnLabel() throws SQLException {
         emptyResultSet.updateSQLXML("column", null);
     }
@@ -752,27 +758,31 @@ public class EmptyResultSetTest {
         assertNull(emptyResultSet.getNCharacterStream("column"));
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateNCharacterStreamByColumnIndexWithLength() throws SQLException {
         emptyResultSet.updateNCharacterStream(1, new Reader() {
             @Override
             public int read(char[] cbuf, int off, int len) { return -1; }
             @Override
-            public void close() {}
+            public void close() {
+                // do nothing
+            }
         }, 0L);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateNCharacterStreamByColumnLabelWithLength() throws SQLException {
         emptyResultSet.updateNCharacterStream("column", new Reader() {
             @Override
             public int read(char[] cbuf, int off, int len) { return -1; }
             @Override
-            public void close() {}
+            public void close() {
+                // do nothing
+            }
         }, 0L);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateAsciiStreamByColumnIndexWithLength() throws SQLException {
         emptyResultSet.updateAsciiStream(1, new InputStream() {
             @Override
@@ -780,7 +790,7 @@ public class EmptyResultSetTest {
         }, 0L);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateBinaryStreamByColumnIndexWithLength() throws SQLException {
         emptyResultSet.updateBinaryStream(1, new InputStream() {
             @Override
@@ -788,17 +798,19 @@ public class EmptyResultSetTest {
         }, 0L);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateCharacterStreamByColumnIndexWithLength() throws SQLException {
         emptyResultSet.updateCharacterStream(1, new Reader() {
             @Override
             public int read(char[] cbuf, int off, int len) { return -1; }
             @Override
-            public void close() {}
+            public void close() {
+                // do nothing
+            }
         }, 0L);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateAsciiStreamByColumnLabelWithLength() throws SQLException {
         emptyResultSet.updateAsciiStream("column", new InputStream() {
             @Override
@@ -806,7 +818,7 @@ public class EmptyResultSetTest {
         }, 0L);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateBinaryStreamByColumnLabelWithLength() throws SQLException {
         emptyResultSet.updateBinaryStream("column", new InputStream() {
             @Override
@@ -814,68 +826,74 @@ public class EmptyResultSetTest {
         }, 0L);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateCharacterStreamByColumnLabelWithLength() throws SQLException {
         emptyResultSet.updateCharacterStream("column", new Reader() {
             @Override
             public int read(char[] cbuf, int off, int len) { return -1; }
             @Override
-            public void close() {}
+            public void close() {
+                // do nothing
+            }
         }, 0L);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateBlobByColumnIndexWithInputStreamAndLength() throws SQLException {
         emptyResultSet.updateBlob(1, null, 0L);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateBlobByColumnLabelWithInputStreamAndLength() throws SQLException {
         emptyResultSet.updateBlob("column", null, 0L);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateClobByColumnIndexWithReaderAndLength() throws SQLException {
         emptyResultSet.updateClob(1, null, 0L);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateClobByColumnLabelWithReaderAndLength() throws SQLException {
         emptyResultSet.updateClob("column", null, 0L);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateNClobByColumnIndexWithReaderAndLength() throws SQLException {
         emptyResultSet.updateNClob(1, null, 0L);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateNClobByColumnLabelWithReaderAndLength() throws SQLException {
         emptyResultSet.updateNClob("column", null, 0L);
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateNCharacterStreamByColumnIndex() throws SQLException {
         emptyResultSet.updateNCharacterStream(1, new Reader() {
             @Override
             public int read(char[] cbuf, int off, int len) { return -1; }
             @Override
-            public void close() {}
+            public void close() {
+                // do nothing
+            }
         });
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateNCharacterStreamByColumnLabel() throws SQLException {
         emptyResultSet.updateNCharacterStream("column", new Reader() {
             @Override
             public int read(char[] cbuf, int off, int len) { return -1; }
             @Override
-            public void close() {}
+            public void close() {
+                // do nothing
+            }
         });
     }
 
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateBlobByColumnIndexWithInputStream() throws SQLException {
         emptyResultSet.updateBlob(1, new InputStream() {
             @Override
@@ -883,7 +901,7 @@ public class EmptyResultSetTest {
         });
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateBlobByColumnLabelWithInputStream() throws SQLException {
         emptyResultSet.updateBlob("column", new InputStream() {
             @Override
@@ -891,43 +909,51 @@ public class EmptyResultSetTest {
         });
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateClobByColumnIndexWithReader() throws SQLException {
         emptyResultSet.updateClob(1, new Reader() {
             @Override
             public int read(char[] cbuf, int off, int len) { return -1; }
             @Override
-            public void close() {}
+            public void close() {
+                // do nothing
+            }
         });
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateClobByColumnLabelWithReader() throws SQLException {
         emptyResultSet.updateClob("column", new Reader() {
             @Override
             public int read(char[] cbuf, int off, int len) { return -1; }
             @Override
-            public void close() {}
+            public void close() {
+                // do nothing
+            }
         });
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateNClobByColumnIndexWithReader() throws SQLException {
         emptyResultSet.updateNClob(1, new Reader() {
             @Override
             public int read(char[] cbuf, int off, int len) { return -1; }
             @Override
-            public void close() {}
+            public void close() {
+                // do nothing
+            }
         });
     }
 
-    @Test
+    @Test(expected = SQLException.class)
     public void testUpdateNClobByColumnLabelWithReader() throws SQLException {
         emptyResultSet.updateNClob("column", new Reader() {
             @Override
             public int read(char[] cbuf, int off, int len) { return -1; }
             @Override
-            public void close() {}
+            public void close() {
+                // do nothing
+            }
         });
     }
 

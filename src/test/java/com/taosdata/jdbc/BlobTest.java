@@ -9,14 +9,14 @@ import java.sql.*;
 import java.util.Properties;
 
 public class BlobTest {
-    static String host = "127.0.0.1";
-    static String dbName = TestUtils.camelToSnake(BlobTest.class);;
-    static String tableNative = "blob_noraml";
+    static final String HOST = "127.0.0.1";
+    static final String DB_NAME = TestUtils.camelToSnake(BlobTest.class);
+    static final String TABLE_NATIVE = "blob_noraml";
     static Connection connection;
     static Statement statement;
 
-    static String testStr = "20160601";
-    static byte[] expectedArray = StringUtils.hexToBytes(testStr);
+    static final String TEST_STR = "20160601";
+    static final byte[] expectedArray = StringUtils.hexToBytes(TEST_STR);
 
     @BeforeClass
     public static void checkEnvironment() {
@@ -24,8 +24,8 @@ public class BlobTest {
     }
     @Test
     public void testInsert() throws Exception {
-        statement.executeUpdate("insert into subt_a using " + dbName + "." + tableNative + "  tags( \"123456abcdef\")  values(now, \"\\x" + testStr + "\")");
-        ResultSet resultSet = statement.executeQuery("select c1, t1 from " + dbName + "." + tableNative);
+        statement.executeUpdate("insert into subt_a using " + DB_NAME + "." + TABLE_NATIVE + "  tags( \"123456abcdef\")  values(now, \"\\x" + TEST_STR + "\")");
+        ResultSet resultSet = statement.executeQuery("select c1, t1 from " + DB_NAME + "." + TABLE_NATIVE);
         resultSet.next();
         Assert.assertArrayEquals(expectedArray, resultSet.getBytes(1));
         resultSet.close();
@@ -33,8 +33,8 @@ public class BlobTest {
 
     @Test
     public void testInsertNull() throws Exception {
-        statement.executeUpdate("insert into subt_a using " + dbName + "." + tableNative + "  tags( \"123456abcdef\")  values(now, NULL)");
-        ResultSet resultSet = statement.executeQuery("select c1, t1 from " + dbName + "." + tableNative);
+        statement.executeUpdate("insert into subt_a using " + DB_NAME + "." + TABLE_NATIVE + "  tags( \"123456abcdef\")  values(now, NULL)");
+        ResultSet resultSet = statement.executeQuery("select c1, t1 from " + DB_NAME + "." + TABLE_NATIVE);
         resultSet.next();
         Assert.assertArrayEquals(null, resultSet.getBytes(1));
         resultSet.close();
@@ -44,24 +44,24 @@ public class BlobTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
         connection = DriverManager.getConnection(url, properties);
         statement = connection.createStatement();
-        statement.executeUpdate("drop database if exists " + dbName);
-        statement.executeUpdate("create database if not exists " + dbName);
-        statement.executeUpdate("use " + dbName);
-        statement.executeUpdate("create table " + tableNative + " (ts timestamp, c1 blob)  tags(t1 varchar(20))");
+        statement.executeUpdate("drop database if exists " + DB_NAME);
+        statement.executeUpdate("create database if not exists " + DB_NAME);
+        statement.executeUpdate("use " + DB_NAME);
+        statement.executeUpdate("create table " + TABLE_NATIVE + " (ts timestamp, c1 blob)  tags(t1 varchar(20))");
     }
 
     @After
     public void after() {
         try {
             if (statement != null && !statement.isClosed()) {
-                statement.executeUpdate("drop database if exists " + dbName);
+                statement.executeUpdate("drop database if exists " + DB_NAME);
                 statement.close();
             }
             if (connection != null && !connection.isClosed()) {

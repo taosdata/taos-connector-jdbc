@@ -12,10 +12,10 @@ import java.util.Properties;
 @Ignore
 public class InvalidResultSetPointerTest {
 
-    private static final String host = "127.0.0.1";
-    private static final String dbName = TestUtils.camelToSnake(InvalidResultSetPointerTest.class);
-    private static final String stbName = "stb";
-    private static final String tbName = "tb";
+    private static final String HOST = "127.0.0.1";
+    private static final String DB_NAME = TestUtils.camelToSnake(InvalidResultSetPointerTest.class);
+    private static final String STB_NAME = "stb";
+    private static final String TB_NAME = "tb";
     private static Connection connection;
     private static final int numOfSTb = 30000;
     private static final int numOfTb = 3;
@@ -23,9 +23,9 @@ public class InvalidResultSetPointerTest {
 
     @Test
     public void test() throws SQLException {
-        execute("drop database if exists " + dbName);
-        execute("create database if not exists " + dbName);
-        execute("use " + dbName);
+        execute("drop database if exists " + DB_NAME);
+        execute("create database if not exists " + DB_NAME);
+        execute("use " + DB_NAME);
         createSTable();
         createTable();
         insert();
@@ -36,7 +36,7 @@ public class InvalidResultSetPointerTest {
     private void insert() {
         for (int i = 0; i < numOfSTb; i++) {
             for (int j = 0; j < numOfTb; j++) {
-                final String sql = "INSERT INTO " + dbName + "." + tbName + i + "_" + j + " (ts, temperature, humidity, name) values(now, 20.5, 34, \"" + i + "\")";
+                final String sql = "INSERT INTO " + DB_NAME + "." + TB_NAME + i + "_" + j + " (ts, temperature, humidity, name) values(now, 20.5, 34, \"" + i + "\")";
                 System.out.println(sql);
                 execute(sql);
             }
@@ -45,7 +45,7 @@ public class InvalidResultSetPointerTest {
 
     private void createSTable() {
         for (int i = 0; i < numOfSTb; i++) {
-            final String sql = "create table if not exists " + dbName + "." + stbName + i + " (ts timestamp, temperature float, humidity int, name BINARY(" + (i % 73 + 10) + ")) TAGS (tag1 INT)";
+            final String sql = "create table if not exists " + DB_NAME + "." + STB_NAME + i + " (ts timestamp, temperature float, humidity int, name BINARY(" + (i % 73 + 10) + ")) TAGS (tag1 INT)";
             execute(sql);
         }
     }
@@ -53,7 +53,7 @@ public class InvalidResultSetPointerTest {
     private void createTable() {
         for (int i = 0; i < numOfSTb; i++) {
             for (int j = 0; j < numOfTb; j++) {
-                final String sql = "create table if not exists " + dbName + "." + tbName + i + "_" + j + " USING " + stbName + i + " TAGS(" + j + ")";
+                final String sql = "create table if not exists " + DB_NAME + "." + TB_NAME + i + "_" + j + " USING " + STB_NAME + i + " TAGS(" + j + ")";
                 execute(sql);
             }
         }
@@ -94,8 +94,8 @@ public class InvalidResultSetPointerTest {
             last = instance[i].to + 1;
             instance[i].numOfTb = numOfTb;
             instance[i].connection = connection;
-            instance[i].dbName = dbName;
-            instance[i].tbName = tbName;
+            instance[i].dbName = DB_NAME;
+            instance[i].tbName = TB_NAME;
             instance[i].start();
         }
 
@@ -113,7 +113,7 @@ public class InvalidResultSetPointerTest {
         try {
             String url = SpecifyAddress.getInstance().getJniUrl();
             if (url == null) {
-                url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+                url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
             }
             Class.forName("com.taosdata.jdbc.TSDBDriver");
             Properties properties = new Properties();

@@ -12,7 +12,7 @@ import java.util.Properties;
 
 public class TimestampFormatTest {
     private static final String host = "127.0.0.1";
-    private long ts = Instant.now().toEpochMilli();
+    private final long ts = Instant.now().toEpochMilli();
     private Connection conn;
 
     @Test

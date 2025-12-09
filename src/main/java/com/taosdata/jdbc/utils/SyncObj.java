@@ -17,6 +17,7 @@ public class SyncObj {
         }
     }
 
+    @SuppressWarnings({"java:S2274","java:S899"})
     public void await() throws InterruptedException {
         lock.lock();
         try {

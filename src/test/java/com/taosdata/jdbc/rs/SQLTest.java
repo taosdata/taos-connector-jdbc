@@ -10,15 +10,15 @@ import java.sql.*;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class SQLTest {
 
-    private static final String host = "127.0.0.1";
+    private static final String HOST = "127.0.0.1";
     private static Connection connection;
 
-    private static String dbName = TestUtils.camelToSnake(SQLTest.class);
+    private static final String DB_NAME = TestUtils.camelToSnake(SQLTest.class);
 
     @Test
     public void testCase001() {
         // given
-        String sql = "create database if not exists " + dbName;
+        String sql = "create database if not exists " + DB_NAME;
 
         // when
         boolean execute = execute(connection, sql);
@@ -30,7 +30,7 @@ public class SQLTest {
     @Test
     public void testCase002() {
         // given
-        String sql = "use " + dbName;
+        String sql = "use " + DB_NAME;
 
         // when
         boolean execute = execute(connection, sql);
@@ -102,7 +102,7 @@ public class SQLTest {
     @Test
     public void testCase008() {
         // given
-        String sql = "drop table if exists " + dbName + ".weather";
+        String sql = "drop table if exists " + DB_NAME + ".weather";
 
         // when
         boolean execute = execute(connection, sql);
@@ -114,7 +114,7 @@ public class SQLTest {
     @Test
     public void testCase009() {
         // given
-        String sql = "create table if not exists " + dbName + ".weather(ts timestamp, temperature float) tags(location nchar(64))";
+        String sql = "create table if not exists " + DB_NAME + ".weather(ts timestamp, temperature float) tags(location nchar(64))";
 
         // when
         boolean execute = execute(connection, sql);
@@ -126,7 +126,7 @@ public class SQLTest {
     @Test
     public void testCase010() {
         // given
-        String sql = "create table t1 using " + dbName + ".weather tags('北京')";
+        String sql = "create table t1 using " + DB_NAME + ".weather tags('北京')";
 
         // when
         boolean execute = execute(connection, sql);
@@ -138,7 +138,7 @@ public class SQLTest {
     @Test
     public void testCase011() {
         // given
-        String sql = "insert into " + dbName + ".t1 values(now, 22.22)";
+        String sql = "insert into " + DB_NAME + ".t1 values(now, 22.22)";
 
         // when
         boolean execute = execute(connection, sql);
@@ -150,7 +150,7 @@ public class SQLTest {
     @Test
     public void testCase012() {
         // given
-        String sql = "insert into " + dbName + ".t1 values('2020-01-01 00:00:00.000', 22.22)";
+        String sql = "insert into " + DB_NAME + ".t1 values('2020-01-01 00:00:00.000', 22.22)";
 
         // when
         boolean execute = execute(connection, sql);
@@ -162,7 +162,7 @@ public class SQLTest {
     @Test
     public void testCase013() {
         // given
-        String sql = "insert into " + dbName + ".t1 values('2020-01-01 00:01:00.000', 22.22),('2020-01-01 00:02:00.000', 22.22)";
+        String sql = "insert into " + DB_NAME + ".t1 values('2020-01-01 00:01:00.000', 22.22),('2020-01-01 00:02:00.000', 22.22)";
 
         // when
         boolean execute = execute(connection, sql);
@@ -174,7 +174,7 @@ public class SQLTest {
     @Test
     public void testCase014() {
         // given
-        String sql = "insert into " + dbName + ".t2 using weather tags('上海') values('2020-01-01 00:03:00.000', 22.22)";
+        String sql = "insert into " + DB_NAME + ".t2 using weather tags('上海') values('2020-01-01 00:03:00.000', 22.22)";
 
         // when
         boolean execute = execute(connection, sql);
@@ -186,7 +186,7 @@ public class SQLTest {
     @Test
     public void testCase015() {
         // given
-        String sql = "insert into " + dbName + ".t2 using weather tags('上海') values('2020-01-01 00:01:00.000', 22.22),('2020-01-01 00:02:00.000', 22.22)";
+        String sql = "insert into " + DB_NAME + ".t2 using weather tags('上海') values('2020-01-01 00:01:00.000', 22.22),('2020-01-01 00:02:00.000', 22.22)";
 
         // when
         boolean execute = execute(connection, sql);
@@ -222,7 +222,7 @@ public class SQLTest {
     @Test
     public void testCase018() {
         // given
-        String sql = "select * from " + dbName + ".t1";
+        String sql = "select * from " + DB_NAME + ".t1";
         // when
         boolean execute = execute(connection, sql);
         // then
@@ -232,7 +232,7 @@ public class SQLTest {
     @Test
     public void testCase019() {
         // given
-        String sql = "select * from " + dbName + ".weather";
+        String sql = "select * from " + DB_NAME + ".weather";
         // when
         boolean execute = execute(connection, sql);
         // then
@@ -242,7 +242,7 @@ public class SQLTest {
     @Test
     public void testCase020() {
         // given
-        String sql = "select ts, temperature from " + dbName + ".t1";
+        String sql = "select ts, temperature from " + DB_NAME + ".t1";
         // when
         boolean execute = execute(connection, sql);
         // then
@@ -252,7 +252,7 @@ public class SQLTest {
     @Test
     public void testCase021() {
         // given
-        String sql = "select ts, temperature from " + dbName + ".weather";
+        String sql = "select ts, temperature from " + DB_NAME + ".weather";
         // when
         boolean execute = execute(connection, sql);
         // then
@@ -262,7 +262,7 @@ public class SQLTest {
     @Test
     public void testCase022() {
         // given
-        String sql = "select temperature, ts from " + dbName + ".t1";
+        String sql = "select temperature, ts from " + DB_NAME + ".t1";
         // when
         boolean execute = execute(connection, sql);
         // then
@@ -272,7 +272,7 @@ public class SQLTest {
     @Test
     public void testCase023() {
         // given
-        String sql = "select temperature, ts from " + dbName + ".weather";
+        String sql = "select temperature, ts from " + DB_NAME + ".weather";
         // when
         boolean execute = execute(connection, sql);
         // then
@@ -282,7 +282,7 @@ public class SQLTest {
     @Test
     public void testCase024() {
         // given
-        String sql = "import into " + dbName + ".t5 using weather tags('石家庄') values('2020-01-01 00:01:00.000', 22.22)";
+        String sql = "import into " + DB_NAME + ".t5 using weather tags('石家庄') values('2020-01-01 00:01:00.000', 22.22)";
         // when
         int affectedRows = executeUpdate(connection, sql);
         // then
@@ -292,7 +292,7 @@ public class SQLTest {
     @Test
     public void testCase025() {
         // given
-        String sql = "import into " + dbName + ".t6 using weather tags('沈阳') values('2020-01-01 00:01:00.000', 22.22),('2020-01-01 00:02:00.000', 22.22)";
+        String sql = "import into " + DB_NAME + ".t6 using weather tags('沈阳') values('2020-01-01 00:01:00.000', 22.22),('2020-01-01 00:02:00.000', 22.22)";
         // when
         int affectedRows = executeUpdate(connection, sql);
         // then
@@ -302,7 +302,7 @@ public class SQLTest {
     @Test
     public void testCase026() {
         // given
-        String sql = "import into " + dbName + ".t7 using weather tags('长沙') values('2020-01-01 00:01:00.000', 22.22) " + dbName + ".t8 using weather tags('吉林') values('2020-01-01 00:01:00.000', 22.22)";
+        String sql = "import into " + DB_NAME + ".t7 using weather tags('长沙') values('2020-01-01 00:01:00.000', 22.22) " + DB_NAME + ".t8 using weather tags('吉林') values('2020-01-01 00:01:00.000', 22.22)";
 
         // when
         int affectedRows = executeUpdate(connection, sql);
@@ -313,7 +313,7 @@ public class SQLTest {
     @Test
     public void testCase027() {
         // given
-        String sql = "import into " + dbName + ".t9 using weather tags('武汉') values('2020-01-01 00:01:00.000', 22.22) ,('2020-01-02 00:01:00.000', 22.22) " + dbName + ".t10 using weather tags('哈尔滨') values('2020-01-01 00:01:00.000', 22.22),('2020-01-02 00:01:00.000', 22.22)";
+        String sql = "import into " + DB_NAME + ".t9 using weather tags('武汉') values('2020-01-01 00:01:00.000', 22.22) ,('2020-01-02 00:01:00.000', 22.22) " + DB_NAME + ".t10 using weather tags('哈尔滨') values('2020-01-01 00:01:00.000', 22.22),('2020-01-02 00:01:00.000', 22.22)";
         // when
         int affectedRows = executeUpdate(connection, sql);
         // then
@@ -323,7 +323,7 @@ public class SQLTest {
     @Test
     public void testCase028() {
         // given
-        String sql = "select location, temperature, ts from " + dbName + ".weather where temperature > 1";
+        String sql = "select location, temperature, ts from " + DB_NAME + ".weather where temperature > 1";
         // when
         ResultSet rs = executeQuery(connection, sql);
         // then
@@ -332,7 +332,7 @@ public class SQLTest {
 
     @Test
     public void testCase029() {
-        String sql = "select location, temperature, ts from " + dbName + ".weather where temperature < 1";
+        String sql = "select location, temperature, ts from " + DB_NAME + ".weather where temperature < 1";
         // when
         ResultSet rs = executeQuery(connection, sql);
         // then
@@ -341,7 +341,7 @@ public class SQLTest {
 
     @Test
     public void testCase030() {
-        String sql = "select location, temperature, ts from " + dbName + ".weather where ts  > now";
+        String sql = "select location, temperature, ts from " + DB_NAME + ".weather where ts  > now";
         // when
         ResultSet rs = executeQuery(connection, sql);
         // then
@@ -350,7 +350,7 @@ public class SQLTest {
 
     @Test
     public void testCase031() {
-        String sql = "select location, temperature, ts from " + dbName + ".weather where ts  < now";
+        String sql = "select location, temperature, ts from " + DB_NAME + ".weather where ts  < now";
         // when
         ResultSet rs = executeQuery(connection, sql);
         // then
@@ -359,7 +359,7 @@ public class SQLTest {
 
     @Test
     public void testCase032() {
-        String sql = "select count(*) from " + dbName + ".weather";
+        String sql = "select count(*) from " + DB_NAME + ".weather";
         // when
         ResultSet rs = executeQuery(connection, sql);
         // then
@@ -368,7 +368,7 @@ public class SQLTest {
 
     @Test
     public void testCase033() {
-        String sql = "select first(*) from " + dbName + ".weather";
+        String sql = "select first(*) from " + DB_NAME + ".weather";
         // when
         ResultSet rs = executeQuery(connection, sql);
         // then
@@ -377,7 +377,7 @@ public class SQLTest {
 
     @Test
     public void testCase034() {
-        String sql = "select last(*) from " + dbName + ".weather";
+        String sql = "select last(*) from " + DB_NAME + ".weather";
         // when
         ResultSet rs = executeQuery(connection, sql);
         // then
@@ -386,7 +386,7 @@ public class SQLTest {
 
     @Test
     public void testCase035() {
-        String sql = "select last_row(*) from " + dbName + ".weather";
+        String sql = "select last_row(*) from " + DB_NAME + ".weather";
         // when
         ResultSet rs = executeQuery(connection, sql);
         // then
@@ -395,7 +395,7 @@ public class SQLTest {
 
     @Test
     public void testCase036() {
-        String sql = "select ts, ts as primary_key from " + dbName + ".weather";
+        String sql = "select ts, ts as primary_key from " + DB_NAME + ".weather";
         // when
         ResultSet rs = executeQuery(connection, sql);
         // then
@@ -441,7 +441,7 @@ public class SQLTest {
 
     @Test
     public void testCase041() {
-        String sql = "select tbname, location from " + dbName + ".weather";
+        String sql = "select tbname, location from " + DB_NAME + ".weather";
         // when
         ResultSet rs = executeQuery(connection, sql);
         // then
@@ -450,7 +450,7 @@ public class SQLTest {
 
     @Test
     public void testCase042() {
-        String sql = "select count(tbname) from " + dbName + ".weather";
+        String sql = "select count(tbname) from " + DB_NAME + ".weather";
         // when
         ResultSet rs = executeQuery(connection, sql);
         // then
@@ -459,7 +459,7 @@ public class SQLTest {
 
     @Test
     public void testCase043() {
-        String sql = "select * from " + dbName + ".weather where ts < now - 1h";
+        String sql = "select * from " + DB_NAME + ".weather where ts < now - 1h";
         // when
         ResultSet rs = executeQuery(connection, sql);
         // then
@@ -468,7 +468,7 @@ public class SQLTest {
 
     @Test
     public void testCase044() {
-        String sql = "select * from " + dbName + ".weather where ts < now - 1h and location like '%'";
+        String sql = "select * from " + DB_NAME + ".weather where ts < now - 1h and location like '%'";
         // when
         ResultSet rs = executeQuery(connection, sql);
         // then
@@ -477,7 +477,7 @@ public class SQLTest {
 
     @Test
     public void testCase045() {
-        String sql = "select * from " + dbName + ".weather where ts < now - 1h order by ts";
+        String sql = "select * from " + DB_NAME + ".weather where ts < now - 1h order by ts";
         // when
         ResultSet rs = executeQuery(connection, sql);
         // then
@@ -486,7 +486,7 @@ public class SQLTest {
 
     @Test
     public void testCase046() {
-        String sql = "select last(*) from " + dbName + ".weather where ts < now - 1h group by tbname order by tbname";
+        String sql = "select last(*) from " + DB_NAME + ".weather where ts < now - 1h group by tbname order by tbname";
         // when
         ResultSet rs = executeQuery(connection, sql);
         // then
@@ -495,7 +495,7 @@ public class SQLTest {
 
     @Test
     public void testCase047() {
-        String sql = "select * from " + dbName + ".weather limit 2";
+        String sql = "select * from " + DB_NAME + ".weather limit 2";
         // when
         ResultSet rs = executeQuery(connection, sql);
         // then
@@ -504,7 +504,7 @@ public class SQLTest {
 
     @Test
     public void testCase048() {
-        String sql = "select * from " + dbName + ".weather limit 2 offset 5";
+        String sql = "select * from " + DB_NAME + ".weather limit 2 offset 5";
         // when
         ResultSet rs = executeQuery(connection, sql);
         // then
@@ -513,7 +513,7 @@ public class SQLTest {
 
     @Test
     public void testCase049() {
-        String sql = "select * from " + dbName + ".t1, " + dbName + ".t3 where t1.ts = t3.ts ";
+        String sql = "select * from " + DB_NAME + ".t1, " + DB_NAME + ".t3 where t1.ts = t3.ts ";
         // when
         ResultSet rs = executeQuery(connection, sql);
         // then
@@ -522,7 +522,7 @@ public class SQLTest {
 
     @Test
     public void testCase050() {
-        String sql = "select * from " + dbName + ".t1, " + dbName + ".t3 where t1.ts = t3.ts";
+        String sql = "select * from " + DB_NAME + ".t1, " + DB_NAME + ".t3 where t1.ts = t3.ts";
         // when
         ResultSet rs = executeQuery(connection, sql);
         // then
@@ -531,7 +531,7 @@ public class SQLTest {
 
     @Test
     public void testCase051() {
-        String sql = "select * from " + dbName + ".t1 tt, " + dbName + ".t3 yy where tt.ts = yy.ts";
+        String sql = "select * from " + DB_NAME + ".t1 tt, " + DB_NAME + ".t3 yy where tt.ts = yy.ts";
         // when
         ResultSet rs = executeQuery(connection, sql);
         // then
@@ -569,7 +569,7 @@ public class SQLTest {
     public static void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
         }
         connection = DriverManager.getConnection(url);
     }
@@ -577,7 +577,7 @@ public class SQLTest {
     @AfterClass
     public static void after() throws SQLException {
         Statement stmt = connection.createStatement();
-        stmt.execute("drop database if exists " + dbName + "");
+        stmt.execute("drop database if exists " + DB_NAME + "");
         stmt.close();
         connection.close();
     }

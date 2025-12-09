@@ -14,7 +14,7 @@ public class StmtInfo {
     private List<Field> fields;
     private final String sql;
 
-    protected ArrayList<Byte> tagTypeList = new ArrayList<>();
+    protected final ArrayList<Byte> tagTypeList = new ArrayList<>();
     protected ArrayList<Byte> colTypeList = new ArrayList<>();
     protected boolean isInsert = false;
     public StmtInfo(String sql) {

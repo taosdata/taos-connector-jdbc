@@ -4,7 +4,7 @@ import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.common.Endpoint;
-import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.TaosAdapterMock;
@@ -25,16 +25,16 @@ import java.util.concurrent.CountDownLatch;
 @RunWith(CatalogRunner.class)
 @FixMethodOrder
 public class BgHealthCheckTest {
-    private static Logger log = org.slf4j.LoggerFactory.getLogger(BgHealthCheckTest.class);
-    private static final String host = "127.0.0.1";
-    private static final int portA = 6041;
-    private static final String db_name = TestUtils.camelToSnake(BgHealthCheckTest.class);
-    private static final String tableName = "meters";
-    static  private Connection connection;
+    private static final Logger log = org.slf4j.LoggerFactory.getLogger(BgHealthCheckTest.class);
+    private static final String HOST = "127.0.0.1";
+    private static final int PORT_A = 6041;
+    private static final String DB_NAME = TestUtils.camelToSnake(BgHealthCheckTest.class);
+    private static final String TABLE_NAME = "meters";
+    private static Connection connection;
 
-    static private TaosAdapterMock mockA;
-    static private TaosAdapterMock mockB;
-    static private TaosAdapterMock mockC;
+    private static TaosAdapterMock mockA;
+    private static TaosAdapterMock mockB;
+    private static TaosAdapterMock mockC;
     private final RebalanceManager rebalanceManager = RebalanceManager.getInstance();
 
 
@@ -42,7 +42,7 @@ public class BgHealthCheckTest {
     @Test
     public void bgCheckOnDisconnection() throws Exception  {
         Properties properties = new Properties();
-        String url = "jdbc:TAOS-WS://" + host + ":" + mockA.getListenPort() + "/?user=root&password=taosdata";
+        String url = "jdbc:TAOS-WS://" + HOST + ":" + mockA.getListenPort() + "/?user=root&password=taosdata";
 
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_INTERVAL_MS, "2000");
@@ -83,7 +83,7 @@ public class BgHealthCheckTest {
     @Test
     public void bgCheckOnConnectionFailed() throws Exception  {
         Properties properties = new Properties();
-        String url = "jdbc:TAOS-WS://" + host + ":" + mockA.getListenPort() + "/?user=root&password=taosdata";
+        String url = "jdbc:TAOS-WS://" + HOST + ":" + mockA.getListenPort() + "/?user=root&password=taosdata";
 
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_INTERVAL_MS, "2000");
@@ -104,16 +104,16 @@ public class BgHealthCheckTest {
         mockA.start();
         // wait for health check
         Thread.sleep(5000);
-        Assert.assertTrue(rebalanceManager.getEndpointInfo(new Endpoint(host, mockA.getListenPort(), false)).isOnline());
+        Assert.assertTrue(rebalanceManager.getEndpointInfo(new Endpoint(HOST, mockA.getListenPort(), false)).isOnline());
     }
 
     @Description("test connection count after node down")
     @Test
     public void connectionCountAfterNodeDownTest() throws Exception  {
         Properties properties = new Properties();
-        String url = "jdbc:TAOS-WS://" + host + ":" + mockA.getListenPort()
-                + "," + host + ":" + mockB.getListenPort()
-                + "," + host + ":" + mockC.getListenPort() + "/?user=root&password=taosdata";
+        String url = "jdbc:TAOS-WS://" + HOST + ":" + mockA.getListenPort()
+                + "," + HOST + ":" + mockB.getListenPort()
+                + "," + HOST + ":" + mockC.getListenPort() + "/?user=root&password=taosdata";
 
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_INTERVAL_MS, "2000");
@@ -135,7 +135,7 @@ public class BgHealthCheckTest {
         mockC.stop();
         // wait for connection lost
         Thread.sleep(1000);
-        try (Statement statement = connection3.createStatement();ResultSet rs = statement.executeQuery("show databases;");) {
+        try (Statement statement = connection3.createStatement();ResultSet rs = statement.executeQuery("show databases;")) {
             while (rs.next()) {
                 String dbName = rs.getString(1);
             }
@@ -163,9 +163,9 @@ public class BgHealthCheckTest {
     @Test
     public void connectionCountAfterCloseTest() throws Exception  {
         Properties properties = new Properties();
-        String url = "jdbc:TAOS-WS://" + host + ":" + mockA.getListenPort()
-                + "," + host + ":" + mockB.getListenPort()
-                + "," + host + ":" + mockC.getListenPort() + "/?user=root&password=taosdata";
+        String url = "jdbc:TAOS-WS://" + HOST + ":" + mockA.getListenPort()
+                + "," + HOST + ":" + mockB.getListenPort()
+                + "," + HOST + ":" + mockC.getListenPort() + "/?user=root&password=taosdata";
 
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_INTERVAL_MS, "2000");
@@ -197,9 +197,9 @@ public class BgHealthCheckTest {
     @Test
     public void testConcurrentConnections() throws Exception {
        String url = "jdbc:TAOS-WS://" +
-                host + ":" + mockA.getListenPort() + "," +
-                host + ":" + mockB.getListenPort() + "," +
-                host + ":" + mockC.getListenPort() +
+               HOST + ":" + mockA.getListenPort() + "," +
+               HOST + ":" + mockB.getListenPort() + "," +
+               HOST + ":" + mockC.getListenPort() +
                 "/?user=root&password=taosdata";
 
         Properties properties = new Properties();
@@ -208,9 +208,9 @@ public class BgHealthCheckTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_RETRY_COUNT, "3");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, "5000");
 
-        Assert.assertNull(rebalanceManager.getEndpointInfo(new Endpoint(host, mockA.getListenPort(), false)));
-        Assert.assertNull(rebalanceManager.getEndpointInfo(new Endpoint(host, mockB.getListenPort(), false)));
-        Assert.assertNull(rebalanceManager.getEndpointInfo(new Endpoint(host, mockC.getListenPort(), false)));
+        Assert.assertNull(rebalanceManager.getEndpointInfo(new Endpoint(HOST, mockA.getListenPort(), false)));
+        Assert.assertNull(rebalanceManager.getEndpointInfo(new Endpoint(HOST, mockB.getListenPort(), false)));
+        Assert.assertNull(rebalanceManager.getEndpointInfo(new Endpoint(HOST, mockC.getListenPort(), false)));
 
         int threadCount = 15;
         CountDownLatch latch = new CountDownLatch(threadCount);
@@ -265,7 +265,7 @@ public class BgHealthCheckTest {
         String url;
         url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":" + 6030 + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":" + 6030 + "/?user=root&password=taosdata";
         } else {
             url += "?user=root&password=taosdata";
         }
@@ -273,11 +273,11 @@ public class BgHealthCheckTest {
 
         connection = DriverManager.getConnection(url, properties);
         Statement statement = connection.createStatement();
-        statement.execute("drop database if exists " + db_name);
-        statement.execute("create database " + db_name);
-        statement.execute("use " + db_name);
-        statement.execute("create table if not exists " + db_name + "." + tableName + "(ts timestamp, f int)");
-        statement.execute("insert into " + db_name + "." + tableName + " values (now, 1)");
+        statement.execute("drop database if exists " + DB_NAME);
+        statement.execute("create database " + DB_NAME);
+        statement.execute("use " + DB_NAME);
+        statement.execute("create table if not exists " + DB_NAME + "." + TABLE_NAME + "(ts timestamp, f int)");
+        statement.execute("insert into " + DB_NAME + "." + TABLE_NAME + " values (now, 1)");
         statement.close();
     }
 
@@ -285,7 +285,7 @@ public class BgHealthCheckTest {
     static public void after() throws SQLException {
         if (null != connection) {
             Statement statement = connection.createStatement();
-            statement.execute("drop database if exists " + db_name);
+            statement.execute("drop database if exists " + DB_NAME);
             statement.close();
             connection.close();
         }

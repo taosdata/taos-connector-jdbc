@@ -4,8 +4,9 @@ import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.common.Endpoint;
+import com.taosdata.jdbc.common.Printable;
 import com.taosdata.jdbc.enums.WSFunction;
-import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.utils.CompletableFutureTimeout;
 import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.entity.Request;
@@ -134,7 +135,7 @@ public class Transport implements AutoCloseable {
         }
 
         CompletableFuture<Response> responseFuture = CompletableFutureTimeout.orTimeout(
-                completableFuture, timeout, TimeUnit.MILLISECONDS, reqString);
+                completableFuture, timeout, TimeUnit.MILLISECONDS, getPrintString(reqString, request));
         try {
             response = responseFuture.get();
             handleTaosdError(response);
@@ -372,7 +373,7 @@ public class Transport implements AutoCloseable {
         }
 
         CompletableFuture<Response> responseFuture = CompletableFutureTimeout.orTimeout(
-                completableFuture, timeout, TimeUnit.MILLISECONDS, reqString);
+                completableFuture, timeout, TimeUnit.MILLISECONDS, getPrintString(reqString, request));
         try {
             response = responseFuture.get();
         } catch (InterruptedException e) {
@@ -505,5 +506,12 @@ public class Transport implements AutoCloseable {
      */
     public void balanceConnection() {
         connectionManager.balanceConnection(this);
+    }
+
+    private String getPrintString(String reqString, Request request) {
+        if (request.getArgs() instanceof Printable){
+            return request.toPrintString();
+        }
+        return reqString;
     }
 }
