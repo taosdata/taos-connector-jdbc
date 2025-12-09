@@ -3,7 +3,7 @@ package com.taosdata.jdbc.ws.tmq.entity;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
-import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.tmq.TMQConstants;
 import com.taosdata.jdbc.utils.StringUtils;
 
@@ -85,7 +85,7 @@ public class ConsumerParam {
     private String msgWithTableName;
     private String enableBatchMeta;
 
-    private HashMap<String, String> config = new HashMap<>();
+    private final HashMap<String, String> config = new HashMap<>();
 
     public ConsumerParam(Properties properties) throws SQLException {
         if (null != properties.getProperty(TMQConstants.CONNECT_URL)) {

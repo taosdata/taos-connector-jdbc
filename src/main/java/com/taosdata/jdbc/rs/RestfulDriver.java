@@ -5,6 +5,7 @@ import com.taosdata.jdbc.AbstractDriver;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
+import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.utils.HttpClientPoolUtil;
 import com.taosdata.jdbc.utils.StringUtils;
 import org.slf4j.LoggerFactory;
@@ -58,7 +59,7 @@ public class RestfulDriver extends AbstractDriver {
                 url, auth, param.isUseSsl(), param.getCloudToken(), param.getTz());
         if (param.getDatabase() != null && !param.getDatabase().trim().replaceAll("\\s", "").isEmpty()) {
             try (Statement stmt = conn.createStatement()) {
-                stmt.execute("use " + param.getDatabase());
+                stmt.execute("use " + param.getDatabase()); // NOSONAR
             }
         }
         return conn;

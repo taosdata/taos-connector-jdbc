@@ -109,6 +109,24 @@ public class BlockResultSetTest {
     }
 
     @Test(expected = SQLException.class)
+    public void testAbsoluteWhenClosed() throws SQLException {
+        rs.close();
+        rs.absolute(1);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testRelativeWhenClosed() throws SQLException {
+        rs.close();
+        rs.relative(1);
+    }
+
+    @Test(expected = SQLException.class)
+    public void testPreviousWhenClosed() throws SQLException {
+        rs.close();
+        rs.previous();
+    }
+
+    @Test(expected = SQLException.class)
     public void testIsAfterLastWhenClosed() throws SQLException {
         rs.close();
         rs.isAfterLast();

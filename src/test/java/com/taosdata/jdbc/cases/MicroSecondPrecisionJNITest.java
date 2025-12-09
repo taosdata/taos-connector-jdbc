@@ -13,23 +13,23 @@ import java.util.Properties;
 
 public class MicroSecondPrecisionJNITest {
 
-    private static final String host = "127.0.0.1";
-    private static final String ms_timestamp_db = "ms_precision_test";
-    private static final String us_timestamp_db = "us_precision_test";
-    private static final long timestamp1 = System.currentTimeMillis();
-    private static final long timestamp2 = timestamp1 * 1000 + 123;
+    private static final String HOST = "127.0.0.1";
+    private static final String MS_TIMESTAMP_DB = "ms_precision_test";
+    private static final String US_TIMESTAMP_DB = "us_precision_test";
+    private static final long TIMESTAMP_1 = System.currentTimeMillis();
+    private static final long TIMESTAMP_2 = TIMESTAMP_1 * 1000 + 123;
 
     private static Connection conn;
 
     @Test
     public void testCase1() {
         try (Statement stmt = conn.createStatement()) {
-            ResultSet rs = stmt.executeQuery("select last_row(ts) from " + ms_timestamp_db + ".weather");
+            ResultSet rs = stmt.executeQuery("select last_row(ts) from " + MS_TIMESTAMP_DB + ".weather");
             rs.next();
             long ts = rs.getTimestamp(1).getTime();
-            Assert.assertEquals(timestamp1, ts);
+            Assert.assertEquals(TIMESTAMP_1, ts);
             ts = rs.getLong(1);
-            Assert.assertEquals(timestamp1, ts);
+            Assert.assertEquals(TIMESTAMP_1, ts);
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -38,17 +38,17 @@ public class MicroSecondPrecisionJNITest {
     @Test
     public void testCase2() {
         try (Statement stmt = conn.createStatement()) {
-            ResultSet rs = stmt.executeQuery("select last_row(ts) from " + us_timestamp_db + ".weather");
+            ResultSet rs = stmt.executeQuery("select last_row(ts) from " + US_TIMESTAMP_DB + ".weather");
             rs.next();
 
             Timestamp timestamp = rs.getTimestamp(1);
             long ts = timestamp.getTime();
-            Assert.assertEquals(timestamp1, ts);
+            Assert.assertEquals(TIMESTAMP_1, ts);
             int nanos = timestamp.getNanos();
-            Assert.assertEquals(timestamp2 % 1000_000l * 1000, nanos);
+            Assert.assertEquals(TIMESTAMP_2 % 1000_000L * 1000, nanos);
 
             ts = rs.getLong(1);
-            Assert.assertEquals(timestamp2, ts);
+            Assert.assertEquals(TIMESTAMP_2, ts);
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -63,20 +63,20 @@ public class MicroSecondPrecisionJNITest {
 
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
         }
         conn = DriverManager.getConnection(url, properties);
 
         Statement stmt = conn.createStatement();
-        stmt.execute("drop database if exists " + ms_timestamp_db);
-        stmt.execute("create database if not exists " + ms_timestamp_db + " precision 'ms'");
-        stmt.execute("create table " + ms_timestamp_db + ".weather(ts timestamp, f1 int)");
-        stmt.executeUpdate("insert into " + ms_timestamp_db + ".weather(ts,f1) values(" + timestamp1 + ", 127)");
+        stmt.execute("drop database if exists " + MS_TIMESTAMP_DB);
+        stmt.execute("create database if not exists " + MS_TIMESTAMP_DB + " precision 'ms'");
+        stmt.execute("create table " + MS_TIMESTAMP_DB + ".weather(ts timestamp, f1 int)");
+        stmt.executeUpdate("insert into " + MS_TIMESTAMP_DB + ".weather(ts,f1) values(" + TIMESTAMP_1 + ", 127)");
 
-        stmt.execute("drop database if exists " + us_timestamp_db);
-        stmt.execute("create database if not exists " + us_timestamp_db + " precision 'us'");
-        stmt.execute("create table " + us_timestamp_db + ".weather(ts timestamp, f1 int)");
-        stmt.executeUpdate("insert into " + us_timestamp_db + ".weather(ts,f1) values(" + timestamp2 + ", 127)");
+        stmt.execute("drop database if exists " + US_TIMESTAMP_DB);
+        stmt.execute("create database if not exists " + US_TIMESTAMP_DB + " precision 'us'");
+        stmt.execute("create table " + US_TIMESTAMP_DB + ".weather(ts timestamp, f1 int)");
+        stmt.executeUpdate("insert into " + US_TIMESTAMP_DB + ".weather(ts,f1) values(" + TIMESTAMP_2 + ", 127)");
         stmt.close();
     }
 
@@ -85,8 +85,8 @@ public class MicroSecondPrecisionJNITest {
         try {
             if (conn != null) {
                 Statement statement = conn.createStatement();
-                statement.execute("drop database " + ms_timestamp_db);
-                statement.execute("drop database " + us_timestamp_db);
+                statement.execute("drop database " + MS_TIMESTAMP_DB);
+                statement.execute("drop database " + US_TIMESTAMP_DB);
                 statement.close();
                 conn.close();
             }

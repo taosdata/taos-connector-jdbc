@@ -12,11 +12,11 @@ import java.sql.*;
 import java.util.Properties;
 
 public class WsPstmtSubTableTest {
-    String host = "127.0.0.1";
-    String db_name = TestUtils.camelToSnake(WsPstmtSubTableTest.class);
-    String superTable = "wpt_st";
-    String superTable1 = "wpt_st1";
-    String superTable2 = "wpt_json";
+    final String host = "127.0.0.1";
+    final String db_name = TestUtils.camelToSnake(WsPstmtSubTableTest.class);
+    final String superTable = "wpt_st";
+    final String superTable1 = "wpt_st1";
+    final String superTable2 = "wpt_json";
     Connection connection;
 
     @Test

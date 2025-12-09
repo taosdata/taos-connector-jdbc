@@ -37,7 +37,6 @@ public enum Action {
     //schemaless
     INSERT("insert", CommonResp.class),
     ;
-    ;
     private final String action;
     private final Class<? extends Response> clazz;
 

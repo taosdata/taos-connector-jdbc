@@ -25,7 +25,7 @@ public class WSDatabaseMetaDataTest {
         String[] types = new String[]{"VIEW"};
         ResultSet rs = metaData.getTables(dbName, "", null, types);
 
-        Assert.assertFalse(rs.next());;
+        Assert.assertFalse(rs.next());
     }
 
     @Test
@@ -33,7 +33,7 @@ public class WSDatabaseMetaDataTest {
         String[] types = new String[]{"TABLE"};
         ResultSet rs = metaData.getTables(dbName, "", null, types);
 
-        Assert.assertTrue(rs.next());;
+        Assert.assertTrue(rs.next());
     }
 
     @Test

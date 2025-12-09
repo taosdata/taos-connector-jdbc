@@ -4,7 +4,7 @@ import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.common.Endpoint;
-import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.TaosAdapterMock;
@@ -29,11 +29,11 @@ import java.util.concurrent.TimeUnit;
 @RunWith(CatalogRunner.class)
 @FixMethodOrder
 public class ConnectionRebalanceTest {
-    private static Logger log = org.slf4j.LoggerFactory.getLogger(ConnectionRebalanceTest.class);
-    private static final String host = "127.0.0.1";
-    private static final int portA = 6041;
-    private static final String db_name = TestUtils.camelToSnake(ConnectionRebalanceTest.class);
-    private static final String tableName = "meters";
+    private static final Logger log = org.slf4j.LoggerFactory.getLogger(ConnectionRebalanceTest.class);
+    private static final String HOST = "127.0.0.1";
+    private static final int PORT_A = 6041;
+    private static final String DB_NAME = TestUtils.camelToSnake(ConnectionRebalanceTest.class);
+    private static final String TABLE_NAME = "meters";
     private static Connection connection;
 
     private static TaosAdapterMock mockA;
@@ -76,7 +76,7 @@ public class ConnectionRebalanceTest {
 
         // 4. Recover failed node mockA, wait for health check thread detection
         mockA.start();
-        RebalanceTestUtil.waitHealthCheckFinished(new Endpoint(host, mockA.getListenPort(), false)); // Wait for health check and rebalance trigger
+        RebalanceTestUtil.waitHealthCheckFinished(new Endpoint(HOST, mockA.getListenPort(), false)); // Wait for health check and rebalance trigger
         Assert.assertEquals(0, rebalanceManager.getBgHealthCheckInstanceCount());
 
         // trigger rebalance
@@ -116,7 +116,7 @@ public class ConnectionRebalanceTest {
 
         // 2. Recover mockA, wait for health check
         mockA.start();
-        RebalanceTestUtil.waitHealthCheckFinishedIgnoreException(new Endpoint(host, mockA.getListenPort(), false));
+        RebalanceTestUtil.waitHealthCheckFinishedIgnoreException(new Endpoint(HOST, mockA.getListenPort(), false));
         Assert.assertEquals(0, rebalanceManager.getBgHealthCheckInstanceCount());
 
         // assert background healthcheck work
@@ -156,7 +156,7 @@ public class ConnectionRebalanceTest {
 
         // 2. Recover mockA, wait for health check
         mockA.start();
-        RebalanceTestUtil.waitHealthCheckFinishedIgnoreException(new Endpoint(host, mockA.getListenPort(), false));
+        RebalanceTestUtil.waitHealthCheckFinishedIgnoreException(new Endpoint(HOST, mockA.getListenPort(), false));
         Assert.assertEquals(0, rebalanceManager.getBgHealthCheckInstanceCount());
 
         // new connection, choose node A
@@ -203,7 +203,7 @@ public class ConnectionRebalanceTest {
 
         // 3. Recover failed node mockA, wait for health check thread detection
         mockA.start();
-        RebalanceTestUtil.waitHealthCheckFinishedIgnoreException(new Endpoint(host, mockA.getListenPort(), false)); // Wait for health check and rebalance trigger
+        RebalanceTestUtil.waitHealthCheckFinishedIgnoreException(new Endpoint(HOST, mockA.getListenPort(), false)); // Wait for health check and rebalance trigger
         Assert.assertEquals(0, rebalanceManager.getBgHealthCheckInstanceCount());
 
         // 4. trigger rebalance
@@ -258,7 +258,7 @@ public class ConnectionRebalanceTest {
             latch.countDown();
         }).start();
         latch.await(30, TimeUnit.SECONDS);
-        RebalanceTestUtil.waitHealthCheckFinished(new Endpoint(host, mockA.getListenPort(), false));
+        RebalanceTestUtil.waitHealthCheckFinished(new Endpoint(HOST, mockA.getListenPort(), false));
         Assert.assertEquals(0, rebalanceManager.getBgHealthCheckInstanceCount());
 
         connections.parallelStream().forEach(conn -> checkConnection(conn));
@@ -278,8 +278,8 @@ public class ConnectionRebalanceTest {
     public void testOtherClusterNoRebalance() throws Exception {
         Properties propertiesA = getRebalanceProperties();
         Properties propertiesB = getRebalanceProperties();
-        String clusterA =  "jdbc:TAOS-WS://" + host + ":" + mockA.getListenPort() + "," + host + ":" + mockB.getListenPort() + "/?user=root&password=taosdata";
-        String clusterB =  "jdbc:TAOS-WS://" + host + ":" + mockC.getListenPort() + "/?user=root&password=taosdata";
+        String clusterA =  "jdbc:TAOS-WS://" + HOST + ":" + mockA.getListenPort() + "," + HOST + ":" + mockB.getListenPort() + "/?user=root&password=taosdata";
+        String clusterB =  "jdbc:TAOS-WS://" + HOST + ":" + mockC.getListenPort() + "/?user=root&password=taosdata";
 
 
         // 1. Simulate node failure + create batch idle connections
@@ -291,7 +291,7 @@ public class ConnectionRebalanceTest {
         }
 
         mockA.start();
-        RebalanceTestUtil.waitHealthCheckFinishedIgnoreException(new Endpoint(host, mockA.getListenPort(), false));
+        RebalanceTestUtil.waitHealthCheckFinishedIgnoreException(new Endpoint(HOST, mockA.getListenPort(), false));
         Assert.assertEquals(0, rebalanceManager.getBgHealthCheckInstanceCount());
 
         Connection connection1 = connections.get(5);
@@ -350,9 +350,9 @@ public class ConnectionRebalanceTest {
      * @return Formatted cluster JDBC URL
      */
     private String getClusterUrl() {
-        return "jdbc:TAOS-WS://" + host + ":" + mockA.getListenPort()
-                + "," + host + ":" + mockB.getListenPort()
-                + "," + host + ":" + mockC.getListenPort() + "/?user=root&password=taosdata";
+        return "jdbc:TAOS-WS://" + HOST + ":" + mockA.getListenPort()
+                + "," + HOST + ":" + mockB.getListenPort()
+                + "," + HOST + ":" + mockC.getListenPort() + "/?user=root&password=taosdata";
     }
 
     /**
@@ -383,18 +383,18 @@ public class ConnectionRebalanceTest {
         System.setProperty("ENV_TAOS_JDBC_TEST", "test");
         String url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":" + 6030 + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":" + 6030 + "/?user=root&password=taosdata";
         } else {
             url += "?user=root&password=taosdata";
         }
         Properties properties = new Properties();
         connection = DriverManager.getConnection(url, properties);
         Statement statement = connection.createStatement();
-        statement.execute("drop database if exists " + db_name);
-        statement.execute("create database " + db_name);
-        statement.execute("use " + db_name);
-        statement.execute("create table if not exists " + db_name + "." + tableName + "(ts timestamp, f int)");
-        statement.execute("insert into " + db_name + "." + tableName + " values (now, 1)");
+        statement.execute("drop database if exists " + DB_NAME);
+        statement.execute("create database " + DB_NAME);
+        statement.execute("use " + DB_NAME);
+        statement.execute("create table if not exists " + DB_NAME + "." + TABLE_NAME + "(ts timestamp, f int)");
+        statement.execute("insert into " + DB_NAME + "." + TABLE_NAME + " values (now, 1)");
         statement.close();
     }
 
@@ -406,7 +406,7 @@ public class ConnectionRebalanceTest {
     public static void afterClass() throws SQLException {
         if (null != connection) {
             Statement statement = connection.createStatement();
-            statement.execute("drop database if exists " + db_name);
+            statement.execute("drop database if exists " + DB_NAME);
             statement.close();
             connection.close();
         }

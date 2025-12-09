@@ -25,19 +25,19 @@ import java.util.Properties;
 @RunWith(CatalogRunner.class)
 @FixMethodOrder
 public class WSCompressTest {
-    private static final String host = "127.0.0.1";
-    private static final int port = 6041;
-    private static final String db_name = TestUtils.camelToSnake(WSCompressTest.class);
-    private static final String tableName = "compressA";
+    private static final String HOST = "127.0.0.1";
+    private static final int PORT = 6041;
+    private static final String DB_NAME = TestUtils.camelToSnake(WSCompressTest.class);
+    private static final String TABLE_NAME = "compressA";
 
-    private static final String topicName = "compress_topic";
+    private static final String TOPIC_NAME = "compress_topic";
     private static Connection connection;
     @Description("inertRows")
     @Test
     public void inertRows() throws SQLException {
         try (Statement statement = connection.createStatement()) {
             // 必须超过1024个字符才会触发压缩
-            statement.execute("INSERT INTO " + db_name + "." + tableName + " (tbname, location, groupId, ts, current, voltage, phase) \n" +
+            statement.execute("INSERT INTO " + DB_NAME + "." + TABLE_NAME + " (tbname, location, groupId, ts, current, voltage, phase) \n" +
                     "                values('d31001', 'California.SanFrancisco', 2, '2021-07-13 14:06:34.630', 10.2, 219, 0.32) \n" +
                     "                ('d31001', 'California.SanFrancisco', 2, '2021-07-13 14:06:35.779', 10.15, 217, 0.33)\n" +
                     "                ('d31001', 'California.SanFrancisco', 2, '2021-07-13 14:06:36.780', 10.15, 217, 0.33)\n" +
@@ -65,7 +65,7 @@ public class WSCompressTest {
                     "                ('d31001', 'California.SanFrancisco', 2, '2021-07-13 14:06:58.779', 10.15, 217, 0.33)\n" +
                     "                ('d31001', 'California.SanFrancisco', 2, '2021-07-13 14:06:59.779', 10.16, 217, 0.33)");
 
-            ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + tableName + " order by ts desc limit 1");
+            ResultSet resultSet = statement.executeQuery("select * from " + DB_NAME + "." + TABLE_NAME + " order by ts desc limit 1");
             resultSet.next();
             Assert.assertTrue(resultSet.getFloat(2) > 10.15);
         }
@@ -109,7 +109,7 @@ public class WSCompressTest {
 
         try (Statement statement = connection.createStatement()) {
 
-            ResultSet resultSet = statement.executeQuery("select current from " + db_name + ".meters order by _ts desc limit 1");
+            ResultSet resultSet = statement.executeQuery("select current from " + DB_NAME + ".meters order by _ts desc limit 1");
             resultSet.next();
             Assert.assertTrue(resultSet.getFloat(1) > 10.3);
         }
@@ -121,7 +121,7 @@ public class WSCompressTest {
         inertRows();
         // create topic
         try (Statement statement = connection.createStatement()) {
-            statement.executeUpdate("create topic if not exists " + topicName + " as select * from " + tableName);
+            statement.executeUpdate("create topic if not exists " + TOPIC_NAME + " as select * from " + TABLE_NAME);
         }
 
         Properties properties = new Properties();
@@ -137,7 +137,7 @@ public class WSCompressTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_COMPRESSION, "true");
 
         try (TaosConsumer<Map<String, Object>> consumer = new TaosConsumer<>(properties)) {
-            consumer.subscribe(Collections.singletonList(topicName));
+            consumer.subscribe(Collections.singletonList(TOPIC_NAME));
             for (int i = 0; i < 3; i++) {
                 ConsumerRecords<Map<String, Object>> consumerRecords = consumer.poll(Duration.ofMillis(100));
                 for (ConsumerRecord<Map<String, Object>> r : consumerRecords) {
@@ -152,7 +152,7 @@ public class WSCompressTest {
     public static void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":" + port + "/?user=root&password=taosdata&batchfetch=true";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + PORT + "/?user=root&password=taosdata&batchfetch=true";
         } else {
             url += "?user=root&password=taosdata";
         }
@@ -161,11 +161,11 @@ public class WSCompressTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_COMPRESSION, "true");
         connection = DriverManager.getConnection(url, properties);
         Statement statement = connection.createStatement();
-        statement.executeUpdate("drop topic if exists " + topicName);
-        statement.execute("drop database if exists " + db_name);
-        statement.execute("create database " + db_name);
-        statement.execute("use " + db_name);
-        statement.execute("CREATE STABLE " + tableName + " (ts timestamp, current float, voltage int, phase float) TAGS (location binary(64), groupId int);");
+        statement.executeUpdate("drop topic if exists " + TOPIC_NAME);
+        statement.execute("drop database if exists " + DB_NAME);
+        statement.execute("create database " + DB_NAME);
+        statement.execute("use " + DB_NAME);
+        statement.execute("CREATE STABLE " + TABLE_NAME + " (ts timestamp, current float, voltage int, phase float) TAGS (location binary(64), groupId int);");
         statement.close();
     }
 
@@ -173,8 +173,8 @@ public class WSCompressTest {
     public static void after() throws SQLException {
         if (null != connection) {
             try (Statement statement = connection.createStatement()) {
-                statement.executeUpdate("drop topic if exists " + topicName);
-                statement.executeUpdate("drop database if exists " + db_name);
+                statement.executeUpdate("drop topic if exists " + TOPIC_NAME);
+                statement.executeUpdate("drop database if exists " + DB_NAME);
             } catch (SQLException e) {
                 // do nothing
             }

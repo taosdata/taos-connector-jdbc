@@ -1,10 +1,12 @@
 package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
 import java.io.ByteArrayInputStream;
+import java.io.Reader;
 import java.io.StringReader;
 import java.math.BigDecimal;
 import java.sql.*;
@@ -15,40 +17,40 @@ import java.util.Random;
 
 public class TSDBPreparedStatementTest {
 
-    private static final String host = "127.0.0.1";
+    private static final String HOST = "127.0.0.1";
     private static Connection conn;
-    private static final String sql_insert = "insert into t1 values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    private static final String sql_select = "select * from t1 where ts >= ? and ts < ? and f1 >= ?";
-    private static final String dbname = TestUtils.camelToSnake(TSDBPreparedStatementTest.class);;
+    private static final String SQL_INSERT = "insert into t1 values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    private static final String SQL_SELECT = "select * from t1 where ts >= ? and ts < ? and f1 >= ?";
+    private static final String DBNAME = TestUtils.camelToSnake(TSDBPreparedStatementTest.class);
 
-    private PreparedStatement pstmt_insert;
-    private PreparedStatement pstmt_select;
+    private PreparedStatement pstmtInsert;
+    private PreparedStatement pstmtSelect;
     //create table weather(ts timestamp, f1 int, f2 bigint, f3 float, f4 double, f5 smallint, f6 tinyint, f7 bool, f8 binary(64), f9 nchar(64)) tags(loc nchar(64))
 
     @Test
     public void executeQuery() throws SQLException {
         // given
         long ts = System.currentTimeMillis();
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        pstmt_insert.setInt(2, 2);
-        pstmt_insert.setLong(3, 3L);
-        pstmt_insert.setFloat(4, 3.14f);
-        pstmt_insert.setDouble(5, 3.1415);
-        pstmt_insert.setShort(6, (short) 6);
-        pstmt_insert.setByte(7, (byte) 7);
-        pstmt_insert.setBoolean(8, true);
-        pstmt_insert.setBytes(9, "abc".getBytes());
-        pstmt_insert.setString(10, "涛思数据");
-        pstmt_insert.executeUpdate();
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setInt(2, 2);
+        pstmtInsert.setLong(3, 3L);
+        pstmtInsert.setFloat(4, 3.14f);
+        pstmtInsert.setDouble(5, 3.1415);
+        pstmtInsert.setShort(6, (short) 6);
+        pstmtInsert.setByte(7, (byte) 7);
+        pstmtInsert.setBoolean(8, true);
+        pstmtInsert.setBytes(9, "abc".getBytes());
+        pstmtInsert.setString(10, "涛思数据");
+        pstmtInsert.executeUpdate();
         long start = ts - 1000 * 60 * 60;
         long end = ts + 1000 * 60 * 60;
-        pstmt_select.setTimestamp(1, new Timestamp(start));
-        pstmt_select.setTimestamp(2, new Timestamp(end));
-        pstmt_select.setInt(3, 0);
+        pstmtSelect.setTimestamp(1, new Timestamp(start));
+        pstmtSelect.setTimestamp(2, new Timestamp(end));
+        pstmtSelect.setInt(3, 0);
 
 
         // when
-        ResultSet rs = pstmt_select.executeQuery();
+        ResultSet rs = pstmtSelect.executeQuery();
         ResultSetMetaData meta = rs.getMetaData();
         rs.next();
 
@@ -98,9 +100,9 @@ public class TSDBPreparedStatementTest {
         long ts = System.currentTimeMillis();
 
         // when
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        pstmt_insert.setNull(2, Types.INTEGER);
-        int result = pstmt_insert.executeUpdate();
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setNull(2, Types.INTEGER);
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -142,9 +144,9 @@ public class TSDBPreparedStatementTest {
         long ts = System.currentTimeMillis();
 
         // when
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        pstmt_insert.setNull(3, Types.BIGINT);
-        int result = pstmt_insert.executeUpdate();
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setNull(3, Types.BIGINT);
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -163,9 +165,9 @@ public class TSDBPreparedStatementTest {
         long ts = System.currentTimeMillis();
 
         // when
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        pstmt_insert.setNull(4, Types.FLOAT);
-        int result = pstmt_insert.executeUpdate();
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setNull(4, Types.FLOAT);
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -184,9 +186,9 @@ public class TSDBPreparedStatementTest {
         long ts = System.currentTimeMillis();
 
         // when
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        pstmt_insert.setNull(5, Types.DOUBLE);
-        int result = pstmt_insert.executeUpdate();
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setNull(5, Types.DOUBLE);
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -205,9 +207,9 @@ public class TSDBPreparedStatementTest {
         long ts = System.currentTimeMillis();
 
         // when
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        pstmt_insert.setNull(6, Types.SMALLINT);
-        int result = pstmt_insert.executeUpdate();
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setNull(6, Types.SMALLINT);
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -226,9 +228,9 @@ public class TSDBPreparedStatementTest {
         long ts = System.currentTimeMillis();
 
         // when
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        pstmt_insert.setNull(7, Types.TINYINT);
-        int result = pstmt_insert.executeUpdate();
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setNull(7, Types.TINYINT);
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -247,9 +249,9 @@ public class TSDBPreparedStatementTest {
         long ts = System.currentTimeMillis();
 
         // when
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        pstmt_insert.setNull(8, Types.BOOLEAN);
-        int result = pstmt_insert.executeUpdate();
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setNull(8, Types.BOOLEAN);
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -268,9 +270,9 @@ public class TSDBPreparedStatementTest {
         long ts = System.currentTimeMillis();
 
         // when
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        pstmt_insert.setNull(9, Types.BINARY);
-        int result = pstmt_insert.executeUpdate();
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setNull(9, Types.BINARY);
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -289,9 +291,9 @@ public class TSDBPreparedStatementTest {
         long ts = System.currentTimeMillis();
 
         // when
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        pstmt_insert.setNull(10, Types.NCHAR);
-        int result = pstmt_insert.executeUpdate();
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setNull(10, Types.NCHAR);
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -477,11 +479,11 @@ public class TSDBPreparedStatementTest {
     public void bindDataWithSingleTagTest() throws SQLException {
         Statement stmt = conn.createStatement();
 
-        String[] types = new String[]{"tinyint", "smallint", "int", "bigint", "bool", "float", "double", "binary(10)", "nchar(10)"};
+        String[] types = new String[]{"tinyint", "smallint", "int", "bigint",  "timestamp", "bool", "float", "double", "binary(10)", "nchar(10)", "varbinary(10)", "geometry(50)"};
 
         for (String type : types) {
             stmt.execute("drop table if exists weather_test");
-            stmt.execute("create table weather_test(ts timestamp, f1 nchar(10), f2 binary(10)) tags (t " + type + ")");
+            stmt.execute("create table weather_test(ts timestamp, f1 tinyint, f2 smallint) tags (t " + type + ")");
 
             int numOfRows = 1;
 
@@ -491,10 +493,19 @@ public class TSDBPreparedStatementTest {
 
             switch (type) {
                 case "tinyint":
+                    s.setTagByte(0, (byte)1);
+                    break;
                 case "smallint":
+                    s.setTagShort(0, (short) 1);
+                    break;
                 case "int":
-                case "bigint":
                     s.setTagInt(0, 1);
+                    break;
+                case "bigint":
+                    s.setTagLong(0, 1L);
+                    break;
+                case "timestamp":
+                    s.setTagTimestamp(0, 1L);
                     break;
                 case "float":
                     s.setTagFloat(0, 1.23f);
@@ -511,6 +522,12 @@ public class TSDBPreparedStatementTest {
                 case "nchar(10)":
                     s.setTagNString(0, "test");
                     break;
+                case "varbinary(10)":
+                    s.setTagVarbinary(0, "test".getBytes());
+                    break;
+                case "geometry(50)":
+                    s.setTagGeometry(0, StringUtils.hexToBytes("0101000020E6100000000000000000F03F0000000000000040"));
+                    break;
                 default:
                     break;
             }
@@ -523,18 +540,18 @@ public class TSDBPreparedStatementTest {
             s.setTimestamp(0, ts);
 
             int random = 10 + r.nextInt(5);
-            ArrayList<String> s2 = new ArrayList<>();
+            ArrayList<Byte> s2 = new ArrayList<>();
             for (int i = 0; i < numOfRows; i++) {
-                s2.add("分支" + i % 4);
+                s2.add((byte)1);
             }
-            s.setNString(1, s2, 10);
+            s.setByte(1, s2);
 
             random = 10 + r.nextInt(5);
-            ArrayList<String> s3 = new ArrayList<>();
+            ArrayList<Short> s3 = new ArrayList<>();
             for (int i = 0; i < numOfRows; i++) {
-                s3.add("test" + i % 4);
+                s3.add((short) i);
             }
-            s.setString(2, s3, 10);
+            s.setShort(2, s3);
 
             s.columnDataAddBatch();
             s.columnDataExecuteBatch();
@@ -731,9 +748,9 @@ public class TSDBPreparedStatementTest {
         long ts = System.currentTimeMillis();
 
         // when
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        pstmt_insert.setBoolean(8, true);
-        int result = pstmt_insert.executeUpdate();
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setBoolean(8, true);
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -758,9 +775,9 @@ public class TSDBPreparedStatementTest {
         long ts = System.currentTimeMillis();
 
         // when
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        pstmt_insert.setByte(7, (byte) 0x001);
-        int result = pstmt_insert.executeUpdate();
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setByte(7, (byte) 0x001);
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -785,9 +802,9 @@ public class TSDBPreparedStatementTest {
         long ts = System.currentTimeMillis();
 
         // when
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        pstmt_insert.setShort(6, (short) 2);
-        int result = pstmt_insert.executeUpdate();
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setShort(6, (short) 2);
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -812,9 +829,9 @@ public class TSDBPreparedStatementTest {
         long ts = System.currentTimeMillis();
 
         // when
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        pstmt_insert.setInt(2, 10086);
-        int result = pstmt_insert.executeUpdate();
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setInt(2, 10086);
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -839,9 +856,9 @@ public class TSDBPreparedStatementTest {
         long ts = System.currentTimeMillis();
 
         // when
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        pstmt_insert.setLong(3, Long.MAX_VALUE);
-        int result = pstmt_insert.executeUpdate();
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setLong(3, Long.MAX_VALUE);
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -866,9 +883,9 @@ public class TSDBPreparedStatementTest {
         long ts = System.currentTimeMillis();
 
         // when
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        pstmt_insert.setFloat(4, 3.14f);
-        int result = pstmt_insert.executeUpdate();
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setFloat(4, 3.14f);
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -893,9 +910,9 @@ public class TSDBPreparedStatementTest {
         long ts = System.currentTimeMillis();
 
         // when
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        pstmt_insert.setDouble(5, 3.14444);
-        int result = pstmt_insert.executeUpdate();
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setDouble(5, 3.14444);
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -921,9 +938,9 @@ public class TSDBPreparedStatementTest {
         BigDecimal bigDecimal = new BigDecimal("3.14444");
 
         // when
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        pstmt_insert.setBigDecimal(5, bigDecimal);
-        int result = pstmt_insert.executeUpdate();
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setBigDecimal(5, bigDecimal);
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -949,9 +966,9 @@ public class TSDBPreparedStatementTest {
         String f9 = "{\"name\": \"john\", \"age\": 10, \"address\": \"192.168.1.100\"}";
 
         // when
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        pstmt_insert.setString(10, f9);
-        int result = pstmt_insert.executeUpdate();
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setString(10, f9);
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -977,9 +994,9 @@ public class TSDBPreparedStatementTest {
         byte[] f8 = "{\"name\": \"john\", \"age\": 10, \"address\": \"192.168.1.100\"}".getBytes();
 
         // when
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        pstmt_insert.setBytes(9, f8);
-        int result = pstmt_insert.executeUpdate();
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setBytes(9, f8);
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -1004,8 +1021,8 @@ public class TSDBPreparedStatementTest {
         long ts = new java.util.Date().getTime();
 
         // when
-        pstmt_insert.setDate(1, new Date(ts));
-        int result = pstmt_insert.executeUpdate();
+        pstmtInsert.setDate(1, new Date(ts));
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -1028,8 +1045,8 @@ public class TSDBPreparedStatementTest {
         long ts = System.currentTimeMillis();
 
         // when
-        pstmt_insert.setTime(1, new Time(ts));
-        int result = pstmt_insert.executeUpdate();
+        pstmtInsert.setTime(1, new Time(ts));
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -1052,8 +1069,8 @@ public class TSDBPreparedStatementTest {
         long ts = System.currentTimeMillis();
 
         // when
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        int result = pstmt_insert.executeUpdate();
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        int result = pstmtInsert.executeUpdate();
 
         // then
         Assert.assertEquals(1, result);
@@ -1072,37 +1089,59 @@ public class TSDBPreparedStatementTest {
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void setAsciiStream() throws SQLException {
-        pstmt_insert.setAsciiStream(1, null);
+        pstmtInsert.setAsciiStream(1, null);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void setBinaryStream() throws SQLException {
-        pstmt_insert.setBinaryStream(1, null);
+        pstmtInsert.setBinaryStream(1, null);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void setCharacterStream() throws SQLException {
-        pstmt_insert.setCharacterStream(1, null);
+        pstmtInsert.setCharacterStream(1, null);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void setRef() throws SQLException {
-        pstmt_insert.setRef(1, null);
+        pstmtInsert.setRef(1, null);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void setBlob() throws SQLException {
-        pstmt_insert.setBlob(1, (Blob) null);
+        pstmtInsert.setBlob(1, (Blob) null);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void setClob() throws SQLException {
-        pstmt_insert.setClob(1, (Clob) null);
+        pstmtInsert.setClob(1, (Clob) null);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void setArray() throws SQLException {
-        pstmt_insert.setArray(1, null);
+        pstmtInsert.setArray(1, null);
+    }
+
+    @Test(expected = SQLFeatureNotSupportedException.class)
+    public void setNCharacterStream() throws SQLException {
+        pstmtInsert.setNCharacterStream(1, null);
+    }
+    @Test(expected = SQLFeatureNotSupportedException.class)
+    public void setNCharacterStream2() throws SQLException {
+        pstmtInsert.setNCharacterStream(1, null, 0L);
+    }
+
+    @Test(expected = SQLFeatureNotSupportedException.class)
+    public void setAsciiStream2() throws SQLException {
+        pstmtInsert.setAsciiStream(1, null, 0L);
+    }
+    @Test(expected = SQLFeatureNotSupportedException.class)
+    public void setBinaryStream2() throws SQLException {
+        pstmtInsert.setBinaryStream(1, null, 0L);
+    }
+    @Test(expected = SQLFeatureNotSupportedException.class)
+    public void setCharacterStream2() throws SQLException {
+        pstmtInsert.setCharacterStream(1, null, 0L);
     }
 
     @Test
@@ -1111,8 +1150,8 @@ public class TSDBPreparedStatementTest {
         long ts = System.currentTimeMillis();
 
         // when
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        ResultSetMetaData metaData = pstmt_insert.getMetaData();
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        ResultSetMetaData metaData = pstmtInsert.getMetaData();
 
         // then
         Assert.assertNull(metaData);
@@ -1120,26 +1159,26 @@ public class TSDBPreparedStatementTest {
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void setURL() throws SQLException {
-        pstmt_insert.setURL(1, null);
+        pstmtInsert.setURL(1, null);
     }
 
     @Test
     public void getParameterMetaData() throws SQLException {
         // given
         long ts = System.currentTimeMillis();
-        pstmt_insert.setTimestamp(1, new Timestamp(ts));
-        pstmt_insert.setInt(2, 2);
-        pstmt_insert.setLong(3, 3L);
-        pstmt_insert.setFloat(4, 3.14f);
-        pstmt_insert.setDouble(5, 3.1415);
-        pstmt_insert.setShort(6, (short) 6);
-        pstmt_insert.setByte(7, (byte) 7);
-        pstmt_insert.setBoolean(8, true);
-        pstmt_insert.setBytes(9, "abc".getBytes());
-        pstmt_insert.setString(10, "涛思数据");
+        pstmtInsert.setTimestamp(1, new Timestamp(ts));
+        pstmtInsert.setInt(2, 2);
+        pstmtInsert.setLong(3, 3L);
+        pstmtInsert.setFloat(4, 3.14f);
+        pstmtInsert.setDouble(5, 3.1415);
+        pstmtInsert.setShort(6, (short) 6);
+        pstmtInsert.setByte(7, (byte) 7);
+        pstmtInsert.setBoolean(8, true);
+        pstmtInsert.setBytes(9, "abc".getBytes());
+        pstmtInsert.setString(10, "涛思数据");
 
         // when
-        ParameterMetaData parameterMetaData = pstmt_insert.getParameterMetaData();
+        ParameterMetaData parameterMetaData = pstmtInsert.getParameterMetaData();
 
         // then
         Assert.assertNotNull(parameterMetaData);
@@ -1169,7 +1208,7 @@ public class TSDBPreparedStatementTest {
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void testSetRowId() throws SQLException {
-        pstmt_insert.setRowId(1, null);
+        pstmtInsert.setRowId(1, null);
     }
     @Test
     public void testSetNString() throws SQLException {
@@ -1178,101 +1217,101 @@ public class TSDBPreparedStatementTest {
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void testSetNCharacterStream() throws SQLException {
-        pstmt_insert.setNCharacterStream(1, null);
+        pstmtInsert.setNCharacterStream(1, null);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void testSetNClob() throws SQLException {
-        pstmt_insert.setNClob(1, (NClob) null);
+        pstmtInsert.setNClob(1, (NClob) null);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void testSetSQLXML() throws SQLException {
-        pstmt_insert.setSQLXML(1, null);
+        pstmtInsert.setSQLXML(1, null);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void testSetAsciiStream() throws SQLException {
-        pstmt_insert.setAsciiStream(1, null, 0);
+        pstmtInsert.setAsciiStream(1, null, 0);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void testSetUnicodeStream() throws SQLException {
-        pstmt_insert.setUnicodeStream(1, null, 0);
+        pstmtInsert.setUnicodeStream(1, null, 0);
     }
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void testSetBinaryStream() throws SQLException {
-        pstmt_insert.setBinaryStream(1, null, 0);
+        pstmtInsert.setBinaryStream(1, null, 0);
     }
 
     @Test
     public void testClearParameters() throws SQLException {
-        pstmt_insert.clearParameters();
+        pstmtInsert.clearParameters();
     }
 
     @Test
     public void testSetObject() throws SQLException {
-        pstmt_insert.setObject(1, null, 1);
+        pstmtInsert.setObject(1, null, 1);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void testSetDate() throws SQLException {
-        pstmt_insert.setDate(1, new Date(System.currentTimeMillis()), Calendar.getInstance());
+        pstmtInsert.setDate(1, new Date(System.currentTimeMillis()), Calendar.getInstance());
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void testSetTime() throws SQLException {
-        pstmt_insert.setTime(1, new Time(System.currentTimeMillis()), Calendar.getInstance());
+        pstmtInsert.setTime(1, new Time(System.currentTimeMillis()), Calendar.getInstance());
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void testSetTimestamp() throws SQLException {
-        pstmt_insert.setTimestamp(1, new Timestamp(System.currentTimeMillis()), Calendar.getInstance());
+        pstmtInsert.setTimestamp(1, new Timestamp(System.currentTimeMillis()), Calendar.getInstance());
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void testSetNull() throws SQLException {
-        pstmt_insert.setNull(1, Types.NULL, null);
+        pstmtInsert.setNull(1, Types.NULL, null);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void testSetClobWithReaderAndLength() throws SQLException {
-        pstmt_insert.setClob(1, new StringReader("test"), 4);
+        pstmtInsert.setClob(1, new StringReader("test"), 4);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void testSetBlobWithInputStreamAndLength() throws SQLException {
-        pstmt_insert.setBlob(1, new ByteArrayInputStream(new byte[]{1, 2, 3}), 3);
+        pstmtInsert.setBlob(1, new ByteArrayInputStream(new byte[]{1, 2, 3}), 3);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void testSetNClobWithReaderAndLength() throws SQLException {
-        pstmt_insert.setNClob(1, new StringReader("test"), 4);
+        pstmtInsert.setNClob(1, new StringReader("test"), 4);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void testSetObjectWithTargetSqlType() throws SQLException {
-        pstmt_insert.setObject(1, new Object(), Types.OTHER, 0);
+        pstmtInsert.setObject(1, new Object(), Types.OTHER, 0);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void testSetCharacterStream() throws SQLException {
-        pstmt_insert.setCharacterStream(1, new StringReader("test"), 4);
+        pstmtInsert.setCharacterStream(1, new StringReader("test"), 4);
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void testSetClobWithReader() throws SQLException {
-        pstmt_insert.setClob(1, new StringReader("test"));
+        pstmtInsert.setClob(1, new StringReader("test"));
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void testSetBlobWithInputStream() throws SQLException {
-        pstmt_insert.setBlob(1, new ByteArrayInputStream(new byte[]{1, 2, 3}));
+        pstmtInsert.setBlob(1, new ByteArrayInputStream(new byte[]{1, 2, 3}));
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void testSetNClobWithReader() throws SQLException {
-        pstmt_insert.setNClob(1, new StringReader("test"));
+        pstmtInsert.setNClob(1, new StringReader("test"));
     }
 
     @Before
@@ -1284,8 +1323,8 @@ public class TSDBPreparedStatementTest {
             stmt.execute("create table if not exists t1 using weather tags('beijing')");
             stmt.close();
 
-            pstmt_insert = conn.prepareStatement(sql_insert);
-            pstmt_select = conn.prepareStatement(sql_select);
+            pstmtInsert = conn.prepareStatement(SQL_INSERT);
+            pstmtSelect = conn.prepareStatement(SQL_SELECT);
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -1294,10 +1333,10 @@ public class TSDBPreparedStatementTest {
     @After
     public void after() {
         try {
-            if (pstmt_insert != null)
-                pstmt_insert.close();
-            if (pstmt_select != null)
-                pstmt_select.close();
+            if (pstmtInsert != null)
+                pstmtInsert.close();
+            if (pstmtSelect != null)
+                pstmtSelect.close();
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -1309,16 +1348,16 @@ public class TSDBPreparedStatementTest {
         try {
             String url = SpecifyAddress.getInstance().getJniUrl();
             if (url == null) {
-                url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+                url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
             }
             Properties properties = new Properties();
             properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
             properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
             conn = DriverManager.getConnection(url, properties);
             try (Statement stmt = conn.createStatement()) {
-                stmt.execute("drop database if exists " + dbname);
-                stmt.execute("create database if not exists " + dbname);
-                stmt.execute("use " + dbname);
+                stmt.execute("drop database if exists " + DBNAME);
+                stmt.execute("create database if not exists " + DBNAME);
+                stmt.execute("use " + DBNAME);
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -1329,7 +1368,7 @@ public class TSDBPreparedStatementTest {
     public static void afterClass() {
         try {
             Statement statement = conn.createStatement();
-            statement.execute("drop database if exists " + dbname);
+            statement.execute("drop database if exists " + DBNAME);
             statement.execute("drop database if exists dbtest");
             statement.close();
             if (conn != null)

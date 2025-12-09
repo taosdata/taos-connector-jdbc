@@ -24,7 +24,7 @@ public class TaosAdapterMock {
     private volatile boolean isRunning = false;
     private ServerSocket serverSocket;
     private ExecutorService executor;
-    private AtomicInteger delayMillis = new AtomicInteger(0);
+    private final AtomicInteger delayMillis = new AtomicInteger(0);
     private final ConcurrentHashMap<Socket, Boolean> activeConnections = new ConcurrentHashMap<>();
 
     public TaosAdapterMock() {
@@ -44,7 +44,6 @@ public class TaosAdapterMock {
         this.targetPort = 6041;
         this.listenPort = listenPort;
     }
-
     public int getListenPort() {
         return listenPort;
     }

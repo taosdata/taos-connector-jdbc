@@ -415,18 +415,18 @@ public class AutoExpandingBufferTest {
     @Test
     public void edgeCase_MaxComponentsReached() throws SQLException {
         // Test writing when max components is reached
-        AutoExpandingBuffer buffer = new AutoExpandingBuffer(4, 2); // 4 bytes per component, max 2 components
+        AutoExpandingBuffer autoExpandingBuffer = new AutoExpandingBuffer(4, 2); // 4 bytes per component, max 2 components
 
         try {
             // First write: 4 bytes → first component
-            buffer.writeBytes(new byte[4]);
+            autoExpandingBuffer.writeBytes(new byte[4]);
             // Second write: 4 bytes → second component
-            buffer.writeBytes(new byte[4]);
+            autoExpandingBuffer.writeBytes(new byte[4]);
 
             // Third write: 1 byte → should throw exception (exceeds max components)
-            assertThrows(SQLException.class, () -> buffer.writeBytes(new byte[4]));
+            assertThrows(SQLException.class, () -> autoExpandingBuffer.writeBytes(new byte[4]));
         }finally {
-            buffer.release();
+            autoExpandingBuffer.release();
         }
     }
 

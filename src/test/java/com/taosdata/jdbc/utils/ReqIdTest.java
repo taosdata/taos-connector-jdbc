@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Properties;
 
 public class ReqIdTest {
-    String host = "127.0.0.1";
+    final String host = "127.0.0.1";
 
     @Test
     public void testMurmurHash32() {

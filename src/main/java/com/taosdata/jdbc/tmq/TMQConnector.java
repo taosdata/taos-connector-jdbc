@@ -10,7 +10,7 @@ import java.util.stream.Collectors;
 import static com.taosdata.jdbc.TSDBConstants.*;
 import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_JNI_RESULT_SET_NULL;
 import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_TMQ_CONSUMER_NULL;
-
+@SuppressWarnings("java:S125")
 public class TMQConnector extends TSDBJNIConnector {
 
     private String createConsumerErrorMsg;

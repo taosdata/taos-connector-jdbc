@@ -11,143 +11,143 @@ import java.sql.*;
 
 public class TSDBParameterMetaDataTest {
 
-    private static final String host = "127.0.0.1";
+    private static final String HOST = "127.0.0.1";
     private static Connection conn;
-    private static final String sql_insert = "insert into t1 values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    private static PreparedStatement pstmt_insert;
-    private static final String sql_select = "select * from t1 where ts > ? and ts <= ? and f1 >= ?";
-    private static PreparedStatement pstmt_select;
-    private static ParameterMetaData parameterMetaData_insert;
-    private static ParameterMetaData parameterMetaData_select;
-    private static final String dbname = TestUtils.camelToSnake(TSDBParameterMetaDataTest.class);
+    private static final String SQL_INSERT = "insert into t1 values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    private static PreparedStatement pstmtInsert;
+    private static final String SQL_SELECT = "select * from t1 where ts > ? and ts <= ? and f1 >= ?";
+    private static PreparedStatement pstmtSelect;
+    private static ParameterMetaData parameterMetaDataInsert;
+    private static ParameterMetaData parameterMetaDataSelect;
+    private static final String DBNAME = TestUtils.camelToSnake(TSDBParameterMetaDataTest.class);
 
     @Test
     public void getParameterCount() throws SQLException {
-        Assert.assertEquals(10, parameterMetaData_insert.getParameterCount());
+        Assert.assertEquals(10, parameterMetaDataInsert.getParameterCount());
     }
 
     @Test
     public void isNullable() throws SQLException {
-        Assert.assertEquals(ParameterMetaData.parameterNullableUnknown, parameterMetaData_insert.isNullable(1));
-        Assert.assertEquals(ParameterMetaData.parameterNullableUnknown, parameterMetaData_insert.isNullable(2));
-        Assert.assertEquals(ParameterMetaData.parameterNullableUnknown, parameterMetaData_insert.isNullable(3));
-        Assert.assertEquals(ParameterMetaData.parameterNullableUnknown, parameterMetaData_insert.isNullable(4));
-        Assert.assertEquals(ParameterMetaData.parameterNullableUnknown, parameterMetaData_insert.isNullable(5));
-        Assert.assertEquals(ParameterMetaData.parameterNullableUnknown, parameterMetaData_insert.isNullable(6));
-        Assert.assertEquals(ParameterMetaData.parameterNullableUnknown, parameterMetaData_insert.isNullable(7));
-        Assert.assertEquals(ParameterMetaData.parameterNullableUnknown, parameterMetaData_insert.isNullable(8));
-        Assert.assertEquals(ParameterMetaData.parameterNullableUnknown, parameterMetaData_insert.isNullable(9));
-        Assert.assertEquals(ParameterMetaData.parameterNullableUnknown, parameterMetaData_insert.isNullable(10));
+        Assert.assertEquals(ParameterMetaData.parameterNullableUnknown, parameterMetaDataInsert.isNullable(1));
+        Assert.assertEquals(ParameterMetaData.parameterNullableUnknown, parameterMetaDataInsert.isNullable(2));
+        Assert.assertEquals(ParameterMetaData.parameterNullableUnknown, parameterMetaDataInsert.isNullable(3));
+        Assert.assertEquals(ParameterMetaData.parameterNullableUnknown, parameterMetaDataInsert.isNullable(4));
+        Assert.assertEquals(ParameterMetaData.parameterNullableUnknown, parameterMetaDataInsert.isNullable(5));
+        Assert.assertEquals(ParameterMetaData.parameterNullableUnknown, parameterMetaDataInsert.isNullable(6));
+        Assert.assertEquals(ParameterMetaData.parameterNullableUnknown, parameterMetaDataInsert.isNullable(7));
+        Assert.assertEquals(ParameterMetaData.parameterNullableUnknown, parameterMetaDataInsert.isNullable(8));
+        Assert.assertEquals(ParameterMetaData.parameterNullableUnknown, parameterMetaDataInsert.isNullable(9));
+        Assert.assertEquals(ParameterMetaData.parameterNullableUnknown, parameterMetaDataInsert.isNullable(10));
     }
 
     @Test
     public void isSigned() throws SQLException {
-        Assert.assertEquals(false, parameterMetaData_insert.isSigned(1));
-        Assert.assertEquals(true, parameterMetaData_insert.isSigned(2));
-        Assert.assertEquals(true, parameterMetaData_insert.isSigned(3));
-        Assert.assertEquals(true, parameterMetaData_insert.isSigned(4));
-        Assert.assertEquals(true, parameterMetaData_insert.isSigned(5));
-        Assert.assertEquals(true, parameterMetaData_insert.isSigned(6));
-        Assert.assertEquals(true, parameterMetaData_insert.isSigned(7));
-        Assert.assertEquals(false, parameterMetaData_insert.isSigned(8));
-        Assert.assertEquals(false, parameterMetaData_insert.isSigned(9));
-        Assert.assertEquals(false, parameterMetaData_insert.isSigned(10));
+        Assert.assertEquals(false, parameterMetaDataInsert.isSigned(1));
+        Assert.assertEquals(true, parameterMetaDataInsert.isSigned(2));
+        Assert.assertEquals(true, parameterMetaDataInsert.isSigned(3));
+        Assert.assertEquals(true, parameterMetaDataInsert.isSigned(4));
+        Assert.assertEquals(true, parameterMetaDataInsert.isSigned(5));
+        Assert.assertEquals(true, parameterMetaDataInsert.isSigned(6));
+        Assert.assertEquals(true, parameterMetaDataInsert.isSigned(7));
+        Assert.assertEquals(false, parameterMetaDataInsert.isSigned(8));
+        Assert.assertEquals(false, parameterMetaDataInsert.isSigned(9));
+        Assert.assertEquals(false, parameterMetaDataInsert.isSigned(10));
     }
 
     @Test
     public void getPrecision() throws SQLException {
         //create table weather(ts timestamp, f1 int, f2 bigint, f3 float, f4 double, f5 smallint, f6 tinyint, f7 bool, f8 binary(64), f9 nchar(64))
-        Assert.assertEquals(TSDBConstants.TIMESTAMP_MS_PRECISION, parameterMetaData_insert.getPrecision(1));
-        Assert.assertEquals(TSDBConstants.INT_PRECISION, parameterMetaData_insert.getPrecision(2));
-        Assert.assertEquals(TSDBConstants.BIGINT_PRECISION, parameterMetaData_insert.getPrecision(3));
-        Assert.assertEquals(TSDBConstants.FLOAT_PRECISION, parameterMetaData_insert.getPrecision(4));
-        Assert.assertEquals(TSDBConstants.DOUBLE_PRECISION, parameterMetaData_insert.getPrecision(5));
-        Assert.assertEquals(TSDBConstants.SMALLINT_PRECISION, parameterMetaData_insert.getPrecision(6));
-        Assert.assertEquals(TSDBConstants.TINYINT_PRECISION, parameterMetaData_insert.getPrecision(7));
-        Assert.assertEquals(TSDBConstants.BOOLEAN_PRECISION, parameterMetaData_insert.getPrecision(8));
-        Assert.assertEquals("hello".getBytes().length, parameterMetaData_insert.getPrecision(9));
-        Assert.assertEquals("涛思数据".length(), parameterMetaData_insert.getPrecision(10));
+        Assert.assertEquals(TSDBConstants.TIMESTAMP_MS_PRECISION, parameterMetaDataInsert.getPrecision(1));
+        Assert.assertEquals(TSDBConstants.INT_PRECISION, parameterMetaDataInsert.getPrecision(2));
+        Assert.assertEquals(TSDBConstants.BIGINT_PRECISION, parameterMetaDataInsert.getPrecision(3));
+        Assert.assertEquals(TSDBConstants.FLOAT_PRECISION, parameterMetaDataInsert.getPrecision(4));
+        Assert.assertEquals(TSDBConstants.DOUBLE_PRECISION, parameterMetaDataInsert.getPrecision(5));
+        Assert.assertEquals(TSDBConstants.SMALLINT_PRECISION, parameterMetaDataInsert.getPrecision(6));
+        Assert.assertEquals(TSDBConstants.TINYINT_PRECISION, parameterMetaDataInsert.getPrecision(7));
+        Assert.assertEquals(TSDBConstants.BOOLEAN_PRECISION, parameterMetaDataInsert.getPrecision(8));
+        Assert.assertEquals("hello".getBytes().length, parameterMetaDataInsert.getPrecision(9));
+        Assert.assertEquals("涛思数据".length(), parameterMetaDataInsert.getPrecision(10));
     }
 
     @Test
     public void getScale() throws SQLException {
-        Assert.assertEquals(0, parameterMetaData_insert.getScale(1));
-        Assert.assertEquals(0, parameterMetaData_insert.getScale(2));
-        Assert.assertEquals(0, parameterMetaData_insert.getScale(3));
-        Assert.assertEquals(31, parameterMetaData_insert.getScale(4));
-        Assert.assertEquals(31, parameterMetaData_insert.getScale(5));
-        Assert.assertEquals(0, parameterMetaData_insert.getScale(6));
-        Assert.assertEquals(0, parameterMetaData_insert.getScale(7));
-        Assert.assertEquals(0, parameterMetaData_insert.getScale(8));
-        Assert.assertEquals(0, parameterMetaData_insert.getScale(9));
-        Assert.assertEquals(0, parameterMetaData_insert.getScale(10));
+        Assert.assertEquals(0, parameterMetaDataInsert.getScale(1));
+        Assert.assertEquals(0, parameterMetaDataInsert.getScale(2));
+        Assert.assertEquals(0, parameterMetaDataInsert.getScale(3));
+        Assert.assertEquals(31, parameterMetaDataInsert.getScale(4));
+        Assert.assertEquals(31, parameterMetaDataInsert.getScale(5));
+        Assert.assertEquals(0, parameterMetaDataInsert.getScale(6));
+        Assert.assertEquals(0, parameterMetaDataInsert.getScale(7));
+        Assert.assertEquals(0, parameterMetaDataInsert.getScale(8));
+        Assert.assertEquals(0, parameterMetaDataInsert.getScale(9));
+        Assert.assertEquals(0, parameterMetaDataInsert.getScale(10));
     }
 
     @Test
     public void getParameterType() throws SQLException {
-        Assert.assertEquals(Types.TIMESTAMP, parameterMetaData_insert.getParameterType(1));
-        Assert.assertEquals(Types.INTEGER, parameterMetaData_insert.getParameterType(2));
-        Assert.assertEquals(Types.BIGINT, parameterMetaData_insert.getParameterType(3));
-        Assert.assertEquals(Types.FLOAT, parameterMetaData_insert.getParameterType(4));
-        Assert.assertEquals(Types.DOUBLE, parameterMetaData_insert.getParameterType(5));
-        Assert.assertEquals(Types.SMALLINT, parameterMetaData_insert.getParameterType(6));
-        Assert.assertEquals(Types.TINYINT, parameterMetaData_insert.getParameterType(7));
-        Assert.assertEquals(Types.BOOLEAN, parameterMetaData_insert.getParameterType(8));
-        Assert.assertEquals(Types.BINARY, parameterMetaData_insert.getParameterType(9));
-        Assert.assertEquals(Types.NCHAR, parameterMetaData_insert.getParameterType(10));
+        Assert.assertEquals(Types.TIMESTAMP, parameterMetaDataInsert.getParameterType(1));
+        Assert.assertEquals(Types.INTEGER, parameterMetaDataInsert.getParameterType(2));
+        Assert.assertEquals(Types.BIGINT, parameterMetaDataInsert.getParameterType(3));
+        Assert.assertEquals(Types.FLOAT, parameterMetaDataInsert.getParameterType(4));
+        Assert.assertEquals(Types.DOUBLE, parameterMetaDataInsert.getParameterType(5));
+        Assert.assertEquals(Types.SMALLINT, parameterMetaDataInsert.getParameterType(6));
+        Assert.assertEquals(Types.TINYINT, parameterMetaDataInsert.getParameterType(7));
+        Assert.assertEquals(Types.BOOLEAN, parameterMetaDataInsert.getParameterType(8));
+        Assert.assertEquals(Types.BINARY, parameterMetaDataInsert.getParameterType(9));
+        Assert.assertEquals(Types.NCHAR, parameterMetaDataInsert.getParameterType(10));
     }
 
     @Test
     public void getParameterTypeName() throws SQLException {
-        Assert.assertEquals(TSDBConstants.jdbcType2TaosTypeName(Types.TIMESTAMP), parameterMetaData_insert.getParameterTypeName(1));
-        Assert.assertEquals(TSDBConstants.jdbcType2TaosTypeName(Types.INTEGER), parameterMetaData_insert.getParameterTypeName(2));
-        Assert.assertEquals(TSDBConstants.jdbcType2TaosTypeName(Types.BIGINT), parameterMetaData_insert.getParameterTypeName(3));
-        Assert.assertEquals(TSDBConstants.jdbcType2TaosTypeName(Types.FLOAT), parameterMetaData_insert.getParameterTypeName(4));
-        Assert.assertEquals(TSDBConstants.jdbcType2TaosTypeName(Types.DOUBLE), parameterMetaData_insert.getParameterTypeName(5));
-        Assert.assertEquals(TSDBConstants.jdbcType2TaosTypeName(Types.SMALLINT), parameterMetaData_insert.getParameterTypeName(6));
-        Assert.assertEquals(TSDBConstants.jdbcType2TaosTypeName(Types.TINYINT), parameterMetaData_insert.getParameterTypeName(7));
-        Assert.assertEquals(TSDBConstants.jdbcType2TaosTypeName(Types.BOOLEAN), parameterMetaData_insert.getParameterTypeName(8));
-        Assert.assertEquals(TSDBConstants.jdbcType2TaosTypeName(Types.BINARY), parameterMetaData_insert.getParameterTypeName(9));
-        Assert.assertEquals(TSDBConstants.jdbcType2TaosTypeName(Types.NCHAR), parameterMetaData_insert.getParameterTypeName(10));
+        Assert.assertEquals(TSDBConstants.jdbcType2TaosTypeName(Types.TIMESTAMP), parameterMetaDataInsert.getParameterTypeName(1));
+        Assert.assertEquals(TSDBConstants.jdbcType2TaosTypeName(Types.INTEGER), parameterMetaDataInsert.getParameterTypeName(2));
+        Assert.assertEquals(TSDBConstants.jdbcType2TaosTypeName(Types.BIGINT), parameterMetaDataInsert.getParameterTypeName(3));
+        Assert.assertEquals(TSDBConstants.jdbcType2TaosTypeName(Types.FLOAT), parameterMetaDataInsert.getParameterTypeName(4));
+        Assert.assertEquals(TSDBConstants.jdbcType2TaosTypeName(Types.DOUBLE), parameterMetaDataInsert.getParameterTypeName(5));
+        Assert.assertEquals(TSDBConstants.jdbcType2TaosTypeName(Types.SMALLINT), parameterMetaDataInsert.getParameterTypeName(6));
+        Assert.assertEquals(TSDBConstants.jdbcType2TaosTypeName(Types.TINYINT), parameterMetaDataInsert.getParameterTypeName(7));
+        Assert.assertEquals(TSDBConstants.jdbcType2TaosTypeName(Types.BOOLEAN), parameterMetaDataInsert.getParameterTypeName(8));
+        Assert.assertEquals(TSDBConstants.jdbcType2TaosTypeName(Types.BINARY), parameterMetaDataInsert.getParameterTypeName(9));
+        Assert.assertEquals(TSDBConstants.jdbcType2TaosTypeName(Types.NCHAR), parameterMetaDataInsert.getParameterTypeName(10));
     }
 
     @Test
     public void getParameterClassName() throws SQLException {
-        Assert.assertEquals(Timestamp.class.getName(), parameterMetaData_insert.getParameterClassName(1));
-        Assert.assertEquals(Integer.class.getName(), parameterMetaData_insert.getParameterClassName(2));
-        Assert.assertEquals(Long.class.getName(), parameterMetaData_insert.getParameterClassName(3));
-        Assert.assertEquals(Float.class.getName(), parameterMetaData_insert.getParameterClassName(4));
-        Assert.assertEquals(Double.class.getName(), parameterMetaData_insert.getParameterClassName(5));
-        Assert.assertEquals(Short.class.getName(), parameterMetaData_insert.getParameterClassName(6));
-        Assert.assertEquals(Byte.class.getName(), parameterMetaData_insert.getParameterClassName(7));
-        Assert.assertEquals(Boolean.class.getName(), parameterMetaData_insert.getParameterClassName(8));
-        Assert.assertEquals(byte[].class.getName(), parameterMetaData_insert.getParameterClassName(9));
-        Assert.assertEquals(String.class.getName(), parameterMetaData_insert.getParameterClassName(10));
+        Assert.assertEquals(Timestamp.class.getName(), parameterMetaDataInsert.getParameterClassName(1));
+        Assert.assertEquals(Integer.class.getName(), parameterMetaDataInsert.getParameterClassName(2));
+        Assert.assertEquals(Long.class.getName(), parameterMetaDataInsert.getParameterClassName(3));
+        Assert.assertEquals(Float.class.getName(), parameterMetaDataInsert.getParameterClassName(4));
+        Assert.assertEquals(Double.class.getName(), parameterMetaDataInsert.getParameterClassName(5));
+        Assert.assertEquals(Short.class.getName(), parameterMetaDataInsert.getParameterClassName(6));
+        Assert.assertEquals(Byte.class.getName(), parameterMetaDataInsert.getParameterClassName(7));
+        Assert.assertEquals(Boolean.class.getName(), parameterMetaDataInsert.getParameterClassName(8));
+        Assert.assertEquals(byte[].class.getName(), parameterMetaDataInsert.getParameterClassName(9));
+        Assert.assertEquals(String.class.getName(), parameterMetaDataInsert.getParameterClassName(10));
     }
 
     @Test
     public void getParameterMode() throws SQLException {
-        Assert.assertEquals(ParameterMetaData.parameterModeUnknown, parameterMetaData_insert.getParameterMode(1));
-        Assert.assertEquals(ParameterMetaData.parameterModeUnknown, parameterMetaData_insert.getParameterMode(2));
-        Assert.assertEquals(ParameterMetaData.parameterModeUnknown, parameterMetaData_insert.getParameterMode(3));
-        Assert.assertEquals(ParameterMetaData.parameterModeUnknown, parameterMetaData_insert.getParameterMode(4));
-        Assert.assertEquals(ParameterMetaData.parameterModeUnknown, parameterMetaData_insert.getParameterMode(5));
-        Assert.assertEquals(ParameterMetaData.parameterModeUnknown, parameterMetaData_insert.getParameterMode(6));
-        Assert.assertEquals(ParameterMetaData.parameterModeUnknown, parameterMetaData_insert.getParameterMode(7));
-        Assert.assertEquals(ParameterMetaData.parameterModeUnknown, parameterMetaData_insert.getParameterMode(8));
-        Assert.assertEquals(ParameterMetaData.parameterModeUnknown, parameterMetaData_insert.getParameterMode(9));
-        Assert.assertEquals(ParameterMetaData.parameterModeUnknown, parameterMetaData_insert.getParameterMode(10));
+        Assert.assertEquals(ParameterMetaData.parameterModeUnknown, parameterMetaDataInsert.getParameterMode(1));
+        Assert.assertEquals(ParameterMetaData.parameterModeUnknown, parameterMetaDataInsert.getParameterMode(2));
+        Assert.assertEquals(ParameterMetaData.parameterModeUnknown, parameterMetaDataInsert.getParameterMode(3));
+        Assert.assertEquals(ParameterMetaData.parameterModeUnknown, parameterMetaDataInsert.getParameterMode(4));
+        Assert.assertEquals(ParameterMetaData.parameterModeUnknown, parameterMetaDataInsert.getParameterMode(5));
+        Assert.assertEquals(ParameterMetaData.parameterModeUnknown, parameterMetaDataInsert.getParameterMode(6));
+        Assert.assertEquals(ParameterMetaData.parameterModeUnknown, parameterMetaDataInsert.getParameterMode(7));
+        Assert.assertEquals(ParameterMetaData.parameterModeUnknown, parameterMetaDataInsert.getParameterMode(8));
+        Assert.assertEquals(ParameterMetaData.parameterModeUnknown, parameterMetaDataInsert.getParameterMode(9));
+        Assert.assertEquals(ParameterMetaData.parameterModeUnknown, parameterMetaDataInsert.getParameterMode(10));
     }
 
     @Test
     public void unwrap() throws SQLException {
-        TSDBParameterMetaData unwrap = parameterMetaData_insert.unwrap(TSDBParameterMetaData.class);
+        TSDBParameterMetaData unwrap = parameterMetaDataInsert.unwrap(TSDBParameterMetaData.class);
         Assert.assertNotNull(unwrap);
     }
 
     @Test
     public void isWrapperFor() throws SQLException {
-        Assert.assertTrue(parameterMetaData_insert.isWrapperFor(TSDBParameterMetaData.class));
+        Assert.assertTrue(parameterMetaDataInsert.isWrapperFor(TSDBParameterMetaData.class));
     }
 
     @BeforeClass
@@ -155,35 +155,36 @@ public class TSDBParameterMetaDataTest {
         try {
             String url = SpecifyAddress.getInstance().getJniUrl();
             if (url == null) {
-                url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+                url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
             }
             conn = DriverManager.getConnection(url);
             try (Statement stmt = conn.createStatement()) {
-                stmt.execute("drop database if exists " + dbname);
-                stmt.execute("create database if not exists " + dbname);
-                stmt.execute("use " + dbname);
+                stmt.execute("drop database if exists " + DBNAME);
+                stmt.execute("create database if not exists " + DBNAME);
+                stmt.execute("use " + DBNAME);
                 stmt.execute("create table weather(ts timestamp, f1 int, f2 bigint, f3 float, f4 double, f5 smallint, f6 tinyint, f7 bool, f8 binary(64), f9 nchar(64)) tags(loc nchar(64))");
                 stmt.execute("create table t1 using weather tags('beijing')");
             }
-            pstmt_insert = conn.prepareStatement(sql_insert);
+            pstmtInsert = conn.prepareStatement(SQL_INSERT);
 
-            pstmt_insert.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
-            pstmt_insert.setObject(2, 111);
-            pstmt_insert.setObject(3, Long.MAX_VALUE);
-            pstmt_insert.setObject(4, 3.14159265354f);
-            pstmt_insert.setObject(5, Double.MAX_VALUE);
-            pstmt_insert.setObject(6, Short.MAX_VALUE);
-            pstmt_insert.setObject(7, Byte.MAX_VALUE);
-            pstmt_insert.setObject(8, true);
-            pstmt_insert.setObject(9, "hello".getBytes());
-            pstmt_insert.setObject(10, "涛思数据");
-            parameterMetaData_insert = pstmt_insert.getParameterMetaData();
+            pstmtInsert.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
+            pstmtInsert.setObject(2, 111);
+            pstmtInsert.setObject(3, Long.MAX_VALUE);
+            pstmtInsert.setObject(4, 3.14159265354f);
+            pstmtInsert.setObject(5, Double.MAX_VALUE);
+            pstmtInsert.setObject(6, Short.MAX_VALUE);
+            pstmtInsert.setObject(7, Byte.MAX_VALUE);
+            pstmtInsert.setObject(8, true);
+            pstmtInsert.setObject(9, "hello".getBytes());
+            pstmtInsert.setObject(10, "涛思数据");
+            parameterMetaDataInsert = pstmtInsert.getParameterMetaData();
 
-            pstmt_select = conn.prepareStatement(sql_select);
-            pstmt_select.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
-            pstmt_select.setTimestamp(2, new Timestamp(System.currentTimeMillis() + 10000));
-            pstmt_select.setInt(3, 0);
-            parameterMetaData_select = pstmt_select.getParameterMetaData();
+            pstmtSelect = conn.prepareStatement(SQL_SELECT);
+            pstmtSelect.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
+            pstmtSelect.setTimestamp(2, new Timestamp(System.currentTimeMillis() + 10000));
+            pstmtSelect.setInt(3, 0);
+            parameterMetaDataSelect = pstmtSelect.getParameterMetaData();
+            Assert.assertNotNull(parameterMetaDataSelect);
 
         } catch (SQLException e) {
             e.printStackTrace();
@@ -193,13 +194,13 @@ public class TSDBParameterMetaDataTest {
     @AfterClass
     public static void afterClass() {
         try {
-            if (pstmt_insert != null)
-                pstmt_insert.close();
-            if (pstmt_select != null)
-                pstmt_select.close();
+            if (pstmtInsert != null)
+                pstmtInsert.close();
+            if (pstmtSelect != null)
+                pstmtSelect.close();
             if (conn != null) {
                 Statement statement = conn.createStatement();
-                statement.execute("drop database if exists " + dbname);
+                statement.execute("drop database if exists " + DBNAME);
                 statement.close();
                 conn.close();
             }

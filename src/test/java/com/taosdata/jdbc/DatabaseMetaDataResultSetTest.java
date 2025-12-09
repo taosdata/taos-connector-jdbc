@@ -1,5 +1,6 @@
 //package com.taosdata.jdbc;
 //
+//import com.taosdata.jdbc.utils.TestUtils;
 //import org.junit.AfterClass;
 //import org.junit.Before;
 //import org.junit.BeforeClass;
@@ -8,19 +9,19 @@
 //import com.taosdata.jdbc.utils.SpecifyAddress;
 //
 //import java.math.BigDecimal;
-//import java.sql.Connection;
-//import java.sql.DatabaseMetaData;
-//import java.sql.DriverManager;
-//import java.sql.SQLException;
+//import java.sql.*;
 //import java.util.ArrayList;
 //import java.util.List;
+//import java.util.Properties;
 //
 //import static org.junit.Assert.*;
 //
 //public class DatabaseMetaDataResultSetTest {
-//
+//    static final String HOST = "127.0.0.1";
+//    static final String DB_NAME = TestUtils.camelToSnake(DatabaseMetaDataResultSetTest.class);
+//    static final String TABLE_NAME = "test";
 //    static Connection connection;
-//    static String host = "127.0.0.1";
+//    static Statement statement;
 //    static DatabaseMetaDataResultSet resultSet;
 //
 //
@@ -91,20 +92,36 @@
 //        resultSet.getString("INVALID_COLUMN");
 //    }
 //
+//
 //    @BeforeClass
 //    public static void before() throws SQLException {
 //        String url = SpecifyAddress.getInstance().getJniUrl();
 //        if (url == null) {
-//            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+//            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
 //        }
-//        connection = DriverManager.getConnection(url);
+//        Properties properties = new Properties();
+//        properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
+//        properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
+//        connection = DriverManager.getConnection(url, properties);
+//        statement = connection.createStatement();
+//        statement.executeUpdate("drop database if exists " + DB_NAME);
+//        statement.executeUpdate("create database if not exists " + DB_NAME);
+//        statement.executeUpdate("use " + DB_NAME);
+//        statement.executeUpdate("create table " + TABLE_NAME + " (ts timestamp, c1 varbinary(20))  tags(t1 varbinary(20))");
 //    }
 //
 //    @AfterClass
-//    public static void after() throws SQLException {
-//        if (connection != null) {
-//            connection.close();
+//    public static void after() {
+//        try {
+//            if (statement != null && !statement.isClosed()) {
+//                statement.executeUpdate("drop database if exists " + DB_NAME);
+//                statement.close();
+//            }
+//            if (connection != null && !connection.isClosed()) {
+//                connection.close();
+//            }
+//        } catch (SQLException e) {
+//            // ignore
 //        }
 //    }
-//    // Add more tests for other methods as needed
 //}

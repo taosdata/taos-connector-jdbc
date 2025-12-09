@@ -4,7 +4,6 @@ import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -13,14 +12,15 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+@SuppressWarnings("java:S1874")
 public class SchemalessConnectionTest {
-    private static final String host = "127.0.0.1";
-    private static final String db = TestUtils.camelToSnake(SchemalessConnectionTest.class);
+    private static final String HOST = "127.0.0.1";
+    private static final String DB = TestUtils.camelToSnake(SchemalessConnectionTest.class);
     private static Connection connection;
 
     @Test(expected = SQLException.class)
     public void testThroughJniConnectionAndUserPassword() throws SQLException {
-        String url = "jdbc:TAOS://" + host + ":6030/";
+        String url = "jdbc:TAOS://" + HOST + ":6030/";
         Connection conn = DriverManager.getConnection(url, "root", "taosdata");
         SchemalessWriter writer = new SchemalessWriter(conn);
         writer.write("measurement,host=host1 field1=2i,field2=2.0 1577837300000", SchemalessProtocolType.LINE, SchemalessTimestampType.MILLI_SECONDS);
@@ -28,7 +28,7 @@ public class SchemalessConnectionTest {
 
     @Test(expected = SQLException.class)
     public void testThroughWSConnectionAndUserPassword() throws SQLException {
-        String url = "jdbc:TAOS-RS://" + host + ":6041/";
+        String url = "jdbc:TAOS-RS://" + HOST + ":6041/";
         Connection conn = DriverManager.getConnection(url, "root", "taosdata");
         SchemalessWriter writer = new SchemalessWriter(conn);
         writer.write("measurement,host=host1 field1=2i,field2=2.0 1577837300000", SchemalessProtocolType.LINE, SchemalessTimestampType.MILLI_SECONDS);
@@ -36,33 +36,33 @@ public class SchemalessConnectionTest {
 
     @Test
     public void testThroughJniUrl() throws SQLException {
-        String url = "jdbc:TAOS://" + host + ":6030/";
-        SchemalessWriter writer = new SchemalessWriter(url, "root", "taosdata", db);
+        String url = "jdbc:TAOS://" + HOST + ":6030/";
+        SchemalessWriter writer = new SchemalessWriter(url, "root", "taosdata", DB);
         writer.write("measurement,host=host1 field1=2i,field2=2.0 1577837300000", SchemalessProtocolType.LINE, SchemalessTimestampType.MILLI_SECONDS);
     }
 
     @Test
     public void testThroughWSUrl() throws SQLException {
-        String url = "jdbc:TAOS-RS://" + host + ":6041/";
-        SchemalessWriter writer = new SchemalessWriter(url, "root", "taosdata", db);
+        String url = "jdbc:TAOS-RS://" + HOST + ":6041/";
+        SchemalessWriter writer = new SchemalessWriter(url, "root", "taosdata", DB);
         writer.write("measurement,host=host1 field1=2i,field2=2.0 1577837300000", SchemalessProtocolType.LINE, SchemalessTimestampType.MILLI_SECONDS);
     }
 
     @BeforeClass
     public static void before() throws SQLException {
-        String url = "jdbc:TAOS://" + host + ":6030/";
+        String url = "jdbc:TAOS://" + HOST + ":6030/";
         connection = DriverManager.getConnection(url, "root", "taosdata");
         try (Statement statement = connection.createStatement()) {
-            statement.executeUpdate("drop database if exists " + db);
-            statement.executeUpdate("create database " + db);
+            statement.executeUpdate("drop database if exists " + DB);
+            statement.executeUpdate("create database " + DB);
         }
     }
 
     @AfterClass
     public static void after() throws SQLException {
-        String url = "jdbc:TAOS://" + host + ":6030/";
+        String url = "jdbc:TAOS://" + HOST + ":6030/";
         try (Statement statement = connection.createStatement()) {
-            statement.executeUpdate("drop database if exists " + db);
+            statement.executeUpdate("drop database if exists " + DB);
         }
         connection.close();
     }

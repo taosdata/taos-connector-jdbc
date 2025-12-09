@@ -1,6 +1,5 @@
 package com.taosdata.jdbc.ws.tmq.entity;
 
-import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.tmq.TopicPartition;
 import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.tmq.ConsumerAction;

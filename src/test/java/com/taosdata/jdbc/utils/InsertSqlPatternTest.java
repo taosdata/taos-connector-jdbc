@@ -1,11 +1,5 @@
 package com.taosdata.jdbc.utils;
 
-import com.taosdata.jdbc.ws.TSWSPreparedStatement;
-import org.junit.Assert;
-import org.junit.Test;
-
-import java.util.regex.Matcher;
-
 public class InsertSqlPatternTest {
     String[] sqls = {
             "insert into st.pre values (?, ?)",

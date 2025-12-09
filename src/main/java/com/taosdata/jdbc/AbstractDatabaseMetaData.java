@@ -1,8 +1,8 @@
 package com.taosdata.jdbc;
 
 import com.google.common.collect.Lists;
+import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.enums.DataType;
-import com.taosdata.jdbc.rs.ConnectionParam;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.ws.WSConnection;
 import org.slf4j.Logger;
@@ -1667,33 +1667,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
     }
 
     protected ResultSet getSuperTables(String catalog, String schemaPattern, String tableNamePattern, Connection conn) throws SQLException {
-        if (catalog == null || catalog.isEmpty())
-            return null;
-
-        if (!isAvailableCatalog(conn, catalog)) {
-            return new EmptyResultSet();
-        }
-
-        DatabaseMetaDataResultSet resultSet = new DatabaseMetaDataResultSet();
-        try (Statement stmt = conn.createStatement()) {
-            // set up ColumnMetaDataList
-            resultSet.setColumnMetaDataList(buildGetSuperTablesColumnMetaDataList());
-            // set result set row data
-            try (ResultSet rs = stmt.executeQuery("select * from information_schema.ins_tables where db_name='"
-                    + catalog + "' and table_name like '" + tableNamePattern + "'")) {
-                List<TSDBResultSetRowData> rowDataList = new ArrayList<>();
-                while (rs.next()) {
-                    TSDBResultSetRowData rowData = new TSDBResultSetRowData(4);
-                    rowData.setStringValue(1, catalog);
-                    rowData.setStringValue(2, null);
-                    rowData.setStringValue(3, rs.getString("table_name"));
-                    rowData.setStringValue(4, rs.getString("stable_name"));
-                    rowDataList.add(rowData);
-                }
-                resultSet.setRowDataList(rowDataList);
-            }
-        }
-        return resultSet;
+        return getEmptyResultSet();
     }
 
     private List<ColumnMetaData> buildGetSuperTablesColumnMetaDataList() {

@@ -16,10 +16,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class WSIpv6Test {
-    private static final String host = "[::1]";
-    private static final int port = 6041;
+    private static final String HOST = "[::1]";
+    private static final int PORT = 6041;
     private static Connection connection;
-    private static final String databaseName = "driver";
+    private static final String DATABASE_NAME = TestUtils.camelToSnake(WSIpv6Test.class);
 
     private static void testInsert() throws SQLException {
         Statement statement = connection.createStatement();
@@ -27,7 +27,7 @@ public class WSIpv6Test {
         List<String> timeList = new ArrayList<>();
         for (long i = 0L; i < 30; i++) {
             long t = cur + i;
-            timeList.add("insert into " + databaseName + ".alltype_query values(" + t + ",1,1,1)");
+            timeList.add("insert into " + DATABASE_NAME + ".alltype_query values(" + t + ",1,1,1)");
         }
         for (int i = 0; i < 30; i++) {
             statement.execute(timeList.get(i));
@@ -41,7 +41,7 @@ public class WSIpv6Test {
         int count = 0;
         long start = System.nanoTime();
         for (int i = 0; i < 1; i++) {
-            ResultSet resultSet = statement.executeQuery("select ts,c1,c2,c3 from " + databaseName + ".alltype_query limit 3000");
+            ResultSet resultSet = statement.executeQuery("select ts,c1,c2,c3 from " + DATABASE_NAME + ".alltype_query limit 3000");
             while (resultSet.next()) {
                 count++;
                 resultSet.getTimestamp(1);
@@ -63,16 +63,16 @@ public class WSIpv6Test {
 
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":" + port + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + PORT + "/?user=root&password=taosdata";
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, "10000");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
         connection = DriverManager.getConnection(url, properties);
         Statement statement = connection.createStatement();
-        statement.execute("drop database if exists " + databaseName);
-        statement.execute("create database " + databaseName);
-        statement.execute("create table " + databaseName + ".alltype_query(ts timestamp, c1 bool,c2 tinyint, c3 smallint)");
+        statement.execute("drop database if exists " + DATABASE_NAME);
+        statement.execute("create database " + DATABASE_NAME);
+        statement.execute("create table " + DATABASE_NAME + ".alltype_query(ts timestamp, c1 bool,c2 tinyint, c3 smallint)");
         statement.close();
         testInsert();
     }
@@ -81,7 +81,7 @@ public class WSIpv6Test {
     public static void afterClass() throws SQLException {
         if (connection != null){
             try(Statement statement = connection.createStatement()) {
-                statement.execute("drop database if exists " + databaseName);
+                statement.execute("drop database if exists " + DATABASE_NAME);
             }
             connection.close();
         }

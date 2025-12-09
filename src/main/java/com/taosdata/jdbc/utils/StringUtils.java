@@ -12,6 +12,8 @@ import java.util.Properties;
 import java.util.StringTokenizer;
 
 public class StringUtils {
+    private StringUtils() {
+    }
 
     public static boolean isEmpty(final CharSequence cs) {
         return cs == null || cs.length() == 0;
@@ -172,7 +174,8 @@ public class StringUtils {
 
             int nib1 = hexToInt(hex.charAt(i2));
             int nib0 = hexToInt(hex.charAt(i2 + 1));
-            byte b = (byte) ((nib1 << 4) + (byte) nib0);
+            byte b = (byte) ((nib1 << 4) | nib0);
+
             bytes[i] = b;
         }
         return bytes;

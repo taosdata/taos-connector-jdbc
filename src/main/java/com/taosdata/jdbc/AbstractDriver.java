@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.taosdata.jdbc.enums.WSFunction;
-import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.utils.*;
 import com.taosdata.jdbc.ws.*;
 import com.taosdata.jdbc.ws.entity.*;
@@ -52,6 +52,7 @@ public abstract class AbstractDriver implements Driver {
         propertyInfo[4] = passwordProp;
         return propertyInfo;
     }
+    @SuppressWarnings("java:S2095")
     protected Connection getWSConnection(String url, ConnectionParam param, Properties props) throws SQLException {
         if (log.isDebugEnabled()){
             log.debug("getWSConnection, url = {}", StringUtils.getBasicUrl(url));

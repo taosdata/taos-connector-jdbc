@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 class StepFlow {
-    static Logger log = org.slf4j.LoggerFactory.getLogger(StepFlow.class);
+    static final Logger log = org.slf4j.LoggerFactory.getLogger(StepFlow.class);
     private final List<Step> steps;
     private final BgHealthCheck context;
     private int currentStepIndex;

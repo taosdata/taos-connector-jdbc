@@ -11,7 +11,7 @@ import java.util.Properties;
 
 public class NullValueInResultSetJNITest {
 
-    private static final String host = "127.0.0.1";
+    private static final String HOST = "127.0.0.1";
     Connection conn;
 
     @Test
@@ -29,7 +29,7 @@ public class NullValueInResultSetJNITest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");

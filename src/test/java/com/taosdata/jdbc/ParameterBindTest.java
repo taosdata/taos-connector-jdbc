@@ -14,8 +14,8 @@ import java.util.stream.Collectors;
 
 public class ParameterBindTest {
 
-    private static final String host = "127.0.0.1";
-    private static final String stable = "weather";
+    private static final String HOST = "127.0.0.1";
+    private static final String STABLE = "weather";
 
     private Connection conn;
     private final Random random = new Random(System.currentTimeMillis());
@@ -27,14 +27,14 @@ public class ParameterBindTest {
         int rows = 10;
 
         // when
-        String sql = "insert into ? using " + stable + " tags(?, ?) values(?, ?, ?)";
+        String sql = "insert into ? using " + STABLE + " tags(?, ?) values(?, ?, ?)";
         try (TSDBPreparedStatement pstmt = conn.prepareStatement(sql).unwrap(TSDBPreparedStatement.class)) {
             long current = System.currentTimeMillis();
             insertIntoTables(pstmt, tbnames, current, 10);
         }
 
         // then
-        assertRows(stable, tbnames.length * rows);
+        assertRows(STABLE, tbnames.length * rows);
         for (String t : tbnames) {
             assertRows(t, rows);
         }
@@ -48,7 +48,7 @@ public class ParameterBindTest {
         String[] tbnames = {"t1", "t2", "t3"};
 
         // when
-        String sql = "insert into ? using " + stable + " tags(?, ?) values(?, ?, ?)";
+        String sql = "insert into ? using " + STABLE + " tags(?, ?) values(?, ?, ?)";
         try (TSDBPreparedStatement pstmt = conn.prepareStatement(sql).unwrap(TSDBPreparedStatement.class)) {
 
             long current = System.currentTimeMillis();
@@ -59,7 +59,7 @@ public class ParameterBindTest {
         }
 
         // then
-        assertRows(stable, tbnames.length * batchSize * rows);
+        assertRows(STABLE, tbnames.length * batchSize * rows);
         for (String t : tbnames) {
             assertRows(t, rows * batchSize);
         }
@@ -74,7 +74,7 @@ public class ParameterBindTest {
         // when
         List<Thread> threads = Arrays.stream(tables).map(tbnames -> new Thread(() -> {
 
-            String sql = "insert into ? using " + stable + " tags(?, ?) values(?, ?, ?)";
+            String sql = "insert into ? using " + STABLE + " tags(?, ?) values(?, ?, ?)";
             try (TSDBPreparedStatement pstmt = conn.prepareStatement(sql).unwrap(TSDBPreparedStatement.class)) {
                 long current = System.currentTimeMillis();
                 insertIntoTables(pstmt, tbnames, current, 10);
@@ -104,7 +104,7 @@ public class ParameterBindTest {
     @Test
     public void testOOM() throws SQLException {
         String[] tbnames = {"t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9", "t10"};
-        String sql = "insert into ? using " + stable + " tags(?, ?) values(?, ?, ?)";
+        String sql = "insert into ? using " + STABLE + " tags(?, ?) values(?, ?, ?)";
         int rows = 1000;
 
         try (TSDBPreparedStatement pstmt = conn.prepareStatement(sql).unwrap(TSDBPreparedStatement.class)) {
@@ -166,7 +166,7 @@ public class ParameterBindTest {
     public void before() {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
         }
         try {
             conn = DriverManager.getConnection(url);
@@ -174,7 +174,7 @@ public class ParameterBindTest {
             stmt.execute("drop database if exists test_pd");
             stmt.execute("create database if not exists test_pd");
             stmt.execute("use test_pd");
-            stmt.execute("create table " + stable + "(ts timestamp, f1 int, f2 int) tags(t1 int, t2 int)");
+            stmt.execute("create table " + STABLE + "(ts timestamp, f1 int, f2 int) tags(t1 int, t2 int)");
         } catch (SQLException e) {
             e.printStackTrace();
         }

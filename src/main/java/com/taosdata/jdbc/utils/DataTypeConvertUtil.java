@@ -21,7 +21,9 @@ import java.time.format.DateTimeParseException;
 import static com.taosdata.jdbc.TSDBConstants.*;
 import static com.taosdata.jdbc.utils.UnsignedDataUtils.*;
 
-public class DataTypeConverUtil {
+public class DataTypeConvertUtil {
+    private DataTypeConvertUtil() {
+    }
     public static boolean getBoolean(int taosType, Object value) throws SQLDataException {
         switch (taosType) {
             case TSDB_DATA_TYPE_TINYINT:
@@ -138,7 +140,7 @@ public class DataTypeConverUtil {
                 try {
                     tmp = new String((byte[]) value, charset);
                 } catch (UnsupportedEncodingException e) {
-                    throw new RuntimeException(e.getMessage());
+                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, e.getMessage());
                 }
                 return Byte.parseByte(tmp);
             }
@@ -330,8 +332,9 @@ public class DataTypeConverUtil {
                 }
                 return Long.parseLong(tmp);
             }
+            default:
+                return 0;
         }
-        return 0;
     }
 
     public static float getFloat(int taosType, Object value, int columnIndex) throws SQLException {
@@ -373,8 +376,9 @@ public class DataTypeConverUtil {
                 }
                 return Float.parseFloat(tmp);
             }
+            default:
+                return 0;
         }
-        return 0;
     }
 
     public static double getDouble(int taosType, Object value, int columnIndex, int timestampPrecision) throws SQLException {
@@ -418,7 +422,7 @@ public class DataTypeConverUtil {
                 try {
                     tmp = new String((byte[]) value, charset);
                 } catch (UnsupportedEncodingException e) {
-                    throw new RuntimeException(e.getMessage());
+                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, e.getMessage());
                 }
                 return Double.parseDouble(tmp);
             }

@@ -1,10 +1,9 @@
 package com.taosdata.jdbc.common;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class ColumnInfo implements Comparable<ColumnInfo> {
-    private List<Object> dataList;
+    private final List<Object> dataList;
     // taos data type
     private final int type;
     private final int index;

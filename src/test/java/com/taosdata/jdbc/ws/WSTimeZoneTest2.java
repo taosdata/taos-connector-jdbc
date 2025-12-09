@@ -14,8 +14,8 @@ import java.util.Properties;
 @TestTarget(alias = "websocket timezon test", author = "sheyj", version = "3.7.0")
 public class WSTimeZoneTest2 {
 
-    private static final String host = "127.0.0.1";
-    private static final int port = 6041;
+    private static final String HOST = "127.0.0.1";
+    private static final int PORT = 6041;
 
 
 
@@ -23,7 +23,7 @@ public class WSTimeZoneTest2 {
     public void UTC8Test() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + host + ":" + port + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST + ":" + PORT + "/?user=root&password=taosdata";
         } else {
             url += "?user=root&password=taosdata";
         }

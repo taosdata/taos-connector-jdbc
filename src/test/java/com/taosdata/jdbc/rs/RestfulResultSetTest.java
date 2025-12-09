@@ -23,24 +23,24 @@ import java.util.List;
 
 public class RestfulResultSetTest {
 
-    private static final String host = "127.0.0.1";
+    private static final String HOST = "127.0.0.1";
     private static Connection conn;
     private static Statement stmt;
     private static ResultSet rs;
-    private static final String dbname = TestUtils.camelToSnake(RestfulResultSetTest.class);
+    private static final String DBNAME = TestUtils.camelToSnake(RestfulResultSetTest.class);
 
 
     @BeforeClass
     public static void beforeClass() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
         }
         conn = DriverManager.getConnection(url);
         stmt = conn.createStatement();
-        stmt.execute("drop database if exists " + dbname);
-        stmt.execute("create database if not exists " + dbname);
-        stmt.execute("use " + dbname);
+        stmt.execute("drop database if exists " + DBNAME);
+        stmt.execute("create database if not exists " + DBNAME);
+        stmt.execute("use " + DBNAME);
         stmt.execute("drop table if exists weather");
         stmt.execute("create table if not exists weather(f1 timestamp, f2 int, f3 bigint, f4 float, f5 double, f6 binary(64), f7 smallint, f8 tinyint, f9 bool, f10 nchar(64))");
         stmt.execute("insert into weather values('2021-01-01 00:00:00.000', 1, 100, 3.1415, 3.1415926, 'abc', 10, 10, true, '涛思数据')");
@@ -701,7 +701,7 @@ public class RestfulResultSetTest {
         if (rs != null)
             rs.close();
         if (stmt != null) {
-            stmt.execute("drop database if exists " + dbname);
+            stmt.execute("drop database if exists " + DBNAME);
             stmt.close();
         }
         if (conn != null)

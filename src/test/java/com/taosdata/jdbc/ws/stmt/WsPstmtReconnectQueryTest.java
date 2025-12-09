@@ -19,9 +19,9 @@ import java.util.Properties;
 @RunWith(Parameterized.class)
 @FixMethodOrder
 public class WsPstmtReconnectQueryTest {
-    static String host = "localhost";
-    static String db_name = TestUtils.camelToSnake(WsPstmtReconnectQueryTest.class);
-    static String tableName = "wpt";
+    static final String HOST = "localhost";
+    static final String DB_NAME = TestUtils.camelToSnake(WsPstmtReconnectQueryTest.class);
+    static final String TABLE_NAME = "wpt";
     static Connection connection;
     private final String actionStr;
     private final String mode;
@@ -49,7 +49,7 @@ public class WsPstmtReconnectQueryTest {
 
     private void stmt2Query(String url, Properties properties) throws SQLException {
 
-        String sql = "select * from " + db_name + "." + tableName + " where ts > ? and ts < ?";
+        String sql = "select * from " + DB_NAME + "." + TABLE_NAME + " where ts > ? and ts < ?";
         int resultCount = 0;
 
         try (Connection connection = DriverManager.getConnection(url, properties);
@@ -73,8 +73,8 @@ public class WsPstmtReconnectQueryTest {
 
         Properties properties = new Properties();
         String url = "jdbc:TAOS-WS://"
-                + host + ":" + mockB.getListenPort() + ","
-                + host + ":" + 6041 + "/?user=root&password=taosdata";
+                + HOST + ":" + mockB.getListenPort() + ","
+                + HOST + ":" + 6041 + "/?user=root&password=taosdata";
 
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_INTERVAL_MS, "2000");
@@ -99,18 +99,18 @@ public class WsPstmtReconnectQueryTest {
 
         String url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + host + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST + ":6041/?user=root&password=taosdata";
         } else {
             url += "?user=root&password=taosdata&batchfetch=true";
         }
         Properties properties = new Properties();
         connection = DriverManager.getConnection(url, properties);
         Statement statement = connection.createStatement();
-        statement.execute("drop database if exists " + db_name);
-        statement.execute("create database " + db_name);
-        statement.execute("use " + db_name);
-        statement.execute("create stable if not exists " + db_name + "." + tableName + " (ts TIMESTAMP, current FLOAT, voltage INT, phase FLOAT) TAGS (groupId INT, location BINARY(24))");
-        statement.execute("insert into d0 using " + db_name + "." + tableName + " " +
+        statement.execute("drop database if exists " + DB_NAME);
+        statement.execute("create database " + DB_NAME);
+        statement.execute("use " + DB_NAME);
+        statement.execute("create stable if not exists " + DB_NAME + "." + TABLE_NAME + " (ts TIMESTAMP, current FLOAT, voltage INT, phase FLOAT) TAGS (groupId INT, location BINARY(24))");
+        statement.execute("insert into d0 using " + DB_NAME + "." + TABLE_NAME + " " +
                 "TAGS (2, \"California.SanFrancisco\") VALUES " +
                 "    (\"2018-10-03 14:38:05\", 10.2, 220, 0.23),\n" +
                 "    (\"2018-10-03 14:38:15\", 12.6, 218, 0.33),\n" +
@@ -124,7 +124,7 @@ public class WsPstmtReconnectQueryTest {
             return;
         }
         try (Statement statement = connection.createStatement()) {
-            statement.execute("drop database if exists " + db_name);
+            statement.execute("drop database if exists " + DB_NAME);
         }
         connection.close();
         System.gc();

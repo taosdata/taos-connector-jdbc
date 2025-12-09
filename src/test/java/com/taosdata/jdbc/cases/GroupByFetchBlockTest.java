@@ -15,9 +15,9 @@ public class GroupByFetchBlockTest {
     private static Connection connection;
     private static Statement statement;
 
-    private String host = "127.0.0.1";
-    private String dbName = TestUtils.camelToSnake(GroupByFetchBlockTest.class);
-    private String tName = "st";
+    private final String host = "127.0.0.1";
+    private final String dbName = TestUtils.camelToSnake(GroupByFetchBlockTest.class);
+    private final String tName = "st";
 
     @Test
     public void groupbyTest() throws SQLException {

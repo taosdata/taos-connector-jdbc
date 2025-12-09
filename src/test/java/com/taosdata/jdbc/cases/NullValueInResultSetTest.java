@@ -13,7 +13,7 @@ public class NullValueInResultSetTest {
     private static final String host = "127.0.0.1";
     private static Properties properties;
     private Connection conn;
-    private String dbName = TestUtils.camelToSnake(NullValueInResultSetTest.class);
+    private final String dbName = TestUtils.camelToSnake(NullValueInResultSetTest.class);
 
     @Test
     public void testRestful() throws SQLException {

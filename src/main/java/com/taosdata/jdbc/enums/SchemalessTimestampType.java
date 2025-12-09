@@ -11,7 +11,7 @@ public enum SchemalessTimestampType {
     NANO_SECONDS("ns"),
     ;
 
-    private String type;
+    private final String type;
 
     SchemalessTimestampType(String type) {
         this.type = type;

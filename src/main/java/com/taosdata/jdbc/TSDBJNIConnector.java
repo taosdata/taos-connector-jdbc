@@ -197,7 +197,7 @@ public class TSDBJNIConnector {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_JNI_CONNECTION_NULL, errMsg);
         }
         // invoke connectImp only here
-        taosInfo.conn_open_increment();
+        taosInfo.connOpenIncrement();
         return true;
     }
 
@@ -219,7 +219,7 @@ public class TSDBJNIConnector {
                 pSql = this.executeQueryImp(sql.getBytes(TaosGlobalConfig.getCharset()), this.taos);
             else
                 pSql = this.executeQueryWithReqId(sql.getBytes(TaosGlobalConfig.getCharset()), this.taos, reqId);
-            taosInfo.stmt_count_increment();
+            taosInfo.stmtCountIncrement();
         } catch (UnsupportedEncodingException e) {
             this.freeResultSetImp(this.taos, pSql);
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_ENCODING);
@@ -365,7 +365,7 @@ public class TSDBJNIConnector {
         }
 
         // invoke closeConnectionImpl only here
-        taosInfo.connect_close_increment();
+        taosInfo.connectCloseIncrement();
     }
 
     private native int closeConnectionImp(long connection);

@@ -20,9 +20,9 @@ import java.util.Properties;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class WsPstmtTest {
-    String host = "127.0.0.1";
-    String db_name = TestUtils.camelToSnake(WsPstmtTest.class);
-    String tableName = "wpt";
+    final String host = "127.0.0.1";
+    final String db_name = TestUtils.camelToSnake(WsPstmtTest.class);
+    final String tableName = "wpt";
     String superTable = "wpt_st";
     Connection connection;
 

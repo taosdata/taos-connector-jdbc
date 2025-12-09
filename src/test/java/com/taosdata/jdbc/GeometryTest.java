@@ -13,20 +13,20 @@ import java.util.ArrayList;
 import java.util.Properties;
 
 public class GeometryTest {
-    static String host = "127.0.0.1";
-    static String dbName = TestUtils.camelToSnake(GeometryTest.class);
-    static String tableNative = "geometry_noraml";
-    static String tableStmt = "geometry_stmt";
+    static final String HOST = "127.0.0.1";
+    static final String DB_NAME = TestUtils.camelToSnake(GeometryTest.class);
+    static final String TABLE_NATIVE = "geometry_noraml";
+    static final String TABLE_STMT = "geometry_stmt";
     static Connection connection;
     static Statement statement;
-    byte[] expectedArray = StringUtils.hexToBytes("0101000000000000000000F03F0000000000000040");
+    final byte[] expectedArray = StringUtils.hexToBytes("0101000000000000000000F03F0000000000000040");
 
 
     @Test
     public void testInsert() throws Exception {
         String sql = "insert into ? using stable3 tags(?) values(?,?)";
 
-        statement.executeUpdate("insert into subt_a using " + dbName + "." + tableNative + " tags( \"POINT(3 5)\") values(now, \"POINT(1 2)\")");
+        statement.executeUpdate("insert into subt_a using " + DB_NAME + "." + TABLE_NATIVE + " tags( \"POINT(3 5)\") values(now, \"POINT(1 2)\")");
         ResultSet resultSet = statement.executeQuery("select c1 from subt_a");
 
         resultSet.next();
@@ -37,7 +37,7 @@ public class GeometryTest {
 
     @Test
     public void testPrepare() throws SQLException {
-        TSDBPreparedStatement preparedStatement = (TSDBPreparedStatement) connection.prepareStatement("insert into ? using  " + dbName + "." + tableStmt + "  tags(?) values (?, ?)");
+        TSDBPreparedStatement preparedStatement = (TSDBPreparedStatement) connection.prepareStatement("insert into ? using  " + DB_NAME + "." + TABLE_STMT + "  tags(?) values (?, ?)");
         preparedStatement.setTableName("subt_b");
         preparedStatement.setTagGeometry(0, expectedArray);
 
@@ -68,25 +68,25 @@ public class GeometryTest {
     public static void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
         connection = DriverManager.getConnection(url, properties);
         statement = connection.createStatement();
-        statement.executeUpdate("drop database if exists " + dbName);
-        statement.executeUpdate("create database if not exists " + dbName);
-        statement.executeUpdate("use " + dbName);
-        statement.executeUpdate("create table " + tableNative + " (ts timestamp, c1 GEOMETRY(50))  tags(t1 GEOMETRY(50))");
-        statement.executeUpdate("create table " + tableStmt + " (ts timestamp, c1 GEOMETRY(50))    tags(t1 GEOMETRY(50))");
+        statement.executeUpdate("drop database if exists " + DB_NAME);
+        statement.executeUpdate("create database if not exists " + DB_NAME);
+        statement.executeUpdate("use " + DB_NAME);
+        statement.executeUpdate("create table " + TABLE_NATIVE + " (ts timestamp, c1 GEOMETRY(50))  tags(t1 GEOMETRY(50))");
+        statement.executeUpdate("create table " + TABLE_STMT + " (ts timestamp, c1 GEOMETRY(50))    tags(t1 GEOMETRY(50))");
     }
 
     @AfterClass
     public static void after() {
         try {
             if (statement != null && !statement.isClosed()) {
-                statement.executeUpdate("drop database if exists " + dbName);
+                statement.executeUpdate("drop database if exists " + DB_NAME);
                 statement.close();
             }
             if (connection != null && !connection.isClosed()) {

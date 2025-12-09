@@ -1,7 +1,7 @@
 package com.taosdata.jdbc.ws.entity;
 
 public class ConCheckInfo {
-    private long lastCheckTime;
+    private final long lastCheckTime;
 
     public long getLastCheckTime() {
         return lastCheckTime;

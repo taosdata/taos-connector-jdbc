@@ -6,7 +6,7 @@ import com.taosdata.jdbc.common.ColumnInfo;
 import com.taosdata.jdbc.common.SerializeBlock;
 import com.taosdata.jdbc.common.TableInfo;
 import com.taosdata.jdbc.enums.FieldBindType;
-import com.taosdata.jdbc.rs.ConnectionParam;
+import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.utils.BlobUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.ReqId;
@@ -1069,7 +1069,7 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
         }
 
         writeBlockWithRetrySync(rawBlock);
-        this.affectedRows = batchInsertedRows.getAndSet(0);
+        this.affectedRows = batchInsertedRowsInner.getAndSet(0);
         return this.affectedRows;
     }
     private ResultResp executeQueryImpl() throws SQLException {
