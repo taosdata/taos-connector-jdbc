@@ -1,6 +1,7 @@
 name: build
 permissions:
-  contents: read
+    contents: read
+    actions: write
 on:
   push:
     branches:
@@ -243,6 +244,14 @@ jobs:
           fail_ci_if_error: false
           verbose: true
           root_dir: jdbc-workspace
+
+      - name: Upload Jacoco coverage report for sonar
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-coverage-report
+          path: jdbc-workspace/target/site/jacoco/jacoco.xml
+          retention-days: 1
+          if-no-files-found: error
 
       - name: Upload logs on failure
         if: failure()

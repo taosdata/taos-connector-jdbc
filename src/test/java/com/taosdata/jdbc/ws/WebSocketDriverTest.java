@@ -1,6 +1,5 @@
 package com.taosdata.jdbc.ws;
 
-import com.taosdata.jdbc.rs.RestfulDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import org.junit.Assert;
 import org.junit.Test;
@@ -41,21 +40,18 @@ public class WebSocketDriverTest {
     }
 
     @Test
-    @SuppressWarnings("java:S1874")
     public void getMajorVersion() {
-        Assert.assertEquals(3, new RestfulDriver().getMajorVersion());
+        Assert.assertEquals(3, new WebSocketDriver().getMajorVersion());
     }
 
     @Test
-    @SuppressWarnings("java:S1874")
     public void getMinorVersion() {
-        Assert.assertEquals(0, new RestfulDriver().getMinorVersion());
+        Assert.assertEquals(0, new WebSocketDriver().getMinorVersion());
     }
 
     @Test
-    @SuppressWarnings("java:S1874")
     public void jdbcCompliant() {
-        Assert.assertFalse(new RestfulDriver().jdbcCompliant());
+        Assert.assertFalse(new WebSocketDriver().jdbcCompliant());
     }
 
     @Test(expected = SQLFeatureNotSupportedException.class)

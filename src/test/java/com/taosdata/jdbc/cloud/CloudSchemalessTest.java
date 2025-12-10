@@ -5,12 +5,11 @@ import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.sql.*;
 
-@Ignore
+
 public class CloudSchemalessTest {
     String url = null;
     public static SchemalessWriter writer;
@@ -24,6 +23,8 @@ public class CloudSchemalessTest {
             System.out.println("Environment variable for CloudTest not set properly");
             return;
         }
+
+        url = url.replace("TAOS-WS", "TAOS-RS");
         connection = DriverManager.getConnection(url);
         writer = new SchemalessWriter(url, null, null, dbName);
     }

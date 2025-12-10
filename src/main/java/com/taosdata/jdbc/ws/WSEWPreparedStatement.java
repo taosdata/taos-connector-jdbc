@@ -156,7 +156,14 @@ public class WSEWPreparedStatement extends AbsWSPreparedStatement {
         for (int i = 0; i < stmtInfo.getFields().size(); i++){
             Field field = stmtInfo.getFields().get(i);
             Column column = map.get(i + 1);
-            if (DataLengthCfg.getDataLength(column.getType()) == null && field.getBindType() != FieldBindType.TAOS_FIELD_TBNAME.getValue()){
+            if (field.getBindType() == FieldBindType.TAOS_FIELD_TBNAME.getValue()) {
+                if (column.getData() instanceof byte[]){
+                    byte[] data = (byte[]) column.getData();
+                    if (data.length > field.getBytes()){
+                        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "tbname length is too long, column index " + i);
+                    }
+                }
+            } else if (DataLengthCfg.getDataLength(column.getType()) == null && field.getBindType() != FieldBindType.TAOS_FIELD_TBNAME.getValue()){
                 if (column.getData() instanceof byte[]){
                     byte[] data = (byte[]) column.getData();
                     if (data.length > field.getBytes()){
