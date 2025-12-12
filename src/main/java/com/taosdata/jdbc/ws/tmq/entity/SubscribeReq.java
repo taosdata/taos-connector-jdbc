@@ -35,6 +35,8 @@ public class SubscribeReq extends Payload {
     private String app;
     @JsonProperty("ip")
     private String ip;
+    @JsonProperty("connector")
+    private String connector;
     @JsonProperty("config")
     private HashMap<String, String> config = new HashMap<>();
 
@@ -140,6 +142,14 @@ public class SubscribeReq extends Payload {
 
     public void setIp(String ip) {
         this.ip = ip;
+    }
+
+    public String getConnector() {
+        return connector;
+    }
+
+    public void setConnector(String connector) {
+        this.connector = connector;
     }
 
     public String getEnableBatchMeta() {

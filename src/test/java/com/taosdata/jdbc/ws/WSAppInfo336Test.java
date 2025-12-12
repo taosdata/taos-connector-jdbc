@@ -14,7 +14,7 @@ import java.util.Properties;
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "websocket query test", author = "huolibo", version = "2.0.38")
 @FixMethodOrder
-public class WSAppInfoTest {
+public class WSAppInfo336Test {
     private static final String HOST = "127.0.0.1";
     private static final int PORT = 6041;
     private Connection connection;
@@ -32,13 +32,10 @@ public class WSAppInfoTest {
 
                     String name = resultSet.getString("user_app");
                     String ip = resultSet.getString("user_ip");
-                    String connectionInfo = resultSet.getString("connector_info");
 
-                    System.out.println("name: " + name + ", ip: " + ip + ", connectionInfo: " + connectionInfo);
+                    System.out.println("name: " + name + ", ip: " + ip);
                     if (APP_NAME.equals(name)
-                            && APP_IP.equals(ip)
-                            && connectionInfo.split("-").length == 4
-                            && connectionInfo.length() >= "jdbc-ws-v3.0.0-ncid000".length()) {
+                            && APP_IP.equals(ip)) {
                         return;
                     }
                 }
@@ -52,7 +49,7 @@ public class WSAppInfoTest {
 
     @Before
     public void before() throws SQLException {
-        TestUtils.runInMain();
+        TestUtils.runIn336();
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();
         if (url == null) {
             url = "jdbc:TAOS-WS://" + HOST + ":" + PORT + "/?user=root&password=taosdata";

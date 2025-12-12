@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
 import java.sql.*;
@@ -9,6 +10,7 @@ import java.util.stream.IntStream;
 public class BatchErrorIgnoreTest {
 
     private static final String HOST = "127.0.0.1";
+    private static final String DB_NAME = TestUtils.camelToSnake(BatchErrorIgnoreTest.class);
 
     @Test
     public void batchErrorThrowException() throws SQLException {
@@ -21,7 +23,7 @@ public class BatchErrorIgnoreTest {
 
         // when
         try (Statement stmt = conn.createStatement()) {
-            IntStream.range(1, 6).mapToObj(i -> "insert into test.t" + i + " values(now, " + i + ")").forEach(sql -> {
+            IntStream.range(1, 6).mapToObj(i -> "insert into " + DB_NAME + ".t" + i + " values(now, " + i + ")").forEach(sql -> {
                 try {
                     stmt.addBatch(sql);
                 } catch (SQLException ignored) {
@@ -29,14 +31,14 @@ public class BatchErrorIgnoreTest {
                 }
             });
             stmt.addBatch("insert into t11 values(now, 11)");
-            IntStream.range(6, 11).mapToObj(i -> "insert into test.t" + i + " values(now, " + i + "),(now + 1s, " + (10 * i) + ")").forEach(sql -> {
+            IntStream.range(6, 11).mapToObj(i -> "insert into " + DB_NAME + ".t" + i + " values(now, " + i + "),(now + 1s, " + (10 * i) + ")").forEach(sql -> {
                 try {
                     stmt.addBatch(sql);
                 } catch (SQLException ignored) {
                     // do nothing
                 }
             });
-            stmt.addBatch("select count(*) from test.weather");
+            stmt.addBatch("select count(*) from " + DB_NAME + ".weather");
 
             stmt.executeBatch();
         } catch (BatchUpdateException e) {
@@ -65,7 +67,7 @@ public class BatchErrorIgnoreTest {
         // when
         int[] results = null;
         try (Statement stmt = conn.createStatement()) {
-            IntStream.range(1, 6).mapToObj(i -> "insert into test.t" + i + " values(now, " + i + ")").forEach(sql -> {
+            IntStream.range(1, 6).mapToObj(i -> "insert into " + DB_NAME + ".t" + i + " values(now, " + i + ")").forEach(sql -> {
                 try {
                     stmt.addBatch(sql);
                 } catch (SQLException ignored) {
@@ -73,14 +75,14 @@ public class BatchErrorIgnoreTest {
                 }
             });
             stmt.addBatch("insert into t11 values(now, 11)");
-            IntStream.range(6, 11).mapToObj(i -> "insert into test.t" + i + " values(now, " + i + "),(now + 1s, " + (10 * i) + ")").forEach(sql -> {
+            IntStream.range(6, 11).mapToObj(i -> "insert into " + DB_NAME + ".t" + i + " values(now, " + i + "),(now + 1s, " + (10 * i) + ")").forEach(sql -> {
                 try {
                     stmt.addBatch(sql);
                 } catch (SQLException ignored) {
                     // do nothing
                 }
             });
-            stmt.addBatch("select count(*) from test.weather");
+            stmt.addBatch("select count(*) from " + DB_NAME + ".weather");
 
             results = stmt.executeBatch();
         }
@@ -111,7 +113,7 @@ public class BatchErrorIgnoreTest {
         try (Connection conn = DriverManager.getConnection(url);
              Statement stmt = conn.createStatement()) {
 
-            stmt.execute("use test");
+            stmt.execute("use " + DB_NAME);
             stmt.execute("drop table if exists weather");
             stmt.execute("create table weather (ts timestamp, f1 float) tags(t1 int)");
             IntStream.range(1, 11).mapToObj(i -> "create table t" + i + " using weather tags(" + i + ")").forEach(sql -> {
@@ -133,8 +135,8 @@ public class BatchErrorIgnoreTest {
         try (Connection conn = DriverManager.getConnection(url);
              Statement stmt = conn.createStatement()) {
 
-            stmt.execute("drop database if exists test");
-            stmt.execute("create database if not exists test");
+            stmt.execute("drop database if exists " + DB_NAME);
+            stmt.execute("create database if not exists " + DB_NAME);
         }
     }
 
@@ -147,7 +149,7 @@ public class BatchErrorIgnoreTest {
         try (Connection conn = DriverManager.getConnection(url);
              Statement stmt = conn.createStatement()) {
 
-            stmt.execute("drop database if exists test");
+            stmt.execute("drop database if exists " + DB_NAME);
         }
     }
 }
