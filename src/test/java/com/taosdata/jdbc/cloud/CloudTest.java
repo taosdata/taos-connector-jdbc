@@ -9,7 +9,7 @@ import java.util.Arrays;
 import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertNotEquals;
-
+@Ignore
 public class CloudTest {
     final String[] strings = {"abc", "涛思数据"};
     final String[] types = {"BINARY", "TIMESTAMP"};

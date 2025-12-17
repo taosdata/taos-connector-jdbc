@@ -1,9 +1,10 @@
 package com.taosdata.jdbc.ws.schemaless;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.taosdata.jdbc.common.Printable;
 import com.taosdata.jdbc.ws.entity.Payload;
 
-public class ConnReq extends Payload {
+public class ConnReq extends Payload implements Printable {
     @JsonProperty("user")
     private String user;
     @JsonProperty("password")
@@ -33,5 +34,15 @@ public class ConnReq extends Payload {
 
     public void setDb(String db) {
         this.db = db;
+    }
+
+    @Override
+    public String toPrintString() {
+        return "ConnReq{" +
+                "reqId=" + getReqId() +
+                ", user='" + user + '\'' +
+                ", password='" + "******" + '\'' +
+                ", db='" + db + '\'' +
+                '}';
     }
 }

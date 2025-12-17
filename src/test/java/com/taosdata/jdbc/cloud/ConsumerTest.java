@@ -4,12 +4,10 @@ import com.taosdata.jdbc.tmq.*;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
 import java.sql.*;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Properties;
-
 
 public class ConsumerTest {
     String url = null;

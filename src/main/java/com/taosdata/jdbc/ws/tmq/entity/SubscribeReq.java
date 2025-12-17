@@ -1,11 +1,12 @@
 package com.taosdata.jdbc.ws.tmq.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.taosdata.jdbc.common.Printable;
 import com.taosdata.jdbc.ws.entity.Payload;
 
 import java.util.HashMap;
 
-public class SubscribeReq extends Payload {
+public class SubscribeReq extends Payload implements Printable {
     @JsonProperty("user")
     private String user;
     @JsonProperty("password")
@@ -157,5 +158,26 @@ public class SubscribeReq extends Payload {
 
     public void setConfig(HashMap<String, String> config) {
         this.config = config;
+    }
+
+    @Override
+    public String toPrintString() {
+        return "SubscribeReq{" +
+                "user='" + user + '\'' +
+                ", password='" + "******" + '\'' +
+                ", db='" + db + '\'' +
+                ", groupId='" + groupId + '\'' +
+                ", clientId='" + clientId + '\'' +
+                ", offsetRest='" + offsetRest + '\'' +
+                ", topics=" + String.join(",", topics) +
+                ", autoCommit='" + autoCommit + '\'' +
+                ", autoCommitIntervalMs='" + autoCommitIntervalMs + '\'' +
+                ", withTableName='" + withTableName + '\'' +
+                ", enableBatchMeta='" + enableBatchMeta + '\'' +
+                ", tz='" + tz + '\'' +
+                ", app='" + app + '\'' +
+                ", ip='" + ip + '\'' +
+                ", config=" + config +
+                '}';
     }
 }

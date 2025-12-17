@@ -40,16 +40,19 @@ public class WebSocketDriverTest {
     }
 
     @Test
+    @SuppressWarnings("java:S1874")
     public void getMajorVersion() {
         Assert.assertEquals(3, new WebSocketDriver().getMajorVersion());
     }
 
     @Test
+    @SuppressWarnings("java:S1874")
     public void getMinorVersion() {
         Assert.assertEquals(0, new WebSocketDriver().getMinorVersion());
     }
 
     @Test
+    @SuppressWarnings("java:S1874")
     public void jdbcCompliant() {
         Assert.assertFalse(new WebSocketDriver().jdbcCompliant());
     }

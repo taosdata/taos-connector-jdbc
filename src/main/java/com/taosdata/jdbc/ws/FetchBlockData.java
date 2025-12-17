@@ -73,7 +73,7 @@ public class FetchBlockData {
         blockingQueue.put(blockData);
         dataHandleExecutor.submit(blockData::handleData);
 
-        if (blockingQueue.remainingCapacity() > 0){
+        if (blockingQueue.remainingCapacity() > 0 && FetchDataUtil.getFetchMap().get(reqId) != null){
             try {
                 transport.sendFetchBlockAsync(reqId, queryId);
                 return;
