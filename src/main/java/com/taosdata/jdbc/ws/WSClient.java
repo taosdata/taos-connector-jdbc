@@ -360,16 +360,18 @@ public class WSClient implements AutoCloseable {
             wsFunction = "/rest/tmq";
         }
         String loginUrl = protocol + "://" + params.getEndpoints().get(endpointIndex).getHost() + port + wsFunction;
+        String loginPrintUrl = loginUrl;
 
         if (null != params.getCloudToken()) {
             loginUrl = loginUrl + "?token=" + params.getCloudToken();
+            loginPrintUrl = loginPrintUrl + "?token=" + "******";
         }
 
         URI urlPath;
         try {
             urlPath = new URI(loginUrl);
         } catch (URISyntaxException e) {
-            throw new SQLException("Websocket url parse error: " + loginUrl, e);
+            throw new SQLException("Websocket url parse error: " + loginPrintUrl, e);
         }
         return new WSClient(urlPath, params);
     }

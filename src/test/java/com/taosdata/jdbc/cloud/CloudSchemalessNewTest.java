@@ -5,12 +5,10 @@ import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.sql.*;
 
-@Ignore
 public class CloudSchemalessNewTest {
     String url = null;
     public static Connection connection;

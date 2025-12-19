@@ -123,7 +123,7 @@ public class HttpClientPoolUtil {
             }
 
             byte[] compressedData = baos.toByteArray();
-            // 创建带有压缩数据的 HttpEntity
+            // create HttpEntity with compressed data
             HttpEntity entity = new ByteArrayEntity(compressedData);
             method.setEntity(entity);
         } else {

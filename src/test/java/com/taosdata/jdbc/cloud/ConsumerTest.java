@@ -3,15 +3,12 @@ package com.taosdata.jdbc.cloud;
 import com.taosdata.jdbc.tmq.*;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
-
 import java.sql.*;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Properties;
 
-@Ignore
 public class ConsumerTest {
     String url = null;
 

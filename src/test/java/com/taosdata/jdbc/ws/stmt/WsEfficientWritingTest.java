@@ -15,11 +15,13 @@ import java.io.IOException;
 import java.sql.*;
 import java.util.Properties;
 import java.util.Random;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @FixMethodOrder
 public class WsEfficientWritingTest {
     private final String host = "localhost";
-    private final String db_name = TestUtils.camelToSnake(WsEfficientWritingTest.class);
+    private final String dbName = TestUtils.camelToSnake(WsEfficientWritingTest.class);
     private final String tableName = "wpt";
     private final String tableNameCopyData = "wpt_cp";
     private final String tableReconnect = "wpt_rc";
@@ -37,7 +39,7 @@ public class WsEfficientWritingTest {
         // create sub table first
         String createSql = "create table";
         for (int i = 1; i <= numOfSubTable; i++) {
-            createSql += " if not exists d_bind_" + i + " using " + db_name + "." + tableName + " tags(" + i + ", \"location_" + i + "\")";
+            createSql += " if not exists d_bind_" + i + " using " + dbName + "." + tableName + " tags(" + i + ", \"location_" + i + "\")";
         }
         try (Statement stmt = connection.createStatement()) {
             stmt.execute(createSql);
@@ -53,7 +55,7 @@ public class WsEfficientWritingTest {
     @Test
     public void testStmt2InsertStdApiNoTag() throws SQLException {
 
-        String sql = "INSERT INTO " + db_name + "." + tableName + "(tbname, ts, current, voltage, phase) VALUES (?,?,?,?,?)";
+        String sql = "INSERT INTO " + dbName + "." + tableName + "(tbname, ts, current, voltage, phase) VALUES (?,?,?,?,?)";
 
         long current = System.currentTimeMillis();
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
@@ -77,12 +79,12 @@ public class WsEfficientWritingTest {
             }
         }
 
-        Assert.assertEquals(numOfSubTable * numOfRow, Utils.getSqlRows(connection, db_name + "." + tableName));
+        Assert.assertEquals(numOfSubTable * numOfRow, Utils.getSqlRows(connection, dbName + "." + tableName));
     }
 
     @Test
     public void testCopyData() throws SQLException {
-        String sql = "INSERT INTO " + db_name + "." + tableNameCopyData + "(tbname, ts, b, groupId) VALUES (?,?,?,?)";
+        String sql = "INSERT INTO " + dbName + "." + tableNameCopyData + "(tbname, ts, b, groupId) VALUES (?,?,?,?)";
 
         long current = System.currentTimeMillis();
         Timestamp ts = new Timestamp(current);
@@ -112,8 +114,8 @@ public class WsEfficientWritingTest {
             }
         }
 
-        Assert.assertEquals(numOfSubTable * numOfRow, Utils.getSqlRows(connection, db_name + "." + tableNameCopyData));
-        Assert.assertEquals(numOfSubTable, Utils.getSqlRows(connection, db_name + "." + tableNameCopyData + " where b = '\\x63000000000000000000'"));
+        Assert.assertEquals(numOfSubTable * numOfRow, Utils.getSqlRows(connection, dbName + "." + tableNameCopyData));
+        Assert.assertEquals(numOfSubTable, Utils.getSqlRows(connection, dbName + "." + tableNameCopyData + " where b = '\\x63000000000000000000'"));
     }
 
 
@@ -124,7 +126,7 @@ public class WsEfficientWritingTest {
         taosAdapterMock.start();
         RebalanceTestUtil.waitHealthCheckFinishedIgnoreException(new Endpoint(host, proxyPort2, false));
 
-        String sql = "INSERT INTO " + db_name + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
+        String sql = "INSERT INTO " + dbName + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
 
         long current = System.currentTimeMillis();
         try (Connection con = getConnection(false, false, proxyPort2);
@@ -159,7 +161,7 @@ public class WsEfficientWritingTest {
             }
         }
 
-        Assert.assertEquals(numOfSubTable * numOfRow, Utils.getSqlRows(connection, db_name + "." + tableReconnect));
+        Assert.assertEquals(numOfSubTable * numOfRow, Utils.getSqlRows(connection, dbName + "." + tableReconnect));
 
         if (taosAdapterMock != null) {
             taosAdapterMock.stop();
@@ -172,7 +174,7 @@ public class WsEfficientWritingTest {
         taosAdapterMock = new TaosAdapterMock(proxyPort);
         taosAdapterMock.start();
 
-        String sql = "INSERT INTO " + db_name + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
+        String sql = "INSERT INTO " + dbName + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
 
         long current = System.currentTimeMillis();
         try (Connection con = getConnection(false, false, proxyPort);
@@ -215,7 +217,7 @@ public class WsEfficientWritingTest {
     @Ignore
     public void manualTest() throws SQLException, InterruptedException {
 
-        String sql = "INSERT INTO " + db_name + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
+        String sql = "INSERT INTO " + dbName + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
 
         long current = System.currentTimeMillis();
         try (Connection con = getConnection(false, false, 6041);
@@ -242,13 +244,13 @@ public class WsEfficientWritingTest {
             }
         }
 
-        Assert.assertEquals(numOfSubTable * numOfRow, Utils.getSqlRows(connection,db_name + "." + tableReconnect));
+        Assert.assertEquals(numOfSubTable * numOfRow, Utils.getSqlRows(connection, dbName + "." + tableReconnect));
     }
 
 
     @Test
     public void testAsyncSql() throws SQLException {
-        String sql = "ASYNC_INSERT INTO " + db_name + "." + asyncSqlTable + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
+        String sql = "ASYNC_INSERT INTO " + dbName + "." + asyncSqlTable + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
 
         long current = System.currentTimeMillis();
         try (Connection con = getConnectionNormal();
@@ -275,12 +277,12 @@ public class WsEfficientWritingTest {
             }
         }
 
-        Assert.assertEquals(numOfSubTable * numOfRow, Utils.getSqlRows(connection, db_name + "." + asyncSqlTable));
+        Assert.assertEquals(numOfSubTable * numOfRow, Utils.getSqlRows(connection, dbName + "." + asyncSqlTable));
     }
 
     @Test(expected = SQLException.class)
     public void testStrictCheck() throws SQLException, InterruptedException {
-        String sql = "INSERT INTO " + db_name + "." + tableNameCopyData + "(tbname, ts, b, groupId) VALUES (?,?,?,?)";
+        String sql = "INSERT INTO " + dbName + "." + tableNameCopyData + "(tbname, ts, b, groupId) VALUES (?,?,?,?)";
 
         long current = System.currentTimeMillis();
         Timestamp ts = new Timestamp(current);
@@ -310,14 +312,55 @@ public class WsEfficientWritingTest {
             }
         }
 
-        Assert.assertEquals(numOfSubTable * numOfRow, Utils.getSqlRows(connection,db_name + "." + tableNameCopyData));
-        Assert.assertEquals(numOfSubTable, Utils.getSqlRows(connection, db_name + "." + tableNameCopyData + " where b = '\\x63000000000000000000'"));
+        Assert.assertEquals(numOfSubTable * numOfRow, Utils.getSqlRows(connection, dbName + "." + tableNameCopyData));
+        Assert.assertEquals(numOfSubTable, Utils.getSqlRows(connection, dbName + "." + tableNameCopyData + " where b = '\\x63000000000000000000'"));
+
+    }
+
+    @Test(expected = SQLException.class)
+    public void testStrictCheck2() throws SQLException, InterruptedException {
+        String sql = "INSERT INTO " + dbName + "." + tableNameCopyData + "(tbname, ts, b, groupId) VALUES (?,?,?,?)";
+
+        long current = System.currentTimeMillis();
+        Timestamp ts = new Timestamp(current);
+        byte[] bytes = new byte[5];
+
+        String tbname = IntStream.range(0, 300)
+                .mapToObj(i -> "a")
+                .collect(Collectors.joining());
+
+        try (Connection con= getConnection(true, true);
+             PreparedStatement pstmt = con.prepareStatement(sql)) {
+            for (int j = 0; j < numOfRow; j++) {
+                for (int i = 1; i <= numOfSubTable; i++) {
+                    // set columns
+                    pstmt.setString(1, tbname + i);
+                    pstmt.setTimestamp(2, ts);
+                    pstmt.setBytes(3, bytes);
+                    pstmt.setInt(4, i);
+                    pstmt.addBatch();
+                }
+
+                ts.setTime(ts.getTime() + 1000); // 增加 1 s
+                bytes[0] = (byte)(bytes[0] + 1);
+
+                int[] exeResult = pstmt.executeBatch();
+                Assert.assertEquals(exeResult.length, numOfSubTable);
+
+                for (int ele : exeResult){
+                    Assert.assertEquals(ele, Statement.SUCCESS_NO_INFO);
+                }
+            }
+        }
+
+        Assert.assertEquals(numOfSubTable * numOfRow, Utils.getSqlRows(connection, dbName + "." + tableNameCopyData));
+        Assert.assertEquals(numOfSubTable, Utils.getSqlRows(connection, dbName + "." + tableNameCopyData + " where b = '\\x63000000000000000000'"));
 
     }
 
     @Test(expected = SQLException.class)
     public void testGetMetaDataThrowsSQLException() throws SQLException {
-        String sql = "INSERT INTO " + db_name + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
+        String sql = "INSERT INTO " + dbName + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
         try (Connection con = getConnection(false);
              PreparedStatement pstmt = con.prepareStatement(sql)) {
              pstmt.getMetaData();
@@ -326,7 +369,7 @@ public class WsEfficientWritingTest {
 
     @Test(expected = SQLException.class)
     public void testColumnDataAddBatchThrowsSQLException() throws SQLException {
-        String sql = "INSERT INTO " + db_name + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
+        String sql = "INSERT INTO " + dbName + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
         try (Connection con = getConnection(false);
              WSEWPreparedStatement pstmt = (WSEWPreparedStatement)con.prepareStatement(sql)) {
             pstmt.columnDataAddBatch();
@@ -335,7 +378,7 @@ public class WsEfficientWritingTest {
 
     @Test(expected = SQLException.class)
     public void testColumnDataExecuteBatchThrowsSQLException() throws SQLException {
-        String sql = "INSERT INTO " + db_name + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
+        String sql = "INSERT INTO " + dbName + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
         try (Connection con = getConnection(false);
              WSEWPreparedStatement pstmt = (WSEWPreparedStatement)con.prepareStatement(sql)) {
             pstmt.columnDataExecuteBatch();
@@ -344,7 +387,7 @@ public class WsEfficientWritingTest {
 
     @Test(expected = SQLException.class)
     public void testColumnDataCloseBatchThrowsSQLException() throws SQLException {
-        String sql = "INSERT INTO " + db_name + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
+        String sql = "INSERT INTO " + dbName + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
         try (Connection con = getConnection(false);
              WSEWPreparedStatement pstmt = (WSEWPreparedStatement)con.prepareStatement(sql)) {
             pstmt.columnDataCloseBatch();
@@ -352,7 +395,7 @@ public class WsEfficientWritingTest {
     }
     @Test
     public void testNcharTag() throws SQLException {
-        String sql = "INSERT INTO " + db_name + "." + tableNcharTag + "(tbname, ts, i, tag_nchar) VALUES (?,?,?,?)";
+        String sql = "INSERT INTO " + dbName + "." + tableNcharTag + "(tbname, ts, i, tag_nchar) VALUES (?,?,?,?)";
         try (Connection con = getConnection(false);
              PreparedStatement pstmt = con.prepareStatement(sql)) {
             long current = System.currentTimeMillis();
@@ -372,13 +415,13 @@ public class WsEfficientWritingTest {
     public void before() throws SQLException {
         connection = getConnection(false);
         Statement statement = connection.createStatement();
-        statement.execute("drop database if exists " + db_name);
-        statement.execute("create database " + db_name);
-        statement.execute("use " + db_name);
-        statement.execute("create stable if not exists " + db_name + "." + tableName + " (ts TIMESTAMP, current FLOAT, voltage INT, phase FLOAT) TAGS (groupId INT, location BINARY(24))");
-        statement.execute("create stable if not exists " + db_name + "." + tableNameCopyData + " (ts TIMESTAMP, b varbinary(10)) TAGS (groupId INT)");
-        statement.execute("create stable if not exists " + db_name + "." + tableReconnect + " (ts TIMESTAMP, i INT) TAGS (groupId INT)");
-        statement.execute("create stable if not exists " + db_name + "." + tableNcharTag + " (ts TIMESTAMP, i INT) TAGS (tag_nchar nchar(100))");
+        statement.execute("drop database if exists " + dbName);
+        statement.execute("create database " + dbName);
+        statement.execute("use " + dbName);
+        statement.execute("create stable if not exists " + dbName + "." + tableName + " (ts TIMESTAMP, current FLOAT, voltage INT, phase FLOAT) TAGS (groupId INT, location BINARY(24))");
+        statement.execute("create stable if not exists " + dbName + "." + tableNameCopyData + " (ts TIMESTAMP, b varbinary(10)) TAGS (groupId INT)");
+        statement.execute("create stable if not exists " + dbName + "." + tableReconnect + " (ts TIMESTAMP, i INT) TAGS (groupId INT)");
+        statement.execute("create stable if not exists " + dbName + "." + tableNcharTag + " (ts TIMESTAMP, i INT) TAGS (tag_nchar nchar(100))");
 
         statement.close();
 
@@ -424,7 +467,7 @@ public class WsEfficientWritingTest {
     @After
     public void after() throws SQLException, InterruptedException {
         try (Statement statement = connection.createStatement()) {
-            statement.execute("drop database if exists " + db_name);
+            statement.execute("drop database if exists " + dbName);
         }
         connection.close();
         Assert.assertEquals(0, RebalanceManager.getInstance().getBgHealthCheckInstanceCount());

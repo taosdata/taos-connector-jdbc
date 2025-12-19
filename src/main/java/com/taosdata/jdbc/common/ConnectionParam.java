@@ -474,7 +474,7 @@ public class ConnectionParam {
         } catch (UnsupportedEncodingException e) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE,
                     "unsupported UTF-8 concoding, user: " + properties.getProperty(TSDBDriver.PROPERTY_KEY_USER)
-                            + ", password: " + properties.getProperty(TSDBDriver.PROPERTY_KEY_PASSWORD));
+                            + ", password: '******'");
         }
 
         String tz = properties.getProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE);

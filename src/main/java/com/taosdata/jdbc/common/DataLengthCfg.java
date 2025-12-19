@@ -16,7 +16,14 @@ public class DataLengthCfg {
             1, //TSDB_DATA_TYPE_UTINYINT
             2, //TSDB_DATA_TYPE_USMALLINT
             4, //TSDB_DATA_TYPE_UINT
-            8  //TSDB_DATA_TYPE_UBIGINT
+            8, //TSDB_DATA_TYPE_UBIGINT
+            null, //TSDB_DATA_TYPE_JSON
+            null, //TSDB_DATA_TYPE_VARBINARY
+            16, //TSDB_DATA_TYPE_DECIMAL128
+            null, //TSDB_DATA_TYPE_BLOB
+            null, //TSDB_DATA_TYPE_MEDIUMBLOB
+            null, //TSDB_DATA_TYPE_GEOMETRY
+            8 //TSDB_DATA_TYPE_DECIMAL64
 };
 
     public static Integer getDataLength(int dataType){
