@@ -188,6 +188,7 @@ public class ConsumerCommittedTest {
         }
         if (connection != null) {
             if (statement != null) {
+                TestUtils.waitTransactionDone(connection);
                 statement.executeUpdate("drop topic if exists " + TOPIC);
                 statement.executeUpdate("drop database if exists " + DB_NAME);
                 statement.close();

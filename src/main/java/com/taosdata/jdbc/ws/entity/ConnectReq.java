@@ -100,15 +100,16 @@ public class ConnectReq extends Payload implements Printable {
 
     @Override
     public String toPrintString() {
-       return "ConnectReq{" +
-                "user='" + user + '\'' +
-                ", password='" + "******" + '\'' +
-                ", db='" + db + '\'' +
-                ", mode=" + mode +
-                ", tz='" + tz + '\'' +
-                ", app='" + app + '\'' +
-                ", ip='" + ip + '\'' +
-                ", reqId=" + getReqId() +
-                '}';
+        return new StringBuilder("ConnectReq{")
+                .append("user='").append(user).append('\'')
+                .append(", password='").append("******").append('\'')
+                .append(", db='").append(db).append('\'')
+                .append(", mode=").append(mode)
+                .append(", tz='").append(tz).append('\'')
+                .append(", app='").append(app).append('\'')
+                .append(", ip='").append(ip).append('\'')
+                .append(", reqId=").append(getReqId())
+                .append('}')
+                .toString();
     }
 }
