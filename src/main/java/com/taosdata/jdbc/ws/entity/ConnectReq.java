@@ -108,17 +108,17 @@ public class ConnectReq extends Payload implements Printable {
             this.setMode(0);
         }
     }
-
     @Override
     public String toPrintString() {
         return new StringBuilder("ConnectReq{")
-                .append("user='").append(user).append('\'')
-                .append(", password='").append("******").append('\'')
-                .append(", db='").append(db).append('\'')
+                .append("user='").append(user).append('"')
+                .append(", password='").append("******").append('"')
+                .append(", db='").append(db).append('"')
                 .append(", mode=").append(mode)
-                .append(", tz='").append(tz).append('\'')
-                .append(", app='").append(app).append('\'')
-                .append(", ip='").append(ip).append('\'')
+                .append(", tz='").append(tz).append('"')
+                .append(", app='").append(app).append('"')
+                .append(", ip='").append(ip).append('"')
+                .append(", connector='").append(connector).append('"')
                 .append(", reqId=").append(getReqId())
                 .append('}')
                 .toString();

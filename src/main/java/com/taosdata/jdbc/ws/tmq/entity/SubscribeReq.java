@@ -170,24 +170,27 @@ public class SubscribeReq extends Payload implements Printable {
         this.config = config;
     }
 
-    @Override
     public String toPrintString() {
+
+        String topics = this.topics == null ? "" : String.join(",", this.topics);
         return new StringBuilder("SubscribeReq{")
-                .append("user='").append(user).append('\'')
-                .append(", password='").append("******").append('\'')
-                .append(", db='").append(db).append('\'')
-                .append(", groupId='").append(groupId).append('\'')
-                .append(", clientId='").append(clientId).append('\'')
-                .append(", offsetRest='").append(offsetRest).append('\'')
-                .append(", topics=").append(String.join(",", topics))
-                .append(", autoCommit='").append(autoCommit).append('\'')
-                .append(", autoCommitIntervalMs='").append(autoCommitIntervalMs).append('\'')
-                .append(", withTableName='").append(withTableName).append('\'')
-                .append(", enableBatchMeta='").append(enableBatchMeta).append('\'')
-                .append(", tz='").append(tz).append('\'')
-                .append(", app='").append(app).append('\'')
-                .append(", ip='").append(ip).append('\'')
+                .append("user='").append(user).append('"')
+                .append(", password='").append("******").append('"')
+                .append(", db='").append(db).append('"')
+                .append(", groupId='").append(groupId).append('"')
+                .append(", clientId='").append(clientId).append('"')
+                .append(", offsetRest='").append(offsetRest).append('"')
+                .append(", topics=").append(topics)
+                .append(", autoCommit='").append(autoCommit).append('"')
+                .append(", autoCommitIntervalMs='").append(autoCommitIntervalMs).append('"')
+                .append(", withTableName='").append(withTableName).append('"')
+                .append(", enableBatchMeta='").append(enableBatchMeta).append('"')
+                .append(", tz='").append(tz).append('"')
+                .append(", app='").append(app).append('"')
+                .append(", ip='").append(ip).append('"')
+                .append(", connector='").append(connector).append('"')
                 .append(", config=").append(config)
+                .append(", reqId=").append(getReqId())
                 .append('}')
                 .toString();
     }

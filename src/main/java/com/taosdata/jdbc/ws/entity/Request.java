@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
 /**
  * send to taosadapter
  */
-public class Request implements Printable{
+public class Request implements Printable {
     private static final Logger log = LoggerFactory.getLogger(Request.class);
 
     @JsonProperty("action")
