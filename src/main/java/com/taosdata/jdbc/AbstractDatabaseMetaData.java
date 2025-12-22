@@ -3,13 +3,12 @@ package com.taosdata.jdbc;
 import com.google.common.collect.Lists;
 import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.enums.DataType;
+import com.taosdata.jdbc.utils.ProductUtil;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.ws.WSConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.sql.*;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -19,41 +18,11 @@ import java.util.stream.Stream;
 
 public abstract class AbstractDatabaseMetaData extends WrapperImpl implements DatabaseMetaData {
     private static final Logger log = LoggerFactory.getLogger(AbstractDatabaseMetaData.class);
-    private static final String PRODUCT_NAME;
-    private static final String PRODUCT_VERSION;
-    private static final String DRIVER_VERSION;
-    private static final int DRIVER_MAJAR_VERSION;
-    private static final int DRIVER_MINOR_VERSION;
-
     public static final String NUMERIC_FUNCTIONS = "ABS,ACOS,ASIN,ATAN,CEIL,COS,FLOOR,LOG,POW,ROUND,SIN,SQRT,TAN";
     public static final String STRING_FUNCTIONS = "CHAR_LENGTH,CONCAT,CONCAT_WS,LENGTH,LOWER,LTRIM,RTRIM,SUBSTR,UPPER";
     public static final String SYSTEM_FUNCTIONS = "DATABASE,CLIENT_VERSION,SERVER_VERSION,SERVER_STATUS,CURRENT_USER";
     public static final String TIME_DATE_FUNCTIONS = "NOW,TIMEDIFF,TIMETRUNCATE,TIMEZONE,TODAY";
     private static final Set<String> tableTypeSet = Stream.of("TABLE", "STABLE", "VIEW").collect(Collectors.toSet());
-
-    static {
-        Properties props = System.getProperties();
-        InputStream propertiesStream = loadProperties();
-        if (propertiesStream != null) {
-            try (InputStream stream = propertiesStream) {
-                props.load(stream);
-            } catch (IOException e) {
-                log.error("load taos-jdbc-version.properties failed", e);
-                //ignore
-            }
-        } else {
-            log.error("Could not find taos-jdbc-version.properties on classpath");
-        }
-        PRODUCT_NAME = props.getProperty("PRODUCT_NAME");
-        PRODUCT_VERSION = props.getProperty("PRODUCT_VERSION");
-        DRIVER_VERSION = props.getProperty("DRIVER_VERSION");
-        DRIVER_MAJAR_VERSION = Integer.parseInt(DRIVER_VERSION.split("\\.")[0]);
-        DRIVER_MINOR_VERSION = Integer.parseInt(DRIVER_VERSION.split("\\.")[1]);
-    }
-
-    private static InputStream loadProperties() {
-        return AbstractDatabaseMetaData.class.getClassLoader().getResourceAsStream("taos-jdbc-version.properties");
-    }
 
     public boolean allProceduresAreCallable() throws SQLException {
         return false;
@@ -88,7 +57,7 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
     }
 
     public String getDatabaseProductName() throws SQLException {
-        return PRODUCT_NAME;
+        return ProductUtil.getProductName();
     }
 
     public String getDatabaseProductVersion() throws SQLException {
@@ -107,24 +76,22 @@ public abstract class AbstractDatabaseMetaData extends WrapperImpl implements Da
         }
 
         if (StringUtils.isEmpty(version)) {
-            return PRODUCT_VERSION;
+            return ProductUtil.getProductVersion();
         } else {
             return version;
         }
     }
 
-    public abstract String getDriverName() throws SQLException;
-
     public String getDriverVersion() throws SQLException {
-        return DRIVER_VERSION;
+        return ProductUtil.getDriverVersion();
     }
 
     public int getDriverMajorVersion() {
-        return DRIVER_MAJAR_VERSION;
+        return ProductUtil.getDriverMajorVersion();
     }
 
     public int getDriverMinorVersion() {
-        return DRIVER_MINOR_VERSION;
+        return ProductUtil.getDriverMinorVersion();
     }
 
     public boolean usesLocalFiles() throws SQLException {

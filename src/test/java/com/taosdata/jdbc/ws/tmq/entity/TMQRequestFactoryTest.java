@@ -63,6 +63,8 @@ public class TMQRequestFactoryTest {
         Assert.assertEquals("Asia/Shanghai", req.getTz());
         Assert.assertEquals("app_name", req.getApp());
         Assert.assertEquals("192.168.1.1", req.getIp());
+        Assert.assertTrue(req.getConnector().startsWith("jdbc-"));
+        Assert.assertTrue(req.getConnector().length() > 5);
     }
 
     @Test

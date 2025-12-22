@@ -36,6 +36,8 @@ public class SubscribeReq extends Payload implements Printable {
     private String app;
     @JsonProperty("ip")
     private String ip;
+    @JsonProperty("connector")
+    private String connector;
     @JsonProperty("config")
     private HashMap<String, String> config = new HashMap<>();
 
@@ -143,6 +145,14 @@ public class SubscribeReq extends Payload implements Printable {
         this.ip = ip;
     }
 
+    public String getConnector() {
+        return connector;
+    }
+
+    public void setConnector(String connector) {
+        this.connector = connector;
+    }
+
     public String getEnableBatchMeta() {
         return enableBatchMeta;
     }
@@ -162,22 +172,23 @@ public class SubscribeReq extends Payload implements Printable {
 
     @Override
     public String toPrintString() {
-        return "SubscribeReq{" +
-                "user='" + user + '\'' +
-                ", password='" + "******" + '\'' +
-                ", db='" + db + '\'' +
-                ", groupId='" + groupId + '\'' +
-                ", clientId='" + clientId + '\'' +
-                ", offsetRest='" + offsetRest + '\'' +
-                ", topics=" + String.join(",", topics) +
-                ", autoCommit='" + autoCommit + '\'' +
-                ", autoCommitIntervalMs='" + autoCommitIntervalMs + '\'' +
-                ", withTableName='" + withTableName + '\'' +
-                ", enableBatchMeta='" + enableBatchMeta + '\'' +
-                ", tz='" + tz + '\'' +
-                ", app='" + app + '\'' +
-                ", ip='" + ip + '\'' +
-                ", config=" + config +
-                '}';
+        return new StringBuilder("SubscribeReq{")
+                .append("user='").append(user).append('\'')
+                .append(", password='").append("******").append('\'')
+                .append(", db='").append(db).append('\'')
+                .append(", groupId='").append(groupId).append('\'')
+                .append(", clientId='").append(clientId).append('\'')
+                .append(", offsetRest='").append(offsetRest).append('\'')
+                .append(", topics=").append(String.join(",", topics))
+                .append(", autoCommit='").append(autoCommit).append('\'')
+                .append(", autoCommitIntervalMs='").append(autoCommitIntervalMs).append('\'')
+                .append(", withTableName='").append(withTableName).append('\'')
+                .append(", enableBatchMeta='").append(enableBatchMeta).append('\'')
+                .append(", tz='").append(tz).append('\'')
+                .append(", app='").append(app).append('\'')
+                .append(", ip='").append(ip).append('\'')
+                .append(", config=").append(config)
+                .append('}')
+                .toString();
     }
 }

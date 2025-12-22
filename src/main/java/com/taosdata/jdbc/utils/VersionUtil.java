@@ -14,6 +14,7 @@ import static com.taosdata.jdbc.TSDBConstants.*;
 
 public class VersionUtil {
     private VersionUtil(){}
+
     public static boolean checkVersion(String version) throws SQLException {
         if (version != null) {
             return compareVersions(version, MIN_SUPPORT_VERSION) >= 0;
