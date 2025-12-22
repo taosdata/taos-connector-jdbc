@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.ws.tmq.entity;
 
 import com.taosdata.jdbc.tmq.TopicPartition;
+import com.taosdata.jdbc.utils.ProductUtil;
 import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.tmq.ConsumerAction;
 
@@ -43,6 +44,7 @@ public class TMQRequestFactory {
         subscribeReq.setTz(param.getConnectionParam().getTz());
         subscribeReq.setApp(param.getConnectionParam().getAppName());
         subscribeReq.setIp(param.getConnectionParam().getAppIp());
+        subscribeReq.setConnector(ProductUtil.getWsConnectorVersion());
         subscribeReq.setEnableBatchMeta(param.getEnableBatchMeta());
         subscribeReq.setConfig(param.getConfig());
 

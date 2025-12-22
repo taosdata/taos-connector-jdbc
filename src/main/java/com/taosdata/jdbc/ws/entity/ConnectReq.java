@@ -3,6 +3,7 @@ package com.taosdata.jdbc.ws.entity;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.common.Printable;
+import com.taosdata.jdbc.utils.ProductUtil;
 import com.taosdata.jdbc.utils.ReqId;
 
 /**
@@ -25,6 +26,8 @@ public class ConnectReq extends Payload implements Printable {
     private String app;
     @JsonProperty("ip")
     private String ip;
+    @JsonProperty("connector")
+    private String connector;
 
     public String getUser() {
         return user;
@@ -82,6 +85,13 @@ public class ConnectReq extends Payload implements Printable {
     public void setIp(String ip) {
         this.ip = ip;
     }
+    public String getConnector() {
+        return connector;
+    }
+
+    public void setConnector(String connector) {
+        this.connector = connector;
+    }
 
     public ConnectReq(ConnectionParam param) {
         this.setReqId(ReqId.getReqID());
@@ -91,6 +101,7 @@ public class ConnectReq extends Payload implements Printable {
         this.setTz(param.getTz());
         this.setApp(param.getAppName());
         this.setIp(param.getAppIp());
+        this.setConnector(ProductUtil.getWsConnectorVersion());
 
         // Currently, only BI mode is supported. The downstream interface value is 0, so a conversion is performed here.
         if(param.getConnectMode() == ConnectionParam.CONNECT_MODE_BI){
