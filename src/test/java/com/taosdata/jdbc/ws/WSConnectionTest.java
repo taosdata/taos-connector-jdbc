@@ -84,6 +84,16 @@ public class WSConnectionTest {
     }
 
     @Test
+    @Ignore
+    public void bearerTokenTest() throws SQLException {
+        String url = "jdbc:TAOS-WS://" + host + ":" + port + "/?=bearerTokenTest=123";
+        try (Connection connection = DriverManager.getConnection(url);
+        Statement statement = connection.createStatement()) {
+            statement.execute("select 1");
+        }
+    }
+
+    @Test
     public void testRetainHostPortPart() {
         // Test case 1: Full URL with multiple hosts, database and parameters
         String url1 = "jdbc:TAOS://host1:6030,host2:6030/mydb?user=root&password=taosdata";

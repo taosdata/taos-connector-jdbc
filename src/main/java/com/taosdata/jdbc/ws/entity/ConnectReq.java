@@ -27,7 +27,8 @@ public class ConnectReq extends Payload {
     private String ip;
     @JsonProperty("connector")
     private String connector;
-
+    @JsonProperty("bearer_token")
+    private String bearerToken;
     public String getUser() {
         return user;
     }
@@ -92,6 +93,13 @@ public class ConnectReq extends Payload {
         this.connector = connector;
     }
 
+    public String getBearerToken() {
+        return bearerToken;
+    }
+
+    public void setBearerToken(String bearerToken) {
+        this.bearerToken = bearerToken;
+    }
     public ConnectReq(ConnectionParam param) {
         this.setReqId(ReqId.getReqID());
         this.setUser(param.getUser());
@@ -101,6 +109,7 @@ public class ConnectReq extends Payload {
         this.setApp(param.getAppName());
         this.setIp(param.getAppIp());
         this.setConnector(ProductUtil.getWsConnectorVersion());
+        this.setBearerToken(param.getBearerToken());
 
         // Currently, only BI mode is supported. The downstream interface value is 0, so a conversion is performed here.
         if(param.getConnectMode() == ConnectionParam.CONNECT_MODE_BI){
