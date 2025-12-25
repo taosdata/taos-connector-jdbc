@@ -2,6 +2,7 @@ package com.taosdata.jdbc.ws.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.taosdata.jdbc.common.ConnectionParam;
+import com.taosdata.jdbc.common.Printable;
 import com.taosdata.jdbc.utils.ProductUtil;
 import com.taosdata.jdbc.utils.ReqId;
 
@@ -9,7 +10,7 @@ import com.taosdata.jdbc.utils.ReqId;
  * connection request pojo
  */
 
-public class ConnectReq extends Payload {
+public class ConnectReq extends Payload implements Printable {
 
     @JsonProperty("user")
     private String user;
@@ -106,5 +107,20 @@ public class ConnectReq extends Payload {
         if(param.getConnectMode() == ConnectionParam.CONNECT_MODE_BI){
             this.setMode(0);
         }
+    }
+    @Override
+    public String toPrintString() {
+        return new StringBuilder("ConnectReq{")
+                .append("user='").append(user).append('"')
+                .append(", password='").append("******").append('"')
+                .append(", db='").append(db).append('"')
+                .append(", mode=").append(mode)
+                .append(", tz='").append(tz).append('"')
+                .append(", app='").append(app).append('"')
+                .append(", ip='").append(ip).append('"')
+                .append(", connector='").append(connector).append('"')
+                .append(", reqId=").append(getReqId())
+                .append('}')
+                .toString();
     }
 }
