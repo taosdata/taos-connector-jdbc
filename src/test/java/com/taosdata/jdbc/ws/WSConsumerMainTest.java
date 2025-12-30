@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class WSConsumerMainTest {
-    private static final String HOST = "vm98";
+    private static final String HOST = "127.0.0.1";
     private static final String DB_NAME = TestUtils.camelToSnake(WSConsumerMainTest.class);
     private static final String SUPER_TABLE = "st";
     private static Connection connection;
@@ -90,7 +90,6 @@ public class WSConsumerMainTest {
 
         properties.setProperty(TSDBDriver.PROPERTY_KEY_APP_NAME, APP_NAME);
         properties.setProperty(TSDBDriver.PROPERTY_KEY_APP_IP, APP_IP);
-
 
         try (TaosConsumer<Map<String, Object>> consumer = new TaosConsumer<>(properties)) {
             consumer.subscribe(Collections.singletonList(topic));
@@ -165,6 +164,7 @@ public class WSConsumerMainTest {
 
     @BeforeClass
     public static void before() throws SQLException {
+        TestUtils.runInMain();
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
             url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
@@ -191,7 +191,6 @@ public class WSConsumerMainTest {
 
     @AfterClass
     public static void after() throws InterruptedException {
-        TestUtils.runInMain();
         try {
             if (connection != null) {
                 if (statement != null) {

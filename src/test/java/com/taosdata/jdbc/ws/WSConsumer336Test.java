@@ -133,6 +133,7 @@ public class WSConsumer336Test {
 
     @BeforeClass
     public static void before() throws SQLException {
+        TestUtils.runIn336();
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
             url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
@@ -159,8 +160,6 @@ public class WSConsumer336Test {
 
     @AfterClass
     public static void after() throws InterruptedException {
-        TestUtils.runIn336();
-
         try {
             if (connection != null) {
                 if (statement != null) {

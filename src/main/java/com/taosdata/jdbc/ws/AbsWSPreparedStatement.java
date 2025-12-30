@@ -732,12 +732,12 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
     @Override
     public void close() throws SQLException {
         if (!isClosed()) {
+            super.close();
             if (transport.isConnected() && stmtInfo.getStmtId() != 0) {
                 long reqId = ReqId.getReqID();
                 Request close = RequestFactory.generateClose(stmtInfo.getStmtId(), reqId);
                 transport.send(close, this.getQueryTimeoutInMs());
             }
-            super.close();
         }
     }
 

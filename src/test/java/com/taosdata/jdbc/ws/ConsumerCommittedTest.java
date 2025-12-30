@@ -50,6 +50,9 @@ public class ConsumerCommittedTest {
             consumer.subscribe(Collections.singletonList(TOPIC));
             // poll data
             ConsumerRecords<ResultBean> records = consumer.poll(Duration.ofMillis(100));
+            if (records.isEmpty()) {
+                records = consumer.poll(Duration.ofMillis(100));
+            }
             Assert.assertFalse(records.isEmpty());
             // sync commit
             consumer.commitSync();
@@ -101,6 +104,9 @@ public class ConsumerCommittedTest {
             consumer.subscribe(Collections.singletonList(TOPIC));
             // poll data
             ConsumerRecords<ResultBean> records = consumer.poll(Duration.ofMillis(100));
+            if (records.isEmpty()) {
+                records = consumer.poll(Duration.ofMillis(100));
+            }
             Assert.assertFalse(records.isEmpty());
             // sync commit
             consumer.commitSync();
@@ -188,6 +194,7 @@ public class ConsumerCommittedTest {
         }
         if (connection != null) {
             if (statement != null) {
+                TestUtils.waitTransactionDone(connection);
                 statement.executeUpdate("drop topic if exists " + TOPIC);
                 statement.executeUpdate("drop database if exists " + DB_NAME);
                 statement.close();

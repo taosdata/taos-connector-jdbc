@@ -1,11 +1,12 @@
 package com.taosdata.jdbc.ws.tmq.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.taosdata.jdbc.common.Printable;
 import com.taosdata.jdbc.ws.entity.Payload;
 
 import java.util.HashMap;
 
-public class SubscribeReq extends Payload {
+public class SubscribeReq extends Payload implements Printable {
     @JsonProperty("user")
     private String user;
     @JsonProperty("password")
@@ -20,7 +21,6 @@ public class SubscribeReq extends Payload {
     private String offsetRest;
     @JsonProperty("topics")
     private String[] topics;
-
     @JsonProperty("auto_commit")
     private String autoCommit;
     @JsonProperty("auto_commit_interval_ms")
@@ -37,6 +37,8 @@ public class SubscribeReq extends Payload {
     private String ip;
     @JsonProperty("connector")
     private String connector;
+    @JsonProperty("bearer_token")
+    private String bearerToken;
     @JsonProperty("config")
     private HashMap<String, String> config = new HashMap<>();
 
@@ -167,5 +169,38 @@ public class SubscribeReq extends Payload {
 
     public void setConfig(HashMap<String, String> config) {
         this.config = config;
+    }
+    public String getBearerToken() {
+        return bearerToken;
+    }
+
+    public void setBearerToken(String bearerToken) {
+        this.bearerToken = bearerToken;
+    }
+
+    public String toPrintString() {
+
+        String topicsStr = this.topics == null ? "" : String.join(",", this.topics);
+        return new StringBuilder("SubscribeReq{")
+                .append("user='").append(user).append('"')
+                .append(", password='").append("******").append('"')
+                .append(", bearerToken='").append("******").append('"')
+                .append(", db='").append(db).append('"')
+                .append(", groupId='").append(groupId).append('"')
+                .append(", clientId='").append(clientId).append('"')
+                .append(", offsetRest='").append(offsetRest).append('"')
+                .append(", topics=").append(topicsStr)
+                .append(", autoCommit='").append(autoCommit).append('"')
+                .append(", autoCommitIntervalMs='").append(autoCommitIntervalMs).append('"')
+                .append(", withTableName='").append(withTableName).append('"')
+                .append(", enableBatchMeta='").append(enableBatchMeta).append('"')
+                .append(", tz='").append(tz).append('"')
+                .append(", app='").append(app).append('"')
+                .append(", ip='").append(ip).append('"')
+                .append(", connector='").append(connector).append('"')
+                .append(", config=").append(config)
+                .append(", reqId=").append(getReqId())
+                .append('}')
+                .toString();
     }
 }

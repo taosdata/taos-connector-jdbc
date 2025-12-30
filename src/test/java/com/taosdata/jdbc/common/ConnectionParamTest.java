@@ -42,6 +42,9 @@ public class ConnectionParamTest {
         connectionParam.setPassword("testPassword");
         assertEquals("testPassword", connectionParam.getPassword());
 
+        connectionParam.setBearerToken("bearerToken");
+        assertEquals("bearerToken", connectionParam.getBearerToken());
+
         connectionParam.setTz("UTC");
         assertEquals("UTC", connectionParam.getTz());
 
