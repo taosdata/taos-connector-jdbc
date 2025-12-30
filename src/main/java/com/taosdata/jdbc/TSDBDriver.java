@@ -70,7 +70,7 @@ public class TSDBDriver extends AbstractDriver {
      * Key used to retrieve the bearer_token value from the properties instance passed
      * to the driver.
      */
-    public static final String PROPERTY_KEY_BEARER_TOKEN = "bearer_token";
+    public static final String PROPERTY_KEY_BEARER_TOKEN = "bearerToken";
 
     /**
      * Key used to retrieve the token value from the properties instance passed to

@@ -72,6 +72,7 @@ public class ConnectionParam {
         this.cloudToken = builder.cloudToken;
         this.user = builder.user;
         this.password = builder.password;
+        this.bearerToken = builder.bearerToken;
         this.tz = builder.tz;
         this.useSsl = builder.useSsl;
         this.maxRequest = builder.maxRequest;
@@ -469,24 +470,22 @@ public class ConnectionParam {
         String user = properties.getProperty(TSDBDriver.PROPERTY_KEY_USER);
         String password = properties.getProperty(TSDBDriver.PROPERTY_KEY_PASSWORD);
 
-        if (user == null && cloudToken == null) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_USER_IS_REQUIRED);
-        }
-        if (password == null && cloudToken == null) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_PASSWORD_IS_REQUIRED);
-        }
+        if (cloudToken == null && bearerToken == null) {
+            if (user == null) {
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_USER_IS_REQUIRED);
+            }
+            if (password == null) {
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_PASSWORD_IS_REQUIRED);
+            }
 
-        try {
-            if (user != null) {
+            try {
                 user = URLDecoder.decode(user, StandardCharsets.UTF_8.displayName());
-            }
-            if (password != null) {
                 password = URLDecoder.decode(password, StandardCharsets.UTF_8.displayName());
+            } catch (UnsupportedEncodingException e) {
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE,
+                        "unsupported UTF-8 concoding, user: " + properties.getProperty(TSDBDriver.PROPERTY_KEY_USER)
+                                + ", password: " + properties.getProperty(TSDBDriver.PROPERTY_KEY_PASSWORD));
             }
-        } catch (UnsupportedEncodingException e) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE,
-                    "unsupported UTF-8 concoding, user: " + properties.getProperty(TSDBDriver.PROPERTY_KEY_USER)
-                            + ", password: " + properties.getProperty(TSDBDriver.PROPERTY_KEY_PASSWORD));
         }
 
         String tz = properties.getProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE);

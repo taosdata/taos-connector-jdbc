@@ -6,6 +6,7 @@ import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.StringUtils;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
@@ -23,7 +24,8 @@ import java.util.Properties;
 @TestTarget(alias = "test connection with server", author = "huolibo", version = "2.0.37")
 public class WSConnectionTest {
     //    private static final String host = "192.168.1.98";
-    private static String host = "127.0.0.1";
+
+    private static String host = "localhost";
     private static String port = "6041";
     private Connection connection;
     private final String db_name = "information_schema";
@@ -84,13 +86,44 @@ public class WSConnectionTest {
     }
 
     @Test
-    @Ignore
+//    @Ignore
     public void bearerTokenTest() throws SQLException {
-        String url = "jdbc:TAOS-WS://" + host + ":" + port + "/?=bearerTokenTest=123";
-        try (Connection connection = DriverManager.getConnection(url);
-        Statement statement = connection.createStatement()) {
-            statement.execute("select 1");
+        // create token
+        String token = "";
+        try (Connection conn = DriverManager.getConnection("jdbc:TAOS-WS://" + host + ":" + port + "/?user=root&password=taosdata");
+             Statement statement = conn.createStatement();){
+             ResultSet rs = statement.executeQuery("CREATE TOKEN jdbc_token FROM user root ENABLE 1 PROVIDER 'root' ttl 1");
+            TestUtils.waitTransactionDone(conn);
+            rs.next();
+            token = rs.getString(1);
+
+            System.out.println("token = " + token);
+            rs.close();
         }
+
+        if (StringUtils.isEmpty(token)) {
+            Assert.fail("no token created");
+        }
+
+        String url = "jdbc:TAOS-WS://" + host + ":" + port + "/?bearerToken=" + token;
+        try (Connection connection = DriverManager.getConnection(url);
+             Statement statement = connection.createStatement();
+             ResultSet rs = statement.executeQuery("show databases")) {
+
+            while (rs.next()) {
+                System.out.println(rs.getString(1));
+                return;
+            }
+        } finally {
+            // revoke token
+            try (Connection conn = DriverManager.getConnection("jdbc:TAOS-WS://" + host + ":" + port + "/?user=root&password=taosdata");
+                 Statement statement = conn.createStatement();){
+                statement.executeUpdate("drop token jdbc_token");
+                TestUtils.waitTransactionDone(conn);
+            }
+        }
+
+        Assert.fail("Not implemented yet");
     }
 
     @Test
