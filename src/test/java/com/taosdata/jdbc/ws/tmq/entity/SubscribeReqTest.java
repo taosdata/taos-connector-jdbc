@@ -15,6 +15,7 @@ public class SubscribeReqTest {
     // Test constants
     private static final String TEST_USER = "tmq_user";
     private static final String TEST_PASSWORD = "tmq_pwd_123";
+    private static final String TEST_BEARER_TOKEN = "bearerToken";
     private static final String TEST_DB = "tmq_test_db";
     private static final String TEST_GROUP_ID = "tmq_group_001";
     private static final String TEST_CLIENT_ID = "tmq_client_001";
@@ -74,6 +75,7 @@ public class SubscribeReqTest {
         // 2. Execute: Set test values via setters
         subscribeReq.setUser(TEST_USER);
         subscribeReq.setPassword(TEST_PASSWORD);
+        subscribeReq.setBearerToken(TEST_BEARER_TOKEN);
         subscribeReq.setDb(TEST_DB);
         subscribeReq.setGroupId(TEST_GROUP_ID);
         subscribeReq.setClientId(TEST_CLIENT_ID);
@@ -98,6 +100,7 @@ public class SubscribeReqTest {
         // 3. Verify: Getters return correct values
         assertEquals("User should match test value", TEST_USER, subscribeReq.getUser());
         assertEquals("Password should match test value", TEST_PASSWORD, subscribeReq.getPassword());
+        assertEquals("BearerToken should match test value", TEST_BEARER_TOKEN, subscribeReq.getBearerToken());
         assertEquals("Database should match test value", TEST_DB, subscribeReq.getDb());
         assertEquals("GroupId should match test value", TEST_GROUP_ID, subscribeReq.getGroupId());
         assertEquals("ClientId should match test value", TEST_CLIENT_ID, subscribeReq.getClientId());

@@ -21,7 +21,6 @@ public class SubscribeReq extends Payload implements Printable {
     private String offsetRest;
     @JsonProperty("topics")
     private String[] topics;
-
     @JsonProperty("auto_commit")
     private String autoCommit;
     @JsonProperty("auto_commit_interval_ms")
@@ -38,6 +37,8 @@ public class SubscribeReq extends Payload implements Printable {
     private String ip;
     @JsonProperty("connector")
     private String connector;
+    @JsonProperty("bearer_token")
+    private String bearerToken;
     @JsonProperty("config")
     private HashMap<String, String> config = new HashMap<>();
 
@@ -169,18 +170,26 @@ public class SubscribeReq extends Payload implements Printable {
     public void setConfig(HashMap<String, String> config) {
         this.config = config;
     }
+    public String getBearerToken() {
+        return bearerToken;
+    }
+
+    public void setBearerToken(String bearerToken) {
+        this.bearerToken = bearerToken;
+    }
 
     public String toPrintString() {
 
-        String topics = this.topics == null ? "" : String.join(",", this.topics);
+        String topicsStr = this.topics == null ? "" : String.join(",", this.topics);
         return new StringBuilder("SubscribeReq{")
                 .append("user='").append(user).append('"')
                 .append(", password='").append("******").append('"')
+                .append(", bearerToken='").append("******").append('"')
                 .append(", db='").append(db).append('"')
                 .append(", groupId='").append(groupId).append('"')
                 .append(", clientId='").append(clientId).append('"')
                 .append(", offsetRest='").append(offsetRest).append('"')
-                .append(", topics=").append(topics)
+                .append(", topics=").append(topicsStr)
                 .append(", autoCommit='").append(autoCommit).append('"')
                 .append(", autoCommitIntervalMs='").append(autoCommitIntervalMs).append('"')
                 .append(", withTableName='").append(withTableName).append('"')

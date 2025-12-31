@@ -1,6 +1,8 @@
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.TSDBError;
+import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
@@ -17,14 +19,13 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class WSConsumerTest {
-    private static final String HOST = "127.0.0.1";
-    private static final String DB_NAME = TestUtils.camelToSnake(WSConsumerTest.class);
+public class WSConsumer336Test {
+    private static final String HOST = "localhost";
+    private static final String DB_NAME = TestUtils.camelToSnake(WSConsumer336Test.class);
     private static final String SUPER_TABLE = "st";
     private static Connection connection;
     private static Statement statement;
     private static final String[] topics = {"topic_ws_map" + DB_NAME, "topic_ws_bean" + DB_NAME};
-
     @Test
     public void testWSMap() throws Exception {
         AtomicInteger a = new AtomicInteger(1);
@@ -52,7 +53,7 @@ public class WSConsumerTest {
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.CONNECT_USER, "root");
         properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
-        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, "127.0.0.1:6041");
+        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, HOST + ":6041");
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
         properties.setProperty(TMQConstants.GROUP_ID, "ws_map");
@@ -60,8 +61,10 @@ public class WSConsumerTest {
         properties.setProperty("fetch.max.wait.ms", "5000");
         properties.setProperty("min.poll.rows", "1000");
 
+
         try (TaosConsumer<Map<String, Object>> consumer = new TaosConsumer<>(properties)) {
             consumer.subscribe(Collections.singletonList(topic));
+
             for (int i = 0; i < 10; i++) {
                 ConsumerRecords<Map<String, Object>> consumerRecords = consumer.poll(Duration.ofMillis(100));
                 for (ConsumerRecord<Map<String, Object>> r : consumerRecords) {
@@ -130,6 +133,7 @@ public class WSConsumerTest {
 
     @BeforeClass
     public static void before() throws SQLException {
+        TestUtils.runIn336();
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
             url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";

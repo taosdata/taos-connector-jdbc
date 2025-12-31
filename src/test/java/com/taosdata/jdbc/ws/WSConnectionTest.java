@@ -23,16 +23,17 @@ import java.util.Properties;
 @TestTarget(alias = "test connection with server", author = "huolibo", version = "2.0.37")
 public class WSConnectionTest {
     //    private static final String host = "192.168.1.98";
-    private static String host = "127.0.0.1";
+
+    private static String host = "localhost";
     private static String port = "6041";
     private Connection connection;
-    private final String db_name = "information_schema";
+    private final String dbName = "information_schema";
 
     @Test
     @Ignore
     @Description("normal test with websocket server")
     public void normalConnection() throws SQLException {
-        String url = "jdbc:TAOS-RS://" + host + ":" + port + "/" + db_name + "?user=root&password=taosdata";
+        String url = "jdbc:TAOS-RS://" + host + ":" + port + "/" + dbName + "?user=root&password=taosdata";
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
         connection = DriverManager.getConnection(url, properties);
@@ -82,7 +83,6 @@ public class WSConnectionTest {
         connection = DriverManager.getConnection(url);
         connection.isValid(-1);
     }
-
     @Test
     public void testRetainHostPortPart() {
         // Test case 1: Full URL with multiple hosts, database and parameters

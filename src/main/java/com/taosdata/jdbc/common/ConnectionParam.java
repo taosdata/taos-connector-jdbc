@@ -26,6 +26,7 @@ public class ConnectionParam {
     private String cloudToken;
     private String user;
     private String password;
+    private String bearerToken;
     private String tz;
     private ZoneId zoneId;
     private boolean useSsl;
@@ -71,6 +72,7 @@ public class ConnectionParam {
         this.cloudToken = builder.cloudToken;
         this.user = builder.user;
         this.password = builder.password;
+        this.bearerToken = builder.bearerToken;
         this.tz = builder.tz;
         this.useSsl = builder.useSsl;
         this.maxRequest = builder.maxRequest;
@@ -125,6 +127,9 @@ public class ConnectionParam {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+    public void setBearerToken(String bearerToken) {
+        this.bearerToken = bearerToken;
     }
 
     public void setTz(String tz) {
@@ -272,6 +277,9 @@ public class ConnectionParam {
     }
     public String getPassword() {
         return password;
+    }
+    public String getBearerToken() {
+        return bearerToken;
     }
     public String getTz() {
         return tz;
@@ -454,27 +462,30 @@ public class ConnectionParam {
             cloudToken = properties.getProperty(TSDBDriver.PROPERTY_KEY_TOKEN);
         }
 
+        String bearerToken = null;
+        if (properties.containsKey(TSDBDriver.PROPERTY_KEY_BEARER_TOKEN)) {
+            bearerToken = properties.getProperty(TSDBDriver.PROPERTY_KEY_BEARER_TOKEN);
+        }
+
         String user = properties.getProperty(TSDBDriver.PROPERTY_KEY_USER);
         String password = properties.getProperty(TSDBDriver.PROPERTY_KEY_PASSWORD);
 
-        if (user == null && cloudToken == null) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_USER_IS_REQUIRED);
-        }
-        if (password == null && cloudToken == null) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_PASSWORD_IS_REQUIRED);
-        }
+        if (cloudToken == null && bearerToken == null) {
+            if (user == null) {
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_USER_IS_REQUIRED);
+            }
+            if (password == null) {
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_PASSWORD_IS_REQUIRED);
+            }
 
-        try {
-            if (user != null) {
+            try {
                 user = URLDecoder.decode(user, StandardCharsets.UTF_8.displayName());
-            }
-            if (password != null) {
                 password = URLDecoder.decode(password, StandardCharsets.UTF_8.displayName());
+            } catch (UnsupportedEncodingException e) {
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE,
+                        "unsupported UTF-8 concoding, user: " + properties.getProperty(TSDBDriver.PROPERTY_KEY_USER)
+                                + ", password: " + properties.getProperty(TSDBDriver.PROPERTY_KEY_PASSWORD));
             }
-        } catch (UnsupportedEncodingException e) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE,
-                    "unsupported UTF-8 concoding, user: " + properties.getProperty(TSDBDriver.PROPERTY_KEY_USER)
-                            + ", password: " + properties.getProperty(TSDBDriver.PROPERTY_KEY_PASSWORD));
         }
 
         String tz = properties.getProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE);
@@ -620,6 +631,7 @@ public class ConnectionParam {
                 .setDatabase(database)
                 .setCloudToken(cloudToken)
                 .setUserAndPassword(user, password)
+                .setBearerToken(bearerToken)
                 .setTimeZone(tz)
                 .setUseSsl(useSsl)
                 .setMaxRequest(maxRequest)
@@ -662,6 +674,7 @@ public class ConnectionParam {
         private String cloudToken;
         private String user;
         private String password;
+        private String bearerToken;
         private String tz;
         private boolean useSsl;
         private int maxRequest;
@@ -720,6 +733,10 @@ public class ConnectionParam {
             return this;
         }
 
+        public Builder setBearerToken(String bearerToken) {
+            this.bearerToken = bearerToken;
+            return this;
+        }
         public Builder setTimeZone(String timeZone) {
             this.tz = timeZone;
             return this;

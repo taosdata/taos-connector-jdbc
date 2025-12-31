@@ -5,6 +5,8 @@ import com.taosdata.jdbc.enums.FieldBindType;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP;
+
 public class StmtInfo {
     private long stmtId = 0;
     private int toBeBindTableNameIndex = -1;
@@ -27,11 +29,14 @@ public class StmtInfo {
         isInsert = prepareResp.isInsert();
         if (isInsert){
             fields = prepareResp.getFields();
-            if (!fields.isEmpty()){
-                precision = fields.get(0).getPrecision();
-            }
             for (int i = 0; i < fields.size(); i++){
                 Field field = fields.get(i);
+
+                // timestamp precision is same in one database
+                if (field.getFieldType() == TSDB_DATA_TYPE_TIMESTAMP){
+                    precision = field.getPrecision();
+                }
+
                 if (field.getBindType() == FieldBindType.TAOS_FIELD_TBNAME.getValue()){
                     toBeBindTableNameIndex = i;
                 }

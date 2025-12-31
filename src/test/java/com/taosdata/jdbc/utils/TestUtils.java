@@ -42,4 +42,9 @@ public class TestUtils {
         String env = System.getenv("TD_3360_TEST");
         Assume.assumeFalse("true".equals(env));
     }
+
+    public static void runInEnterprise(){
+        String env = System.getenv("TD_ENTERPRISE_TEST");
+        Assume.assumeTrue("true".equals(env));
+    }
 }
