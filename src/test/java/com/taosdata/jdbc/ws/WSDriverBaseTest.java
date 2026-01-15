@@ -16,25 +16,25 @@ import java.util.Properties;
 @TestTarget(alias = "websocket query test", author = "huolibo", version = "2.0.38")
 @FixMethodOrder
 public class WSDriverBaseTest {
-    private static final String host = "127.0.0.1";
-    private static final int port = 6041;
+    private static final String HOST = "127.0.0.1";
+    private static final int PORT = 6041;
     private final String db_name = TestUtils.camelToSnake(WSDriverBaseTest.class);
-    private static final String tableName = "wq";
+    private static final String TABLE_NAME = "wq";
     private Connection connection;
 
     @Description("query")
     @Test
     public void queryBlock() throws SQLException {
         try (Statement statement = connection.createStatement()) {
-            statement.execute("insert into " + db_name + "." + tableName + " values(now+100s, 100)");
-            try (ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + tableName)) {
+            statement.execute("insert into " + db_name + "." + TABLE_NAME + " values(now+100s, 100)");
+            try (ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + TABLE_NAME)) {
                 resultSet.next();
                 Assert.assertEquals(100, resultSet.getInt(2));
             }
 
 
             statement.execute("select 1 where 0");
-            try (ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + tableName)) {
+            try (ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + TABLE_NAME)) {
                 resultSet.next();
                 Assert.assertEquals(100, resultSet.getInt(2));
             }
@@ -49,7 +49,7 @@ public class WSDriverBaseTest {
         System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "80");
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + host + ":" + port + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST + ":" + PORT + "/?user=root&password=taosdata";
         } else {
             url += "?user=root&password=taosdata";
         }
@@ -60,7 +60,7 @@ public class WSDriverBaseTest {
         statement.execute("drop database if exists " + db_name);
         statement.execute("create database " + db_name);
         statement.execute("use " + db_name);
-        statement.execute("create table if not exists " + db_name + "." + tableName + "(ts timestamp, f int)");
+        statement.execute("create table if not exists " + db_name + "." + TABLE_NAME + "(ts timestamp, f int)");
         statement.close();
     }
 

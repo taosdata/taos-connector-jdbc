@@ -11,7 +11,7 @@ import java.sql.*;
 @Ignore
 public class JDBCTypeAndTypeCompareTest {
     private static Connection conn;
-    private static final String dbname = TestUtils.camelToSnake(JDBCTypeAndTypeCompareTest.class);
+    private static final String DB_NAME = TestUtils.camelToSnake(JDBCTypeAndTypeCompareTest.class);
 
     @Test
     public void test() throws SQLException {
@@ -22,9 +22,9 @@ public class JDBCTypeAndTypeCompareTest {
         conn = DriverManager.getConnection(url, "root", "taosdata");
         Statement stmt = conn.createStatement();
 
-        stmt.execute("drop database if exists " + dbname);
-        stmt.execute("create database if not exists " + dbname);
-        stmt.execute("use " + dbname);
+        stmt.execute("drop database if exists " + DB_NAME);
+        stmt.execute("create database if not exists " + DB_NAME);
+        stmt.execute("use " + DB_NAME);
         stmt.execute("create table weather(ts timestamp, f1 int, f2 bigint, f3 float, f4 double, f5 smallint, f6 tinyint, f7 bool, f8 binary(10), f9 nchar(10) )");
         stmt.execute("insert into weather values(now, 1, 2, 3.0, 4.0, 5, 6, true, 'test','test')");
 
@@ -47,7 +47,7 @@ public class JDBCTypeAndTypeCompareTest {
         try {
             if (null != conn) {
                 Statement statement = conn.createStatement();
-                statement.execute("drop database if exists " + dbname);
+                statement.execute("drop database if exists " + DB_NAME);
                 statement.close();
                 conn.close();
             }

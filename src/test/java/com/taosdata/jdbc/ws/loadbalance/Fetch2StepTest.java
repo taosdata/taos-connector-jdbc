@@ -180,8 +180,10 @@ public class Fetch2StepTest {
     }
 
     @AfterClass
-    public static void tearDown() {
-        System.gc();
+    public static void tearDown() throws InterruptedException {
         Assert.assertEquals(0, RebalanceManager.getInstance().getBgHealthCheckInstanceCount());
+        RebalanceManager.getInstance().clearAllForTest();
+        System.gc();
+        Thread.sleep(500);
     }
 }

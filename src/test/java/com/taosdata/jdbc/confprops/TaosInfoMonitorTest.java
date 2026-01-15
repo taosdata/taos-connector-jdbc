@@ -15,7 +15,7 @@ import java.util.stream.IntStream;
 @Ignore
 public class TaosInfoMonitorTest {
 
-    private static final String host = "127.0.0.1";
+    private static final String HOST = "127.0.0.1";
     private final Random random = new Random(System.currentTimeMillis());
 
     @Test
@@ -24,7 +24,7 @@ public class TaosInfoMonitorTest {
         List<Thread> threads = IntStream.range(1, 11).mapToObj(i -> new Thread(() -> {
             String url = SpecifyAddress.getInstance().getJniUrl();
             if (url == null) {
-                url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+                url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
             }
             int connSize = random.nextInt(10);
             for (int j = 0; j < connSize; j++) {

@@ -17,7 +17,7 @@ import static org.junit.Assert.*;
 @SuppressWarnings("java:S1874")
 public class RestfulConnectionTest {
 
-    private static final String host = "127.0.0.1";
+    private static final String HOST = "127.0.0.1";
 
     private static Connection conn;
 
@@ -487,7 +487,7 @@ public class RestfulConnectionTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
         }
         conn = DriverManager.getConnection(url, properties);
         // create test database for test cases

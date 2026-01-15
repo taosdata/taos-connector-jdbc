@@ -9,8 +9,6 @@ import com.taosdata.jdbc.rs.RestfulResultSet;
 import com.taosdata.jdbc.rs.RestfulResultSetMetaData;
 import com.taosdata.jdbc.utils.FetchDataUtil;
 import com.taosdata.jdbc.ws.entity.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -20,7 +18,6 @@ import java.util.Arrays;
 import java.util.List;
 
 public abstract class AbstractWSResultSet extends AbstractResultSet {
-    private static final Logger log = LoggerFactory.getLogger(AbstractWSResultSet.class);
 
     protected final Statement statement;
     protected final Transport transport;

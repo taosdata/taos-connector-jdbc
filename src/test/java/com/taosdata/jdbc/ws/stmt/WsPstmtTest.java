@@ -33,7 +33,6 @@ public class WsPstmtTest {
         String sql = "insert into " + db_name + "." + tableName + " values(?, ?)";
         PreparedStatement statement = connection.prepareStatement(sql);
         statement.setTimestamp(1, new Timestamp(1746870173341L));
-//        statement.setTimestamp(1, new Timestamp(0));
         statement.setInt(2, 1);
         int i = statement.executeUpdate();
         Assert.assertEquals(1, i);
@@ -45,13 +44,11 @@ public class WsPstmtTest {
         String sql = "insert into " + db_name + "." + tableName + " values(?, ?)";
         PreparedStatement statement = connection.prepareStatement(sql);
         statement.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
-//        statement.setTimestamp(1, new Timestamp(0));
         statement.setInt(2, 1);
         int i = statement.executeUpdate();
         Assert.assertEquals(1, i);
 
         statement.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
-//        statement.setTimestamp(1, new Timestamp(0));
         statement.setInt(2, 1);
         i = statement.executeUpdate();
         Assert.assertEquals(1, i);

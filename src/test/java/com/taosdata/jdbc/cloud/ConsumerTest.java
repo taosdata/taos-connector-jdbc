@@ -37,7 +37,6 @@ public class ConsumerTest {
             return;
         }
         // create topic sql
-//        create topic if not exists topic_java_ws_bean as select ts, c1, c2, c3, c4, c5 from javatest.tmq;
         String topic = "topic_java_ws_bean";
 
         Properties properties = new Properties();

@@ -49,7 +49,7 @@ public class WebSocketChannelInitializer extends ChannelInitializer<SocketChanne
         }
 
         // for debug
-        //p.addLast(new LoggingHandler(LogLevel.DEBUG));
+        //p.addLast(new LoggingHandler(LogLevel.DEBUG)); // NOSONAR - kept for debugging
 
         p.addLast(new HttpClientCodec());
         p.addLast(new HttpObjectAggregator(8192));

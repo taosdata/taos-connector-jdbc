@@ -1,6 +1,5 @@
 package com.taosdata.jdbc.ws;
 
-import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.common.Bean;
 import com.taosdata.jdbc.tmq.ConsumerRecord;
@@ -14,8 +13,6 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.sql.*;
 import java.time.Duration;
 import java.util.Collections;
@@ -30,7 +27,7 @@ public class WSConsumerNullValueTest {
     private static Connection connection;
     private static Statement statement;
     private static final String[] topics = {"topic_" + DB_NAME};
-    private static final byte[] expectedBinary = new byte[]{0x39, 0x38, 0x66, 0x34, 0x36, 0x33};
+
     private void insertOneRow() throws SQLException {
         statement.executeUpdate("insert into " + DB_NAME + ".ct0 values(now, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)");
     }
@@ -86,7 +83,6 @@ public class WSConsumerNullValueTest {
     }
     @Test
     public void testWSBeanMap() throws Exception {
-        //statement.executeUpdate("insert into " + dbName + ".ct0 values(now, 1, 100, 2.2, 2.3, '1', 12, 2, true, '一', 'POINT(1 1)', '\\x0101', 1.2234, now, 255, 65535, 4294967295, 18446744073709551615)");
         insertOneRow();
 
         String topic = topics[0];
@@ -136,7 +132,6 @@ public class WSConsumerNullValueTest {
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
-        // properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
         connection = DriverManager.getConnection(url, properties);
         statement = connection.createStatement();
 

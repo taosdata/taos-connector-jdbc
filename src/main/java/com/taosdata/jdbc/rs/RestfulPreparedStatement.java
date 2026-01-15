@@ -10,6 +10,10 @@ import java.math.BigDecimal;
 import java.net.URL;
 import java.sql.*;
 import java.util.Calendar;
+
+/**
+ * @deprecated Use WebSocket connection instead.
+ */
 @Deprecated
 public class RestfulPreparedStatement extends RestfulStatement implements PreparedStatement {
 
@@ -270,7 +274,6 @@ public class RestfulPreparedStatement extends RestfulStatement implements Prepar
     public ParameterMetaData getParameterMetaData() throws SQLException {
         if (isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
-//        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
 
         return this.parameterMetaData;
     }

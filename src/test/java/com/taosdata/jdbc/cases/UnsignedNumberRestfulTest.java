@@ -16,12 +16,12 @@ public class UnsignedNumberRestfulTest {
     private static final String HOST = "127.0.0.1";
     private static Connection conn;
     private static long ts;
-    private static final String DBNAME = TestUtils.camelToSnake(UnsignedNumberRestfulTest.class);
+    private static final String DB_NAME = TestUtils.camelToSnake(UnsignedNumberRestfulTest.class);
 
     @Test
     public void testCase001() throws SQLException {
         try (Statement stmt = conn.createStatement()) {
-            ResultSet rs = stmt.executeQuery("select * from " + DBNAME + ".us_table");
+            ResultSet rs = stmt.executeQuery("select * from " + DB_NAME + ".us_table");
             ResultSetMetaData meta = rs.getMetaData();
             assertResultSetMetaData(meta);
             while (rs.next()) {
@@ -153,9 +153,9 @@ public class UnsignedNumberRestfulTest {
         }
         conn = DriverManager.getConnection(url, properties);
         Statement stmt = conn.createStatement();
-        stmt.execute("drop database if exists " + DBNAME);
-        stmt.execute("create database if not exists " + DBNAME);
-        stmt.execute("use " + DBNAME);
+        stmt.execute("drop database if exists " + DB_NAME);
+        stmt.execute("create database if not exists " + DB_NAME);
+        stmt.execute("use " + DB_NAME);
         stmt.execute("create table us_table(ts timestamp, f1 tinyint unsigned, f2 smallint unsigned, f3 int unsigned, f4 bigint unsigned)");
         stmt.executeUpdate("insert into us_table(ts,f1,f2,f3,f4) values(" + ts + ", 127, 32767,2147483647, 9223372036854775807)");
         stmt.close();
@@ -166,7 +166,7 @@ public class UnsignedNumberRestfulTest {
         try {
             if (conn != null) {
                 Statement statement = conn.createStatement();
-                statement.execute("drop database if exists " + DBNAME);
+                statement.execute("drop database if exists " + DB_NAME);
                 statement.close();
                 conn.close();
             }

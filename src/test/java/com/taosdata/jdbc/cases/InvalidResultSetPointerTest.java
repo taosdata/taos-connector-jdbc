@@ -17,8 +17,8 @@ public class InvalidResultSetPointerTest {
     private static final String STB_NAME = "stb";
     private static final String TB_NAME = "tb";
     private static Connection connection;
-    private static final int numOfSTb = 30000;
-    private static final int numOfTb = 3;
+    private static final int NUM_OF_STB = 30000;
+    private static final int NUM_OF_TB = 3;
     private static int numOfThreads = 100;
 
     @Test
@@ -34,8 +34,8 @@ public class InvalidResultSetPointerTest {
     }
 
     private void insert() {
-        for (int i = 0; i < numOfSTb; i++) {
-            for (int j = 0; j < numOfTb; j++) {
+        for (int i = 0; i < NUM_OF_STB; i++) {
+            for (int j = 0; j < NUM_OF_TB; j++) {
                 final String sql = "INSERT INTO " + DB_NAME + "." + TB_NAME + i + "_" + j + " (ts, temperature, humidity, name) values(now, 20.5, 34, \"" + i + "\")";
                 System.out.println(sql);
                 execute(sql);
@@ -44,15 +44,15 @@ public class InvalidResultSetPointerTest {
     }
 
     private void createSTable() {
-        for (int i = 0; i < numOfSTb; i++) {
+        for (int i = 0; i < NUM_OF_STB; i++) {
             final String sql = "create table if not exists " + DB_NAME + "." + STB_NAME + i + " (ts timestamp, temperature float, humidity int, name BINARY(" + (i % 73 + 10) + ")) TAGS (tag1 INT)";
             execute(sql);
         }
     }
 
     private void createTable() {
-        for (int i = 0; i < numOfSTb; i++) {
-            for (int j = 0; j < numOfTb; j++) {
+        for (int i = 0; i < NUM_OF_STB; i++) {
+            for (int j = 0; j < NUM_OF_TB; j++) {
                 final String sql = "create table if not exists " + DB_NAME + "." + TB_NAME + i + "_" + j + " USING " + STB_NAME + i + " TAGS(" + j + ")";
                 execute(sql);
             }
@@ -67,15 +67,15 @@ public class InvalidResultSetPointerTest {
     }
 
     private void selectMultiThreading() {
-        int a = numOfSTb / numOfThreads;
+        int a = NUM_OF_STB / numOfThreads;
         if (a < 1) {
-            numOfThreads = numOfSTb;
+            numOfThreads = NUM_OF_STB;
             a = 1;
         }
 
         int b = 0;
         if (numOfThreads != 0) {
-            b = numOfSTb % numOfThreads;
+            b = NUM_OF_STB % numOfThreads;
         }
 
         multiThreadingClass[] instance = new multiThreadingClass[numOfThreads];
@@ -92,7 +92,7 @@ public class InvalidResultSetPointerTest {
             }
 
             last = instance[i].to + 1;
-            instance[i].numOfTb = numOfTb;
+            instance[i].NUM_OF_TB = NUM_OF_TB;
             instance[i].connection = connection;
             instance[i].dbName = DB_NAME;
             instance[i].tbName = TB_NAME;
@@ -150,7 +150,6 @@ public class InvalidResultSetPointerTest {
             ResultSet resultSet = statement.executeQuery(sql);
             long end = System.currentTimeMillis();
             printSql(sql, (end - start));
-//            printResult(resultSet);
             resultSet.close();
             statement.close();
         } catch (SQLException e) {
@@ -161,7 +160,7 @@ public class InvalidResultSetPointerTest {
     class multiThreadingClass extends Thread {
         public int id;
         public int from, to;
-        public int numOfTb;
+        public int NUM_OF_TB;
         public Connection connection;
         public String dbName;
         public String tbName;
@@ -175,7 +174,7 @@ public class InvalidResultSetPointerTest {
             }
 
             for (int i = from; i < to; i++) {
-                for (int j = 0; j < numOfTb; j++) {
+                for (int j = 0; j < NUM_OF_TB; j++) {
                     if (j % 1000 == 0) {
                         try {
                             System.out.print(id + "s.");

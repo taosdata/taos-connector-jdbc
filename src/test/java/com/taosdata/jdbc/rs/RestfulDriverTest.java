@@ -10,20 +10,20 @@ import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 
 public class RestfulDriverTest {
-    private static final String host = "127.0.0.1";
+    private static final String HOST = "127.0.0.1";
 
     @Test
     public void acceptsURL() throws SQLException {
         Driver driver = new RestfulDriver();
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041";
+            url = "jdbc:TAOS-RS://" + HOST + ":6041";
         }
         boolean isAccept = driver.acceptsURL(url);
         Assert.assertTrue(isAccept);
         String specifyHost = SpecifyAddress.getInstance().getHost();
         if (specifyHost == null) {
-            url = "jdbc:TAOS://" + host + ":6041";
+            url = "jdbc:TAOS://" + HOST + ":6041";
         } else {
             url = "jdbc:TAOS://" + specifyHost + ":6041";
         }

@@ -8,7 +8,6 @@ import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.utils.HttpClientPoolUtil;
 import com.taosdata.jdbc.utils.StringUtils;
-import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
@@ -16,9 +15,11 @@ import java.util.Base64;
 import java.util.Properties;
 import java.util.logging.Logger;
 
+/**
+ * @deprecated Use WebSocket connection instead.
+ */
 @Deprecated
 public class RestfulDriver extends AbstractDriver {
-    private static final org.slf4j.Logger log = LoggerFactory.getLogger(RestfulDriver.class);
     public static final String URL_PREFIX = "jdbc:TAOS-RS://";
 
     static {

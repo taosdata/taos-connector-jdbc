@@ -16,6 +16,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import static com.taosdata.jdbc.utils.SqlSyntaxValidator.getDatabaseName;
+
+/**
+ * @deprecated Use WebSocket connection instead.
+ */
 @Deprecated
 public class RestfulStatement extends AbstractStatement {
 

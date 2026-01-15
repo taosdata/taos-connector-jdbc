@@ -663,7 +663,7 @@ public class RestfulPreparedStatementTest {
         pstmtInsert.addBatch();
         pstmtInsert.clearBatch();
 
-        int[] results = pstmtInsert.executeBatch();
+        pstmtInsert.executeBatch();
     }
 
     // Test clearBatch after close

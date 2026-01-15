@@ -486,7 +486,7 @@ public class TSDBJNIConnector {
         }
     }
 
-    //    DLL_EXPORT TAOS_RES *taos_schemaless_insert(TAOS *taos, char *lines[], int numLines, int protocol, int precision);
+    //    DLL_EXPORT TAOS_RES *taos_schemaless_insert(TAOS *taos, char *lines[], int numLines, int protocol, int precision); // NOSONAR
     private native long schemalessInsertImp(String[] lines, long conn, int type, int precision);
 
     public void insertLinesWithReqId(String[] lines, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, long reqId) throws SQLException {
@@ -508,8 +508,8 @@ public class TSDBJNIConnector {
         releaseSchemalessInsert(pSql);
     }
 
-    //    DLL_EXPORT TAOS_RES *taos_schemaless_insert_ttl_with_reqid(TAOS *taos, char *lines[], int numLines, int protocol,
-    //                                                               int precision, int32_t ttl, int64_t reqid);
+    //    DLL_EXPORT TAOS_RES *taos_schemaless_insert_ttl_with_reqid(TAOS *taos, char *lines[], int numLines, int protocol, // NOSONAR
+    //                                                               int precision, int32_t ttl, int64_t reqid); // NOSONAR
     private native long schemalessInsertWithTtlAndReqId(long conn, String[] lines, int type, int precision, int ttl, long reqId);
 
     public int insertRaw(String line, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType) throws SQLException {
@@ -559,8 +559,8 @@ public class TSDBJNIConnector {
         return resp.getTotalRows();
     }
 
-    //    DLL_EXPORT TAOS_RES *taos_schemaless_insert_raw_ttl_with_reqid(TAOS *taos, char *lines, int len, int32_t *totalRows,
-    //                                                                   int protocol, int precision, int32_t ttl, int64_t reqid);
+    //    DLL_EXPORT TAOS_RES *taos_schemaless_insert_raw_ttl_with_reqid(TAOS *taos, char *lines, int len, int32_t *totalRows, // NOSONAR
+    //                                                                   int protocol, int precision, int32_t ttl, int64_t reqid); // NOSONAR
     private native SchemalessResp schemalessInsertRawWithTtlAndReqId(long conn, String line, int type, int precision, int ttl, long reqId);
 
     /******************** VGroupID ************************/

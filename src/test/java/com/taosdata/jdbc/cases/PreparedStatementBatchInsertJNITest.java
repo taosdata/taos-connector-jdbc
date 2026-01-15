@@ -15,8 +15,8 @@ import java.util.stream.IntStream;
 
 public class PreparedStatementBatchInsertJNITest {
 
-    private static final String host = "127.0.0.1";
-    private static final String dbname = TestUtils.camelToSnake(PreparedStatementBatchInsertJNITest.class);
+    private static final String HOST = "127.0.0.1";
+    private static final String DB_NAME = TestUtils.camelToSnake(PreparedStatementBatchInsertJNITest.class);
 
     private final Random random = new Random(System.currentTimeMillis());
     private Connection conn;
@@ -75,13 +75,13 @@ public class PreparedStatementBatchInsertJNITest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
         }
         conn = DriverManager.getConnection(url);
         Statement stmt = conn.createStatement();
-        stmt.execute("drop database if exists " + dbname);
-        stmt.execute("create database if not exists " + dbname);
-        stmt.execute("use " + dbname);
+        stmt.execute("drop database if exists " + DB_NAME);
+        stmt.execute("create database if not exists " + DB_NAME);
+        stmt.execute("use " + DB_NAME);
         stmt.execute("create table meters(ts timestamp, current float, voltage int, phase int) tags(groupId int)");
 
     }
@@ -90,7 +90,7 @@ public class PreparedStatementBatchInsertJNITest {
     public void after() {
         try {
             Statement stmt = conn.createStatement();
-            stmt.execute("drop database if exists " + dbname);
+            stmt.execute("drop database if exists " + DB_NAME);
             stmt.close();
             conn.close();
         } catch (SQLException e) {

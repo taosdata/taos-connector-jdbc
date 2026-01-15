@@ -207,7 +207,7 @@ public class WSRetryableStmt extends WSStatement {
 
         // Network issue, retry after waiting
         if (e.getErrorCode() == TSDBErrorNumbers.ERROR_CONNECTION_CLOSED ||
-                e.getErrorCode() == TSDBErrorNumbers.ERROR_RESTFul_Client_IOException) {
+                e.getErrorCode() == TSDBErrorNumbers.ERROR_RESTFUL_CLIENT_IOEXCEPTION) {
             return true;
         }
 

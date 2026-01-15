@@ -24,8 +24,8 @@ public class TSDBErrorNumbers {
     public static final int ERROR_NUMERIC_VALUE_OUT_OF_RANGE = 0x2314;  // numeric value out of range
     public static final int ERROR_UNKNOWN_TAOS_TYPE = 0x2315; //unknown taos type in tdengine
     public static final int ERROR_UNKNOWN_TIMESTAMP_PRECISION = 0x2316;     // unknown timestamp precision
-    public static final int ERROR_RESTFul_Client_Protocol_Exception = 0x2317;
-    public static final int ERROR_RESTFul_Client_IOException = 0x2318;
+    public static final int ERROR_RESTFUL_CLIENT_PROTOCOL_EXCEPTION = 0x2317;
+    public static final int ERROR_RESTFUL_CLIENT_IOEXCEPTION = 0x2318;
     public static final int ERROR_USER_IS_REQUIRED = 0x2319;        // user is required
     public static final int ERROR_PASSWORD_IS_REQUIRED = 0x231a;    // password is required
     public static final int ERROR_INVALID_JSON_FORMAT = 0x231b;

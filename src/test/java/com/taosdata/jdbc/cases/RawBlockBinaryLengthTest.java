@@ -26,7 +26,6 @@ public class RawBlockBinaryLengthTest {
         ResultSet resultSet = statement.executeQuery("select body from `stb_sba_tem_bdr`");
         resultSet.next();
         String body = resultSet.getString("body");
-        //System.out.println(body);
         Assert.assertTrue(body.length() > 0);
     }
 
@@ -38,7 +37,6 @@ public class RawBlockBinaryLengthTest {
         ) {
             resultSet.next();
             String body = resultSet.getString("body");
-            //System.out.println(body);
             Assert.assertTrue(body.length() > 0);
         }
 

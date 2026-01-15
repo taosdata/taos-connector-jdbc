@@ -25,13 +25,13 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 @RunWith(Parameterized.class)
 public class WSConsumerMetaDeleteTest {
-    private static final String host = "127.0.0.1";
-    private static final String dbName = TestUtils.camelToSnake(WSConsumerMetaDeleteTest.class);
-    private static final String superTable = "st";
-    private static final String superTableJson = "st_json";
+    private static final String HOST = "127.0.0.1";
+    private static final String DB_NAME = TestUtils.camelToSnake(WSConsumerMetaDeleteTest.class);
+    private static final String SUPER_TABLE = "st";
+    private static final String SUPER_TABLE_JSON = "st_json";
     private static Connection connection;
     private static Statement statement;
-    private static final String[] topics = {"topic_ws_map" + dbName, "topic_db" + dbName, "topic_json" + dbName};
+    private static final String[] topics = {"topic_ws_map" + DB_NAME, "topic_db" + DB_NAME, "topic_json" + DB_NAME};
     private final String topicWith;
 
     public WSConsumerMetaDeleteTest(String topicWith) {
@@ -39,7 +39,7 @@ public class WSConsumerMetaDeleteTest {
     }
     @Parameterized.Parameters
     public static Collection<String> data() {
-        return Arrays.asList("stable " + superTable , "database " + dbName);
+        return Arrays.asList("stable " + SUPER_TABLE , "database " + DB_NAME);
     }
 
     @Test
@@ -65,9 +65,9 @@ public class WSConsumerMetaDeleteTest {
             consumer.poll(Duration.ofMillis(100));
             {
                 int idx = 1;
-                String sql = String.format("insert into %s using %s.%s tags(%s, '%s', %s) values (1756792428951, 1)", "act" + idx, dbName, superTable, idx, "t" + idx, "true");
+                String sql = String.format("insert into %s using %s.%s tags(%s, '%s', %s) values (1756792428951, 1)", "act" + idx, DB_NAME, SUPER_TABLE, idx, "t" + idx, "true");
                 statement.execute(sql);
-                String sql2 = String.format("delete from %s.act%s where t1 = \"t1\"", dbName, idx);
+                String sql2 = String.format("delete from %s.act%s where t1 = \"t1\"", DB_NAME, idx);
                 statement.execute(sql2);
             }
 
@@ -103,23 +103,22 @@ public class WSConsumerMetaDeleteTest {
     public static void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + host + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST + ":6041/?user=root&password=taosdata";
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
-        // properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
         connection = DriverManager.getConnection(url, properties);
         statement = connection.createStatement();
         for (String topic : topics) {
             statement.executeUpdate("drop topic if exists " + topic);
         }
-        statement.execute("drop database if exists " + dbName);
-        statement.execute("create database if not exists " + dbName + " WAL_RETENTION_PERIOD 3650");
-        statement.execute("use " + dbName);
-        statement.execute("create stable if not exists " + superTable
+        statement.execute("drop database if exists " + DB_NAME);
+        statement.execute("create database if not exists " + DB_NAME + " WAL_RETENTION_PERIOD 3650");
+        statement.execute("use " + DB_NAME);
+        statement.execute("create stable if not exists " + SUPER_TABLE
                 + " (ts timestamp, c1 int) tags(t1 int, t2 varchar(10), t3 bool)");
-        statement.execute("create stable if not exists " + superTableJson
+        statement.execute("create stable if not exists " + SUPER_TABLE_JSON
                 + " (ts timestamp, c1 int) tags(t1 json)");
     }
 
@@ -132,7 +131,7 @@ public class WSConsumerMetaDeleteTest {
                         TimeUnit.SECONDS.sleep(3);
                         statement.executeUpdate("drop topic if exists " + topic);
                     }
-                    statement.executeUpdate("drop database if exists " + dbName);
+                    statement.executeUpdate("drop database if exists " + DB_NAME);
                     statement.close();
                 }
                 connection.close();

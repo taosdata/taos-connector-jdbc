@@ -27,6 +27,9 @@ import java.util.logging.Logger;
  */
 public class TSDBDriver extends AbstractDriver {
 
+    /**
+     * @deprecated Use {@link #URL_PREFIX} instead.
+     */
     @Deprecated
     private static final String URL_PREFIX1 = "jdbc:TSDB://";
 

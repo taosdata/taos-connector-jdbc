@@ -34,7 +34,6 @@ public class ConsumerTopicTest {
                 for (ConsumerRecord<Bean> r : consumerRecords) {
                     Assert.assertEquals(TOPIC, r.getTopic());
                     Assert.assertEquals(DB_NAME, r.getDbName());
-//                    System.out.println(r.getVGroupId());
                 }
             }
             consumer.unsubscribe();

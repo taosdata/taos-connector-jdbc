@@ -204,7 +204,7 @@ public class Utils {
 
     public static boolean isValidIP(String ip) {
         try {
-            InetAddress address = InetAddress.getByName(ip);
+            InetAddress.getByName(ip);
             return true;
         } catch (UnknownHostException e) {
             return false;
@@ -233,7 +233,6 @@ public class Utils {
         // Example:
         //
         eventLoopGroup = new NioEventLoopGroup(0, new DefaultThreadFactory("netty-eventloop", true));
-        //ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
     }
     public static EventLoopGroup getEventLoopGroup() {
         return eventLoopGroup;

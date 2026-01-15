@@ -6,8 +6,6 @@ import com.taosdata.jdbc.enums.DataType;
 import com.taosdata.jdbc.utils.ProductUtil;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.ws.WSConnection;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.sql.*;
 import java.util.*;
@@ -17,7 +15,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public abstract class AbstractDatabaseMetaData extends WrapperImpl implements DatabaseMetaData {
-    private static final Logger log = LoggerFactory.getLogger(AbstractDatabaseMetaData.class);
     public static final String NUMERIC_FUNCTIONS = "ABS,ACOS,ASIN,ATAN,CEIL,COS,FLOOR,LOG,POW,ROUND,SIN,SQRT,TAN";
     public static final String STRING_FUNCTIONS = "CHAR_LENGTH,CONCAT,CONCAT_WS,LENGTH,LOWER,LTRIM,RTRIM,SUBSTR,UPPER";
     public static final String SYSTEM_FUNCTIONS = "DATABASE,CLIENT_VERSION,SERVER_VERSION,SERVER_STATUS,CURRENT_USER";

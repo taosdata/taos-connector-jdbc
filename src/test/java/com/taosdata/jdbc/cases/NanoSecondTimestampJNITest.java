@@ -10,8 +10,8 @@ import java.util.Random;
 
 public class NanoSecondTimestampJNITest {
 
-    private static final String host = "127.0.0.1";
-    private static final String dbname = TestUtils.camelToSnake(NanoSecondTimestampJNITest.class);
+    private static final String HOST = "127.0.0.1";
+    private static final String DB_NAME = TestUtils.camelToSnake(NanoSecondTimestampJNITest.class);
     private static final Random random = new Random(System.currentTimeMillis());
     private static Connection conn;
 
@@ -146,13 +146,13 @@ public class NanoSecondTimestampJNITest {
     public static void beforeClass() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
         }
         conn = DriverManager.getConnection(url);
         try (Statement stmt = conn.createStatement()) {
-            stmt.execute("drop database if exists " + dbname);
-            stmt.execute("create database if not exists " + dbname + " precision 'ns'");
-            stmt.execute("use " + dbname);
+            stmt.execute("drop database if exists " + DB_NAME);
+            stmt.execute("create database if not exists " + DB_NAME + " precision 'ns'");
+            stmt.execute("use " + DB_NAME);
         }
     }
 
@@ -161,7 +161,7 @@ public class NanoSecondTimestampJNITest {
         try {
             if (null != conn){
                 Statement statement = conn.createStatement();
-                statement.execute("drop database if exists " + dbname);
+                statement.execute("drop database if exists " + DB_NAME);
                 statement.close();
                 conn.close();
             }

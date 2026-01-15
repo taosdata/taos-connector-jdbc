@@ -23,7 +23,6 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.time.format.DateTimeParseException;
 import java.util.Date;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
@@ -295,12 +294,6 @@ public class DataTypeConvertUtilTest {
         // FLOAT
         assertEquals(2147483647, DataTypeConvertUtil.getInt(TSDB_DATA_TYPE_FLOAT, 2147483647.0f, 1));
         assertEquals(-2147483648, DataTypeConvertUtil.getInt(TSDB_DATA_TYPE_FLOAT, -2147483648.0f, 1));
-//        try {
-//            DataTypeConverUtil.getInt(TSDB_DATA_TYPE_FLOAT, 2147483648.0f, 1);
-//            fail("Expected SQLException for FLOAT out of range");
-//        } catch (SQLException e) {
-//            // Expected exception
-//        }
 
         // DOUBLE
         assertEquals(2147483647, DataTypeConvertUtil.getInt(TSDB_DATA_TYPE_DOUBLE, 2147483647.0, 1));

@@ -8,7 +8,7 @@ import org.junit.Test;
 import java.sql.*;
 
 public class RestfulResponseCodeTest {
-    private static final String host = "127.0.0.1";
+    private static final String HOST = "127.0.0.1";
 
     @Test
     public void cloudTest() {
@@ -31,7 +31,7 @@ public class RestfulResponseCodeTest {
     public void taosAdapterTest() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
         }
         try (Connection connection = DriverManager.getConnection(url);
              Statement statement = connection.createStatement()) {

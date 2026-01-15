@@ -23,7 +23,6 @@ public class WSVarcharAsStringTest {
     private static final String HOST = "127.0.0.1";
     private static final int PORT = 6041;
     private final String dbName = TestUtils.camelToSnake(WSVarcharAsStringTest.class);
-    private static final String TABLE_NAME = "wq";
     private Connection connection;
     private Statement statement;
     private static final String TOPIC = "topic_ws_map_varchar_as_string";

@@ -11,7 +11,7 @@ import java.time.Instant;
 import java.util.Properties;
 
 public class TimestampFormatTest {
-    private static final String host = "127.0.0.1";
+    private static final String HOST = "127.0.0.1";
     private final long ts = Instant.now().toEpochMilli();
     private Connection conn;
 
@@ -21,7 +21,7 @@ public class TimestampFormatTest {
         String timestampFormat = "UTC";
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata&timestampFormat=" + timestampFormat;
+            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata&timestampFormat=" + timestampFormat;
         } else {
             url = url + "&timestampFormat=" + timestampFormat;
         }
@@ -44,7 +44,7 @@ public class TimestampFormatTest {
         String timestampFormat = "UTC";
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
         }
         // when
         Properties props = new Properties();
@@ -66,7 +66,7 @@ public class TimestampFormatTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
         }
         conn = DriverManager.getConnection(url);
         Statement stmt = conn.createStatement();

@@ -13,8 +13,6 @@ import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.entity.Response;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.sql.SQLException;
 import java.util.concurrent.CompletableFuture;
@@ -27,7 +25,6 @@ import java.util.concurrent.TimeUnit;
  * Delegates connection management to WSConnectionManager.
  */
 public class Transport implements AutoCloseable {
-    private static final Logger log = LoggerFactory.getLogger(Transport.class);
 
     /** Error code indicating RPC network unavailability */
     public static final int TSDB_CODE_RPC_NETWORK_UNAVAIL = 0x0B;
@@ -130,7 +127,7 @@ public class Transport implements AutoCloseable {
                 throw ex;
             } catch (Exception ex) {
                 inFlightRequest.remove(request.getAction(), request.id());
-                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFUL_CLIENT_IOEXCEPTION, e.getMessage());
             }
         }
 
@@ -207,7 +204,7 @@ public class Transport implements AutoCloseable {
                 connectionManager.getCurrentClient().send(buffer);
             } catch (Exception ex) {
                 inFlightRequest.remove(action, reqId);
-                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFUL_CLIENT_IOEXCEPTION, e.getMessage());
             }
         } finally {
             Utils.releaseByteBuf(buffer);
@@ -305,7 +302,7 @@ public class Transport implements AutoCloseable {
                 connectionManager.getCurrentClient().send(buffer);
             } catch (Exception ex) {
                 inFlightRequest.remove(action, reqId);
-                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, ex.getMessage());
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFUL_CLIENT_IOEXCEPTION, ex.getMessage());
             } finally {
                 Utils.releaseByteBuf(buffer);
             }
@@ -368,7 +365,7 @@ public class Transport implements AutoCloseable {
             connectionManager.getCurrentClient().send(reqString);
         } catch (Exception e) {
             inFlightRequest.remove(request.getAction(), request.id());
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException,
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFUL_CLIENT_IOEXCEPTION,
                     e.getMessage() == null ? "" : e.getMessage());
         }
 
@@ -405,7 +402,7 @@ public class Transport implements AutoCloseable {
             try {
                 connectionManager.getCurrentClient().send(request.toString());
             } catch (Exception ex) {
-                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, e.getMessage());
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFUL_CLIENT_IOEXCEPTION, e.getMessage());
             }
         }
     }

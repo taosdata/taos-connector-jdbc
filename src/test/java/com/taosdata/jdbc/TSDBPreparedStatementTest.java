@@ -6,7 +6,6 @@ import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
 import java.io.ByteArrayInputStream;
-import java.io.Reader;
 import java.io.StringReader;
 import java.math.BigDecimal;
 import java.sql.*;
@@ -21,7 +20,7 @@ public class TSDBPreparedStatementTest {
     private static Connection conn;
     private static final String SQL_INSERT = "insert into t1 values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     private static final String SQL_SELECT = "select * from t1 where ts >= ? and ts < ? and f1 >= ?";
-    private static final String DBNAME = TestUtils.camelToSnake(TSDBPreparedStatementTest.class);
+    private static final String DB_NAME = TestUtils.camelToSnake(TSDBPreparedStatementTest.class);
 
     private PreparedStatement pstmtInsert;
     private PreparedStatement pstmtSelect;
@@ -1355,9 +1354,9 @@ public class TSDBPreparedStatementTest {
             properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
             conn = DriverManager.getConnection(url, properties);
             try (Statement stmt = conn.createStatement()) {
-                stmt.execute("drop database if exists " + DBNAME);
-                stmt.execute("create database if not exists " + DBNAME);
-                stmt.execute("use " + DBNAME);
+                stmt.execute("drop database if exists " + DB_NAME);
+                stmt.execute("create database if not exists " + DB_NAME);
+                stmt.execute("use " + DB_NAME);
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -1368,7 +1367,7 @@ public class TSDBPreparedStatementTest {
     public static void afterClass() {
         try {
             Statement statement = conn.createStatement();
-            statement.execute("drop database if exists " + DBNAME);
+            statement.execute("drop database if exists " + DB_NAME);
             statement.execute("drop database if exists dbtest");
             statement.close();
             if (conn != null)

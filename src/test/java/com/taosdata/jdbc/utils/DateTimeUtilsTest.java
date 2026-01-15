@@ -21,7 +21,6 @@ public class DateTimeUtilsTest {
     private static TimeZone originalTimeZone;
     private static final ZoneId UTC_ZONE = ZoneId.of("UTC");
     private static final ZoneId NEW_YORK_ZONE = ZoneId.of("America/New_York");
-    private static final ZoneId TOKYO_ZONE = ZoneId.of("Asia/Tokyo");
 
     // Test data
     private static final String MILLISECOND_STRING = "2024-01-15 10:30:45.123";

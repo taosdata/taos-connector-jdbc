@@ -23,7 +23,7 @@ import static com.taosdata.jdbc.TSDBConstants.*;
 public class SerializeBlock {
     private SerializeBlock() {
     }
-    private static void SerializeShort(ByteBuf buf, short v){
+    private static void serializeShort(ByteBuf buf, short v){
         buf.writeShortLE(v);
     }
 
@@ -54,7 +54,7 @@ public class SerializeBlock {
         if (dataLen != null){
             buf.writeByte(0);
             // buffer
-            SerializeNormalDataType(columnInfo.getType(), buf, columnInfo.getDataList(), precision);
+            serializeNormalDataType(columnInfo.getType(), buf, columnInfo.getDataList(), precision);
             return;
         }
 
@@ -88,11 +88,11 @@ public class SerializeBlock {
         buf.writeIntLE(bufferLength);
 
         // buffer
-        SerializeArrayDataType(columnInfo.getType(), buf, columnInfo.getDataList());
+        serializeArrayDataType(columnInfo.getType(), buf, columnInfo.getDataList());
         return;
     }
 
-    private static void SerializeNormalDataType(int dataType , ByteBuf buf, List<Object> objectList, int precision) throws SQLException {
+    private static void serializeNormalDataType(int dataType , ByteBuf buf, List<Object> objectList, int precision) throws SQLException {
         switch (dataType) {
             case TSDB_DATA_TYPE_BOOL: {
                 buf.writeIntLE(objectList.size());
@@ -141,9 +141,9 @@ public class SerializeBlock {
 
                 for (Object o: objectList){
                     if (o != null) {
-                        SerializeShort(buf, (Short) o);
+                        serializeShort(buf, (Short) o);
                     } else {
-                        SerializeShort(buf, (short)0);
+                        serializeShort(buf, (short)0);
                     }
                 }
                 break;
@@ -282,7 +282,7 @@ public class SerializeBlock {
         }
     }
 
-    private static void SerializeArrayDataType(int dataType, ByteBuf buf, List<Object> objectList) throws SQLException {
+    private static void serializeArrayDataType(int dataType, ByteBuf buf, List<Object> objectList) throws SQLException {
         switch (dataType) {
             case TSDB_DATA_TYPE_JSON:
             case TSDB_DATA_TYPE_BINARY:
@@ -536,7 +536,7 @@ public class SerializeBlock {
             }
 
 
-//        for (int i = 30; i < buf.capacity(); i++) {
+//        for (int i = 30; i < buf.capacity(); i++) { // NOSONAR
 //            int bb = buf.getByte(i) & 0xff;
 //            System.out.print(bb);
 //            System.out.print(",");

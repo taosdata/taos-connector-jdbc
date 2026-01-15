@@ -86,7 +86,6 @@ public class WSConsumerWithDiffTypeTest {
 
     @Test
     public void testWSBeanMap() throws Exception {
-        //statement.executeUpdate("insert into " + dbName + ".ct0 values(now, 1, 100, 2.2, 2.3, '1', 12, 2, true, '一', 'POINT(1 1)', '\\x0101', 1.2234, now, 255, 65535, 4294967295, 18446744073709551615)");
         insertOneRow();
 
         String topic = topics[0];
@@ -152,7 +151,6 @@ public class WSConsumerWithDiffTypeTest {
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
-        // properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
         connection = DriverManager.getConnection(url, properties);
         statement = connection.createStatement();
 

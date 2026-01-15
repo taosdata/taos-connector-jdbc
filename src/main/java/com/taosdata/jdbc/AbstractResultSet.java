@@ -41,6 +41,9 @@ public abstract class AbstractResultSet extends WrapperImpl implements ResultSet
         return wasNull;
     }
 
+    /**
+     * @deprecated Use {@link #getBigDecimal(int)} or {@link #getBigDecimal(String)} instead.
+     */
     @Deprecated
     @Override
     public BigDecimal getBigDecimal(int columnIndex, int scale) throws SQLException {
@@ -65,6 +68,9 @@ public abstract class AbstractResultSet extends WrapperImpl implements ResultSet
         throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
     }
 
+    /**
+     * @deprecated Use {@link #getCharacterStream(int)} instead.
+     */
     @Override
     @Deprecated
     public InputStream getUnicodeStream(int columnIndex) throws SQLException {
@@ -118,6 +124,9 @@ public abstract class AbstractResultSet extends WrapperImpl implements ResultSet
         return getDouble(findColumn(columnLabel));
     }
 
+    /**
+     * @deprecated Use {@link #getBigDecimal(int)} or {@link #getBigDecimal(String)} instead.
+     */
     @Deprecated
     @Override
     public BigDecimal getBigDecimal(String columnLabel, int scale) throws SQLException {
@@ -149,6 +158,9 @@ public abstract class AbstractResultSet extends WrapperImpl implements ResultSet
         return getAsciiStream(findColumn(columnLabel));
     }
 
+    /**
+     * @deprecated Use {@link #getCharacterStream(String)} instead.
+     */
     @Override
     @Deprecated
     public InputStream getUnicodeStream(String columnLabel) throws SQLException {

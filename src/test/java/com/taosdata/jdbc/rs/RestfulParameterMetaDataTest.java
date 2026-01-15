@@ -12,15 +12,14 @@ import java.sql.*;
 
 public class RestfulParameterMetaDataTest {
 
-    private static final String host = "127.0.0.1";
+    private static final String HOST = "127.0.0.1";
     private static Connection conn;
-    private static final String sql_insert = "insert into t1 values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    private static final String SQL_INSERT = "insert into t1 values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     private static PreparedStatement pstmt_insert;
-    private static final String sql_select = "select * from t1 where ts > ? and ts <= ? and f1 >= ?";
+    private static final String SQL_SELECT = "select * from t1 where ts > ? and ts <= ? and f1 >= ?";
     private static PreparedStatement pstmt_select;
     private static ParameterMetaData parameterMetaData_insert;
-    private static ParameterMetaData parameterMetaData_select;
-    private static final String dbname = TestUtils.camelToSnake(RestfulParameterMetaDataTest.class);
+    private static final String DB_NAME = TestUtils.camelToSnake(RestfulParameterMetaDataTest.class);
 
     @Test
     public void getParameterCount() throws SQLException {
@@ -142,17 +141,17 @@ public class RestfulParameterMetaDataTest {
             Class.forName("com.taosdata.jdbc.rs.RestfulDriver");
             String url = SpecifyAddress.getInstance().getRestUrl();
             if (url == null) {
-                url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+                url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
             }
             conn = DriverManager.getConnection(url);
             try (Statement stmt = conn.createStatement()) {
-                stmt.execute("drop database if exists " + dbname);
-                stmt.execute("create database if not exists " + dbname);
-                stmt.execute("use " + dbname);
+                stmt.execute("drop database if exists " + DB_NAME);
+                stmt.execute("create database if not exists " + DB_NAME);
+                stmt.execute("use " + DB_NAME);
                 stmt.execute("create table weather(ts timestamp, f1 int, f2 bigint, f3 float, f4 double, f5 smallint, f6 tinyint, f7 bool, f8 binary(64), f9 nchar(64)) tags(loc nchar(64))");
                 stmt.execute("create table t1 using weather tags('beijing')");
             }
-            pstmt_insert = conn.prepareStatement(sql_insert);
+            pstmt_insert = conn.prepareStatement(SQL_INSERT);
 
             pstmt_insert.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
             pstmt_insert.setObject(2, 111);
@@ -166,11 +165,10 @@ public class RestfulParameterMetaDataTest {
             pstmt_insert.setObject(10, "涛思数据");
             parameterMetaData_insert = pstmt_insert.getParameterMetaData();
 
-            pstmt_select = conn.prepareStatement(sql_select);
+            pstmt_select = conn.prepareStatement(SQL_SELECT);
             pstmt_select.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
             pstmt_select.setTimestamp(2, new Timestamp(System.currentTimeMillis() + 10000));
             pstmt_select.setInt(3, 0);
-            parameterMetaData_select = pstmt_select.getParameterMetaData();
 
         } catch (ClassNotFoundException | SQLException e) {
             e.printStackTrace();
@@ -186,7 +184,7 @@ public class RestfulParameterMetaDataTest {
                 pstmt_select.close();
             if (conn != null) {
                 Statement statement = conn.createStatement();
-                statement.execute("drop database if exists " + dbname);
+                statement.execute("drop database if exists " + DB_NAME);
                 statement.close();
                 conn.close();
             }

@@ -32,6 +32,9 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * @deprecated This class will be removed in future. Please use writer functions in connection object instead.
+ */
 @Deprecated
 // will be removed in future, please use writer functions in connection object.
 public class SchemalessWriter implements AutoCloseable {

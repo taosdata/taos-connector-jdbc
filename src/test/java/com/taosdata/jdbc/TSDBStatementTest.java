@@ -11,7 +11,7 @@ import java.util.Properties;
 import java.util.UUID;
 
 public class TSDBStatementTest {
-    private static final String host = "127.0.0.1";
+    private static final String HOST = "127.0.0.1";
     private static Connection conn;
     private static Statement stmt;
 
@@ -340,11 +340,10 @@ public class TSDBStatementTest {
         try {
             Properties properties = new Properties();
             properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
-//            properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "en_US.UTF-8");
             properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
             String url = SpecifyAddress.getInstance().getJniUrl();
             if (url == null) {
-                url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+                url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
             }
             conn = DriverManager.getConnection(url, properties);
             stmt = conn.createStatement();

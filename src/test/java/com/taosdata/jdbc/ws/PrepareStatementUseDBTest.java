@@ -14,14 +14,14 @@ public class PrepareStatementUseDBTest {
     private static final String HOST = "127.0.0.1";
     private static Connection conn;
     private static final String SQL_INSERT = "insert into t1 values (?, ?)";
-    private static final String DBNAME = TestUtils.camelToSnake(PrepareStatementUseDBTest.class);
+    private static final String DB_NAME = TestUtils.camelToSnake(PrepareStatementUseDBTest.class);
     private static final String USE_DB = "stmt_ws_use_db2";
 
     @Test
     public void testUseDB() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/" + DBNAME + "?user=root&password=taosdata&batchfetch=true";
+            url = "jdbc:TAOS-RS://" + HOST + ":6041/" + DB_NAME + "?user=root&password=taosdata&batchfetch=true";
         }
         conn = DriverManager.getConnection(url);
         try (PreparedStatement stmt = conn.prepareStatement(SQL_INSERT)) {
@@ -49,9 +49,9 @@ public class PrepareStatementUseDBTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
         conn = DriverManager.getConnection(url, properties);
         try (Statement stmt = conn.createStatement()) {
-            stmt.execute("drop database if exists " + DBNAME);
-            stmt.execute("create database if not exists " + DBNAME);
-            stmt.execute("use " + DBNAME);
+            stmt.execute("drop database if exists " + DB_NAME);
+            stmt.execute("create database if not exists " + DB_NAME);
+            stmt.execute("use " + DB_NAME);
             stmt.execute("create table t1 (ts timestamp, c1 int)");
 
             stmt.execute("drop database if exists " + USE_DB);
@@ -64,7 +64,7 @@ public class PrepareStatementUseDBTest {
     @AfterClass
     public static void after() throws SQLException {
         try (Statement stmt = conn.createStatement()) {
-            stmt.execute("drop database if exists " + DBNAME);
+            stmt.execute("drop database if exists " + DB_NAME);
             stmt.execute("drop database if exists " + USE_DB);
         }
         conn.close();

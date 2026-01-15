@@ -94,7 +94,7 @@ public class TSDBJNIConnectorTest {
         int columnSize = columnMetaDataList.size();
         // print metadata
         for (int i = 0; i < columnSize; i++) {
-//            System.out.println(columnMetaDataList.get(i));
+            System.out.println(columnMetaDataList.get(i));
         }
         rowData = new TSDBResultSetRowData(columnSize);
         // iterate resultSet
@@ -180,7 +180,6 @@ public class TSDBJNIConnectorTest {
         for (int ind_batch = 0; ind_batch < 10; ind_batch++) {
 
             ts += ind_batch * 1000 * 1000;
-//            System.out.println("batch: " + ind_batch + ", ts: " + ts);
 
             for (int i = 0; i < 10; i++) {
                 // 2. set_tbname_tags

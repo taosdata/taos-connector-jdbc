@@ -19,7 +19,7 @@ public class TSDBParameterMetaDataTest {
     private static PreparedStatement pstmtSelect;
     private static ParameterMetaData parameterMetaDataInsert;
     private static ParameterMetaData parameterMetaDataSelect;
-    private static final String DBNAME = TestUtils.camelToSnake(TSDBParameterMetaDataTest.class);
+    private static final String DB_NAME = TestUtils.camelToSnake(TSDBParameterMetaDataTest.class);
 
     @Test
     public void getParameterCount() throws SQLException {
@@ -159,9 +159,9 @@ public class TSDBParameterMetaDataTest {
             }
             conn = DriverManager.getConnection(url);
             try (Statement stmt = conn.createStatement()) {
-                stmt.execute("drop database if exists " + DBNAME);
-                stmt.execute("create database if not exists " + DBNAME);
-                stmt.execute("use " + DBNAME);
+                stmt.execute("drop database if exists " + DB_NAME);
+                stmt.execute("create database if not exists " + DB_NAME);
+                stmt.execute("use " + DB_NAME);
                 stmt.execute("create table weather(ts timestamp, f1 int, f2 bigint, f3 float, f4 double, f5 smallint, f6 tinyint, f7 bool, f8 binary(64), f9 nchar(64)) tags(loc nchar(64))");
                 stmt.execute("create table t1 using weather tags('beijing')");
             }
@@ -200,7 +200,7 @@ public class TSDBParameterMetaDataTest {
                 pstmtSelect.close();
             if (conn != null) {
                 Statement statement = conn.createStatement();
-                statement.execute("drop database if exists " + DBNAME);
+                statement.execute("drop database if exists " + DB_NAME);
                 statement.close();
                 conn.close();
             }
