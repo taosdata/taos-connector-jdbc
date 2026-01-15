@@ -162,7 +162,7 @@ public class WSRowPreparedStatement extends WSRetryableStmt implements PreparedS
             case TSDB_DATA_TYPE_JSON:
                 seStringInner(parameterIndex, null, true, (byte)type);
                 break;
-//            // bind decimal is not supported now
+            // bind decimal is not supported now - NOSONAR
 //            case TSDB_DATA_TYPE_DECIMAL64:
 //            case TSDB_DATA_TYPE_DECIMAL128:
 //                break;
@@ -988,7 +988,7 @@ public class WSRowPreparedStatement extends WSRetryableStmt implements PreparedS
             rawBlock.addComponent(true, colsBuf.getBuffer());
         }
 
-//        StringBuilder sb = new StringBuilder();
+//        StringBuilder sb = new StringBuilder(); // NOSONAR
 //        for (int i = 30; i < rawBlock.capacity(); i++) {
 //            int bb = rawBlock.getByte(i) & 0xff;
 //            sb.append(bb);

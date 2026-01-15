@@ -13,22 +13,22 @@ public class ReqId {
     private ReqId() {
     }
 
-    private static final long tUUIDHashId;
-    private static final long pid;
+    private static final long T_UUID_HASH_ID;
+    private static final long PID;
     private static final AtomicLong serialNo = new AtomicLong(0);
 
     static {
         String uuid = UUID.randomUUID().toString();
         long hash = murmurHash32(uuid.getBytes(StandardCharsets.UTF_8), uuid.length());
-        tUUIDHashId = (hash & 0x07ff) << 52;
+        T_UUID_HASH_ID = (hash & 0x07ff) << 52;
         RuntimeMXBean runtimeMXBean = ManagementFactory.getRuntimeMXBean();
-        pid = (long) (Long.valueOf(runtimeMXBean.getName().split("@")[0]).intValue() & 0x0f) << 48;
+        PID = (long) (Long.valueOf(runtimeMXBean.getName().split("@")[0]).intValue() & 0x0f) << 48;
     }
 
     public static long getReqID() {
         long ts = (System.currentTimeMillis() >> 8) & 0x3ffffff;
         long val = serialNo.incrementAndGet();
-        return tUUIDHashId | pid | (ts << 20) | (val & 0xfffff);
+        return T_UUID_HASH_ID | PID | (ts << 20) | (val & 0xfffff);
     }
 
     public static long murmurHash32(byte[] data, int seed) {

@@ -168,9 +168,6 @@ public class AbstractDatabaseMetaDataColumnTest {
             dbs.add(columns.getString("TABLE_CAT"));
             tables.add(columns.getString("TABLE_NAME"));
             count++;
-//            System.out.println(columns.getString("TABLE_CAT"));
-//            System.out.println(columns.getString("TABLE_NAME"));
-//            System.out.println(columns.getString("COLUMN_NAME"));
         }
         Assert.assertEquals(1, count);
         Assert.assertTrue(dbs.contains("information_schema"));

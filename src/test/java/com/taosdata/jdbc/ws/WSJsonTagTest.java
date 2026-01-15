@@ -23,7 +23,7 @@ public class WSJsonTagTest {
     private static final String DB_NAME = TestUtils.camelToSnake(WSJsonTagTest.class);
     private static Connection connection;
     private static Statement statement;
-    private static final String superSql = "create table if not exists jsons1(ts timestamp, dataInt int, dataBool bool, dataStr nchar(50), dataStrBin binary(150)) tags(jtag json)";
+    private static final String SUPER_SQL = "create table if not exists jsons1(ts timestamp, dataInt int, dataBool bool, dataStr nchar(50), dataStrBin binary(150)) tags(jtag json)";
     private static final String[] sql = {
             "insert into jsons1_1 using jsons1 tags('{\"tag1\":\"fff\",\"tag2\":5, \"tag3\":true}') values(now, 1, false, 'json1', '你是') (1591060608000, 23, true, '等等', 'json')",
             "insert into jsons1_2 using jsons1 tags('{\"tag1\":5,\"tag2\":\"beijing\"}') values (1591060628000, 2, true, 'json2', 'sss')",
@@ -116,15 +116,6 @@ public class WSJsonTagTest {
     public void case02_AbnormalKeyErrorTest1() throws SQLException {
         statement.execute("CREATE TABLE if not exists jsons1_14 using jsons1 tags('{\"。loc\":\"fff\"}')");
     }
-
-    // TODO: need fix later
-    // windows not recognize \t
-    // @Test(expected = SQLException.class)
-    // @Description("exception will throw when json key is '\\t'")
-    // public void case02_AbnormalKeyErrorTest2() throws SQLException {
-    // statement.execute("CREATE TABLE if not exists jsons1_14 using jsons1
-    // tags('{\"\t\":\"fff\"}')");
-    // }
 
     @Test(expected = SQLException.class)
     @Description("exception will throw when json key is chinese")
@@ -1133,7 +1124,7 @@ public class WSJsonTagTest {
             statement.execute("drop database if exists " + DB_NAME);
             statement.execute("create database if not exists " + DB_NAME);
             statement.execute("use " + DB_NAME);
-            statement.execute(superSql);
+            statement.execute(SUPER_SQL);
         } catch (SQLException e) {
             e.printStackTrace();
         }

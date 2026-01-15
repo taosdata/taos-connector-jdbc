@@ -11,29 +11,29 @@ import java.util.Random;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class RestfulJDBCTest {
 
-    private static final String host = "127.0.0.1";
+    private static final String HOST = "127.0.0.1";
     private static final Random random = new Random(System.currentTimeMillis());
     private static Connection connection;
-    private static final String dbname = TestUtils.camelToSnake(RestfulJDBCTest.class);
+    private static final String DB_NAME = TestUtils.camelToSnake(RestfulJDBCTest.class);
 
     @Test
     public void testCase001() throws SQLException {
         // given
-        String sql = "drop database if exists " + dbname;
+        String sql = "drop database if exists " + DB_NAME;
         // when
         boolean execute = execute(connection, sql);
         // then
         Assert.assertFalse(execute);
 
         // given
-        sql = "create database if not exists " + dbname;
+        sql = "create database if not exists " + DB_NAME;
         // when
         execute = execute(connection, sql);
         // then
         Assert.assertFalse(execute);
 
         // given
-        sql = "use " + dbname;
+        sql = "use " + DB_NAME;
         // when
         execute = execute(connection, sql);
         // then
@@ -43,7 +43,7 @@ public class RestfulJDBCTest {
     @Test
     public void testCase002() throws SQLException {
         // given
-        String sql = "create table " + dbname + ".weather(ts timestamp, temperature float, humidity int) tags(location nchar(64), groupId int)";
+        String sql = "create table " + DB_NAME + ".weather(ts timestamp, temperature float, humidity int) tags(location nchar(64), groupId int)";
         // when
         boolean execute = execute(connection, sql);
         // then
@@ -54,7 +54,7 @@ public class RestfulJDBCTest {
     public void testCase004() throws SQLException {
         for (int i = 1; i <= 100; i++) {
             // given
-            String sql = "create table " + dbname + ".t" + i + " using " + dbname + ".weather tags('beijing', '" + i + "')";
+            String sql = "create table " + DB_NAME + ".t" + i + " using " + DB_NAME + ".weather tags('beijing', '" + i + "')";
             // when
             boolean execute = execute(connection, sql);
             // then
@@ -70,7 +70,7 @@ public class RestfulJDBCTest {
 
                 // given
                 long currentTimeMillis = System.currentTimeMillis();
-                String sql = "insert into " + dbname + ".t" + j + " values(" + currentTimeMillis + "," + (random.nextFloat() * 50) + "," + random.nextInt(100) + ")";
+                String sql = "insert into " + DB_NAME + ".t" + j + " values(" + currentTimeMillis + "," + (random.nextFloat() * 50) + "," + random.nextInt(100) + ")";
                 // when
                 int affectRows = executeUpdate(connection, sql);
                 // then
@@ -85,7 +85,7 @@ public class RestfulJDBCTest {
     @Test
     public void testCase006() throws SQLException {
         // given
-        String sql = "select * from " + dbname + ".weather";
+        String sql = "select * from " + DB_NAME + ".weather";
         // when
 
         try (Statement statement = connection.createStatement()) {
@@ -106,7 +106,7 @@ public class RestfulJDBCTest {
     @Test
     public void testCase007() throws SQLException {
         // given
-        String sql = "drop database " + dbname;
+        String sql = "drop database " + DB_NAME;
 
         // when
         boolean execute = execute(connection, sql);
@@ -132,7 +132,7 @@ public class RestfulJDBCTest {
         try {
             String url = SpecifyAddress.getInstance().getRestUrl();
             if (url == null) {
-                url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+                url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
             }
             connection = DriverManager.getConnection(url);
         } catch (SQLException e) {
@@ -144,7 +144,7 @@ public class RestfulJDBCTest {
     public static void afterClass() throws SQLException {
         if (connection != null) {
             Statement stmt = connection.createStatement();
-            stmt.execute("drop database if exists " + dbname);
+            stmt.execute("drop database if exists " + DB_NAME);
             stmt.close();
             connection.close();
         }

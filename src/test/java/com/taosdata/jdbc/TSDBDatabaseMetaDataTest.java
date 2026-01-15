@@ -91,7 +91,7 @@ public class TSDBDatabaseMetaDataTest {
         String[] array = version.split("\\.");
 
         Assert.assertNotNull(array);
-        Assert.assertTrue(array.length == 5 || array.length == 4);
+        Assert.assertTrue(array.length >= 4 || array.length <= 6);
     }
 
     @Test

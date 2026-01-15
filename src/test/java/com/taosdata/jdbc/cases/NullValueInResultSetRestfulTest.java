@@ -10,7 +10,7 @@ import java.sql.*;
 
 public class NullValueInResultSetRestfulTest {
 
-    private static final String host = "127.0.0.1";
+    private static final String HOST = "127.0.0.1";
     Connection conn;
     private final String dbName = TestUtils.camelToSnake(NullValueInResultSetRestfulTest.class);
 
@@ -31,7 +31,7 @@ public class NullValueInResultSetRestfulTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
         }
         conn = DriverManager.getConnection(url);
         try (Statement stmt = conn.createStatement()) {

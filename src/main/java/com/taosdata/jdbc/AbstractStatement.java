@@ -20,7 +20,7 @@ public abstract class AbstractStatement extends WrapperImpl implements Statement
     public int getMaxFieldSize() throws SQLException {
         if (isClosed())
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
-        return TSDBConstants.maxFieldSize;
+        return TSDBConstants.MAX_FIELD_SIZE;
     }
 
     @Override

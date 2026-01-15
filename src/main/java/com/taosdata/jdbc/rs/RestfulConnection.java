@@ -10,6 +10,9 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Properties;
 
+/**
+ * @deprecated Use WebSocket connection instead.
+ */
 @Deprecated
 public class RestfulConnection extends AbstractConnection {
 

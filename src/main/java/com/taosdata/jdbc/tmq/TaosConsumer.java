@@ -94,6 +94,7 @@ public class TaosConsumer<V> implements AutoCloseable {
      * jni consumer will call back whit error code when commit async
      *
      * @param code error code
+     * @deprecated This callback method is no longer used.
      */
     @Deprecated
     public void commitCallbackHandler(int code) {

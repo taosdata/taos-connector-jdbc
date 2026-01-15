@@ -51,8 +51,6 @@ public class WSIpv6Test {
             }
         }
         long d = System.nanoTime() - start;
-//        System.out.println(d / 1000);
-//        System.out.println(count);
         statement.close();
     }
 

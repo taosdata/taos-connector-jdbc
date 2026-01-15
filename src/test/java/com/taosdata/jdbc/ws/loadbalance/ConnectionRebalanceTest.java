@@ -31,7 +31,6 @@ import java.util.concurrent.TimeUnit;
 public class ConnectionRebalanceTest {
     private static final Logger log = org.slf4j.LoggerFactory.getLogger(ConnectionRebalanceTest.class);
     private static final String HOST = "127.0.0.1";
-    private static final int PORT_A = 6041;
     private static final String DB_NAME = TestUtils.camelToSnake(ConnectionRebalanceTest.class);
     private static final String TABLE_NAME = "meters";
     private static Connection connection;

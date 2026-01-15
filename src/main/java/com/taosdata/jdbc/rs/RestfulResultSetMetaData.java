@@ -9,6 +9,10 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.util.Collections;
 import java.util.List;
+
+/**
+ * @deprecated Use WebSocket connection instead.
+ */
 @Deprecated
 public class RestfulResultSetMetaData extends WrapperImpl implements ResultSetMetaData {
 

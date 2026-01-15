@@ -174,9 +174,9 @@ public class HttpClientPoolUtil {
                     }
             }
         } catch (ClientProtocolException e) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_Protocol_Exception, e.getMessage());
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFUL_CLIENT_PROTOCOL_EXCEPTION, e.getMessage());
         } catch (IOException exception) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFul_Client_IOException, exception.getMessage());
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFUL_CLIENT_IOEXCEPTION, exception.getMessage());
         } finally {
             if (httpEntity != null) {
                 EntityUtils.consumeQuietly(httpEntity);

@@ -31,6 +31,10 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+/**
+ * @deprecated Use WebSocket connection instead.
+ */
 @Deprecated
 public class RestfulResultSet extends AbstractResultSet {
 

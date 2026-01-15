@@ -17,7 +17,7 @@ import java.util.Properties;
 @RunWith(CatalogRunner.class)
 @FixMethodOrder
 public class WSLoadBalance2Test {
-    private static final String host = "127.0.0.1";
+    private static final String HOST = "127.0.0.1";
 
 
     @Description("query")
@@ -34,11 +34,11 @@ public class WSLoadBalance2Test {
         Properties properties = new Properties();
         String url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + host + ":" + mockB.getListenPort() + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST + ":" + mockB.getListenPort() + "/?user=root&password=taosdata";
         } else {
             url += "?user=root&password=taosdata";
         }
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_HOST, host);
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_HOST, HOST);
         properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_PORT, String.valueOf(mockC.getListenPort()));
 
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
@@ -65,7 +65,7 @@ public class WSLoadBalance2Test {
         Properties properties = new Properties();
         String url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + host + ":" + mockB.getListenPort() + "," + host + ":" + mockC.getListenPort() + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST + ":" + mockB.getListenPort() + "," + HOST + ":" + mockC.getListenPort() + "/?user=root&password=taosdata";
         } else {
             url += "?user=root&password=taosdata";
         }
@@ -97,12 +97,12 @@ public class WSLoadBalance2Test {
         Properties properties = new Properties();
         String url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + host + ":" + mockB.getListenPort() + "," + host + ":" + mockC.getListenPort() + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST + ":" + mockB.getListenPort() + "," + HOST + ":" + mockC.getListenPort() + "/?user=root&password=taosdata";
         } else {
             url += "?user=root&password=taosdata";
         }
 
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_HOST, host);
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_HOST, HOST);
         properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_PORT, String.valueOf(mockC.getListenPort()));
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_INTERVAL_MS, "2000");

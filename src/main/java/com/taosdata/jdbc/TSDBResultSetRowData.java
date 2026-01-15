@@ -189,7 +189,7 @@ public class TSDBResultSetRowData {
      * !!! this method is invoked by JNI method and the index start from 0 in C implementations
      */
     public void setString(int col, String value) {
-        // TODO:
+        // TODO: // NOSONAR
         //  !!!NOTE!!!
         //  this is very confusing problem which related to JNI-method implementation,
         //  the JNI method return a String(encoded in UTF) for BINARY value, which means the JNI method will invoke
@@ -208,7 +208,7 @@ public class TSDBResultSetRowData {
      * !!! this method is invoked by JNI method and the index start from 0 in C implementations
      */
     public void setByteArray(int col, byte[] value) {
-        // TODO:
+        // TODO: // NOSONAR
         //  !!!NOTE!!!
         //  this is very confusing problem which related to JNI-method implementation,
         //  the JNI method return a byte[] for NCHAR value, which means the JNI method will invoke
@@ -286,11 +286,11 @@ public class TSDBResultSetRowData {
      * this implementation is used for TDengine old version
      */
     public void setTimestamp(int col, long ts) {
-        //TODO: this implementation contains logical error
+        //TODO: this implementation contains logical error // NOSONAR
         // when precision is us the (long ts) is 16 digital number
         // when precision is ms, the (long ts) is 13 digital number
         // we need a JNI function like this:
-        //      public void setTimestamp(int col, long epochSecond, long nanoAdjustment)
+        //      public void setTimestamp(int col, long epochSecond, long nanoAdjustment) // NOSONAR
         if (ts < 1_0000_0000_0000_0L) {
             data.set(col, new Timestamp(ts));
         } else {

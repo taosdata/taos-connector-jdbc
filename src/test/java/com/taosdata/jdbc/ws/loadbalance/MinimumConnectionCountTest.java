@@ -27,7 +27,6 @@ import java.util.concurrent.CountDownLatch;
 public class MinimumConnectionCountTest {
     private static final Logger log = org.slf4j.LoggerFactory.getLogger(MinimumConnectionCountTest.class);
     private static final String HOST = "127.0.0.1";
-    private static final int PORT_A = 6041;
     private static final String DB_NAME = TestUtils.camelToSnake(MinimumConnectionCountTest.class);
     private static final String TABLE_NAME = "meters";
     private static Connection connection;

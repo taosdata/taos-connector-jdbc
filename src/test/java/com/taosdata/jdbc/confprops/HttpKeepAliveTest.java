@@ -17,8 +17,8 @@ import java.util.stream.IntStream;
 @Ignore
 public class HttpKeepAliveTest {
 
-    private static final String host = "127.0.0.1";
-    private static final String db_name = TestUtils.camelToSnake(HttpKeepAliveTest.class);
+    private static final String HOST = "127.0.0.1";
+    private static final String DB_NAME = TestUtils.camelToSnake(HttpKeepAliveTest.class);
     private static Connection connection;
 
     @Test
@@ -29,13 +29,13 @@ public class HttpKeepAliveTest {
 
         // when
         try (Statement statement = connection.createStatement()) {
-            statement.executeUpdate("create database if not exists " + db_name);
+            statement.executeUpdate("create database if not exists " + DB_NAME);
         }
         List<Thread> threads = IntStream.range(0, multi).mapToObj(i -> new Thread(
                 () -> {
                     try (Statement stmt = connection.createStatement()) {
-                        stmt.execute("insert into " + db_name + ".tb_not_exists values(now, 1)");
-                        stmt.execute("select last(*) from " + db_name + ".dn");
+                        stmt.execute("insert into " + DB_NAME + ".tb_not_exists values(now, 1)");
+                        stmt.execute("select last(*) from " + DB_NAME + ".dn");
                     } catch (SQLException throwables) {
                         exceptionCount.getAndIncrement();
                     }
@@ -63,7 +63,7 @@ public class HttpKeepAliveTest {
 
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
         }
         connection = DriverManager.getConnection(url, props);
     }
@@ -71,7 +71,7 @@ public class HttpKeepAliveTest {
     @AfterClass
     public static void afterClass() {
         try (Statement statement = connection.createStatement()){
-            statement.executeUpdate("drop database if exists " + db_name);
+            statement.executeUpdate("drop database if exists " + DB_NAME);
         } catch (SQLException e) {
             // do nothing
         }

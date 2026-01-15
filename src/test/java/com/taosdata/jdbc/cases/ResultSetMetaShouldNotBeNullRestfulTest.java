@@ -11,8 +11,8 @@ import java.sql.*;
 
 public class ResultSetMetaShouldNotBeNullRestfulTest {
 
-    private static final String host = "127.0.0.1";
-    private static final String dbname = TestUtils.camelToSnake(ResultSetMetaShouldNotBeNullRestfulTest.class);
+    private static final String HOST = "127.0.0.1";
+    private static final String DB_NAME = TestUtils.camelToSnake(ResultSetMetaShouldNotBeNullRestfulTest.class);
 
     private Connection connection;
 
@@ -55,13 +55,13 @@ public class ResultSetMetaShouldNotBeNullRestfulTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
         }
         connection = DriverManager.getConnection(url);
         Statement stmt = connection.createStatement();
-        stmt.execute("drop database if exists " + dbname);
-        stmt.execute("create database if not exists " + dbname);
-        stmt.execute("use " + dbname);
+        stmt.execute("drop database if exists " + DB_NAME);
+        stmt.execute("create database if not exists " + DB_NAME);
+        stmt.execute("use " + DB_NAME);
         stmt.execute("create table weather (ts timestamp, temperature float)");
         stmt.close();
     }
@@ -69,7 +69,7 @@ public class ResultSetMetaShouldNotBeNullRestfulTest {
     @After
     public void after() throws SQLException {
         Statement stmt = connection.createStatement();
-        stmt.execute("drop database if exists " + dbname);
+        stmt.execute("drop database if exists " + DB_NAME);
         stmt.close();
         connection.close();
     }

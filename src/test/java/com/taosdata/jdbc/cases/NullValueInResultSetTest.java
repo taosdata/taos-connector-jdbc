@@ -10,7 +10,7 @@ import java.sql.*;
 import java.util.Properties;
 
 public class NullValueInResultSetTest {
-    private static final String host = "127.0.0.1";
+    private static final String HOST = "127.0.0.1";
     private static Properties properties;
     private Connection conn;
     private final String dbName = TestUtils.camelToSnake(NullValueInResultSetTest.class);
@@ -19,7 +19,7 @@ public class NullValueInResultSetTest {
     public void testRestful() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
         }
         conn = DriverManager.getConnection(url, properties);
 
@@ -54,7 +54,7 @@ public class NullValueInResultSetTest {
     public void testJNI() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
         }
         conn = DriverManager.getConnection(url, properties);
 

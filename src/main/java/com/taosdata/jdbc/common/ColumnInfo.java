@@ -12,12 +12,6 @@ public class ColumnInfo implements Comparable<ColumnInfo> {
 
     private int serializeSize;
 
-//    public ColumnInfo(int columnIndex, Object data, int type) {
-//        this.index = columnIndex;
-//        this.dataList.add(data);
-//        this.type = type;
-//    }
-
     public ColumnInfo(int columnIndex, List<Object> dataList, int type) {
         this.index = columnIndex;
         this.dataList = dataList;

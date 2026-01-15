@@ -6,10 +6,10 @@ import java.util.Date;
 
 public class TimestampUtil {
 
-    private static final String datetimeFormat = "yyyy-MM-dd HH:mm:ss.SSS";
+    private static final String DATETIME_FORMAT = "yyyy-MM-dd HH:mm:ss.SSS";
 
     public static long datetimeToLong(String dateTime) {
-        SimpleDateFormat sdf = new SimpleDateFormat(datetimeFormat);
+        SimpleDateFormat sdf = new SimpleDateFormat(DATETIME_FORMAT);
         try {
             return sdf.parse(dateTime).getTime();
         } catch (ParseException e) {
@@ -18,7 +18,7 @@ public class TimestampUtil {
     }
 
     public static String longToDatetime(long time) {
-        SimpleDateFormat sdf = new SimpleDateFormat(datetimeFormat);
+        SimpleDateFormat sdf = new SimpleDateFormat(DATETIME_FORMAT);
         return sdf.format(new Date(time));
     }
 }

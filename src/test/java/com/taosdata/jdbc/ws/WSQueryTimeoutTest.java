@@ -22,7 +22,7 @@ import java.util.Properties;
 @TestTarget(alias = "websocket master slave test", author = "yjshe", version = "3.2.11")
 @FixMethodOrder
 public class WSQueryTimeoutTest {
-    private static final String host = "127.0.0.1";
+    private static final String HOST = "127.0.0.1";
     @Description("query")
     @Test
     public void queryTimeoutTest() throws Exception  {
@@ -33,7 +33,7 @@ public class WSQueryTimeoutTest {
         Properties properties = new Properties();
         String url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + host + ":" + mockA.getListenPort() + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST + ":" + mockA.getListenPort() + "/?user=root&password=taosdata";
         } else {
             url += "?user=root&password=taosdata";
         }

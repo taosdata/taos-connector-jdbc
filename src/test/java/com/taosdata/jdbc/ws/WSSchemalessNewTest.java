@@ -21,7 +21,6 @@ import java.util.Properties;
 public class WSSchemalessNewTest {
     private static final String HOST = "127.0.0.1";
     private static final String DB_NAME = TestUtils.camelToSnake(WSSchemalessNewTest.class);
-    private static final String DB_NAME_TTL = "test_schemaless_ws_ttl";
     public static Connection connection;
 
     @Before

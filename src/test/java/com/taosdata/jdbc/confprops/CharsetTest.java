@@ -11,7 +11,7 @@ import java.sql.*;
 import java.util.Properties;
 
 public class CharsetTest {
-    private static final String host = "127.0.0.1";
+    private static final String HOST = "127.0.0.1";
     private final String dbName = TestUtils.camelToSnake(CharsetTest.class);
 
     @Test
@@ -19,7 +19,7 @@ public class CharsetTest {
         // given
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
         }
         Properties props = new Properties();
         props.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
@@ -48,7 +48,7 @@ public class CharsetTest {
     public void afterClass(){
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
         }
         Properties props = new Properties();
         props.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");

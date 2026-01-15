@@ -72,8 +72,6 @@ public class WSSelectTest {
             }
         }
         long d = System.nanoTime() - start;
-//        System.out.println(d / 1000);
-//        System.out.println(count);
         statement.close();
     }
 

@@ -46,7 +46,6 @@ public class TaosConsumerTest {
         String topic = "topic_ctb_column";
         // create topic
         statement.executeUpdate("create topic if not exists " + topic + " as select ts, c1, c2, c3, c4, t1 from ct0");
-//        statement.executeUpdate("create topic if not exists " + topic + " as database " + dbName);
 
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.CONNECT_USER,"root");
@@ -133,7 +132,6 @@ public class TaosConsumerTest {
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
-        // properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
         connection = DriverManager.getConnection(url, properties);
         statement = connection.createStatement();
         statement.executeUpdate("drop topic if exists topic_ctb_column");

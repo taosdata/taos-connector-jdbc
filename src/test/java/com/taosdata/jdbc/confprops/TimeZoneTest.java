@@ -85,16 +85,6 @@ public class TimeZoneTest {
         }
     }
 
-    @Test
-    public void testAllTimeZone() {
-//        String[] availableIDs = TimeZone.getAvailableIDs();
-//        System.out.println("可用zoneId总数：" + availableIDs.length);
-//        for (String zoneId : availableIDs) {
-//            System.out.println(zoneId);
-//        }
-    }
-
-
     @Before
     public void before() {
         url = SpecifyAddress.getInstance().getJniUrl();

@@ -61,7 +61,7 @@ public class StmtUtils {
 
                 // network issue, retry with waiting
                 if (e.getErrorCode() == TSDBErrorNumbers.ERROR_CONNECTION_CLOSED
-                        || e.getErrorCode() == TSDBErrorNumbers.ERROR_RESTFul_Client_IOException) {
+                        || e.getErrorCode() == TSDBErrorNumbers.ERROR_RESTFUL_CLIENT_IOEXCEPTION) {
                     continue;
                 }
                 throw e;

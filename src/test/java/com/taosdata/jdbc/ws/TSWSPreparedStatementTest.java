@@ -15,7 +15,7 @@ public class TSWSPreparedStatementTest {
     private static Connection conn;
     private static final String SQL_INSERT = "insert into t1 values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     private static final String SQL_SELECT = "select * from t1 where ts >= ? and ts < ? and f1 >= ?";
-    private static final String DBNAME = TestUtils.camelToSnake(TSWSPreparedStatementTest.class);
+    private static final String DB_NAME = TestUtils.camelToSnake(TSWSPreparedStatementTest.class);
 
     private PreparedStatement pstmtInsert;
     private PreparedStatement pstmtSelect;
@@ -151,7 +151,6 @@ public class TSWSPreparedStatementTest {
 
             TSWSPreparedStatement s = (TSWSPreparedStatement) conn.prepareStatement("insert into weather_test values(?, ?, ?, ?, ?, ?, ?, ?)");
             Random r = new Random();
-            //s.setTableName("weather_test");
 
             ArrayList<Long> ts = new ArrayList<>();
             for (int i = 0; i < numOfRows; i++) {
@@ -1073,7 +1072,6 @@ public class TSWSPreparedStatementTest {
     @Test
     public void setObjectTest() throws SQLException {
 
-        //private static final String sql_select = "select * from t1 where ts >= ? and ts < ? and f1 >= ?";
         long ts = System.currentTimeMillis();
         pstmtSelect.setObject(1, new Timestamp(ts - 10000));
         pstmtSelect.setObject(2, new Timestamp(ts + 10000));
@@ -1169,9 +1167,9 @@ public class TSWSPreparedStatementTest {
         }
         conn = DriverManager.getConnection(url);
         try (Statement stmt = conn.createStatement()) {
-            stmt.execute("drop database if exists " + DBNAME);
-            stmt.execute("create database if not exists " + DBNAME);
-            stmt.execute("use " + DBNAME);
+            stmt.execute("drop database if exists " + DB_NAME);
+            stmt.execute("create database if not exists " + DB_NAME);
+            stmt.execute("use " + DB_NAME);
         }
     }
 
@@ -1179,7 +1177,7 @@ public class TSWSPreparedStatementTest {
     public static void afterClass() {
         try {
             Statement statement = conn.createStatement();
-            statement.execute("drop database if exists " + DBNAME);
+            statement.execute("drop database if exists " + DB_NAME);
             statement.execute("drop database if exists dbtest");
             statement.close();
             if (conn != null)

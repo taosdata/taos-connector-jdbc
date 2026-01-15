@@ -70,8 +70,6 @@ public class InsertSpecialCharacterJniTest {
             long timestamp = rs.getTimestamp(1).getTime();
             Assert.assertEquals(now, timestamp);
             String f1 = new String(rs.getBytes(2));
-            //TODO: bug to be fixed
-//            Assert.assertEquals(special_character_str_2, f1);
             Assert.assertEquals(SPECIAL_CHARACTER_STR_2.substring(1, SPECIAL_CHARACTER_STR_1.length() - 1), f1);
             String f2 = rs.getString(3);
             Assert.assertNull(f2);

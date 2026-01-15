@@ -64,7 +64,7 @@ public abstract class TSDBConstants {
     public static final int TSDB_DATA_TYPE_DECIMAL64 = 21;     //decimal64
 
     // nchar column max length
-    public static final int maxFieldSize = 16 * 1024;
+    public static final int MAX_FIELD_SIZE = 16 * 1024;
 
     // precision for data types, this is used for metadata
     public static final int BOOLEAN_PRECISION = 1;

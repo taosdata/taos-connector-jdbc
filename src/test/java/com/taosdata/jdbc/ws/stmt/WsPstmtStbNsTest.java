@@ -7,7 +7,6 @@ import io.netty.util.ResourceLeakDetector;
 import org.junit.*;
 
 import java.sql.*;
-import java.util.ArrayList;
 import java.util.Properties;
 
 @FixMethodOrder

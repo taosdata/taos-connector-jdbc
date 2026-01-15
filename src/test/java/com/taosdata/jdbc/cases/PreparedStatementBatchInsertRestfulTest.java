@@ -15,8 +15,8 @@ import java.util.stream.IntStream;
 
 public class PreparedStatementBatchInsertRestfulTest {
 
-    private static final String host = "127.0.0.1";
-    private static final String dbname = TestUtils.camelToSnake(PreparedStatementBatchInsertRestfulTest.class);
+    private static final String HOST = "127.0.0.1";
+    private static final String DB_NAME = TestUtils.camelToSnake(PreparedStatementBatchInsertRestfulTest.class);
 
     private final Random random = new Random(System.currentTimeMillis());
     private Connection conn;
@@ -72,20 +72,20 @@ public class PreparedStatementBatchInsertRestfulTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
         }
         conn = DriverManager.getConnection(url);
         Statement stmt = conn.createStatement();
-        stmt.execute("drop database if exists " + dbname);
-        stmt.execute("create database if not exists " + dbname);
-        stmt.execute("use " + dbname);
+        stmt.execute("drop database if exists " + DB_NAME);
+        stmt.execute("create database if not exists " + DB_NAME);
+        stmt.execute("use " + DB_NAME);
         stmt.execute("create table meters(ts timestamp, current float, voltage int, phase int) tags(groupId int)");
     }
 
     @After
     public void after() throws SQLException {
         Statement stmt = conn.createStatement();
-        stmt.execute("drop database if exists " + dbname);
+        stmt.execute("drop database if exists " + DB_NAME);
         stmt.close();
         conn.close();
     }

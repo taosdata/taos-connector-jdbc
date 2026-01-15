@@ -18,7 +18,7 @@ import java.sql.*;
 @Ignore // TODO 3.0 timestamp
 public class DatetimeBefore1970Test {
 
-    private static final String host = "127.0.0.1";
+    private static final String HOST = "127.0.0.1";
     private Connection conn;
 
     @Test
@@ -235,7 +235,7 @@ public class DatetimeBefore1970Test {
     private Connection createEnvironment(String precision) throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata&timezone=UTC";
+            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata&timezone=UTC";
         } else {
             url += "&timezone=UTC";
         }

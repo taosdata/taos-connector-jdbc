@@ -4,6 +4,10 @@ import com.taosdata.jdbc.AbstractDatabaseMetaData;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+
+/**
+ * @deprecated Use WebSocket connection instead.
+ */
 @Deprecated
 public class RestfulDatabaseMetaData extends AbstractDatabaseMetaData {
 

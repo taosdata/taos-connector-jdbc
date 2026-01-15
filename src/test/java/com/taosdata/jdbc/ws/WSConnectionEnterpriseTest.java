@@ -21,8 +21,6 @@ import java.util.Properties;
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "test connection with server", author = "huolibo", version = "2.0.37")
 public class WSConnectionEnterpriseTest {
-    //    private static final String host = "192.168.1.98";
-
     private static String host = "localhost";
     private static String port = "6041";
     private Connection connection;
@@ -76,11 +74,8 @@ public class WSConnectionEnterpriseTest {
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
         connection = DriverManager.getConnection(url, properties);
-//        TimeUnit.SECONDS.sleep(20);
         Statement statement = connection.createStatement();
         ResultSet resultSet = statement.executeQuery("show databases");
-        // Taosd recycles resources, if the sleep more than 30 seconds,
-//        TimeUnit.SECONDS.sleep(30);
         resultSet.next();
         resultSet.close();
         statement.close();

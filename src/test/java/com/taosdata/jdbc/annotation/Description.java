@@ -14,6 +14,6 @@ public @interface Description {
     // git blame author
     String author() default "";
 
-    // since which version;
+    // since which version
     String version() default "";
 }

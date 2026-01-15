@@ -34,9 +34,6 @@ public class FetchRawBlockResp extends Response {
     private int code;
     private String message;
     private short version;
-    private long messageID;
-    private short metaType;
-    private int rawBlockLength;
 
     private RestfulResultSetMetaData metaData;
     private final List<RestfulResultSet.Field> fields = new ArrayList<>();
@@ -63,9 +60,9 @@ public class FetchRawBlockResp extends Response {
         buffer.readBytes(msgBytes);
 
         message = new String(msgBytes, StandardCharsets.UTF_8);
-        messageID = buffer.readLongLE(); // message id
-        metaType = buffer.readShortLE();
-        rawBlockLength = buffer.readIntLE();
+        buffer.readLongLE(); // message id
+        buffer.readShortLE(); // message type
+        buffer.readIntLE(); // raw block length
     }
 
     public ByteBuf getBuffer() {
@@ -187,7 +184,6 @@ public class FetchRawBlockResp extends Response {
             columnNames.clear();
 
             // parse the block's schema
-            //int backupBlockPos = buffer.position();
             buffer.markReaderIndex();
             buffer.skipBytes(blockTotalLen - 18);
             cols = parseZigzagVariableByteInteger();
