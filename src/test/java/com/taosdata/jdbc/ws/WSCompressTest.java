@@ -128,7 +128,7 @@ public class WSCompressTest {
 
         Properties properties = new Properties();
         properties.setProperty("td.connect.type", "ws");
-        properties.setProperty("bootstrap.servers", "127.0.0.1: TestEnvUtil.getWsPort()");
+        properties.setProperty("bootstrap.servers", TestEnvUtil.getHost() + ":" + TestEnvUtil.getWsPort());
         properties.setProperty(TMQConstants.CONNECT_USER, "root");
         properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
