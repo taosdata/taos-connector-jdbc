@@ -255,7 +255,7 @@ public class SetConfigurationInJNITest {
             props.setProperty("rpcTimer", "100000");
             String url = SpecifyAddress.getInstance().getJniUrl();
             if (url == null) {
-                url = "jdbc:TAOS://" + host + ":0/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "";
+                url = "jdbc:TAOS://" + host + ":0/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
             }
             Connection conn = DriverManager.getConnection(url, props);
             Statement stmt = conn.createStatement();

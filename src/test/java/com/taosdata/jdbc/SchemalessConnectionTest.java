@@ -30,7 +30,7 @@ public class SchemalessConnectionTest {
 
     @Test(expected = SQLException.class)
     public void testThroughWSConnectionAndUserPassword() throws SQLException {
-        String url = "jdbc:TAOS-RS://" + HOST + ":6041/";
+        String url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/";
         Connection conn = DriverManager.getConnection(url, TestEnvUtil.getUser(), TestEnvUtil.getPassword());
         SchemalessWriter writer = new SchemalessWriter(conn);
         writer.write("measurement,host=host1 field1=2i,field2=2.0 1577837300000", SchemalessProtocolType.LINE, SchemalessTimestampType.MILLI_SECONDS);
@@ -45,7 +45,7 @@ public class SchemalessConnectionTest {
 
     @Test
     public void testThroughWSUrl() throws SQLException {
-        String url = "jdbc:TAOS-RS://" + HOST + ":6041/";
+        String url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/";
         SchemalessWriter writer = new SchemalessWriter(url, TestEnvUtil.getUser(), TestEnvUtil.getPassword(), DB);
         writer.write("measurement,host=host1 field1=2i,field2=2.0 1577837300000", SchemalessProtocolType.LINE, SchemalessTimestampType.MILLI_SECONDS);
     }
