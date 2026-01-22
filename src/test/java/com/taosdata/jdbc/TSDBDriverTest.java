@@ -12,7 +12,7 @@ import static org.junit.Assert.*;
 
 public class TSDBDriverTest {
 
-        private static String[] validURLs;
+    private static String[] validURLs;
     private Connection conn;
 
     @Test
@@ -47,7 +47,7 @@ public class TSDBDriverTest {
     public void connectWithConfigFile() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS://://?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
+            url = "jdbc:TAOS://:/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         } else {
             url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }

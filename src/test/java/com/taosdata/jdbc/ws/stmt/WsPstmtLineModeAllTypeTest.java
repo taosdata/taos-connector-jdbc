@@ -12,7 +12,7 @@ import java.time.Instant;
 import java.util.Properties;
 
 public class WsPstmtLineModeAllTypeTest {
-            final String dbName = TestUtils.camelToSnake(WsPstmtLineModeAllTypeTest.class);
+    final String dbName = TestUtils.camelToSnake(WsPstmtLineModeAllTypeTest.class);
     final String tableName = "wpt";
     final String stableName = "swpt";
 

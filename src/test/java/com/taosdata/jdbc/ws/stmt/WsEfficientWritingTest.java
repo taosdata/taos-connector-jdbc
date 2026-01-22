@@ -2,6 +2,7 @@ package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.common.Endpoint;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.TaosAdapterMock;
@@ -383,20 +384,20 @@ public class WsEfficientWritingTest {
     }
 
     private Connection getConnection(boolean copyData) throws SQLException {
-        return getConnection(copyData, false, 6041);
+        return getConnection(copyData, false, TestEnvUtil.getWsPort());
     }
 
     private Connection getConnection(boolean copyData, boolean strictCheck) throws SQLException {
-        return getConnection(copyData, strictCheck, 6041);
+        return getConnection(copyData, strictCheck, TestEnvUtil.getWsPort());
     }
     private Connection getConnectionNormal() throws SQLException {
-        String url = "jdbc:TAOS-WS://" + host + ":" + 6041 + "/?user=root&password=taosdata";
+        String url = "jdbc:TAOS-WS://" + host + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         Properties properties = new Properties();
         return DriverManager.getConnection(url, properties);
     }
 
     private Connection getConnection(boolean copyData, boolean strictCheck, int port) throws SQLException {
-        String url = "jdbc:TAOS-WS://" + host + ":" + port + "/?user=root&password=taosdata";
+        String url = "jdbc:TAOS-WS://" + host + ":" + port + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ASYNC_WRITE, "stmt");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_SIZE_BY_ROW, "100");

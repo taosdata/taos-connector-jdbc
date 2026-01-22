@@ -23,7 +23,7 @@ public class WSConFailOverTest {
     private static final String HOST_A = TestEnvUtil.getHost();
     private static final int PORT_A = TestEnvUtil.getWsPort();
 
-    private static final String HOST_B = "127.0.0.1";
+    private static final String HOST_B = TestEnvUtil.getHost();
     private static final int PORT_B = 9041;
     private final String dbName = TestUtils.camelToSnake(WSConFailOverTest.class);
     private static final String TABLE_NAME = "meters";
@@ -100,7 +100,7 @@ public class WSConFailOverTest {
 
         url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
+            url = "jdbc:TAOS-WS://" + HOST_B + ":" + PORT_B + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         } else {
             url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
