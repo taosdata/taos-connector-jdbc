@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.Ignore;
@@ -17,9 +18,9 @@ public class JDBCTypeAndTypeCompareTest {
     public void test() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS://127.0.0.1:6030/";
+            url = "jdbc:TAOS://" + TestEnvUtil.getHost() + ":6030/";
         }
-        conn = DriverManager.getConnection(url, "root", "taosdata");
+        conn = DriverManager.getConnection(url, TestEnvUtil.getUser(), TestEnvUtil.getPassword());
         Statement stmt = conn.createStatement();
 
         stmt.execute("drop database if exists " + DB_NAME);
@@ -56,3 +57,4 @@ public class JDBCTypeAndTypeCompareTest {
         }
     }
 }
+

@@ -3,6 +3,7 @@ package com.taosdata.jdbc.ws.stmt;
 import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.StringUtils;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.TSWSPreparedStatement;
 import io.netty.util.ResourceLeakDetector;
@@ -14,8 +15,7 @@ import java.util.Collections;
 import java.util.Properties;
 
 public class WsPstmtAllType336Test {
-    final String host = "127.0.0.1";
-    final String dbName = TestUtils.camelToSnake(WsPstmtAllTypeTest.class);
+            final String dbName = TestUtils.camelToSnake(WsPstmtAllTypeTest.class);
     final String tableName = "wpt";
     final String stableName = "swpt";
 
@@ -72,7 +72,6 @@ public class WsPstmtAllType336Test {
         Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_INT, resultSet.getLong(16));
         Assert.assertEquals(new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG), resultSet.getObject(17));
 
-
         Assert.assertEquals(new Date(current), resultSet.getDate(1));
         Assert.assertEquals(new Time(current), resultSet.getTime(1));
         Assert.assertEquals(new Timestamp(current), resultSet.getTimestamp(1));
@@ -81,7 +80,6 @@ public class WsPstmtAllType336Test {
         resultSet.close();
         statement.close();
     }
-
 
     @Test
     public void testExecuteUpdate2() throws SQLException {
@@ -105,7 +103,6 @@ public class WsPstmtAllType336Test {
         statement.setTagInt(14,  TSDBConstants.MAX_UNSIGNED_SHORT);
         statement.setTagLong(15,  TSDBConstants.MAX_UNSIGNED_INT);
         statement.setTagBigInteger(16, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
-
 
         statement.setTimestamp(0, Collections.singletonList(current));
         statement.setByte(1, Collections.singletonList((byte) 2));
@@ -282,9 +279,9 @@ public class WsPstmtAllType336Test {
 
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata&batchfetch=true";
+            url = "jdbc:TAOS-RS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
         } else {
-            url += "?user=root&password=taosdata&batchfetch=true";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
         }
         Properties properties = new Properties();
         connection = DriverManager.getConnection(url, properties);

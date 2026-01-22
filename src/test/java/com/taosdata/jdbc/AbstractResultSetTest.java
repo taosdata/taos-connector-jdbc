@@ -26,7 +26,6 @@ public class AbstractResultSetTest {
             extends AbstractResultSet {
         public boolean closed = false;
 
-
         @Override
         public boolean next() throws SQLException {
             return false;
@@ -222,7 +221,6 @@ public class AbstractResultSetTest {
         resultSet.updateShort(1, (short) 1);
     }
 
-
     @Test(expected = SQLException.class)
     public void testUpdateInt() throws SQLException {
         resultSet.closed = false;
@@ -234,7 +232,6 @@ public class AbstractResultSetTest {
         resultSet.updateInt(1, 1);
     }
 
-
     @Test(expected = SQLException.class)
     public void testUpdateLong() throws SQLException {
         resultSet.closed = false;
@@ -245,7 +242,6 @@ public class AbstractResultSetTest {
         resultSet.closed = true;
         resultSet.updateLong(1, 1L);
     }
-
 
     @Test(expected = SQLException.class)
     public void testUpdateFloat() throws SQLException {
@@ -269,7 +265,6 @@ public class AbstractResultSetTest {
         resultSet.updateDouble(1, 1.0);
     }
 
-
     @Test(expected = SQLException.class)
     public void testUpdateBigDecimal() throws SQLException {
         resultSet.closed = false;
@@ -280,7 +275,6 @@ public class AbstractResultSetTest {
         resultSet.closed = true;
         resultSet.updateBigDecimal(1, BigDecimal.ONE);
     }
-
 
     @Test(expected = SQLException.class)
     public void testUpdateString() throws SQLException {
@@ -304,7 +298,6 @@ public class AbstractResultSetTest {
         resultSet.updateBytes(1, new byte[]{1, 2, 3});
     }
 
-
     @Test(expected = SQLException.class)
     public void testUpdateDate() throws SQLException {
         resultSet.closed = false;
@@ -315,7 +308,6 @@ public class AbstractResultSetTest {
         resultSet.closed = true;
         resultSet.updateDate(1, new Date(System.currentTimeMillis()));
     }
-
 
     @Test(expected = SQLException.class)
     public void testUpdateTime() throws SQLException {
@@ -339,7 +331,6 @@ public class AbstractResultSetTest {
         resultSet.updateTimestamp(1, new Timestamp(System.currentTimeMillis()));
     }
 
-
     @Test(expected = SQLException.class)
     public void testUpdateAsciiStream() throws SQLException {
         resultSet.closed = false;
@@ -351,8 +342,6 @@ public class AbstractResultSetTest {
         resultSet.updateAsciiStream(1, (InputStream) null, 10);
     }
 
-
-
     @Test(expected = SQLException.class)
     public void testUpdateBinaryStream() throws SQLException {
         resultSet.closed = false;
@@ -363,7 +352,6 @@ public class AbstractResultSetTest {
         resultSet.closed = true;
         resultSet.updateBinaryStream(1, (InputStream) null, 10);
     }
-
 
     @Test(expected = SQLException.class)
     public void testUpdateCharacterStream() throws SQLException {
@@ -636,7 +624,6 @@ public class AbstractResultSetTest {
         resultSet.updateNString("column", null);
     }
 
-
     @Test(expected = SQLException.class)
     public void testUpdateNClobByIndex() throws SQLException {
         resultSet.closed = false;
@@ -715,7 +702,6 @@ public class AbstractResultSetTest {
         resultSet.updateSQLXML(1, null);
     }
 
-
     @Test(expected = SQLException.class)
     public void testUpdateSQLXMLByLabel() throws SQLException {
         resultSet.closed = false;
@@ -727,7 +713,6 @@ public class AbstractResultSetTest {
         resultSet.updateSQLXML("column", null);
     }
 
-
     @Test(expected = SQLException.class)
     public void testGetNCharacterStreamByIndex() throws SQLException {
         resultSet.closed = false;
@@ -738,7 +723,6 @@ public class AbstractResultSetTest {
         resultSet.closed = true;
         resultSet.getNCharacterStream(1);
     }
-
 
     @Test(expected = SQLException.class)
     public void testGetNCharacterStreamByLabel() throws SQLException {
@@ -893,7 +877,6 @@ public class AbstractResultSetTest {
         resultSet.closed = true;
         resultSet.updateNClob(1, null, 10L);
     }
-
 
     @Test(expected = SQLException.class)
     public void testUpdateNClobByLabelWithLength() throws SQLException {

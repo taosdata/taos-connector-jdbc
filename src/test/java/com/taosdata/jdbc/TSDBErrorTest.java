@@ -9,8 +9,6 @@ import static org.junit.Assert.*;
 
 public class TSDBErrorTest {
 
-
-
     // ------------------------------ Test createRuntimeException(int, Throwable) ------------------------------
     @Test
     public void testCreateRuntimeException_WithThrowable() {
@@ -150,3 +148,4 @@ public class TSDBErrorTest {
         assertEquals(expectedMsg, ex.getMessage());
     }
 }
+

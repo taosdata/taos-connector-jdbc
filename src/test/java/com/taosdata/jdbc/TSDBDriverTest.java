@@ -1,6 +1,7 @@
 package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -11,16 +12,16 @@ import static org.junit.Assert.*;
 
 public class TSDBDriverTest {
 
-    private static String[] validURLs;
+        private static String[] validURLs;
     private Connection conn;
 
     @Test
     public void connectWithJdbcURL() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS://localhost:6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://localhost:" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         } else {
-            url += "?user=root&password=taosdata";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         conn = DriverManager.getConnection(url);
         assertNotNull("failure - connection should not be null", conn);
@@ -30,9 +31,9 @@ public class TSDBDriverTest {
     public void connectWithProperties() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS://localhost:6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://localhost:" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         } else {
-            url += "?user=root&password=taosdata";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties connProps = new Properties();
         connProps.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
@@ -46,9 +47,9 @@ public class TSDBDriverTest {
     public void connectWithConfigFile() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS://:/?user=root&password=taosdata";
+            url = "jdbc:TAOS://://?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         } else {
-            url += "?user=root&password=taosdata";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties connProps = new Properties();
         connProps.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
@@ -65,9 +66,9 @@ public class TSDBDriverTest {
 
         String url = SpecifyAddress.getInstance().getJniWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS://127.0.0.1:0/db?user=root&password=taosdata&charset=UTF-8";
+            url = "jdbc:TAOS://127.0.0.1:0/db?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&charset=UTF-8";
         } else {
-            url += "db?user=root&password=taosdata&charset=UTF-8";
+            url += "db?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&charset=UTF-8";
         }
         String host = SpecifyAddress.getInstance().getHost();
         if (host == null) {
@@ -123,8 +124,8 @@ public class TSDBDriverTest {
 
         url = "jdbc:TAOS://:/?";
         config = new Properties();
-        config.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        config.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        config.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        config.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         actual = driver.parseURL(url, config);
         assertEquals("failure - user should be root", "root", actual.getProperty("user"));
         assertEquals("failure - password should be taosdata", "taosdata", actual.getProperty("password"));
@@ -136,8 +137,8 @@ public class TSDBDriverTest {
     public void parseURLWithIPv6Host() throws SQLException {
         TSDBDriver driver = new TSDBDriver();
         Properties defaults = new Properties();
-        defaults.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        defaults.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        defaults.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        defaults.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
 
         Properties result = driver.parseURL("jdbc:TAOS://[2001:db8::1]:6030/db?charset=UTF-8", defaults);
         assertEquals("failure - host should be 2001:db8::1", "[2001:db8::1]:6030", result.getProperty(TSDBDriver.PROPERTY_KEY_ENDPOINTS));
@@ -160,9 +161,9 @@ public class TSDBDriverTest {
         Driver driver = new TSDBDriver();
         String url = SpecifyAddress.getInstance().getJniWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS://localhost:6030/information_schema?user=root&password=taosdata";
+            url = "jdbc:TAOS://localhost:6030/information_schema?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         } else {
-            url += "information_schema?user=root&password=taosdata";
+            url += "information_schema?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         String host = SpecifyAddress.getInstance().getHost();
         if (host == null) {
@@ -224,11 +225,11 @@ public class TSDBDriverTest {
                 "jdbc:TAOS://" + specifyHost + ":" + port + "/",
                 "jdbc:TSDB://" + specifyHost + ":" + port,
                 "jdbc:TSDB://" + specifyHost + ":" + port + "/",
-                "jdbc:TAOS://" + specifyHost + ":0/db?user=root&password=taosdata",
+                "jdbc:TAOS://" + specifyHost + ":0/db?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword(),
                 "jdbc:TAOS://:",
                 "jdbc:TAOS://:/",
                 "jdbc:TAOS://:/test",
-                "jdbc:TAOS://" + specifyHost + ":0/?user=root&password=taosdata"
+                "jdbc:TAOS://" + specifyHost + ":0/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword()
         };
     }
 }

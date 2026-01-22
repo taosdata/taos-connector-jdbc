@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -13,7 +14,10 @@ public class GroupByFetchBlockJNITest {
     private static Connection connection;
     private static Statement statement;
 
-    private final String host = "127.0.0.1";
+    private final String host = TestEnvUtil.getHost();
+    private final int port = TestEnvUtil.getJniPort();
+    private final String user = TestEnvUtil.getUser();
+    private final String password = TestEnvUtil.getPassword();
     private final String dbName = TestUtils.camelToSnake(GroupByFetchBlockJNITest.class);
     private final String tName = "st";
 
@@ -31,7 +35,7 @@ public class GroupByFetchBlockJNITest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + host + ":" + port + "/?user=" + user + "&password=" + password;
         }
         connection = DriverManager.getConnection(url);
         statement = connection.createStatement();
@@ -51,3 +55,4 @@ public class GroupByFetchBlockJNITest {
         connection.close();
     }
 }
+

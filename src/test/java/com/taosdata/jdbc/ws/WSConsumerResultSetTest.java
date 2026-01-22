@@ -51,7 +51,6 @@ public class WSConsumerResultSetTest {
         wsConsumerResultSet.first();
     }
 
-
     @Test(expected = SQLException.class)
     public void testLast() throws SQLException {
         wsConsumerResultSet.last();
@@ -81,5 +80,5 @@ public class WSConsumerResultSetTest {
         wsConsumerResultSet.getStatement();
     }
 
-
 }
+

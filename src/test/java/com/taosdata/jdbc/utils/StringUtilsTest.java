@@ -50,7 +50,7 @@ public class StringUtilsTest {
 
     @Test
     public void getBasicUrlTest() {
-        Assert.assertEquals("jdbc:TAOS://localhost:6030/", StringUtils.getBasicUrl("jdbc:TAOS://localhost:6030/?user=root&password=taosdata"));
+        Assert.assertEquals("jdbc:TAOS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getJniPort() + "/", StringUtils.getBasicUrl("jdbc:TAOS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + ""));
         Assert.assertEquals("jdbc:TAOS://localhost:6030/", StringUtils.getBasicUrl("jdbc:TAOS://localhost:6030/"));
     }
 
@@ -108,6 +108,5 @@ public class StringUtilsTest {
         String hexString = StringUtils.bytesToHex(bytes);
         Assert.assertEquals("0A1B2C3DFEFF", hexString);
     }
-
 
 }

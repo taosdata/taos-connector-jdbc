@@ -3,6 +3,7 @@ package com.taosdata.jdbc.ws;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -26,7 +27,7 @@ public class WSConsumerOffsetSeekTest {
     private static ScheduledExecutorService scheduledExecutorService = null;
     private static Connection connection = null;
     private static Statement statement = null;
-    private static final String HOST = "127.0.0.1";
+    private static final String HOST = TestEnvUtil.getHost();
     private static final String DB_NAME = TestUtils.camelToSnake(WSConsumerOffsetSeekTest.class);
     private static final String SUPER_TABLE = "st";
     private static final String TOPIC = "offset_seek_ws_test";
@@ -88,7 +89,7 @@ public class WSConsumerOffsetSeekTest {
     public static void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
@@ -136,3 +137,4 @@ public class WSConsumerOffsetSeekTest {
 
     }
 }
+

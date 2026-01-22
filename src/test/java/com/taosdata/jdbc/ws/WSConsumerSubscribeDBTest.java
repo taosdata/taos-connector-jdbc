@@ -3,6 +3,7 @@ package com.taosdata.jdbc.ws;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import io.netty.util.ResourceLeakDetector;
 import org.junit.*;
@@ -17,7 +18,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class WSConsumerSubscribeDBTest {
-    private static final String HOST = "127.0.0.1";
+    private static final String HOST = TestEnvUtil.getHost();
     private static final String DB_NAME = TestUtils.camelToSnake(WSConsumerSubscribeDBTest.class);
     private static final String SUPER_TABLE_1 = "st1";
     private static final String SUPER_TABLE_2 = "st2";
@@ -156,7 +157,7 @@ public class WSConsumerSubscribeDBTest {
                         Assert.assertEquals(new BigInteger("18446744073709551615"), r.value().getMap().get("c17"));
                         Assert.assertEquals(new BigDecimal("-12345678901234567890123.4567890000"), r.value().getMap().get("c18"));
                         Assert.assertEquals(new BigDecimal("12345678.901234"), r.value().getMap().get("c19"));
-                       pass = true;
+                        pass = true;
                     }
                 }
             }
@@ -197,7 +198,6 @@ public class WSConsumerSubscribeDBTest {
                                     "(now+1s," + a.getAndIncrement() + ",0.4,'b','二', false)" +
                                     "(now+2s," + a.getAndIncrement() + ",0.6,'c','三', false)");
 
-
                     statement.executeUpdate(
                             "ALTER STABLE " + SUPER_TABLE_1 + " ADD COLUMN c6 int");
 
@@ -227,7 +227,7 @@ public class WSConsumerSubscribeDBTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
@@ -282,3 +282,4 @@ public class WSConsumerSubscribeDBTest {
         System.gc();
     }
 }
+

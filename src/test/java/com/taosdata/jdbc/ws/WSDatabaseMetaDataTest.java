@@ -2,6 +2,7 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -13,10 +14,11 @@ import java.util.Properties;
 
 public class WSDatabaseMetaDataTest {
 
-    private static final String HOST = "127.0.0.1";
-    private static String url;
+        private static String url;
     private static Connection connection;
     private static WSDatabaseMetaData metaData;
+
+    static final String HOST = TestEnvUtil.getHost();
     private static final String DB_NAME = "1" + TestUtils.camelToSnake(WSDatabaseMetaDataTest.class) + "";
 
     @Test
@@ -60,9 +62,6 @@ public class WSDatabaseMetaDataTest {
         }
     }
 
-
-
-
     @BeforeClass
     public static void beforeClass() throws SQLException {
         Properties properties = new Properties();
@@ -71,7 +70,7 @@ public class WSDatabaseMetaDataTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC+8");
         url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata&batchfetch=true&conmode=1";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true&conmode=1";
         }
 
         connection = DriverManager.getConnection(url, properties);

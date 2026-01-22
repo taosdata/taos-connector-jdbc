@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import io.netty.util.ResourceLeakDetector;
 import org.junit.*;
@@ -15,8 +16,7 @@ import static com.taosdata.jdbc.TSDBConstants.TIMESTAMP_DATA_OUT_OF_RANGE;
 
 @FixMethodOrder
 public class WsPstmtNsTest {
-    final String host = "localhost";
-    final String db_name = TestUtils.camelToSnake(WsPstmtNsTest.class);
+            final String db_name = TestUtils.camelToSnake(WsPstmtNsTest.class);
     final String tableName = "wpt";
     String superTable = "wpt_st";
     Connection connection;
@@ -126,14 +126,13 @@ public class WsPstmtNsTest {
         statement.close();
     }
 
-
     @Before
     public void before() throws SQLException, InterruptedException {
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata&batchfetch=true";
+            url = "jdbc:TAOS-RS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
         } else {
-            url += "?user=root&password=taosdata&batchfetch=true";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
         }
         Properties properties = new Properties();
         connection = DriverManager.getConnection(url, properties);

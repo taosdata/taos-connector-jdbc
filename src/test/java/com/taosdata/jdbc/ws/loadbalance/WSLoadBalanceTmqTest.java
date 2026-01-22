@@ -5,6 +5,7 @@ import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.common.Endpoint;
 import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.TaosAdapterMock;
 import org.junit.*;
@@ -25,11 +26,11 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-
 @RunWith(CatalogRunner.class)
 @FixMethodOrder
 public class WSLoadBalanceTmqTest {
-    private static final String HOST = "127.0.0.1";
+
+    static final String HOST = TestEnvUtil.getHost();
     private static final String DB_NAME = TestUtils.camelToSnake(WSLoadBalanceTmqTest.class);
     private static final String SUPER_TABLE = "st";
     private static Connection connection;
@@ -158,7 +159,7 @@ public class WSLoadBalanceTmqTest {
 
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":6030/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");

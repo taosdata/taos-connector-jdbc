@@ -2,6 +2,7 @@ package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -20,8 +21,7 @@ import java.util.Properties;
 import java.util.TimeZone;
 
 public class WsPStmtLineModeNullTest {
-    final String host = "127.0.0.1";
-    final String db_name = TestUtils.camelToSnake(WsPStmtLineModeNullTest.class);
+            final String db_name = TestUtils.camelToSnake(WsPStmtLineModeNullTest.class);
     final String tableName = "wpt";
     String stableName = "swpt";
     Connection connection;
@@ -293,7 +293,6 @@ public class WsPStmtLineModeNullTest {
         preparedStatement.setBlob(1, inputStream, 4L);
     }
 
-
     @Test(expected = SQLException.class)
     public void testSetNClob_int_Reader_long() throws SQLException {
         Reader reader = new StringReader("test");
@@ -383,14 +382,13 @@ public class WsPStmtLineModeNullTest {
         System.out.println("CompositeByteBuf memory leak test completed successfully.");
     }
 
-
     @Before
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + host + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         } else {
-            url += "?user=root&password=taosdata&batchfetch=true";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_PBS_MODE, "line");
@@ -429,3 +427,4 @@ public class WsPStmtLineModeNullTest {
     }
 
 }
+

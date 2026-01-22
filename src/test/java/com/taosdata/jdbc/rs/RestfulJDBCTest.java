@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.rs;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 import org.junit.runners.MethodSorters;
@@ -11,7 +12,7 @@ import java.util.Random;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class RestfulJDBCTest {
 
-    private static final String HOST = "127.0.0.1";
+    static final String HOST = TestEnvUtil.getHost();
     private static final Random random = new Random(System.currentTimeMillis());
     private static Connection connection;
     private static final String DB_NAME = TestUtils.camelToSnake(RestfulJDBCTest.class);
@@ -132,7 +133,7 @@ public class RestfulJDBCTest {
         try {
             String url = SpecifyAddress.getInstance().getRestUrl();
             if (url == null) {
-                url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
+                url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
             }
             connection = DriverManager.getConnection(url);
         } catch (SQLException e) {
@@ -151,3 +152,4 @@ public class RestfulJDBCTest {
     }
 
 }
+

@@ -1,6 +1,7 @@
 package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -9,8 +10,7 @@ import java.sql.*;
 import java.util.Properties;
 
 public class TSDBConnectionTest {
-
-    private static final String HOST = "127.0.0.1";
+    static final String HOST = TestEnvUtil.getHost();
     private static Connection conn;
     @Test
     public void createStatement() {
@@ -370,9 +370,9 @@ public class TSDBConnectionTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
         String url = SpecifyAddress.getInstance().getJniWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         } else {
-            url += "?user=root&password=taosdata";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         conn = DriverManager.getConnection(url, properties);
     }

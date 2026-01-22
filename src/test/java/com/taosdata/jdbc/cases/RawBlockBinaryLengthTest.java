@@ -3,6 +3,7 @@ package com.taosdata.jdbc.cases;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestUtils;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -13,7 +14,9 @@ import java.util.Properties;
 
 public class RawBlockBinaryLengthTest {
 
-    static final String HOST = "127.0.0.1";
+    static final String HOST = TestEnvUtil.getHost();
+    static final int jniPort = TestEnvUtil.getJniPort();
+    static final int rsPort = TestEnvUtil.getRsPort();
     static final String DB_NAME = TestUtils.camelToSnake(RawBlockBinaryLengthTest.class);
     static Connection connection;
     static Statement statement;
@@ -31,9 +34,9 @@ public class RawBlockBinaryLengthTest {
 
     @Test
     public void websocketQuery() throws SQLException {
-        try (Connection connection = DriverManager.getConnection("jdbc:TAOS-RS://" + HOST + ":6041/" + DB_NAME + "?user=root&password=taosdata&batchfetch=true");
-             Statement stmt = connection.createStatement();
-             ResultSet resultSet = stmt.executeQuery("select body from `stb_sba_tem_bdr`")
+        try (Connection connection = DriverManager.getConnection("jdbc:TAOS-RS://" + HOST + ":" + rsPort + "/" + DB_NAME + "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true");
+                Statement stmt = connection.createStatement();
+                ResultSet resultSet = stmt.executeQuery("select body from `stb_sba_tem_bdr`")
         ) {
             resultSet.next();
             String body = resultSet.getString("body");
@@ -46,7 +49,7 @@ public class RawBlockBinaryLengthTest {
     public static void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":" + jniPort + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
@@ -75,3 +78,4 @@ public class RawBlockBinaryLengthTest {
         }
     }
 }
+

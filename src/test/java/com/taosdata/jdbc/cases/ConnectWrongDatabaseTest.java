@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import org.junit.Test;
 
 import java.sql.Connection;
@@ -14,9 +15,9 @@ public class ConnectWrongDatabaseTest {
     public void connectByJni() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS://localhost:6030/wrong_db?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getJniPort() + "/wrong_db?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         } else {
-            url += "wrong_db?user=root&password=taosdata";
+            url += "wrong_db?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         DriverManager.getConnection(url);
     }
@@ -25,9 +26,9 @@ public class ConnectWrongDatabaseTest {
     public void connectByRestful() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://localhost:6041/wrong_db?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getRsPort() + "/wrong_db?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         } else {
-            url += "wrong_db?user=root&password=taosdata";
+            url += "wrong_db?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Connection connection = DriverManager.getConnection(url);
         try (Statement statement = connection.createStatement()) {
@@ -36,3 +37,4 @@ public class ConnectWrongDatabaseTest {
     }
 
 }
+

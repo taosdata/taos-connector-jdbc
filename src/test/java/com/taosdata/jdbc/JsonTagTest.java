@@ -4,6 +4,7 @@ import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 import org.junit.runner.RunWith;
@@ -16,7 +17,8 @@ import java.util.*;
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "JsonTag", author = "huolibo", version = "2.0.36")
 public class JsonTagTest {
-    private static final String HOST = "127.0.0.1";
+
+    static final String HOST = TestEnvUtil.getHost();
     private static final String DB_NAME = TestUtils.camelToSnake(JsonTagTest.class);
     private static Connection connection;
     private static Statement statement;
@@ -1176,7 +1178,7 @@ public class JsonTagTest {
 
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
@@ -1205,3 +1207,4 @@ public class JsonTagTest {
 
     }
 }
+

@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.common;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import io.netty.buffer.ByteBuf;
 import org.junit.Before;
 import org.junit.Test;
@@ -19,8 +20,8 @@ public class ConnectionParamTest {
     @Before
     public void setUp() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         connectionParam = ConnectionParam.getParam(properties);
     }
 
@@ -148,8 +149,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testInvalidHealthCheckInitIntervalZero() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_INIT_INTERVAL, "0");
         ConnectionParam.getParam(properties);
     }
@@ -157,8 +158,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testInvalidHealthCheckInitIntervalNegative() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_INIT_INTERVAL, "-1");
         ConnectionParam.getParam(properties);
     }
@@ -166,8 +167,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testInvalidHealthCheckMaxIntervalLessThanInit() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_INIT_INTERVAL, "10");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_MAX_INTERVAL, "5");
         ConnectionParam.getParam(properties);
@@ -176,8 +177,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testInvalidHealthCheckMaxIntervalZero() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_MAX_INTERVAL, "0");
         ConnectionParam.getParam(properties);
     }
@@ -185,8 +186,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testInvalidHealthCheckMaxIntervalNegative() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_MAX_INTERVAL, "-10");
         ConnectionParam.getParam(properties);
     }
@@ -194,8 +195,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testInvalidHealthCheckConTimeoutZero() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_CON_TIMEOUT, "0");
         ConnectionParam.getParam(properties);
     }
@@ -203,8 +204,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testInvalidHealthCheckConTimeoutNegative() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_CON_TIMEOUT, "-2");
         ConnectionParam.getParam(properties);
     }
@@ -212,8 +213,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testInvalidHealthCheckCmdTimeoutZero() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_CMD_TIMEOUT, "0");
         ConnectionParam.getParam(properties);
     }
@@ -221,8 +222,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testInvalidHealthCheckCmdTimeoutNegative() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_CMD_TIMEOUT, "-3");
         ConnectionParam.getParam(properties);
     }
@@ -230,8 +231,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testInvalidHealthCheckRecoveryCountZero() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_RECOVERY_COUNT, "0");
         ConnectionParam.getParam(properties);
     }
@@ -239,8 +240,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testInvalidHealthCheckRecoveryCountNegative() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_RECOVERY_COUNT, "-4");
         ConnectionParam.getParam(properties);
     }
@@ -248,8 +249,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testInvalidHealthCheckRecoveryIntervalNegative() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_RECOVERY_INTERVAL, "-10");
         ConnectionParam.getParam(properties);
     }
@@ -258,8 +259,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testInvalidRebalanceThresholdLessThan10() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_REBALANCE_THRESHOLD, "9");
         ConnectionParam.getParam(properties);
     }
@@ -267,8 +268,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testInvalidRebalanceThresholdGreaterThan50() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_REBALANCE_THRESHOLD, "55");
         ConnectionParam.getParam(properties);
     }
@@ -276,8 +277,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testInvalidRebalanceThresholdNegative() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_REBALANCE_THRESHOLD, "-20");
         ConnectionParam.getParam(properties);
     }
@@ -285,8 +286,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testInvalidRebalanceConBaseCountZero() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_REBALANCE_CON_BASE_COUNT, "0");
         ConnectionParam.getParam(properties);
     }
@@ -294,20 +295,18 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testInvalidRebalanceConBaseCountNegative() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_REBALANCE_CON_BASE_COUNT, "-15");
         ConnectionParam.getParam(properties);
     }
-
-
 
     // Test invalid connectMode values (negative or greater than 1)
     @Test(expected = SQLException.class)
     public void testInvalidConnectModeNegative() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_CONNECT_MODE, "-1");
         ConnectionParam.getParam(properties);
     }
@@ -315,8 +314,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testInvalidConnectModeGreaterThan1() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_CONNECT_MODE, "2");
         ConnectionParam.getParam(properties);
     }
@@ -325,8 +324,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testInvalidSlaveClusterPortZero() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_PORT, "0");
         ConnectionParam.getParam(properties);
     }
@@ -334,8 +333,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testInvalidSlaveClusterPortNegative() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_PORT, "-6041");
         ConnectionParam.getParam(properties);
     }
@@ -344,8 +343,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testSlaveClusterHostWithMultipleEndpoints() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENDPOINTS, "host1:6041,host2:6041");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_HOST, "slaveHost");
         ConnectionParam.getParam(properties);
@@ -355,8 +354,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testInvalidReconnectIntervalMsNegative() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_INTERVAL_MS, "-1000");
         ConnectionParam.getParam(properties);
     }
@@ -365,8 +364,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testInvalidReconnectRetryCountNegative() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_RETRY_COUNT, "-5");
         ConnectionParam.getParam(properties);
     }
@@ -375,8 +374,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testInvalidAppNameTooLong() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_APP_NAME, "123456789012345678901234"); // 24 chars
         ConnectionParam.getParam(properties);
     }
@@ -385,8 +384,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testInvalidAppIpFormat() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_APP_IP, "256.0.0.1"); // Invalid IP
         ConnectionParam.getParam(properties);
     }
@@ -395,8 +394,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testInvalidBatchSizeByRowNegative() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_SIZE_BY_ROW, "-100");
         ConnectionParam.getParam(properties);
     }
@@ -405,8 +404,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testInvalidCacheSizeByRowNegative() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_CACHE_SIZE_BY_ROW, "-1000");
         ConnectionParam.getParam(properties);
     }
@@ -415,8 +414,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testBatchSizeGreaterThanCacheSize() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_SIZE_BY_ROW, "2000");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_CACHE_SIZE_BY_ROW, "1000");
         ConnectionParam.getParam(properties);
@@ -426,8 +425,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testCacheSizeNotMultipleOfBatchSize() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_SIZE_BY_ROW, "300");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_CACHE_SIZE_BY_ROW, "1000"); // 1000 % 300 != 0
         ConnectionParam.getParam(properties);
@@ -437,8 +436,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testInvalidBackendWriteThreadNumNegative() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BACKEND_WRITE_THREAD_NUM, "-5");
         ConnectionParam.getParam(properties);
     }
@@ -447,8 +446,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testInvalidRetryTimesNegative() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RETRY_TIMES, "-3");
         ConnectionParam.getParam(properties);
     }
@@ -457,8 +456,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testInvalidAsyncWriteValue() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ASYNC_WRITE, "INVALID");
         ConnectionParam.getParam(properties);
     }
@@ -467,8 +466,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testInvalidPbsModeValue() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_PBS_MODE, "INVALID");
         ConnectionParam.getParam(properties);
     }
@@ -477,8 +476,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testInvalidWsKeepAliveZero() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_WS_KEEP_ALIVE_SECONDS, "0");
         ConnectionParam.getParam(properties);
     }
@@ -486,8 +485,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testInvalidWsKeepAliveNegative() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_WS_KEEP_ALIVE_SECONDS, "-300");
         ConnectionParam.getParam(properties);
     }
@@ -496,7 +495,7 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testUserAndCloudTokenBothNull() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         ConnectionParam.getParam(properties);
     }
 
@@ -504,7 +503,7 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testPasswordAndCloudTokenBothNull() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
         ConnectionParam.getParam(properties);
     }
 
@@ -512,8 +511,8 @@ public class ConnectionParamTest {
     @Test
     public void testParamWsTimeZoneWithPlus() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC+8");
         ConnectionParam param = ConnectionParam.getParamWs(properties);
         assertEquals("", param.getTz());
@@ -523,8 +522,8 @@ public class ConnectionParamTest {
     @Test
     public void testParamWsTimeZoneWithMinus() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
         ConnectionParam param = ConnectionParam.getParamWs(properties);
         assertEquals("", param.getTz());
@@ -534,8 +533,8 @@ public class ConnectionParamTest {
     @Test
     public void testParamWsTimeZoneWithoutSlash() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC");
         ConnectionParam param = ConnectionParam.getParamWs(properties);
         assertEquals("", param.getTz());
@@ -545,8 +544,8 @@ public class ConnectionParamTest {
     @Test(expected = SQLException.class)
     public void testParamWsInvalidTimeZone() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "Invalid/TimeZone");
         ConnectionParam.getParamWs(properties);
     }
@@ -672,15 +671,15 @@ public class ConnectionParamTest {
     @Test
     public void testValidRebalanceThresholdBoundary() throws SQLException {
         Properties properties1 = new Properties();
-        properties1.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties1.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties1.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties1.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties1.setProperty(TSDBDriver.PROPERTY_KEY_REBALANCE_THRESHOLD, "10");
         ConnectionParam param1 = ConnectionParam.getParam(properties1);
         assertEquals(10, param1.getRebalanceThreshold());
 
         Properties properties2 = new Properties();
-        properties2.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties2.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties2.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties2.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties2.setProperty(TSDBDriver.PROPERTY_KEY_REBALANCE_THRESHOLD, "50");
         ConnectionParam param2 = ConnectionParam.getParam(properties2);
         assertEquals(50, param2.getRebalanceThreshold());
@@ -698,8 +697,8 @@ public class ConnectionParamTest {
     @Test
     public void testHealthCheckInitEqualsMaxInterval() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_INIT_INTERVAL, "30");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_MAX_INTERVAL, "30");
         ConnectionParam param = ConnectionParam.getParam(properties);
@@ -711,8 +710,8 @@ public class ConnectionParamTest {
     @Test
     public void testDefaultParameterValues() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         ConnectionParam param = ConnectionParam.getParam(properties);
 
         assertEquals(false, param.isVarcharAsString());

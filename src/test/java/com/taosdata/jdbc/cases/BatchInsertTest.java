@@ -2,6 +2,7 @@ package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -18,7 +19,7 @@ import static org.junit.Assert.assertEquals;
 
 public class BatchInsertTest {
 
-    static final String HOST = "127.0.0.1";
+    static final String HOST = TestEnvUtil.getHost();
     static final String DB_NAME = TestUtils.camelToSnake(BatchInsertTest.class);
     static final String STB_NAME = "meters";
     static final int NUM_OF_TABLES = 30;
@@ -31,8 +32,8 @@ public class BatchInsertTest {
     public void before() {
         try {
             Properties properties = new Properties();
-            properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-            properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+            properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+            properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
             properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
             properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "en_US.UTF-8");
             properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
@@ -124,3 +125,4 @@ public class BatchInsertTest {
     }
 
 }
+

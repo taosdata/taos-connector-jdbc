@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
@@ -9,15 +10,15 @@ import java.util.stream.IntStream;
 
 public class BatchErrorIgnoreTest {
 
-    private static final String HOST = "127.0.0.1";
-    private static final String DB_NAME = TestUtils.camelToSnake(BatchErrorIgnoreTest.class);
+                    static final String HOST = TestEnvUtil.getHost();
+                    private static final String DB_NAME = TestUtils.camelToSnake(BatchErrorIgnoreTest.class);
 
     @Test
     public void batchErrorThrowException() throws SQLException {
         // given
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Connection conn = DriverManager.getConnection(url);
 
@@ -58,7 +59,7 @@ public class BatchErrorIgnoreTest {
         // given
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata&batchErrorIgnore=true";
+            url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchErrorIgnore=true";
         } else {
             url += "&batchErrorIgnore=true";
         }
@@ -108,10 +109,10 @@ public class BatchErrorIgnoreTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         try (Connection conn = DriverManager.getConnection(url);
-             Statement stmt = conn.createStatement()) {
+                Statement stmt = conn.createStatement()) {
 
             stmt.execute("use " + DB_NAME);
             stmt.execute("drop table if exists weather");
@@ -130,10 +131,10 @@ public class BatchErrorIgnoreTest {
     public static void beforeClass() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         try (Connection conn = DriverManager.getConnection(url);
-             Statement stmt = conn.createStatement()) {
+                Statement stmt = conn.createStatement()) {
 
             stmt.execute("drop database if exists " + DB_NAME);
             stmt.execute("create database if not exists " + DB_NAME);
@@ -144,12 +145,13 @@ public class BatchErrorIgnoreTest {
     public static void afterClass() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         try (Connection conn = DriverManager.getConnection(url);
-             Statement stmt = conn.createStatement()) {
+                Statement stmt = conn.createStatement()) {
 
             stmt.execute("drop database if exists " + DB_NAME);
         }
     }
 }
+

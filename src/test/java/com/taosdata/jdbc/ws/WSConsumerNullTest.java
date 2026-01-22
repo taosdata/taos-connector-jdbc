@@ -3,6 +3,7 @@ package com.taosdata.jdbc.ws;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -19,7 +20,7 @@ import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
 public class WSConsumerNullTest {
-    private static final String HOST = "127.0.0.1";
+    private static final String HOST = TestEnvUtil.getHost();
     private static final String DB_NAME = TestUtils.camelToSnake(WSConsumerNullTest.class);
     private static final String SUPER_TABLE = "tmq_type";
     private static Connection connection;
@@ -64,12 +65,11 @@ public class WSConsumerNullTest {
         }
     }
 
-
     @BeforeClass
     public static void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
@@ -104,3 +104,4 @@ public class WSConsumerNullTest {
         }
     }
 }
+

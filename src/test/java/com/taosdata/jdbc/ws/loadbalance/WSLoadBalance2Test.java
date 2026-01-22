@@ -4,6 +4,7 @@ import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.ws.TaosAdapterMock;
 import org.junit.*;
 import org.junit.runner.RunWith;
@@ -13,11 +14,9 @@ import java.net.URISyntaxException;
 import java.sql.*;
 import java.util.Properties;
 
-
 @RunWith(CatalogRunner.class)
 @FixMethodOrder
 public class WSLoadBalance2Test {
-    private static final String HOST = "127.0.0.1";
 
 
     @Description("query")
@@ -34,11 +33,11 @@ public class WSLoadBalance2Test {
         Properties properties = new Properties();
         String url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + HOST + ":" + mockB.getListenPort() + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + TestEnvUtil.getHost() + ":" + mockB.getListenPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         } else {
-            url += "?user=root&password=taosdata";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_HOST, HOST);
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_HOST, TestEnvUtil.getHost());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_PORT, String.valueOf(mockC.getListenPort()));
 
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
@@ -46,8 +45,8 @@ public class WSLoadBalance2Test {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_RETRY_COUNT, "3");
 
         try (Connection connection = DriverManager.getConnection(url, properties);
-             Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery("select 1;")) {
+                Statement statement = connection.createStatement();
+                ResultSet resultSet = statement.executeQuery("select 1;")) {
             resultSet.next();
             System.out.println(resultSet.getLong(1));
         }
@@ -65,9 +64,9 @@ public class WSLoadBalance2Test {
         Properties properties = new Properties();
         String url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + HOST + ":" + mockB.getListenPort() + "," + HOST + ":" + mockC.getListenPort() + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + TestEnvUtil.getHost() + ":" + mockB.getListenPort() + "," + TestEnvUtil.getHost() + ":" + mockC.getListenPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         } else {
-            url += "?user=root&password=taosdata";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
 
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
@@ -76,14 +75,13 @@ public class WSLoadBalance2Test {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, "5000");
 
         try (Connection connection = DriverManager.getConnection(url, properties);
-             Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery("select 1")) {
+                Statement statement = connection.createStatement();
+                ResultSet resultSet = statement.executeQuery("select 1")) {
 
         }
         mockB.stop();
         mockC.stop();
     }
-
 
     @Description("query")
     @Test(expected = SQLException.class)
@@ -97,12 +95,12 @@ public class WSLoadBalance2Test {
         Properties properties = new Properties();
         String url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + HOST + ":" + mockB.getListenPort() + "," + HOST + ":" + mockC.getListenPort() + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + TestEnvUtil.getHost() + ":" + mockB.getListenPort() + "," + TestEnvUtil.getHost() + ":" + mockC.getListenPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         } else {
-            url += "?user=root&password=taosdata";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
 
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_HOST, HOST);
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_HOST, TestEnvUtil.getHost());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_PORT, String.valueOf(mockC.getListenPort()));
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_INTERVAL_MS, "2000");
@@ -110,8 +108,8 @@ public class WSLoadBalance2Test {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, "5000");
 
         try (Connection connection = DriverManager.getConnection(url, properties);
-             Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery("select 1")) {
+                Statement statement = connection.createStatement();
+                ResultSet resultSet = statement.executeQuery("select 1")) {
 
         }
         mockB.stop();

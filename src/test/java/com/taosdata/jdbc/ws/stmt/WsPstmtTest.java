@@ -2,6 +2,7 @@ package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.common.TDBlob;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.TSWSPreparedStatement;
 import io.netty.util.ResourceLeakDetector;
@@ -20,8 +21,7 @@ import java.util.Properties;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class WsPstmtTest {
-    final String host = "127.0.0.1";
-    final String db_name = TestUtils.camelToSnake(WsPstmtTest.class);
+            final String db_name = TestUtils.camelToSnake(WsPstmtTest.class);
     final String tableName = "wpt";
     String superTable = "wpt_st";
     Connection connection;
@@ -97,7 +97,7 @@ public class WsPstmtTest {
         String sql = "select * from " + db_name + "." + tableName + " limit 1";
         try (PreparedStatement statement = connection.prepareStatement(sql);
         ResultSet resultSet = statement.executeQuery()){
-           Assert.assertTrue(resultSet.next());
+            Assert.assertTrue(resultSet.next());
         }
     }
 
@@ -228,7 +228,6 @@ public class WsPstmtTest {
         pstmt.setAsciiStream(1, null, 0);
     }
 
-
     @Test (expected = SQLException.class)
     public void test109_SetBinaryStream() throws SQLException {
         pstmt.setBinaryStream(1, null, 0);
@@ -277,9 +276,9 @@ public class WsPstmtTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata&batchfetch=true";
+            url = "jdbc:TAOS-RS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
         } else {
-            url += "?user=root&password=taosdata&batchfetch=true";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
         }
         Properties properties = new Properties();
         connection = DriverManager.getConnection(url, properties);

@@ -6,6 +6,7 @@ import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.StringUtils;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
@@ -17,14 +18,14 @@ import java.sql.*;
 import java.util.Properties;
 
 /**
- * You need to start taosadapter before testing this method
- */
+    * You need to start taosadapter before testing this method
+    */
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "test connection with server", author = "huolibo", version = "2.0.37")
 public class WSConnectionTest {
 
-    private static String host = "localhost";
-    private static String port = "6041";
+    private static String host = TestEnvUtil.getHost();
+    private static String port = String.valueOf(TestEnvUtil.getWsPort());
     private Connection connection;
     private final String dbName = "information_schema";
 
@@ -32,7 +33,7 @@ public class WSConnectionTest {
     @Ignore
     @Description("normal test with websocket server")
     public void normalConnection() throws SQLException {
-        String url = "jdbc:TAOS-RS://" + host + ":" + port + "/" + dbName + "?user=root&password=taosdata";
+        String url = "jdbc:TAOS-RS://" + host + ":" + port + "/" + dbName + "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
         connection = DriverManager.getConnection(url, properties);
@@ -41,7 +42,7 @@ public class WSConnectionTest {
     @Test
     @Description("url has no db")
     public void withoutDBConnection() throws SQLException {
-        String url = "jdbc:TAOS-RS://" + host + ":" + port + "/?user=root&password=taosdata";
+        String url = "jdbc:TAOS-RS://" + host + ":" + port + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
         connection = DriverManager.getConnection(url, properties);
@@ -52,8 +53,8 @@ public class WSConnectionTest {
     public void propertyUserPassConnection() throws SQLException {
         String url = "jdbc:TAOS-RS://" + host + ":" + port + "/";
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
         connection = DriverManager.getConnection(url, properties);
     }
@@ -61,7 +62,7 @@ public class WSConnectionTest {
     @Test(expected = SQLException.class)
     @Description("wrong password or user")
     public void wrongUserOrPasswordConnection() throws SQLException {
-        String url = "jdbc:TAOS-RS://" + host + ":" + port + "/log?user=abc&password=taosdata";
+        String url = "jdbc:TAOS-RS://" + host + ":" + port + "/log?user=abc&password=" + TestEnvUtil.getPassword();
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
         connection = DriverManager.getConnection(url, properties);
@@ -69,7 +70,7 @@ public class WSConnectionTest {
 
     @Test
     public void isValid() throws SQLException, IOException {
-        String url = "jdbc:TAOS-WS://" + host + ":" + port + "/?user=root&password=taosdata";
+        String url = "jdbc:TAOS-WS://" + host + ":" + port + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         connection = DriverManager.getConnection(url);
 
         Assert.assertTrue(connection.isValid(10));
@@ -78,14 +79,14 @@ public class WSConnectionTest {
 
     @Test(expected = SQLException.class)
     public void isValidException() throws SQLException {
-        String url = "jdbc:TAOS-WS://" + host + ":" + port + "/?user=root&password=taosdata";
+        String url = "jdbc:TAOS-WS://" + host + ":" + port + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         connection = DriverManager.getConnection(url);
         connection.isValid(-1);
     }
     @Test
     public void testRetainHostPortPart() {
         // Test case 1: Full URL with multiple hosts, database and parameters
-        String url1 = "jdbc:TAOS://host1:6030,host2:6030/mydb?user=root&password=taosdata";
+        String url1 = "jdbc:TAOS://host1:6030,host2:6030/mydb?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         Assert.assertEquals("jdbc:TAOS://host1:6030,host2:6030",
                 StringUtils.retainHostPortPart(url1));
 
@@ -123,7 +124,7 @@ public class WSConnectionTest {
     @Test
     @Description("sleep keep connection")
     public void keepConnection() throws SQLException, InterruptedException {
-        String url = "jdbc:TAOS-RS://" + host + ":" + port + "/?user=root&password=taosdata";
+        String url = "jdbc:TAOS-RS://" + host + ":" + port + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
         connection = DriverManager.getConnection(url, properties);
@@ -147,3 +148,4 @@ public class WSConnectionTest {
         }
     }
 }
+

@@ -4,6 +4,7 @@ import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 import org.junit.runner.RunWith;
@@ -14,16 +15,17 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Most of the functionality is consistent with {@link com.taosdata.jdbc.JsonTagTest},
- * Except for batchInsert, which is not supported by restful API.
- * Restful could not distinguish between empty and nonexistent of json value, the result is always null.
- * The order of json results may change due to serialization and deserialization
- */
+    * Most of the functionality is consistent with {@link com.taosdata.jdbc.JsonTagTest},
+    * Except for batchInsert, which is not supported by restful API.
+    * Restful could not distinguish between empty and nonexistent of json value, the result is always null.
+    * The order of json results may change due to serialization and deserialization
+    */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "JsonTag", author = "huolibo", version = "2.0.37")
 public class RestfulJsonTagTest {
-    private static final String HOST = "127.0.0.1";
+
+    static final String HOST = TestEnvUtil.getHost();
     private static final String DB_NAME = TestUtils.camelToSnake(RestfulJsonTagTest.class);
     private static Connection connection;
     private static Statement statement;
@@ -1117,7 +1119,7 @@ public class RestfulJsonTagTest {
     public static void beforeClass() {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         try {
             connection = DriverManager.getConnection(url);
@@ -1147,3 +1149,4 @@ public class RestfulJsonTagTest {
 
     }
 }
+

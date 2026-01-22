@@ -43,7 +43,6 @@ public class TMQRequestFactoryTest {
         properties.setProperty(TMQConstants.CLIENT_ID, "cId");
         properties.setProperty(TMQConstants.AUTO_OFFSET_RESET, "offset");
 
-
         ConsumerParam param = new ConsumerParam(properties);
 
         String[] topics = {"topic_1", "topic_2"};

@@ -3,6 +3,7 @@ package com.taosdata.jdbc.ws;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.entity.ConCheckInfo;
 import com.taosdata.jdbc.ws.loadbalance.RebalanceManager;
@@ -27,9 +28,9 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 
 /**
- * JUnit4 Test class to verify the lock granularity optimization of the isValid method.
- * Focuses on concurrent behavior for same/different jdbcUrls with private jdbcUrl field handling.
- */
+    * JUnit4 Test class to verify the lock granularity optimization of the isValid method.
+    * Focuses on concurrent behavior for same/different jdbcUrls with private jdbcUrl field handling.
+    */
 public class WSConnectionValidationTest {private static volatile int queryExecutionCount = 0;
     private static final String DB_NAME_1 = TestUtils.camelToSnake(WSConsumerAutoCommitTest.class) + "1";
     private static final String DB_NAME_2 = TestUtils.camelToSnake(WSConsumerAutoCommitTest.class) + "2";
@@ -203,7 +204,7 @@ public class WSConnectionValidationTest {private static volatile int queryExecut
         mockB.start();
 
         Properties properties = new Properties();
-        String url =  "jdbc:TAOS-WS://localhost:" + mockB.getListenPort() + "/?user=root&password=taosdata";
+        String url =  "jdbc:TAOS-WS://localhost:" + mockB.getListenPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
 
         try (Connection connection = DriverManager.getConnection(url, properties)) {
             mockB.stop();
@@ -220,7 +221,7 @@ public class WSConnectionValidationTest {private static volatile int queryExecut
 
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
-        String url =  "jdbc:TAOS-WS://localhost:" + mockB.getListenPort() + ",localhost:6041/?user=root&password=taosdata";
+        String url =  "jdbc:TAOS-WS://localhost:" + mockB.getListenPort() + ",localhost:6041/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
 
         try (Connection connection = DriverManager.getConnection(url, properties)) {
             assertTrue(connection.isValid(10));
@@ -231,11 +232,11 @@ public class WSConnectionValidationTest {private static volatile int queryExecut
     }
     @Test
     public void testCacheSize() throws Exception {
-        String url1 =  "jdbc:TAOS-WS://localhost:6041/" + DB_NAME_1 +"?user=root&password=taosdata";
+        String url1 =  "jdbc:TAOS-WS://localhost:6041/" + DB_NAME_1 + "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         try (Connection connection = DriverManager.getConnection(url1)){
             connection.isValid(10);
         }
-        String url2 =  "jdbc:TAOS-WS://localhost:6041/" + DB_NAME_2 +"?user=root&password=taosdata";
+        String url2 =  "jdbc:TAOS-WS://localhost:6041/" + DB_NAME_2 + "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         try (Connection connection = DriverManager.getConnection(url2)){
             connection.isValid(10);
         }
@@ -245,13 +246,13 @@ public class WSConnectionValidationTest {private static volatile int queryExecut
     }
     @Test
     public void testCacheSize2() throws Exception {
-        String url1 =  "jdbc:TAOS-WS://localhost:6041/" + DB_NAME_1 +"?user=root&password=taosdata";
+        String url1 =  "jdbc:TAOS-WS://localhost:6041/" + DB_NAME_1 + "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         try (Connection connection = DriverManager.getConnection(url1)){
             connection.isValid(10);
         }
         TaosAdapterMock mockB = new TaosAdapterMock();
         mockB.start();
-        String url2 =  "jdbc:TAOS-WS://localhost:" + mockB.getListenPort() + "/" + DB_NAME_2 +"?user=root&password=taosdata";
+        String url2 =  "jdbc:TAOS-WS://localhost:" + mockB.getListenPort() + "/" + DB_NAME_2 +"?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         try (Connection connection = DriverManager.getConnection(url2)){
             connection.isValid(10);
         }
@@ -266,7 +267,7 @@ public class WSConnectionValidationTest {private static volatile int queryExecut
     public void testConnectionLoss() throws Exception {
         TaosAdapterMock mockB = new TaosAdapterMock();
         mockB.start();
-        String url2 =  "jdbc:TAOS-WS://localhost:" + mockB.getListenPort() + "/" + DB_NAME_2 +"?user=root&password=taosdata";
+        String url2 =  "jdbc:TAOS-WS://localhost:" + mockB.getListenPort() + "/" + DB_NAME_2 +"?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         try (Connection connection = DriverManager.getConnection(url2)){
             connection.isValid(10);
             mockB.stop();
@@ -274,7 +275,6 @@ public class WSConnectionValidationTest {private static volatile int queryExecut
             Assert.assertFalse(connection.isValid(10));
         }
     }
-
 
     private Object getPrivateField(Object target, Class<?> originalClass, String fieldName) throws Exception {
         Field field = findFieldInClassHierarchy(originalClass, fieldName);
@@ -327,8 +327,8 @@ public class WSConnectionValidationTest {private static volatile int queryExecut
         return (T) field.get(null);
     }
     /**
-     * Invoke private method via reflection
-     */
+        * Invoke private method via reflection
+        */
     private Object invokePrivateMethod(Object target, Class<?> originalClass, String methodName, Class<?>[] paramTypes, Object... params) throws Exception {
         Method method = findMethodInClassHierarchy(originalClass, methodName, paramTypes);
         method.setAccessible(true);
@@ -352,7 +352,7 @@ public class WSConnectionValidationTest {private static volatile int queryExecut
         System.setProperty("ENV_TAOS_JDBC_TEST", "test");
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS://localhost:6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://localhost:6030/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
@@ -379,4 +379,5 @@ public class WSConnectionValidationTest {private static volatile int queryExecut
     }
 
 }
+
 

@@ -3,6 +3,7 @@ package com.taosdata.jdbc.ws;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -24,8 +25,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ConsumerCommittedTest {
-    private static final String HOST = "127.0.0.1";
-    private static final String DB_NAME = TestUtils.camelToSnake(ConsumerCommittedTest.class);
+
+        static final String HOST = TestEnvUtil.getHost();
+        private static final String DB_NAME = TestUtils.camelToSnake(ConsumerCommittedTest.class);
     private static final String SUPER_TABLE = "st";
     private static Connection connection;
     private static Statement statement;
@@ -84,7 +86,6 @@ public class ConsumerCommittedTest {
         }
     }
 
-
     @Test
     public void testWS() throws Exception {
         TimeUnit.MILLISECONDS.sleep(1000);
@@ -142,7 +143,7 @@ public class ConsumerCommittedTest {
     public static void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
@@ -203,3 +204,4 @@ public class ConsumerCommittedTest {
         }
     }
 }
+

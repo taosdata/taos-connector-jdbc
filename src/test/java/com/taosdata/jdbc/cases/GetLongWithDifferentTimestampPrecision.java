@@ -2,6 +2,7 @@ package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -22,7 +23,7 @@ public class GetLongWithDifferentTimestampPrecision {
         if (url == null) {
             url = "jdbc:TAOS-RS://" + host + ":6041/";
         }
-        Connection conn = DriverManager.getConnection(url, "root", "taosdata");
+        Connection conn = DriverManager.getConnection(url, TestEnvUtil.getUser(), TestEnvUtil.getPassword());
         long ts = System.currentTimeMillis();
 
         // when and then
@@ -38,7 +39,7 @@ public class GetLongWithDifferentTimestampPrecision {
         if (url == null) {
             url = "jdbc:TAOS://" + host + ":6030/";
         }
-        Connection conn = DriverManager.getConnection(url, "root", "taosdata");
+        Connection conn = DriverManager.getConnection(url, TestEnvUtil.getUser(), TestEnvUtil.getPassword());
         long ts = System.currentTimeMillis();
 
         // when and then
@@ -66,5 +67,5 @@ public class GetLongWithDifferentTimestampPrecision {
         }
     }
 
-
 }
+

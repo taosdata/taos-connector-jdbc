@@ -6,6 +6,7 @@ import com.google.common.primitives.Shorts;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.TSDBResultSet;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -23,7 +24,7 @@ import java.util.Properties;
 
 public class TSDBBlockResultSetTest {
 
-    private static final String HOST = "127.0.0.1";
+    private static final String HOST = TestEnvUtil.getHost();
     private static Connection conn;
     private static Statement stmt;
     private static ResultSet rs;
@@ -663,7 +664,7 @@ public class TSDBBlockResultSetTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         conn = DriverManager.getConnection(url, properties);
         stmt = conn.createStatement();

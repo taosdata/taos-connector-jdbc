@@ -3,6 +3,7 @@ package com.taosdata.jdbc.rs;
 import com.taosdata.jdbc.AbstractDatabaseMetaData;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -14,10 +15,11 @@ import java.util.Properties;
 
 public class RestfulDatabaseMetaDataTest {
 
-    private static final String HOST = "127.0.0.1";
     private static String url;
     private static Connection connection;
     private static RestfulDatabaseMetaData metaData;
+
+    static final String HOST = TestEnvUtil.getHost();
     private static final String DB_NAME = TestUtils.camelToSnake(RestfulDatabaseMetaDataTest.class);
 
     @Test
@@ -82,10 +84,10 @@ public class RestfulDatabaseMetaDataTest {
     }
 
     /**
-     * don't have other method to obtain server version，so just check patterns
-     *
-     * @throws SQLException
-     */
+        * don't have other method to obtain server version，so just check patterns
+        *
+        * @throws SQLException
+        */
     @Test
     public void getDatabaseProductVersion() throws SQLException {
         String version = metaData.getDatabaseProductVersion();
@@ -1074,7 +1076,7 @@ public class RestfulDatabaseMetaDataTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
         url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         connection = DriverManager.getConnection(url, properties);
         Statement stmt = connection.createStatement();

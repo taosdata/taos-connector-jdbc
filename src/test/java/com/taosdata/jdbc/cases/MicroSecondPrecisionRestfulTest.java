@@ -1,8 +1,8 @@
 package com.taosdata.jdbc.cases;
 
-
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -13,8 +13,8 @@ import java.util.Properties;
 
 public class MicroSecondPrecisionRestfulTest {
 
-    private static final String HOST = "127.0.0.1";
-    private static final String MS_TIMESTAMP_DB = "ms_precision_test1";
+                    static final String HOST = TestEnvUtil.getHost();
+                    private static final String MS_TIMESTAMP_DB = "ms_precision_test1";
     private static final String US_TIMESTAMP_DB = "us_precision_test1";
     private static final long TIMESTAMP_1 = System.currentTimeMillis();
     private static final long TIMESTAMP_2 = TIMESTAMP_1 * 1000 + 123;
@@ -121,7 +121,7 @@ public class MicroSecondPrecisionRestfulTest {
 
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         conn1 = DriverManager.getConnection(url, properties);
 
@@ -163,3 +163,4 @@ public class MicroSecondPrecisionRestfulTest {
         }
     }
 }
+

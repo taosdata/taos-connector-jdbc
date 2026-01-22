@@ -3,6 +3,7 @@ package com.taosdata.jdbc.ws;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -18,8 +19,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class WSConsumer336Test {
-    private static final String HOST = "localhost";
-    private static final String DB_NAME = TestUtils.camelToSnake(WSConsumer336Test.class);
+
+        static final String HOST = TestEnvUtil.getHost();
+        private static final String DB_NAME = TestUtils.camelToSnake(WSConsumer336Test.class);
     private static final String SUPER_TABLE = "st";
     private static Connection connection;
     private static Statement statement;
@@ -58,7 +60,6 @@ public class WSConsumer336Test {
         properties.setProperty(TMQConstants.CONNECT_TYPE, "ws");
         properties.setProperty("fetch.max.wait.ms", "5000");
         properties.setProperty("min.poll.rows", "1000");
-
 
         try (TaosConsumer<Map<String, Object>> consumer = new TaosConsumer<>(properties)) {
             consumer.subscribe(Collections.singletonList(topic));
@@ -128,13 +129,12 @@ public class WSConsumer336Test {
         scheduledExecutorService.shutdown();
     }
 
-
     @BeforeClass
     public static void before() throws SQLException {
         TestUtils.runIn336();
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
@@ -149,7 +149,6 @@ public class WSConsumer336Test {
         statement.execute("use " + DB_NAME);
         statement.execute("create stable if not exists " + SUPER_TABLE
                 + " (ts timestamp, c1 int, c2 float, c3 nchar(10), c4 binary(10), c5 bool) tags(t1 int)");
-
 
         statement.execute("create table if not exists ct0 using " + SUPER_TABLE + " tags(1000)");
         statement.execute("create table if not exists ct1 using " + SUPER_TABLE + " tags(2000)");
@@ -174,3 +173,4 @@ public class WSConsumer336Test {
         }
     }
 }
+

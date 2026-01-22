@@ -5,6 +5,7 @@ import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.TaosAdapterMock;
 import org.junit.*;
@@ -24,7 +25,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 @RunWith(CatalogRunner.class)
 @FixMethodOrder
 public class WSMasterSlaveTest {
-    private static final String HOST = "localhost";
     private static final String HOST_B = "vm95";
     private static final int PORT_B = 6041;
     private static final String DB_NAME = TestUtils.camelToSnake(WSMasterSlaveTest.class);
@@ -89,7 +89,6 @@ public class WSMasterSlaveTest {
         // create topic
         statement.executeUpdate("create topic if not exists " + topic + " as select ts, c1, c2, c3, c4, c5, t1 from ct0");
 
-
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.CONNECT_USER, "root");
         properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
@@ -122,14 +121,12 @@ public class WSMasterSlaveTest {
         scheduledExecutorService.shutdown();
     }
 
-
-
     @BeforeClass
     public static void before() throws SQLException {
         System.setProperty("ENV_TAOS_JDBC_NO_HEALTH_CHECK", "TRUE");
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         connection = DriverManager.getConnection(url);
         statement = connection.createStatement();
@@ -141,7 +138,6 @@ public class WSMasterSlaveTest {
         statement.execute("use " + DB_NAME);
         statement.execute("create stable if not exists " + SUPER_TABLE
                 + " (ts timestamp, c1 int, c2 float, c3 nchar(10), c4 binary(10), c5 bool) tags(t1 int)");
-
 
         statement.execute("create table if not exists ct0 using " + SUPER_TABLE + " tags(1000)");
         statement.execute("create table if not exists ct1 using " + SUPER_TABLE + " tags(2000)");
@@ -169,3 +165,4 @@ public class WSMasterSlaveTest {
         RebalanceManager.getInstance().clearAllForTest();
     }
 }
+

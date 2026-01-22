@@ -2,6 +2,7 @@ package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.StringUtils;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
@@ -9,7 +10,7 @@ import java.sql.*;
 import java.util.Properties;
 
 public class BlobTest {
-    static final String HOST = "127.0.0.1";
+    static final String HOST = TestEnvUtil.getHost();
     static final String DB_NAME = TestUtils.camelToSnake(BlobTest.class);
     static final String TABLE_NATIVE = "blob_noraml";
     static Connection connection;
@@ -44,7 +45,7 @@ public class BlobTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
@@ -72,3 +73,4 @@ public class BlobTest {
         }
     }
 }
+

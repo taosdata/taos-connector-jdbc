@@ -4,6 +4,7 @@ import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TimestampUtil;
 import org.junit.After;
 import org.junit.Assert;
@@ -18,8 +19,7 @@ import java.sql.*;
 @Ignore // TODO 3.0 timestamp
 public class DatetimeBefore1970Test {
 
-    private static final String HOST = "127.0.0.1";
-    private Connection conn;
+                    private Connection conn;
 
     @Test
     @Description("millisecond")
@@ -235,7 +235,7 @@ public class DatetimeBefore1970Test {
     private Connection createEnvironment(String precision) throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata&timezone=UTC";
+            url = "jdbc:TAOS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&timezone=UTC";
         } else {
             url += "&timezone=UTC";
         }
@@ -267,3 +267,4 @@ public class DatetimeBefore1970Test {
         }
     }
 }
+

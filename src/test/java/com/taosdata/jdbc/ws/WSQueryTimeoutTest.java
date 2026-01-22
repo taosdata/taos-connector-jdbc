@@ -5,6 +5,7 @@ import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.ws.loadbalance.RebalanceManager;
 import org.junit.Assert;
 import org.junit.FixMethodOrder;
@@ -17,13 +18,11 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.Properties;
 
-
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "websocket master slave test", author = "yjshe", version = "3.2.11")
 @FixMethodOrder
 public class WSQueryTimeoutTest {
-    private static final String HOST = "127.0.0.1";
-    @Description("query")
+        @Description("query")
     @Test
     public void queryTimeoutTest() throws Exception  {
         TaosAdapterMock mockA = new TaosAdapterMock();
@@ -33,9 +32,9 @@ public class WSQueryTimeoutTest {
         Properties properties = new Properties();
         String url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + HOST + ":" + mockA.getListenPort() + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + TestEnvUtil.getHost() + ":" + mockA.getListenPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         } else {
-            url += "?user=root&password=taosdata";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
 
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
@@ -45,8 +44,8 @@ public class WSQueryTimeoutTest {
 
         boolean haveRecords = false;
         try (Connection connection = DriverManager.getConnection(url, properties);
-             Statement statement1 = connection.createStatement();
-             Statement statement2 = connection.createStatement()) {
+                Statement statement1 = connection.createStatement();
+                Statement statement2 = connection.createStatement()) {
             statement1.setQueryTimeout(1);
             ResultSet resultSet1 = statement1.executeQuery("show databases;");
             while (resultSet1.next()) {

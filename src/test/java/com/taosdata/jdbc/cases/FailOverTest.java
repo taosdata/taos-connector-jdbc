@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.cases;
 
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -12,7 +13,7 @@ public class FailOverTest {
     @Test
     public void testFailOver() throws ClassNotFoundException {
         Class.forName("com.taosdata.jdbc.TSDBDriver");
-        final String url = "jdbc:TAOS://:/?user=root&password=taosdata";
+        final String url = "jdbc:TAOS://:/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
 
         long end = System.currentTimeMillis() + 1000 * 60 * 5;
         while (System.currentTimeMillis() < end) {
@@ -36,3 +37,4 @@ public class FailOverTest {
     }
 
 }
+

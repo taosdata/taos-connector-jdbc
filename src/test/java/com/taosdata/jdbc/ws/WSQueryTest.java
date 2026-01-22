@@ -5,6 +5,7 @@ import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import io.netty.util.ResourceLeakDetector;
 import org.junit.*;
@@ -19,9 +20,9 @@ import java.util.stream.IntStream;
 @TestTarget(alias = "websocket query test", author = "huolibo", version = "2.0.38")
 @FixMethodOrder
 public class WSQueryTest {
-    private static final String HOST = "127.0.0.1";
-    private static final int PORT = 6041;
-    private final String db_name = TestUtils.camelToSnake(WSQueryTest.class);
+
+    static final String HOST = TestEnvUtil.getHost();
+            private final String db_name = TestUtils.camelToSnake(WSQueryTest.class);
     private static final String TABLE_NAME = "wq";
     private Connection connection;
 
@@ -51,9 +52,9 @@ public class WSQueryTest {
         System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "80");
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":" + PORT + "/?user=root&password=taosdata&batchfetch=true";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
         } else {
-            url += "?user=root&password=taosdata";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
@@ -90,3 +91,4 @@ public class WSQueryTest {
         System.gc();
     }
 }
+

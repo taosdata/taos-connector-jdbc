@@ -6,6 +6,7 @@ import com.taosdata.jdbc.tmq.ConsumerRecords;
 import com.taosdata.jdbc.tmq.TMQConstants;
 import com.taosdata.jdbc.tmq.TaosConsumer;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.tmq.meta.MetaDeleteData;
 import com.taosdata.jdbc.ws.tmq.meta.MetaType;
@@ -103,7 +104,7 @@ public class WSConsumerMetaDeleteTest {
     public static void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + HOST + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST + ":6041/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
@@ -141,3 +142,4 @@ public class WSConsumerMetaDeleteTest {
         }
     }
 }
+

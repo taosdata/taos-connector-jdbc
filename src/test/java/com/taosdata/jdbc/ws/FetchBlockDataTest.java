@@ -106,7 +106,6 @@ public class FetchBlockDataTest {
         assertEquals("Syntax error", blockData.getErrorMessage());
     }
 
-
     @Test
     public void testErrorResponseWithRetry() throws Exception {
 
@@ -140,7 +139,6 @@ public class FetchBlockDataTest {
         }
         Assert.assertEquals(1, transport.getSendFetchCount());
     }
-
 
     // test completed response
     @Test

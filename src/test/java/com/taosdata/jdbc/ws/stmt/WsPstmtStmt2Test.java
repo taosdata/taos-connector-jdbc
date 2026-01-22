@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.TSWSPreparedStatement;
@@ -12,8 +13,7 @@ import java.util.*;
 
 @FixMethodOrder
 public class WsPstmtStmt2Test {
-    final String host = "localhost";
-    final String db_name = TestUtils.camelToSnake(WsPstmtStmt2Test.class);
+            final String db_name = TestUtils.camelToSnake(WsPstmtStmt2Test.class);
     final String tableName = "wpt";
     String superTable = "wpt_st";
     Connection connection;
@@ -231,7 +231,6 @@ public class WsPstmtStmt2Test {
 //                    pstmt.setInt(6, random.nextInt(300));
 //                    pstmt.setFloat(7, random.nextFloat());
 
-
                     pstmt.setTimestamp(4, new Timestamp(1746870173341L));
                     pstmt.setFloat(5, 1.0f);
                     pstmt.setInt(6, 2);
@@ -248,7 +247,6 @@ public class WsPstmtStmt2Test {
             Assert.assertEquals((1), Utils.getSqlRows(connection, db_name + "." + "`d_bind_中国人1`"));
         }
     }
-
 
     @Test
     public void testStmt2InsertStdApiTableExist() throws SQLException {
@@ -384,9 +382,9 @@ public class WsPstmtStmt2Test {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + host + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         } else {
-            url += "?user=root&password=taosdata&batchfetch=true";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
         }
         Properties properties = new Properties();
         connection = DriverManager.getConnection(url, properties);
@@ -416,3 +414,4 @@ public class WsPstmtStmt2Test {
         System.gc();
     }
 }
+

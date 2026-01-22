@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -85,14 +86,14 @@ public class UseNowInsertTimestampTest {
     public static void beforeClass(){
         url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://127.0.0.1:6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
     }
 
     @AfterClass
     public static void afterClass() {
         try (Connection conn = DriverManager.getConnection(url);
-             Statement stmt = conn.createStatement()) {
+                Statement stmt = conn.createStatement()) {
             stmt.execute("drop database if exists " + DB_NAME);
         } catch (SQLException e) {
             e.printStackTrace();
@@ -100,3 +101,4 @@ public class UseNowInsertTimestampTest {
 
     }
 }
+

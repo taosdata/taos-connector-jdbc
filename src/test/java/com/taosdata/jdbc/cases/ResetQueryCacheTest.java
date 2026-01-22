@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import org.junit.Test;
 
 import java.sql.Connection;
@@ -18,7 +19,7 @@ public class ResetQueryCacheTest {
         // given
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://127.0.0.1:0/?user=root&password=taosdata&timezone=UTC-8&charset=UTF-8&locale=en_US.UTF-8";
+            url = "jdbc:TAOS://" + TestEnvUtil.getHost() + ":0/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&timezone=UTC-8&charset=UTF-8&locale=en_US.UTF-8";
         } else {
             url += "&timezone=UTC-8&charset=UTF-8&locale=en_US.UTF-8";
         }
@@ -41,7 +42,7 @@ public class ResetQueryCacheTest {
         // given
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://127.0.0.1:6041/?user=root&password=taosdata&timezone=UTC-8&charset=UTF-8&locale=en_US.UTF-8";
+            url = "jdbc:TAOS-RS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&timezone=UTC-8&charset=UTF-8&locale=en_US.UTF-8";
         } else {
             url += "&timezone=UTC-8&charset=UTF-8&locale=en_US.UTF-8";
         }

@@ -2,13 +2,13 @@ package com.taosdata.jdbc.rs;
 
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.sql.*;
 
 public class RestfulResponseCodeTest {
-    private static final String HOST = "127.0.0.1";
 
     @Test
     public void cloudTest() {
@@ -20,7 +20,7 @@ public class RestfulResponseCodeTest {
 
         url = url.substring(0, url.length() - 1);
         try (Connection connection = DriverManager.getConnection(url);
-             Statement statement = connection.createStatement()) {
+                Statement statement = connection.createStatement()) {
             statement.executeQuery("select 1");
         } catch (SQLException e) {
             Assert.assertEquals(TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT, e.getErrorCode());
@@ -31,13 +31,14 @@ public class RestfulResponseCodeTest {
     public void taosAdapterTest() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         try (Connection connection = DriverManager.getConnection(url);
-             Statement statement = connection.createStatement()) {
+                Statement statement = connection.createStatement()) {
             ResultSet rs = statement.executeQuery("select 1");
             rs.next();
             Assert.assertEquals(1, rs.getInt(1));
         }
     }
 }
+

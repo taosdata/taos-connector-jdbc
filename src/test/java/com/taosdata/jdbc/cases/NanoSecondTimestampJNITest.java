@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
@@ -10,8 +11,8 @@ import java.util.Random;
 
 public class NanoSecondTimestampJNITest {
 
-    private static final String HOST = "127.0.0.1";
-    private static final String DB_NAME = TestUtils.camelToSnake(NanoSecondTimestampJNITest.class);
+                    static final String HOST = TestEnvUtil.getHost();
+                    private static final String DB_NAME = TestUtils.camelToSnake(NanoSecondTimestampJNITest.class);
     private static final Random random = new Random(System.currentTimeMillis());
     private static Connection conn;
 
@@ -146,7 +147,7 @@ public class NanoSecondTimestampJNITest {
     public static void beforeClass() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         conn = DriverManager.getConnection(url);
         try (Statement stmt = conn.createStatement()) {
@@ -171,3 +172,4 @@ public class NanoSecondTimestampJNITest {
     }
 
 }
+

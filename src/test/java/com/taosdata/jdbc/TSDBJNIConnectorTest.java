@@ -3,6 +3,7 @@ package com.taosdata.jdbc;
 import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -23,7 +24,8 @@ import static org.junit.Assert.assertTrue;
 
 public class TSDBJNIConnectorTest {
 
-    private static String host = "127.0.0.1";
+    private static String host = TestEnvUtil.getHost();
+    private static int port = TestEnvUtil.getJniPort();
     private static TSDBResultSetRowData rowData;
 
     @BeforeClass
@@ -43,7 +45,7 @@ public class TSDBJNIConnectorTest {
 
         // connect
         TSDBJNIConnector connector = new TSDBJNIConnector();
-        connector.connect(host, 6030, null, "root", "taosdata");
+        connector.connect(host, port, null, TestEnvUtil.getUser(), TestEnvUtil.getPassword());
 
         // setup
         String[] setupSqlStrs = {"create database if not exists d precision \"us\"", "create table if not exists d.t(ts timestamp, f int)", "create database if not exists d2", "create table if not exists d2.t2(ts timestamp, f int)", "insert into d.t values(now+100s, 100)", "insert into d2.t2 values(now+200s, 200)"};
@@ -135,7 +137,7 @@ public class TSDBJNIConnectorTest {
     @Test
     public void param_bind_one_batch_multi_table() throws SQLException {
         TSDBJNIConnector connector = new TSDBJNIConnector();
-        connector.connect(host, 6030, null, "root", "taosdata");
+        connector.connect(host, port, null, TestEnvUtil.getUser(), TestEnvUtil.getPassword());
         connector.executeQuery("drop database if exists test");
         connector.executeQuery("create database if not exists test");
         connector.executeQuery("use test");
@@ -166,7 +168,7 @@ public class TSDBJNIConnectorTest {
     @Test
     public void param_bind_multi_batch_multi_table() throws SQLException {
         TSDBJNIConnector connector = new TSDBJNIConnector();
-        connector.connect(host, 6030, null, "root", "taosdata");
+        connector.connect(host, port, null, TestEnvUtil.getUser(), TestEnvUtil.getPassword());
         connector.executeQuery("drop database if exists test");
         connector.executeQuery("create database if not exists test");
         connector.executeQuery("use test");
@@ -206,7 +208,7 @@ public class TSDBJNIConnectorTest {
     @Test
     public void paramBindWithoutTableNameJNI() throws SQLException {
         TSDBJNIConnector connector = new TSDBJNIConnector();
-        connector.connect(host, 6030, null, "root", "taosdata");
+        connector.connect(host, port, null, TestEnvUtil.getUser(), TestEnvUtil.getPassword());
         connector.executeQuery("drop database if exists test");
         connector.executeQuery("create database if not exists test");
         connector.executeQuery("use test");
@@ -233,7 +235,7 @@ public class TSDBJNIConnectorTest {
 
     @Test
     public void paramBindWithoutTableName() throws SQLException {
-        String url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+        String url = "jdbc:TAOS://" + host + ":" + port + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         Connection connection = DriverManager.getConnection(url);
         try (Statement statement = connection.createStatement()) {
             statement.executeUpdate("drop database if exists test");
@@ -278,7 +280,7 @@ public class TSDBJNIConnectorTest {
     @Test
     public void getTableVgID() throws SQLException {
         TSDBJNIConnector conn = new TSDBJNIConnector();
-        conn.connect("localhost", 6030, null, "root", "taosdata");
+        conn.connect("localhost", port, null, TestEnvUtil.getUser(), TestEnvUtil.getPassword());
 
         conn.executeQuery("drop database if exists test_get_table_vgroup_id");
         conn.executeQuery("create database if not exists test_get_table_vgroup_id");
@@ -342,7 +344,6 @@ public class TSDBJNIConnectorTest {
         connector.setBindTableNameAndTags(stmt, tbname, 1, tagDataList, typeList, lengthList, isNullList);
     }
 
-
     @Test
     public void testLoadLibrary() throws SQLException {
         if (System.getProperty("os.name").toLowerCase().contains("linux")) {
@@ -361,3 +362,4 @@ public class TSDBJNIConnectorTest {
 
     }
 }
+

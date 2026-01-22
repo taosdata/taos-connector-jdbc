@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -15,8 +16,9 @@ import java.sql.*;
 import java.util.Properties;
 
 public class DoubleQuoteInSqlTest {
-    private static final String HOST = "127.0.0.1";
-    private static final String DB_NAME = TestUtils.camelToSnake(DoubleQuoteInSqlTest.class);
+
+                    static final String HOST = TestEnvUtil.getHost();
+                    private static final String DB_NAME = TestUtils.camelToSnake(DoubleQuoteInSqlTest.class);
 
     private Connection conn;
 
@@ -48,7 +50,7 @@ public class DoubleQuoteInSqlTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
@@ -78,3 +80,4 @@ public class DoubleQuoteInSqlTest {
     }
 
 }
+

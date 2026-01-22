@@ -6,6 +6,7 @@ import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.common.Endpoint;
 import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.TaosAdapterMock;
 import com.taosdata.jdbc.ws.WSConnection;
@@ -21,12 +22,12 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 
-
 @RunWith(CatalogRunner.class)
 @FixMethodOrder
 public class MinimumConnectionCountTest {
+
+    static final String HOST = TestEnvUtil.getHost();
     private static final Logger log = org.slf4j.LoggerFactory.getLogger(MinimumConnectionCountTest.class);
-    private static final String HOST = "127.0.0.1";
     private static final String DB_NAME = TestUtils.camelToSnake(MinimumConnectionCountTest.class);
     private static final String TABLE_NAME = "meters";
     private static Connection connection;
@@ -36,14 +37,13 @@ public class MinimumConnectionCountTest {
     private static TaosAdapterMock mockC;
     private final RebalanceManager rebalanceManager = RebalanceManager.getInstance();
 
-
     @Description("test connection count")
     @Test
     public void connectionCountTest() throws Exception  {
         Properties properties = new Properties();
         String url = "jdbc:TAOS-WS://" + HOST + ":" + mockA.getListenPort()
                 + "," + HOST + ":" + mockB.getListenPort()
-                + "," + HOST + ":" + mockC.getListenPort() + "/?user=root&password=taosdata";
+                + "," + HOST + ":" + mockC.getListenPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
 
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_INTERVAL_MS, "2000");
@@ -68,7 +68,7 @@ public class MinimumConnectionCountTest {
 
         String url2 = "jdbc:TAOS-WS://"
                 + "," + HOST + ":" + mockA.getListenPort()
-                + "," + HOST + ":" + mockC.getListenPort() + "/?user=root&password=taosdata";
+                + "," + HOST + ":" + mockC.getListenPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
 
         Connection connection4 = DriverManager.getConnection(url2, properties);
         Assert.assertEquals(2, rebalanceManager.getEndpointInfo(param.getEndpoints().get(0)).getConnectCount());
@@ -114,7 +114,7 @@ public class MinimumConnectionCountTest {
         Properties properties = new Properties();
         String url = "jdbc:TAOS-WS://" + HOST + ":" + mockA.getListenPort()
                 + "," + HOST + ":" + mockB.getListenPort()
-                + "," + HOST + ":" + mockC.getListenPort() + "/?user=root&password=taosdata";
+                + "," + HOST + ":" + mockC.getListenPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
 
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_INTERVAL_MS, "2000");
@@ -168,7 +168,7 @@ public class MinimumConnectionCountTest {
         Properties properties = new Properties();
         String url = "jdbc:TAOS-WS://" + HOST + ":" + mockA.getListenPort()
                 + "," + HOST + ":" + mockB.getListenPort()
-                + "," + HOST + ":" + mockC.getListenPort() + "/?user=root&password=taosdata";
+                + "," + HOST + ":" + mockC.getListenPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
 
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_INTERVAL_MS, "2000");
@@ -199,11 +199,11 @@ public class MinimumConnectionCountTest {
 
     @Test
     public void testConcurrentConnections() throws Exception {
-       String url = "jdbc:TAOS-WS://" +
-               HOST + ":" + mockA.getListenPort() + "," +
-               HOST + ":" + mockB.getListenPort() + "," +
-               HOST + ":" + mockC.getListenPort() +
-                "/?user=root&password=taosdata";
+        String url = "jdbc:TAOS-WS://" +
+                HOST + ":" + mockA.getListenPort() + "," +
+                HOST + ":" + mockB.getListenPort() + "," +
+                HOST + ":" + mockC.getListenPort() +
+                "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
 
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
@@ -263,7 +263,7 @@ public class MinimumConnectionCountTest {
                 HOST + ":" + mockA.getListenPort() + "," +
                 HOST + ":" + mockB.getListenPort() + "," +
                 HOST + ":" + mockC.getListenPort() +
-                "/?user=root&password=taosdata";
+                "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
 
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, "5000");
@@ -295,7 +295,6 @@ public class MinimumConnectionCountTest {
         conn.close();
     }
 
-
     @BeforeClass
     static public void before() throws SQLException, InterruptedException, IOException, URISyntaxException {
         System.setProperty("ENV_TAOS_JDBC_NO_HEALTH_CHECK", "TRUE");
@@ -304,9 +303,9 @@ public class MinimumConnectionCountTest {
         String url;
         url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":" + 6030 + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":" + 6030 + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         } else {
-            url += "?user=root&password=taosdata";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
 

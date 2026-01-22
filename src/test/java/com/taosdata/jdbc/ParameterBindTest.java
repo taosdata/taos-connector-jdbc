@@ -1,6 +1,7 @@
 package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import org.junit.*;
 
 import java.sql.*;
@@ -14,7 +15,7 @@ import java.util.stream.Collectors;
 
 public class ParameterBindTest {
 
-    private static final String HOST = "127.0.0.1";
+    static final String HOST = TestEnvUtil.getHost();
     private static final String STABLE = "weather";
 
     private Connection conn;
@@ -117,7 +118,6 @@ public class ParameterBindTest {
         }
     }
 
-
     private void assertRows(String tbname, int rows) {
         try (Statement stmt = conn.createStatement()) {
             ResultSet rs = stmt.executeQuery("select count(*) from " + tbname);
@@ -166,7 +166,7 @@ public class ParameterBindTest {
     public void before() {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         try {
             conn = DriverManager.getConnection(url);
@@ -192,3 +192,4 @@ public class ParameterBindTest {
         }
     }
 }
+

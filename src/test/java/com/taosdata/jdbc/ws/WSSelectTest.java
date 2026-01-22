@@ -2,6 +2,7 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -17,9 +18,9 @@ import java.util.Properties;
 import static org.junit.Assert.*;
 
 public class WSSelectTest {
-    private static final String HOST = "127.0.0.1";
-    private static final int PORT = 6041;
     private static Connection connection;
+
+    static final String HOST = TestEnvUtil.getHost();
     private static final String DATABASE_NAME = TestUtils.camelToSnake(WSSelectTest.class);
 
     private static void testInsert() throws SQLException {
@@ -44,7 +45,6 @@ public class WSSelectTest {
             ResultSet resultSet = statement.executeQuery("select ts,c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14,c15 from " + DATABASE_NAME + ".alltype_query limit 3000");
 
             ResultSetMetaData metaData = resultSet.getMetaData();
-
 
             assertEquals(38, metaData.getPrecision(15));
             assertEquals(10, metaData.getScale(15));
@@ -129,8 +129,6 @@ public class WSSelectTest {
             BigDecimal c15 = resultSet.getObject("c15", BigDecimal.class);
             assertEquals(new BigDecimal("12345678.901234"), c15);
 
-
-
             // Test error condition
             try {
                 resultSet.getObject("c1", LocalDateTime.class); // Invalid conversion
@@ -160,7 +158,7 @@ public class WSSelectTest {
     public static void beforeClass() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":" + PORT + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, "10000");
@@ -182,3 +180,4 @@ public class WSSelectTest {
         connection.close();
     }
 }
+

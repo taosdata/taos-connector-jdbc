@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -15,8 +16,8 @@ import java.util.stream.IntStream;
 
 public class PreparedStatementBatchInsertJNITest {
 
-    private static final String HOST = "127.0.0.1";
-    private static final String DB_NAME = TestUtils.camelToSnake(PreparedStatementBatchInsertJNITest.class);
+                    static final String HOST = TestEnvUtil.getHost();
+                    private static final String DB_NAME = TestUtils.camelToSnake(PreparedStatementBatchInsertJNITest.class);
 
     private final Random random = new Random(System.currentTimeMillis());
     private Connection conn;
@@ -75,7 +76,7 @@ public class PreparedStatementBatchInsertJNITest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         conn = DriverManager.getConnection(url);
         Statement stmt = conn.createStatement();
@@ -99,3 +100,4 @@ public class PreparedStatementBatchInsertJNITest {
     }
 
 }
+

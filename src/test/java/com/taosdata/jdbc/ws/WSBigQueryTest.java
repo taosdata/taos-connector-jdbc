@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
@@ -10,12 +11,11 @@ import java.util.Properties;
 
 @FixMethodOrder
 public class WSBigQueryTest {
-    final String host = "127.0.0.1";
+    final String host = TestEnvUtil.getHost();
     final String db_name = "ws_prepare";
     final String tableName = TestUtils.camelToSnake(WSBigQueryTest.class);
     String superTable = "wpt_st";
     Connection connection;
-
 
     @Test
     public void testExecuteBatchInsert() throws SQLException {
@@ -46,9 +46,9 @@ public class WSBigQueryTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata&batchfetch=true";
+            url = "jdbc:TAOS-RS://" + host + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
         } else {
-            url += "?user=root&password=taosdata&batchfetch=true";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
         }
         Properties properties = new Properties();
         connection = DriverManager.getConnection(url, properties);

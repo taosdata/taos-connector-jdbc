@@ -12,8 +12,7 @@ import java.time.Instant;
 import java.util.Properties;
 
 public class WsPstmtLineModeAllTypeTest {
-    final String host = "127.0.0.1";
-    final String dbName = TestUtils.camelToSnake(WsPstmtLineModeAllTypeTest.class);
+            final String dbName = TestUtils.camelToSnake(WsPstmtLineModeAllTypeTest.class);
     final String tableName = "wpt";
     final String stableName = "swpt";
 
@@ -22,7 +21,6 @@ public class WsPstmtLineModeAllTypeTest {
     static final String TEST_STR = "20160601";
     static final byte[] expectedVarBinary = StringUtils.hexToBytes(TEST_STR);
     static final byte[] expectedGeometry = StringUtils.hexToBytes("0101000000000000000000F03F0000000000000040");
-
 
     @Test
     public void testExecuteUpdate() throws SQLException {
@@ -82,7 +80,6 @@ public class WsPstmtLineModeAllTypeTest {
         Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_INT, resultSet.getLong(16));
         Assert.assertEquals(new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG), resultSet.getObject(17));
 
-
         Assert.assertEquals(new Date(current), resultSet.getDate(1));
         Assert.assertEquals(new Time(current), resultSet.getTime(1));
         Assert.assertEquals(new Timestamp(current), resultSet.getTimestamp(1));
@@ -91,7 +88,6 @@ public class WsPstmtLineModeAllTypeTest {
         resultSet.close();
         statement.close();
     }
-
 
     @Test
     public void testSetObject() throws SQLException {
@@ -139,7 +135,6 @@ public class WsPstmtLineModeAllTypeTest {
         Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_SHORT, resultSet.getInt(15));
         Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_INT, resultSet.getLong(16));
         Assert.assertEquals(new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG), resultSet.getObject(17));
-
 
         Assert.assertEquals(new Date(current), resultSet.getDate(1));
         Assert.assertEquals(new Time(current), resultSet.getTime(1));
@@ -196,7 +191,6 @@ public class WsPstmtLineModeAllTypeTest {
         Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_SHORT, resultSet.getInt(15));
         Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_INT, resultSet.getLong(16));
         Assert.assertEquals(new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG), resultSet.getObject(17));
-
 
         Assert.assertEquals(new Date(current), resultSet.getDate(1));
         Assert.assertEquals(new Time(current), resultSet.getTime(1));
@@ -257,7 +251,6 @@ public class WsPstmtLineModeAllTypeTest {
         Assert.assertEquals(6, insertedRows);
         statement.close();
     }
-
 
     @Test
     public void testExecuteUpdate2() throws SQLException {
@@ -496,9 +489,9 @@ public class WsPstmtLineModeAllTypeTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + host + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         } else {
-            url += "?user=root&password=taosdata&batchfetch=true";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_PBS_MODE, "line");

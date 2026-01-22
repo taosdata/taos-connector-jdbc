@@ -9,6 +9,7 @@ import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.utils.Utils;
 import org.junit.*;
@@ -19,15 +20,16 @@ import java.util.List;
 import java.util.Properties;
 
 public class WSSchemalessNewTest {
-    private static final String HOST = "127.0.0.1";
-    private static final String DB_NAME = TestUtils.camelToSnake(WSSchemalessNewTest.class);
+
+        static final String HOST = TestEnvUtil.getHost();
+        private static final String DB_NAME = TestUtils.camelToSnake(WSSchemalessNewTest.class);
     public static Connection connection;
 
     @Before
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
@@ -152,7 +154,6 @@ public class WSSchemalessNewTest {
                 "stb1 1742374817166 false t0=-834409214i32 t1=491614887i64 t2=226345616.000000f32 t3=646745464.983636f64 t4=9183i16 t5=103i8 t6=true t7=L\"qMCx\""
         };
 
-
         // given
         String line = String.join("\n", lines);
 
@@ -183,7 +184,6 @@ public class WSSchemalessNewTest {
         // when
         ((AbstractConnection)connection).write(lines, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS, 1000, 1L);
     }
-
 
     @Test
     public void telnetInsert() throws SQLException {
@@ -307,3 +307,4 @@ public class WSSchemalessNewTest {
     }
 
 }
+

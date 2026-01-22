@@ -3,6 +3,7 @@ package com.taosdata.jdbc.ws;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.tmq.*;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -20,8 +21,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class WSVarcharAsStringTest {
-    private static final String HOST = "127.0.0.1";
-    private static final int PORT = 6041;
+
+        static final String HOST = TestEnvUtil.getHost();
+        static final int PORT = TestEnvUtil.getWsPort();
     private final String dbName = TestUtils.camelToSnake(WSVarcharAsStringTest.class);
     private Connection connection;
     private Statement statement;
@@ -32,7 +34,7 @@ public class WSVarcharAsStringTest {
     @Test
     public void queryResult()  {
         try (Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery("show " + dbName + ".stables")) {
+                ResultSet resultSet = statement.executeQuery("show " + dbName + ".stables")) {
             ResultSetMetaData metaData = resultSet.getMetaData();
             Assert.assertEquals("stable_name", metaData.getColumnLabel(1));
             Assert.assertEquals("stable_name", metaData.getColumnName(1));
@@ -76,7 +78,7 @@ public class WSVarcharAsStringTest {
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.CONNECT_USER, "root");
         properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
-        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, "127.0.0.1:6041");
+        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, "127.0.0.1: TestEnvUtil.getWsPort()");
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
         properties.setProperty(TMQConstants.GROUP_ID, "ws_map");
@@ -111,7 +113,7 @@ public class WSVarcharAsStringTest {
         Properties properties = new Properties();
         properties.setProperty(TMQConstants.CONNECT_USER, "root");
         properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
-        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, "127.0.0.1:6041");
+        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, "127.0.0.1: TestEnvUtil.getWsPort()");
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
         properties.setProperty(TMQConstants.GROUP_ID, "ws_map1");
@@ -151,7 +153,7 @@ public class WSVarcharAsStringTest {
 
     @Before
     public void before() throws SQLException {
-        String url = "jdbc:TAOS-WS://" + HOST + ":" + PORT + "/?user=root&password=taosdata&conmode=1&varcharAsString=true";
+        String url = "jdbc:TAOS-WS://" + HOST + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&conmode=1&varcharAsString=true";
         Properties properties = new Properties();
         connection = DriverManager.getConnection(url, properties);
         statement = connection.createStatement();
@@ -185,3 +187,4 @@ public class WSVarcharAsStringTest {
         }
     }
 }
+

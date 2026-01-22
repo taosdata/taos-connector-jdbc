@@ -1,6 +1,7 @@
 package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
@@ -10,7 +11,7 @@ import java.util.Set;
 
 public class AbstractDatabaseMetaDataColumnTest {
     static Connection connection;
-    static final String HOST = "127.0.0.1";
+    static final String HOST = TestEnvUtil.getHost();
     static DatabaseMetaData metaData;
     static final String DB_NAME = TestUtils.camelToSnake(AbstractDatabaseMetaDataColumnTest.class);
 
@@ -193,7 +194,7 @@ public class AbstractDatabaseMetaDataColumnTest {
     public static void before() throws SQLException, InterruptedException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         connection = DriverManager.getConnection(url);
         metaData = connection.getMetaData();

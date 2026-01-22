@@ -12,5 +12,5 @@ public class InsertSqlPatternTest {
             "insert into st.sub_t using db.sup_t (t1, t2) tags(?,?) (c1, c2) values(?, ?)",
     };
 
-
 }
+

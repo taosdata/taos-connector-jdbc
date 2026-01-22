@@ -11,6 +11,7 @@ import com.taosdata.jdbc.tmq.ConsumerRecords;
 import com.taosdata.jdbc.tmq.TMQConstants;
 import com.taosdata.jdbc.tmq.TaosConsumer;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 import org.junit.runner.RunWith;
@@ -25,8 +26,9 @@ import java.util.Properties;
 @RunWith(CatalogRunner.class)
 @FixMethodOrder
 public class WSCompressTest {
-    private static final String HOST = "127.0.0.1";
-    private static final int PORT = 6041;
+
+        static final String HOST = TestEnvUtil.getHost();
+        static final int PORT = TestEnvUtil.getWsPort();
     private static final String DB_NAME = TestUtils.camelToSnake(WSCompressTest.class);
     private static final String TABLE_NAME = "compressA";
 
@@ -126,7 +128,7 @@ public class WSCompressTest {
 
         Properties properties = new Properties();
         properties.setProperty("td.connect.type", "ws");
-        properties.setProperty("bootstrap.servers", "127.0.0.1:6041");
+        properties.setProperty("bootstrap.servers", "127.0.0.1: TestEnvUtil.getWsPort()");
         properties.setProperty(TMQConstants.CONNECT_USER, "root");
         properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
@@ -152,9 +154,9 @@ public class WSCompressTest {
     public static void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":" + PORT + "/?user=root&password=taosdata&batchfetch=true";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
         } else {
-            url += "?user=root&password=taosdata";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
@@ -182,3 +184,4 @@ public class WSCompressTest {
         }
     }
 }
+

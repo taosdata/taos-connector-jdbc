@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.rs;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -13,8 +14,9 @@ import java.sql.*;
 import java.util.Calendar;
 
 public class RestfulPreparedStatementTest {
-    private static final String HOST = "127.0.0.1";
     private static Connection conn;
+
+    static final String HOST = TestEnvUtil.getHost();
     private static final String SQL_INSERT = "insert into t1 values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     private static PreparedStatement pstmtInsert;
     private static final String SQL_SELECT = "select * from t1 where ts > ? and ts <= ? and f1 >= ?";
@@ -891,7 +893,7 @@ public class RestfulPreparedStatementTest {
         try {
             String url = SpecifyAddress.getInstance().getRestUrl();
             if (url == null) {
-                url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
+                url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
             }
             conn = DriverManager.getConnection(url);
 

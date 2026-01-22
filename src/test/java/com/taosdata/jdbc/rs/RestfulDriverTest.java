@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.rs;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -10,14 +11,14 @@ import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 
 public class RestfulDriverTest {
-    private static final String HOST = "127.0.0.1";
+    static final String HOST = TestEnvUtil.getHost();
 
     @Test
     public void acceptsURL() throws SQLException {
         Driver driver = new RestfulDriver();
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort();
         }
         boolean isAccept = driver.acceptsURL(url);
         Assert.assertTrue(isAccept);
@@ -34,6 +35,7 @@ public class RestfulDriverTest {
     @Test
     public void getPropertyInfo() throws SQLException {
         Driver driver = new RestfulDriver();
+
         final String url = "";
         DriverPropertyInfo[] propertyInfo = driver.getPropertyInfo(url, null);
         Assert.assertNotNull(propertyInfo);
@@ -59,3 +61,4 @@ public class RestfulDriverTest {
         new RestfulDriver().getParentLogger();
     }
 }
+

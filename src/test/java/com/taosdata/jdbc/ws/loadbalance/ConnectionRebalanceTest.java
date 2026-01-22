@@ -6,6 +6,7 @@ import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.common.Endpoint;
 import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.TaosAdapterMock;
 import com.taosdata.jdbc.ws.WSConnection;
@@ -23,14 +24,15 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Test class for connection rebalance mechanism in WebSocket load balancing
- * Covers trigger conditions, connection migration rules, and concurrent scenarios
- */
+    * Test class for connection rebalance mechanism in WebSocket load balancing
+    * Covers trigger conditions, connection migration rules, and concurrent scenarios
+    */
 @RunWith(CatalogRunner.class)
 @FixMethodOrder
 public class ConnectionRebalanceTest {
+
+    static final String HOST = TestEnvUtil.getHost();
     private static final Logger log = org.slf4j.LoggerFactory.getLogger(ConnectionRebalanceTest.class);
-    private static final String HOST = "127.0.0.1";
     private static final String DB_NAME = TestUtils.camelToSnake(ConnectionRebalanceTest.class);
     private static final String TABLE_NAME = "meters";
     private static Connection connection;
@@ -45,9 +47,9 @@ public class ConnectionRebalanceTest {
     private static final int REBALANCE_THRESHOLD = 50; // Percentage threshold for connection ratio (50%)
 
     /**
-     * Test: Rebalance is triggered when all trigger conditions are met after node recovery
-     * Verify rebalance execution when total connections > threshold AND connection ratio > threshold
-     */
+        * Test: Rebalance is triggered when all trigger conditions are met after node recovery
+        * Verify rebalance execution when total connections > threshold AND connection ratio > threshold
+        */
     @Description("test rebalance trigger when all conditions are satisfied")
     @Test
     public void testRebalanceTriggerOnAllConditionsMet() throws Exception {
@@ -94,9 +96,9 @@ public class ConnectionRebalanceTest {
     }
 
     /**
-     * Test: Rebalance is NOT triggered when total connections are below threshold
-     * Verify no rebalance execution even if node recovers (total connections < REBALANCE_CON_BASE_COUNT)
-     */
+        * Test: Rebalance is NOT triggered when total connections are below threshold
+        * Verify no rebalance execution even if node recovers (total connections < REBALANCE_CON_BASE_COUNT)
+        */
     @Description("test no rebalance when total connections are below threshold")
     @Test
     public void testNoRebalanceOnTotalConnectionBelowThreshold() throws Exception {
@@ -136,9 +138,9 @@ public class ConnectionRebalanceTest {
     }
 
     /**
-     * Test: Rebalance is NOT triggered when connection ratio is below threshold
-     * Verify no rebalance execution even if total connections meet threshold (ratio < REBALANCE_THRESHOLD)
-     */
+        * Test: Rebalance is NOT triggered when connection ratio is below threshold
+        * Verify no rebalance execution even if total connections meet threshold (ratio < REBALANCE_THRESHOLD)
+        */
     @Description("test no rebalance when connection ratio is below threshold")
     @Test
     public void testNoRebalanceOnRatioBelowThreshold() throws Exception {
@@ -179,9 +181,9 @@ public class ConnectionRebalanceTest {
     }
 
     /**
-     * Test: Non-idle connections (with unfinished queries) do not participate in migration
-     * Verify connections with pending result sets/statements are excluded from rebalance
-     */
+        * Test: Non-idle connections (with unfinished queries) do not participate in migration
+        * Verify connections with pending result sets/statements are excluded from rebalance
+        */
     @Description("test non-idle connection (with unfinished query) does not migrate")
     @Test
     public void testNonIdleConnectionWithQueryNotMigrate() throws Exception {
@@ -220,9 +222,9 @@ public class ConnectionRebalanceTest {
     }
 
     /**
-     * Test: No connection conflicts/leaks in concurrent rebalance scenarios
-     * Verify connection migration works correctly with concurrent node recovery and connection creation
-     */
+        * Test: No connection conflicts/leaks in concurrent rebalance scenarios
+        * Verify connection migration works correctly with concurrent node recovery and connection creation
+        */
     @Description("test concurrent rebalance without connection conflicts or leaks")
     @Test
     public void testConcurrentRebalance() throws Exception {
@@ -277,9 +279,8 @@ public class ConnectionRebalanceTest {
     public void testOtherClusterNoRebalance() throws Exception {
         Properties propertiesA = getRebalanceProperties();
         Properties propertiesB = getRebalanceProperties();
-        String clusterA =  "jdbc:TAOS-WS://" + HOST + ":" + mockA.getListenPort() + "," + HOST + ":" + mockB.getListenPort() + "/?user=root&password=taosdata";
-        String clusterB =  "jdbc:TAOS-WS://" + HOST + ":" + mockC.getListenPort() + "/?user=root&password=taosdata";
-
+        String clusterA =  "jdbc:TAOS-WS://" + HOST + ":" + mockA.getListenPort() + "," + HOST + ":" + mockB.getListenPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
+        String clusterB =  "jdbc:TAOS-WS://" + HOST + ":" + mockC.getListenPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
 
         // 1. Simulate node failure + create batch idle connections
         mockA.stop();
@@ -310,7 +311,7 @@ public class ConnectionRebalanceTest {
 
     private static void checkConnection(Connection conn) {
         try (Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SELECT 1")) {
+                ResultSet rs = stmt.executeQuery("SELECT 1")) {
             rs.next();
             Assert.assertEquals(1, rs.getInt(1));
             System.out.printf("Connection check succeeded, thread: %s%n", Thread.currentThread().getName());
@@ -321,13 +322,12 @@ public class ConnectionRebalanceTest {
         }
     }
 
-
     // -------------------------- Utility Methods --------------------------
     /**
-     * Get JDBC properties with rebalance configuration
-     * Includes auto-reconnect, health check, and rebalance threshold settings
-     * @return Configured Properties object
-     */
+        * Get JDBC properties with rebalance configuration
+        * Includes auto-reconnect, health check, and rebalance threshold settings
+        * @return Configured Properties object
+        */
     private Properties getRebalanceProperties() {
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
@@ -345,20 +345,20 @@ public class ConnectionRebalanceTest {
     }
 
     /**
-     * Get JDBC URL for 3-node cluster (mockA, mockB, mockC)
-     * @return Formatted cluster JDBC URL
-     */
+        * Get JDBC URL for 3-node cluster (mockA, mockB, mockC)
+        * @return Formatted cluster JDBC URL
+        */
     private String getClusterUrl() {
         return "jdbc:TAOS-WS://" + HOST + ":" + mockA.getListenPort()
                 + "," + HOST + ":" + mockB.getListenPort()
-                + "," + HOST + ":" + mockC.getListenPort() + "/?user=root&password=taosdata";
+                + "," + HOST + ":" + mockC.getListenPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
     }
 
     /**
-     * Batch close connections to clean up resources
-     * Logs warnings for failed connection closures
-     * @param connections List of connections to close
-     */
+        * Batch close connections to clean up resources
+        * Logs warnings for failed connection closures
+        * @param connections List of connections to close
+        */
     private void closeConnections(List<Connection> connections) {
         for (Connection conn : connections) {
             if (conn != null) {
@@ -373,18 +373,18 @@ public class ConnectionRebalanceTest {
 
     // -------------------------- Lifecycle Methods --------------------------
     /**
-     * One-time setup before all test methods
-     * Initializes test database and table for WS connection testing
-     */
+        * One-time setup before all test methods
+        * Initializes test database and table for WS connection testing
+        */
     @BeforeClass
     public static void beforeClass() throws SQLException, InterruptedException, IOException, URISyntaxException {
         TestUtils.runInMain();
         System.setProperty("ENV_TAOS_JDBC_TEST", "test");
         String url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":" + 6030 + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":" + 6030 + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         } else {
-            url += "?user=root&password=taosdata";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
         connection = DriverManager.getConnection(url, properties);
@@ -398,9 +398,9 @@ public class ConnectionRebalanceTest {
     }
 
     /**
-     * One-time teardown after all test methods
-     * Drops test database and closes main connection
-     */
+        * One-time teardown after all test methods
+        * Drops test database and closes main connection
+        */
     @AfterClass
     public static void afterClass() throws SQLException {
         if (null != connection) {
@@ -412,9 +412,9 @@ public class ConnectionRebalanceTest {
     }
 
     /**
-     * Setup before each test method
-     * Initializes and starts 3 mock TaosAdapter nodes (mockA, mockB, mockC)
-     */
+        * Setup before each test method
+        * Initializes and starts 3 mock TaosAdapter nodes (mockA, mockB, mockC)
+        */
     @Before
     public void setUp() throws IOException {
         mockA = new TaosAdapterMock();
@@ -426,9 +426,9 @@ public class ConnectionRebalanceTest {
     }
 
     /**
-     * Teardown after each test method
-     * Stops all mock TaosAdapter nodes to clean up resources
-     */
+        * Teardown after each test method
+        * Stops all mock TaosAdapter nodes to clean up resources
+        */
     @After
     public void tearDown() {
         if (mockA != null) mockA.stop();

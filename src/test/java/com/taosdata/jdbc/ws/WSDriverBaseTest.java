@@ -5,6 +5,7 @@ import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 import org.junit.runner.RunWith;
@@ -16,8 +17,9 @@ import java.util.Properties;
 @TestTarget(alias = "websocket query test", author = "huolibo", version = "2.0.38")
 @FixMethodOrder
 public class WSDriverBaseTest {
-    private static final String HOST = "127.0.0.1";
-    private static final int PORT = 6041;
+
+        static final String HOST = TestEnvUtil.getHost();
+        static final int PORT = TestEnvUtil.getWsPort();
     private final String db_name = TestUtils.camelToSnake(WSDriverBaseTest.class);
     private static final String TABLE_NAME = "wq";
     private Connection connection;
@@ -31,7 +33,6 @@ public class WSDriverBaseTest {
                 resultSet.next();
                 Assert.assertEquals(100, resultSet.getInt(2));
             }
-
 
             statement.execute("select 1 where 0");
             try (ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + TABLE_NAME)) {
@@ -49,9 +50,9 @@ public class WSDriverBaseTest {
         System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "80");
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + HOST + ":" + PORT + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "";
         } else {
-            url += "?user=root&password=taosdata";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "false");
@@ -76,3 +77,4 @@ public class WSDriverBaseTest {
         }
     }
 }
+

@@ -245,7 +245,7 @@ public class EmptyResultSetTest {
 
     @Test
     public void testSetFetchDirection() throws SQLException {
-         emptyResultSet.setFetchDirection(ResultSet.FETCH_FORWARD);
+        emptyResultSet.setFetchDirection(ResultSet.FETCH_FORWARD);
         Assert.assertEquals(ResultSet.FETCH_FORWARD, emptyResultSet.getFetchDirection());
     }
 
@@ -892,7 +892,6 @@ public class EmptyResultSetTest {
         });
     }
 
-
     @Test(expected = SQLException.class)
     public void testUpdateBlobByColumnIndexWithInputStream() throws SQLException {
         emptyResultSet.updateBlob(1, new InputStream() {
@@ -992,3 +991,4 @@ public class EmptyResultSetTest {
         emptyResultSet.close();
     }
 }
+

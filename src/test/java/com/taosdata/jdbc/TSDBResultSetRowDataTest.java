@@ -73,7 +73,6 @@ public class TSDBResultSetRowDataTest {
         Timestamp timestamp = rowData.getTimestamp(1, 0);
         assertEquals(currentTime, timestamp.getTime());
 
-
         rowData.setTimestamp(0, currentTime * 1000, 1);
         timestamp = rowData.getTimestamp(1, 0);
         assertEquals(currentTime, timestamp.getTime());
@@ -81,7 +80,6 @@ public class TSDBResultSetRowDataTest {
         rowData.setTimestamp(0, currentTime * 1000 * 1000, 2);
         timestamp = rowData.getTimestamp(1, 0);
         assertEquals(currentTime, timestamp.getTime());
-
 
         rowData.setLongValue(1, currentTime);
         timestamp = rowData.getTimestamp(1, 5);
@@ -93,7 +91,6 @@ public class TSDBResultSetRowDataTest {
         rowData.setStringValue(1, "test");
         assertEquals("test", rowData.getObject(1));
     }
-
 
     @Test
     public void testGetStringWithNull() throws SQLException {

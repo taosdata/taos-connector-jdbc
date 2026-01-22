@@ -11,7 +11,6 @@ public class Bean336 {
     private Integer c1;
     private Long c2;
 
-
     private Float c3;
     private Double c4;
     private byte[] c5;
@@ -169,7 +168,6 @@ public class Bean336 {
         this.c13 = c13;
     }
 
-
     public Short getC14() {
         return c14;
     }
@@ -210,7 +208,6 @@ public class Bean336 {
         this.t1 = t1;
     }
 
-
     public BigDecimal getC18() {
         return c18;
     }
@@ -227,3 +224,4 @@ public class Bean336 {
         this.c19 = c19;
     }
 }
+

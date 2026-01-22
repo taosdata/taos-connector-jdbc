@@ -41,8 +41,6 @@ public class SpecifyAddress {
                 restPort = REST_PORT_DEFAULT + "";
             }
 
-
-
             String websocket = System.getProperty("maven.test.port.websocket");
             if (null != websocket && !"".equals(websocket.trim())) {
                 webSocketUrl = "jdbc:TAOS-WS://" + host.trim() + ":" + rest.trim() + "/?user=root&password=taosdata";
@@ -90,7 +88,6 @@ public class SpecifyAddress {
         return host;
     }
 
-
     public String getWebSocketUrl() {
         return webSocketUrl;
     }
@@ -103,3 +100,4 @@ public class SpecifyAddress {
         return webSocketPort;
     }
 }
+

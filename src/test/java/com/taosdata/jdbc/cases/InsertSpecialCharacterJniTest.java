@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
@@ -8,8 +9,9 @@ import java.sql.*;
 
 public class InsertSpecialCharacterJniTest {
 
-    private static final String HOST = "127.0.0.1";
-    private static Connection conn;
+                    private static Connection conn;
+
+    static final String HOST = TestEnvUtil.getHost();
     private static final String DB_NAME = TestUtils.camelToSnake(InsertSpecialCharacterJniTest.class);
     private static final String TBNAME_1 = "test";
     private static final String TBNAME_2 = "weather";
@@ -45,7 +47,6 @@ public class InsertSpecialCharacterJniTest {
             Assert.assertNull(f2);
         }
     }
-
 
     @Test
     public void testCase02() throws SQLException {
@@ -378,7 +379,6 @@ public class InsertSpecialCharacterJniTest {
         }
     }
 
-
     @Test
     public void testCase12() throws SQLException {
         final long now = System.currentTimeMillis();
@@ -418,7 +418,7 @@ public class InsertSpecialCharacterJniTest {
     public static void beforeClass() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         conn = DriverManager.getConnection(url);
         try (Statement stmt = conn.createStatement()) {
@@ -439,3 +439,4 @@ public class InsertSpecialCharacterJniTest {
     }
 
 }
+

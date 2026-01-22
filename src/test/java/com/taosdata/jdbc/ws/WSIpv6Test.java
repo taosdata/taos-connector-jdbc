@@ -2,6 +2,7 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -17,7 +18,7 @@ import static org.junit.Assert.assertTrue;
 
 public class WSIpv6Test {
     private static final String HOST = "[::1]";
-    private static final int PORT = 6041;
+    static final int PORT = TestEnvUtil.getWsPort();
     private static Connection connection;
     private static final String DATABASE_NAME = TestUtils.camelToSnake(WSIpv6Test.class);
 
@@ -54,14 +55,13 @@ public class WSIpv6Test {
         statement.close();
     }
 
-
     @BeforeClass
     public static void beforeClass() throws SQLException {
         TestUtils.runInMain();
 
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":" + PORT + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "";
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, "10000");
@@ -85,3 +85,4 @@ public class WSIpv6Test {
         }
     }
 }
+

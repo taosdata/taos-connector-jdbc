@@ -2,6 +2,7 @@ package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -10,8 +11,8 @@ import java.sql.*;
 
 public class AuthenticationTest {
 
-    private static final String HOST = "127.0.0.1";
-    private static final String USER = "root";
+        static final String HOST = TestEnvUtil.getHost();
+        private static final String USER = "root";
     private static final String PASSWORD = "taos?data";
     @Test
     public void connectWithoutUserByJni() {
@@ -117,3 +118,4 @@ public class AuthenticationTest {
     }
 
 }
+

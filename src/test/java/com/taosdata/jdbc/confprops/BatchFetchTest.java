@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.confprops;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 import org.junit.runners.MethodSorters;
@@ -12,21 +13,21 @@ import java.util.Random;
 @Ignore // performance
 public class BatchFetchTest {
 
-    private static final String HOST = "127.0.0.1";
-    private long rowFetchCost, batchFetchCost;
+            private long rowFetchCost, batchFetchCost;
 
+    static final String HOST = TestEnvUtil.getHost();
     private static final String DB_NAME = TestUtils.camelToSnake(BatchFetchTest.class);
 
     @Test
     public void case01_rowFetch() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030/" + DB_NAME + "?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/" + DB_NAME + "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         } else {
-            url += "test?user=root&password=taosdata";
+            url += "test?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         try (Connection conn = DriverManager.getConnection(url);
-             Statement stmt = conn.createStatement()) {
+                Statement stmt = conn.createStatement()) {
 
             boolean batchfetch = Boolean.parseBoolean(conn.getClientInfo("batchfetch"));
             Assert.assertFalse(batchfetch);
@@ -45,12 +46,12 @@ public class BatchFetchTest {
     public void case02_batchFetch() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030/" + DB_NAME + "?user=root&password=taosdata&batchfetch=true";
+            url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/" + DB_NAME + "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
         } else {
-            url += "test?user=root&password=taosdata&batchfetch=true";
+            url += "test?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
         }
         try (Connection conn = DriverManager.getConnection(url);
-             Statement stmt = conn.createStatement()) {
+                Statement stmt = conn.createStatement()) {
 
             boolean batchfetch = Boolean.parseBoolean(conn.getClientInfo("batchfetch"));
             Assert.assertTrue(batchfetch);
@@ -74,10 +75,10 @@ public class BatchFetchTest {
     public static void beforeClass() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         try (Connection conn = DriverManager.getConnection(url);
-             Statement stmt = conn.createStatement()) {
+                Statement stmt = conn.createStatement()) {
             stmt.execute("drop database if exists " + DB_NAME);
             stmt.execute("create database if not exists " + DB_NAME);
             stmt.execute("use " + DB_NAME);
@@ -104,13 +105,14 @@ public class BatchFetchTest {
     public static void afterClass() {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         try (Connection conn = DriverManager.getConnection(url);
-             Statement stmt = conn.createStatement()) {
+                Statement stmt = conn.createStatement()) {
             stmt.execute("drop database if exists " + DB_NAME);
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 }
+
