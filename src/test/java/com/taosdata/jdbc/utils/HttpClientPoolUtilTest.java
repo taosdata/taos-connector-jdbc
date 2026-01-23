@@ -608,7 +608,6 @@ public class HttpClientPoolUtilTest {
                 byte[] requestBytes = readAllBytes(exchange.getRequestBody());
                 lastRequestBody.set(new String(requestBytes, StandardCharsets.UTF_8));
 
-
                 exchange.getResponseHeaders().set("Content-Type", "application/json");
                 exchange.sendResponseHeaders(200, expectedResponse.length());
                 try (OutputStream os = exchange.getResponseBody()) {

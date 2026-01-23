@@ -5,6 +5,7 @@ import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.TaosAdapterMock;
 import org.junit.*;
@@ -15,12 +16,12 @@ import java.net.URISyntaxException;
 import java.sql.*;
 import java.util.Properties;
 
-
 @RunWith(CatalogRunner.class)
 @FixMethodOrder
 public class WSLoadBalanceTest {
-    private static final String HOST = "127.0.0.1";
-    private static final int PORT_A = 6041;
+
+    static final String HOST = TestEnvUtil.getHost();
+    private static final int PORT_A = TestEnvUtil.getWsPort();
     private static final String DB_NAME = TestUtils.camelToSnake(WSLoadBalanceTest.class);
     private static final String TABLE_NAME = "meters";
     static  private Connection connection;
@@ -36,9 +37,9 @@ public class WSLoadBalanceTest {
         Properties properties = new Properties();
         String url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + HOST + ":" + mockB.getListenPort() + "," + HOST + ":" + mockC.getListenPort() + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST + ":" + mockB.getListenPort() + "," + HOST + ":" + mockC.getListenPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         } else {
-            url += "?user=root&password=taosdata";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
 
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
@@ -47,7 +48,7 @@ public class WSLoadBalanceTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, "5000");
 
         try (Connection connection = DriverManager.getConnection(url, properties);
-             Statement statement = connection.createStatement()) {
+                Statement statement = connection.createStatement()) {
             ResultSet resultSet;
             for (int i = 0; i < 4; i++){
                 try {
@@ -95,9 +96,9 @@ public class WSLoadBalanceTest {
         Properties properties = new Properties();
         String url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + HOST + ":" + mockB.getListenPort() + "," + HOST + ":" + mockC.getListenPort() + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST + ":" + mockB.getListenPort() + "," + HOST + ":" + mockC.getListenPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         } else {
-            url += "?user=root&password=taosdata";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
 
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
@@ -105,10 +106,10 @@ public class WSLoadBalanceTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_RETRY_COUNT, "3");
 
         try (Connection connection = DriverManager.getConnection(url, properties);
-             Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery("select ts from " + DB_NAME + "." + TABLE_NAME + " limit 1;")) {
-             resultSet.next();
-             System.out.println(resultSet.getLong(1));
+                Statement statement = connection.createStatement();
+                ResultSet resultSet = statement.executeQuery("select ts from " + DB_NAME + "." + TABLE_NAME + " limit 1;")) {
+                resultSet.next();
+                System.out.println(resultSet.getLong(1));
         }
         mockB.stop();
         mockC.stop();
@@ -128,9 +129,9 @@ public class WSLoadBalanceTest {
         Properties properties = new Properties();
         String url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + HOST + ":" + mockB.getListenPort() + "," + HOST + ":" + mockC.getListenPort() + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST + ":" + mockB.getListenPort() + "," + HOST + ":" + mockC.getListenPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         } else {
-            url += "?user=root&password=taosdata";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
 
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
@@ -138,8 +139,8 @@ public class WSLoadBalanceTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_RETRY_COUNT, "3");
 
         try (Connection connection = DriverManager.getConnection(url, properties);
-             Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery("select ts from " + DB_NAME + "." + TABLE_NAME + " limit 1;")) {
+                Statement statement = connection.createStatement();
+                ResultSet resultSet = statement.executeQuery("select ts from " + DB_NAME + "." + TABLE_NAME + " limit 1;")) {
             resultSet.next();
             System.out.println(resultSet.getLong(1));
         }
@@ -151,9 +152,9 @@ public class WSLoadBalanceTest {
         Properties properties = new Properties();
         String url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://[::1]:6042,[::1]:6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://[::1]:6042,[::1]:6041/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         } else {
-            url += "?user=root&password=taosdata";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
 
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
@@ -161,8 +162,8 @@ public class WSLoadBalanceTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_RETRY_COUNT, "3");
 
         try (Connection connection = DriverManager.getConnection(url, properties);
-             Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery("select 1")) {
+                Statement statement = connection.createStatement();
+                ResultSet resultSet = statement.executeQuery("select 1")) {
         }
     }
 
@@ -174,9 +175,9 @@ public class WSLoadBalanceTest {
         String url;
         url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + HOST + ":" + PORT_A + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST + ":" + PORT_A + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         } else {
-            url += "?user=root&password=taosdata";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
 

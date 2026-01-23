@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -11,7 +12,7 @@ import java.sql.*;
 
 public class ResultSetMetaShouldNotBeNullRestfulTest {
 
-    private static final String HOST = "127.0.0.1";
+    static final String HOST = TestEnvUtil.getHost();
     private static final String DB_NAME = TestUtils.camelToSnake(ResultSetMetaShouldNotBeNullRestfulTest.class);
 
     private Connection connection;
@@ -55,7 +56,7 @@ public class ResultSetMetaShouldNotBeNullRestfulTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         connection = DriverManager.getConnection(url);
         Statement stmt = connection.createStatement();
@@ -75,3 +76,4 @@ public class ResultSetMetaShouldNotBeNullRestfulTest {
     }
 
 }
+

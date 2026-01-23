@@ -4,6 +4,7 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -26,10 +27,11 @@ import static org.junit.Assert.assertNotNull;
 
 public class TSDBResultSetTest {
 
-    private static final String HOST = "127.0.0.1";
     private static Connection conn;
     private static Statement stmt;
     private static ResultSet rs;
+
+    static final String HOST = TestEnvUtil.getHost();
     private static final String DB_NAME = TestUtils.camelToSnake(TSDBResultSetTest.class);
 
     @Test
@@ -191,10 +193,10 @@ public class TSDBResultSetTest {
     }
 
     /**
-     * 根据字节数组，输出对应的格式化字符串
-     * @param bytes 字节数组
-     * @return 字节数组字符串
-     */
+        * 根据字节数组，输出对应的格式化字符串
+        * @param bytes 字节数组
+        * @return 字节数组字符串
+        */
     public static String printBytesByStringBuilder(byte[] bytes){
         StringBuilder stringBuilder = new StringBuilder();
 
@@ -207,8 +209,6 @@ public class TSDBResultSetTest {
     public static String byte2String(byte b){
         return String.format("%02X",b);
     }
-
-
 
     @Test(expected = SQLException.class)
     public void getAsciiStream() throws SQLException {
@@ -715,7 +715,6 @@ public class TSDBResultSetTest {
         assertEquals("2021-01-01 00:00:00.0", ts.toString());
     }
 
-
     @Test
     public void testGetTimestamp() throws SQLException {
         AbstractResultSet rs = (AbstractResultSet) this.rs;
@@ -1058,7 +1057,7 @@ public class TSDBResultSetTest {
         try {
             String url = SpecifyAddress.getInstance().getJniUrl();
             if (url == null) {
-                url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+                url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
             }
             Properties properties = new Properties();
             properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
@@ -1097,3 +1096,4 @@ public class TSDBResultSetTest {
         }
     }
 }
+

@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
@@ -10,8 +11,9 @@ import static org.junit.Assert.assertEquals;
 
 public class InsertSpecialCharacterRestfulTest {
 
-    private static final String HOST = "127.0.0.1";
-    private static Connection conn;
+                    private static Connection conn;
+
+    static final String HOST = TestEnvUtil.getHost();
     private static final String DB_NAME = TestUtils.camelToSnake(InsertSpecialCharacterRestfulTest.class);
     private static final String TB_NAME_1 = "test";
     private static final String TB_NAME_2 = "weather";
@@ -47,7 +49,6 @@ public class InsertSpecialCharacterRestfulTest {
             Assert.assertNull(f2);
         }
     }
-
 
     @Test
     public void testCase02() throws SQLException {
@@ -384,7 +385,7 @@ public class InsertSpecialCharacterRestfulTest {
     public static void beforeClass() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         conn = DriverManager.getConnection(url);
         try (Statement stmt = conn.createStatement()) {
@@ -404,3 +405,4 @@ public class InsertSpecialCharacterRestfulTest {
         }
     }
 }
+

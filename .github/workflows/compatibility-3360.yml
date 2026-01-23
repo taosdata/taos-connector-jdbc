@@ -69,6 +69,12 @@ jobs:
         working-directory: jdbc-workspace
         env:
           TDENGINE_CLOUD_URL: ${{ secrets.TDENGINE_CLOUD_URL }}
+          TDENGINE_HOST: ${{ vars.TDENGINE_HOST }}
+          TDENGINE_JNI_PORT: ${{ vars.TDENGINE_JNI_PORT }}
+          TDENGINE_RS_PORT: ${{ vars.TDENGINE_RS_PORT }}
+          TDENGINE_WS_PORT: ${{ vars.TDENGINE_WS_PORT }}
+          TDENGINE_USER: ${{ secrets.TDENGINE_USER }}
+          TDENGINE_PASSWORD: ${{ secrets.TDENGINE_PASSWORD }}
           TD_3360_TEST: 'true'
         run: mvn -B clean verify --file pom.xml
       - name: Upload logs on failure

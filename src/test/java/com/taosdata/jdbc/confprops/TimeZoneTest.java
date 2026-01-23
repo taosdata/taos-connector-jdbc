@@ -2,6 +2,7 @@ package com.taosdata.jdbc.confprops;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -26,7 +27,6 @@ public class TimeZoneTest {
 
         instant = localDateTime.atZone(ZoneId.of("UT")).toInstant();
         System.out.println("UTC: " + instant.getEpochSecond() + "," + instant);
-
 
         instant = localDateTime.atZone(ZoneId.of("UTC+8")).toInstant();
         System.out.println("UTC+8: " + instant.getEpochSecond() + "," + instant);
@@ -89,7 +89,7 @@ public class TimeZoneTest {
     public void before() {
         url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://127.0.0.1:6030/?user=root&password=taosdata&batchfetch=true";
+            url = "jdbc:TAOS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
         }
     }
 }

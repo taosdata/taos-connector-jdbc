@@ -2,6 +2,7 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
@@ -11,8 +12,9 @@ import java.util.ArrayList;
 import java.util.Random;
 
 public class TSWSPreparedStatementTest {
-    private static final String HOST = "127.0.0.1";
-    private static Connection conn;
+        private static Connection conn;
+
+    static final String HOST = TestEnvUtil.getHost();
     private static final String SQL_INSERT = "insert into t1 values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     private static final String SQL_SELECT = "select * from t1 where ts >= ? and ts < ? and f1 >= ?";
     private static final String DB_NAME = TestUtils.camelToSnake(TSWSPreparedStatementTest.class);
@@ -355,7 +357,6 @@ public class TSWSPreparedStatementTest {
                     break;
             }
 
-
             ArrayList<Long> ts = new ArrayList<>();
             for (int i = 0; i < numOfRows; i++) {
                 ts.add(System.currentTimeMillis() + i);
@@ -391,7 +392,6 @@ public class TSWSPreparedStatementTest {
         }
     }
 
-
     @Test
     public void bindDataWithMultipleTagsTest() throws SQLException {
         Statement stmt = conn.createStatement();
@@ -405,7 +405,6 @@ public class TSWSPreparedStatementTest {
         s.setTableName("w2");
         s.setTagInt(0, 1);
         s.setTagString(1, "test");
-
 
         ArrayList<Long> ts = new ArrayList<>();
         for (int i = 0; i < numOfRows; i++) {
@@ -446,7 +445,6 @@ public class TSWSPreparedStatementTest {
         s.setTableName("w2");
         s.setTagInt(0, 1);
         s.setTagString(1, "test");
-
 
         ArrayList<Long> ts = new ArrayList<>();
         for (int i = 0; i < numOfRows; i++) {
@@ -547,7 +545,6 @@ public class TSWSPreparedStatementTest {
         s.columnDataExecuteBatch();
         s.columnDataCloseBatch();
     }
-
 
     @Test(expected = SQLException.class)
     public void createTwoSameDbTest() throws SQLException {
@@ -1067,8 +1064,6 @@ public class TSWSPreparedStatementTest {
         Assert.assertEquals("NCHAR", parameterMetaData.getParameterTypeName(10));
     }
 
-
-
     @Test
     public void setObjectTest() throws SQLException {
 
@@ -1104,7 +1099,7 @@ public class TSWSPreparedStatementTest {
 
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
-                   haveResult = true;
+                    haveResult = true;
                 }
             }
         }
@@ -1112,7 +1107,6 @@ public class TSWSPreparedStatementTest {
         assert(haveResult);
 
     }
-
 
     @Test(expected = SQLFeatureNotSupportedException.class)
     public void setRowId() throws SQLException {
@@ -1163,7 +1157,7 @@ public class TSWSPreparedStatementTest {
     public static void beforeClass() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata&batchfetch=true";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
         }
         conn = DriverManager.getConnection(url);
         try (Statement stmt = conn.createStatement()) {
@@ -1187,3 +1181,4 @@ public class TSWSPreparedStatementTest {
         }
     }
 }
+

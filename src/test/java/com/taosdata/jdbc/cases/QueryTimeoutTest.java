@@ -2,6 +2,7 @@ package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.TSDBStatement;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -9,11 +10,10 @@ import org.junit.Test;
 
 import java.sql.*;
 
-
 public class QueryTimeoutTest {
-    private final String host = "127.0.0.1";
+    private final String host = TestEnvUtil.getHost();
+    private final int port = TestEnvUtil.getJniPort();
     private Connection conn;
-
 
     @Ignore
     @Test(expected = SQLTimeoutException.class)
@@ -43,9 +43,10 @@ public class QueryTimeoutTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + host + ":" + port + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         conn = DriverManager.getConnection(url);
     }
 
 }
+

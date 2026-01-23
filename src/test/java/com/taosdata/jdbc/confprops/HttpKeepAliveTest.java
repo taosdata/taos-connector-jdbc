@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.confprops;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
@@ -17,7 +18,7 @@ import java.util.stream.IntStream;
 @Ignore
 public class HttpKeepAliveTest {
 
-    private static final String HOST = "127.0.0.1";
+    static final String HOST = TestEnvUtil.getHost();
     private static final String DB_NAME = TestUtils.camelToSnake(HttpKeepAliveTest.class);
     private static Connection connection;
 
@@ -63,7 +64,7 @@ public class HttpKeepAliveTest {
 
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         connection = DriverManager.getConnection(url, props);
     }
@@ -77,3 +78,4 @@ public class HttpKeepAliveTest {
         }
     }
 }
+

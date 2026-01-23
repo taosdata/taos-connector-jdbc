@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
@@ -12,8 +13,8 @@ import java.util.Properties;
 @Ignore
 public class InvalidResultSetPointerTest {
 
-    private static final String HOST = "127.0.0.1";
-    private static final String DB_NAME = TestUtils.camelToSnake(InvalidResultSetPointerTest.class);
+                    static final String HOST = TestEnvUtil.getHost();
+                    private static final String DB_NAME = TestUtils.camelToSnake(InvalidResultSetPointerTest.class);
     private static final String STB_NAME = "stb";
     private static final String TB_NAME = "tb";
     private static Connection connection;
@@ -113,7 +114,7 @@ public class InvalidResultSetPointerTest {
         try {
             String url = SpecifyAddress.getInstance().getJniUrl();
             if (url == null) {
-                url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+                url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
             }
             Class.forName("com.taosdata.jdbc.TSDBDriver");
             Properties properties = new Properties();
@@ -191,3 +192,4 @@ public class InvalidResultSetPointerTest {
     }
 
 }
+

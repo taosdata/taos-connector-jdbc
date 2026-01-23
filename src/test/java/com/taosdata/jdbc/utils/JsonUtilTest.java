@@ -10,7 +10,6 @@ import java.text.SimpleDateFormat;
 public class JsonUtilTest {
     private static final ObjectMapper objectMapper = JsonUtil.getObjectMapper();
 
-
     @Test
     public void testIgnoreUnknownProperties() throws Exception {
         String json = "{\"knownProperty\":\"value\", \"unknownProperty\":\"value\"}";

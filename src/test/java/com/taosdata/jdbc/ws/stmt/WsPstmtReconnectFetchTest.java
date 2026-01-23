@@ -2,6 +2,7 @@ package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.TaosAdapterMock;
 import com.taosdata.jdbc.ws.loadbalance.RebalanceManager;
@@ -19,7 +20,8 @@ import java.util.Properties;
 @RunWith(Parameterized.class)
 @FixMethodOrder
 public class WsPstmtReconnectFetchTest {
-    static final String HOST = "localhost";
+
+    static final String HOST = TestEnvUtil.getHost();
     static final String DB_NAME = TestUtils.camelToSnake(WsPstmtReconnectFetchTest.class);
     static final String TABLE_NAME = "wpt";
     static Connection connection;
@@ -38,7 +40,7 @@ public class WsPstmtReconnectFetchTest {
 
         Properties properties = new Properties();
         String url = "jdbc:TAOS-WS://"
-                + HOST + ":" + mockB.getListenPort() + "/?user=root&password=taosdata";
+                + HOST + ":" + mockB.getListenPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
 
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ENABLE_AUTO_RECONNECT, "true");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_INTERVAL_MS, "2000");
@@ -49,12 +51,11 @@ public class WsPstmtReconnectFetchTest {
             properties.setProperty(TSDBDriver.PROPERTY_KEY_PBS_MODE, this.mode);
         }
 
-
         String sql = "select * from " + DB_NAME + "." + TABLE_NAME + " where ts > ? and ts < ?";
         int resultCount = 0;
 
         try (Connection connection = DriverManager.getConnection(url, properties);
-             PreparedStatement pstmt = connection.prepareStatement(sql)) {
+                PreparedStatement pstmt = connection.prepareStatement(sql)) {
 
             pstmt.setTimestamp(1, Timestamp.valueOf("2018-10-03 14:38:00"));
             pstmt.setTimestamp(2, Timestamp.valueOf("2018-10-03 14:39:00"));
@@ -79,9 +80,9 @@ public class WsPstmtReconnectFetchTest {
 
         String url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + HOST + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         } else {
-            url += "?user=root&password=taosdata&batchfetch=true";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
         }
         Properties properties = new Properties();
         connection = DriverManager.getConnection(url, properties);
@@ -113,3 +114,4 @@ public class WsPstmtReconnectFetchTest {
         RebalanceManager.getInstance().clearAllForTest();
     }
 }
+

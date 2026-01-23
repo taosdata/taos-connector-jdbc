@@ -2,6 +2,7 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
@@ -14,14 +15,13 @@ import java.util.ArrayList;
 import java.util.Properties;
 
 public class WSGeometryTest {
-    static final String HOST = "127.0.0.1";
+    static final String HOST = TestEnvUtil.getHost();
     static final String DB_NAME = TestUtils.camelToSnake(WSGeometryTest.class);
     static final String TABLE_NATIVE = "geometry_noraml";
     static final String TABLE_STMT = "geometry_stmt";
     static Connection connection;
     static Statement statement;
     final byte[] expectedArray = StringUtils.hexToBytes("0101000000000000000000F03F0000000000000040");
-
 
     @Test
     public void testInsert() throws Exception {
@@ -34,7 +34,6 @@ public class WSGeometryTest {
         byte[] result1 = resultSet.getBytes(1);
         Assert.assertArrayEquals(expectedArray, result1);
     }
-
 
     @Test
     public void testPrepare() throws SQLException {
@@ -69,7 +68,7 @@ public class WSGeometryTest {
     public static void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata&batchfetch=true";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
@@ -97,3 +96,4 @@ public class WSGeometryTest {
         }
     }
 }
+

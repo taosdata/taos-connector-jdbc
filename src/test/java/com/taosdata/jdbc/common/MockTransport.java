@@ -15,7 +15,6 @@ public class MockTransport extends Transport {
     private FetchBlockData target;
     private int sendFetchCount = 0;
 
-
     public static final long TEST_QUERY_ID = 12345;
     public static final long TEST_REQ_ID = 67890;
     public static final int TIMEOUT_MS = 100;
@@ -24,7 +23,6 @@ public class MockTransport extends Transport {
             new RestfulResultSet.Field("ts", 0, 8, "timestamp", TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP, 0, 0),
             new RestfulResultSet.Field("name", 0, 4, "name", TSDBConstants.TSDB_DATA_TYPE_INT, 0, 0)
     );
-
 
     public MockTransport() throws SQLException {
         super();

@@ -4,6 +4,7 @@ import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -17,7 +18,7 @@ import java.util.Properties;
 @RunWith(CatalogRunner.class)
 @TestTarget(author = "huolibo", version = "3.0.1")
 public class WasNullTest {
-    static final String HOST = "127.0.0.1";
+    static final String HOST = TestEnvUtil.getHost();
     static final String DB_NAME = TestUtils.camelToSnake(WasNullTest.class);
     static final String TABLE_NAME = "null_t";
     static Connection connection;
@@ -57,7 +58,7 @@ public class WasNullTest {
     public static void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
@@ -88,3 +89,4 @@ public class WasNullTest {
         }
     }
 }
+

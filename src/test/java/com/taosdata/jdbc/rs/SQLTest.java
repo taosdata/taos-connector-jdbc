@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.rs;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 import org.junit.runners.MethodSorters;
@@ -10,9 +11,9 @@ import java.sql.*;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class SQLTest {
 
-    private static final String HOST = "127.0.0.1";
     private static Connection connection;
 
+    static final String HOST = TestEnvUtil.getHost();
     private static final String DB_NAME = TestUtils.camelToSnake(SQLTest.class);
 
     @Test
@@ -402,7 +403,6 @@ public class SQLTest {
         Assert.assertNotNull(rs);
     }
 
-
     @Test
     public void testCase037() {
         String sql = "select database()";
@@ -569,7 +569,7 @@ public class SQLTest {
     public static void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         connection = DriverManager.getConnection(url);
     }
@@ -583,3 +583,4 @@ public class SQLTest {
     }
 
 }
+

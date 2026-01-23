@@ -2,6 +2,7 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
@@ -9,13 +10,13 @@ import java.sql.*;
 import java.util.Calendar;
 import java.util.Properties;
 
-
 public class BlockResultSetTest {
 
-    private static final String HOST = "127.0.0.1";
-    private static Connection conn;
+        private static Connection conn;
     private static Statement stmt;
     private static ResultSet rs;
+
+    static final String HOST = TestEnvUtil.getHost();
     private static final String DB_NAME = TestUtils.camelToSnake(BlockResultSetTest.class);
 
     @Test
@@ -186,7 +187,6 @@ public class BlockResultSetTest {
         rs.getStatement();
     }
 
-
     @Before
     public void before() throws SQLException {
         rs = stmt.executeQuery("select * from weather");
@@ -199,7 +199,6 @@ public class BlockResultSetTest {
         }
     }
 
-
     @BeforeClass
     public static void beforeClass() throws SQLException {
         TestUtils.runInMain();
@@ -210,7 +209,7 @@ public class BlockResultSetTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + HOST + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         conn = DriverManager.getConnection(url, properties);
         stmt = conn.createStatement();

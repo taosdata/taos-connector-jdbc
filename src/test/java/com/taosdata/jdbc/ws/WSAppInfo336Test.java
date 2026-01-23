@@ -4,6 +4,7 @@ import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 import org.junit.runner.RunWith;
@@ -15,8 +16,9 @@ import java.util.Properties;
 @TestTarget(alias = "websocket query test", author = "huolibo", version = "2.0.38")
 @FixMethodOrder
 public class WSAppInfo336Test {
-    private static final String HOST = "127.0.0.1";
-    private static final int PORT = 6041;
+
+        static final String HOST = TestEnvUtil.getHost();
+        static final int PORT = TestEnvUtil.getWsPort();
     private Connection connection;
     private static final String APP_NAME = "jdbc_appName";
     private static final String APP_IP = "192.168.1.1";
@@ -27,7 +29,7 @@ public class WSAppInfo336Test {
         for (int i = 0; i < 10; i++) {
             Thread.sleep(1000);
             try (Statement statement = connection.createStatement();
-                 ResultSet resultSet = statement.executeQuery("show connections")) {
+                    ResultSet resultSet = statement.executeQuery("show connections")) {
                 while (resultSet.next()) {
 
                     String name = resultSet.getString("user_app");
@@ -52,16 +54,16 @@ public class WSAppInfo336Test {
         TestUtils.runIn336();
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + HOST + ":" + PORT + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "";
         } else {
-            url += "?user=root&password=taosdata";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "Asia/Shanghai");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_APP_NAME, APP_NAME);
         properties.setProperty(TSDBDriver.PROPERTY_KEY_APP_IP, APP_IP);
         connection = DriverManager.getConnection(url, properties);
-   }
+    }
 
     @After
     public void after() throws SQLException {
@@ -70,3 +72,4 @@ public class WSAppInfo336Test {
         }
     }
 }
+

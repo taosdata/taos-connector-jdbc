@@ -26,8 +26,8 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 
 /**
- * Unit tests for Fetch2Step, covering different execution scenarios of the 2-step fetch process
- */
+    * Unit tests for Fetch2Step, covering different execution scenarios of the 2-step fetch process
+    */
 public class Fetch2StepTest {
 
     @Mock
@@ -47,7 +47,6 @@ public class Fetch2StepTest {
     @Spy
     private final RebalanceManager rebalanceManager = RebalanceManager.getInstance();
 
-
     @Before
     public void init() {
         MockitoAnnotations.openMocks(this);
@@ -60,8 +59,8 @@ public class Fetch2StepTest {
     }
 
     /**
-     * Test scenario: WebSocket client not open, should return CONNECT step with next interval
-     */
+        * Test scenario: WebSocket client not open, should return CONNECT step with next interval
+        */
     @Test
     public void execute_wsClientNotOpen_returnsConnectStep() throws ExecutionException, InterruptedException, SQLException {
         when(wsClient.isOpen()).thenReturn(false);
@@ -78,8 +77,8 @@ public class Fetch2StepTest {
     }
 
     /**
-     * Test scenario: InFlightRequest.put throws exception, should return CONNECT step with 0 interval
-     */
+        * Test scenario: InFlightRequest.put throws exception, should return CONNECT step with 0 interval
+        */
     @Test
     public void execute_putThrowsException_returnsConnectStep() throws ExecutionException, InterruptedException, SQLException {
         when(wsClient.isOpen()).thenReturn(true);
@@ -94,8 +93,8 @@ public class Fetch2StepTest {
     }
 
     /**
-     * Test scenario: Response completed, should return CLOSE step and trigger endpointUp
-     */
+        * Test scenario: Response completed, should return CLOSE step and trigger endpointUp
+        */
     @Test
     public void execute_responseCompleted_returnsFinishStep() throws ExecutionException, InterruptedException, SQLException {
         doNothing().when(rebalanceManager).endpointUp(any(ConnectionParam.class), any(Endpoint.class));
@@ -124,8 +123,8 @@ public class Fetch2StepTest {
     }
 
     /**
-     * Test scenario: Response not completed, should return FETCH2 step without endpointUp
-     */
+        * Test scenario: Response not completed, should return FETCH2 step without endpointUp
+        */
     @Test
     public void execute_responseNotCompleted_returnsFetch2Step() throws ExecutionException, InterruptedException, SQLException {
         when(wsClient.isOpen()).thenReturn(true);
@@ -153,8 +152,8 @@ public class Fetch2StepTest {
     }
 
     /**
-     * Test scenario: Response throws exception, should return FREE_RESULT step with recovery interval
-     */
+        * Test scenario: Response throws exception, should return FREE_RESULT step with recovery interval
+        */
     @Test
     public void execute_responseException_returnsFreeResultWithRecovery() throws ExecutionException, InterruptedException, SQLException {
         when(wsClient.isOpen()).thenReturn(true);

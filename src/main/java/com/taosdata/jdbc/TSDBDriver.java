@@ -257,7 +257,7 @@ public class TSDBDriver extends AbstractDriver {
     }
 
     /**
-     * example: jdbc:TAOS://127.0.0.1:0/db?user=root&password=your_password
+     * example: jdbc:TAOS://127.0.0.1:0/db?user=user_abc&password=your_password
      */
     public Properties parseURL(String url, Properties defaults) throws SQLException {
         if (url == null || url.length() <= 0 || url.trim().length() <= 0)

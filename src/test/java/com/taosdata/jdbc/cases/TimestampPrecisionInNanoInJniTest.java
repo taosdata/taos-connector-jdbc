@@ -1,8 +1,8 @@
 package com.taosdata.jdbc.cases;
 
-
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
@@ -13,7 +13,7 @@ import java.util.Properties;
 
 public class TimestampPrecisionInNanoInJniTest {
 
-    private static final String HOST = "127.0.0.1";
+    static final String HOST = TestEnvUtil.getHost();
     private static final String NS_TIMESTAMP_DB = TestUtils.camelToSnake(TimestampPrecisionInNanoInJniTest.class);
     private static final long TIMESTAMP_1 = System.currentTimeMillis();
     private static final long TIMESTAMP_2 = TIMESTAMP_1 * 1000_000 + 123455;
@@ -23,7 +23,6 @@ public class TimestampPrecisionInNanoInJniTest {
     private static final String DATE_4 = format.format(new Date(TIMESTAMP_1 + 10L));
     private static final String DATE_2 = DATE_1 + "123455";
     private static final String DATE_3 = DATE_4 + "123456";
-
 
     private static Connection conn;
 
@@ -35,7 +34,7 @@ public class TimestampPrecisionInNanoInJniTest {
 
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         conn = DriverManager.getConnection(url, properties);
 
@@ -494,3 +493,4 @@ public class TimestampPrecisionInNanoInJniTest {
         }
     }
 }
+

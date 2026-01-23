@@ -109,5 +109,4 @@ public class StringUtilsTest {
         Assert.assertEquals("0A1B2C3DFEFF", hexString);
     }
 
-
 }

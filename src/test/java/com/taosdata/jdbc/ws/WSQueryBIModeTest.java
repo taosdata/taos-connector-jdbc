@@ -4,6 +4,7 @@ import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.rs.RestfulDatabaseMetaData;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 import org.junit.runner.RunWith;
@@ -25,7 +26,7 @@ public class WSQueryBIModeTest {
         try (Statement statement = connection.createStatement()) {
             ResultSet resultSet = statement.executeQuery("SELECT * FROM ws_bi_mode.meters LIMIT 1");
             resultSet.next();
-           Assert.assertEquals(7, resultSet.getMetaData().getColumnCount());
+            Assert.assertEquals(7, resultSet.getMetaData().getColumnCount());
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -143,7 +144,7 @@ public class WSQueryBIModeTest {
 
     @Before
     public void before() throws SQLException {
-        String url = "jdbc:TAOS-RS://192.168.1.98:6041/?user=root&password=taosdata&batchfetch=true&conmode=1";
+        String url = "jdbc:TAOS-RS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true&conmode=1";
         Properties properties = new Properties();
         connection = DriverManager.getConnection(url, properties);
         Statement statement = connection.createStatement();
@@ -169,3 +170,4 @@ public class WSQueryBIModeTest {
         }
     }
 }
+

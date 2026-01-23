@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.confprops;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -15,8 +16,8 @@ import java.util.stream.IntStream;
 @Ignore
 public class TaosInfoMonitorTest {
 
-    private static final String HOST = "127.0.0.1";
-    private final Random random = new Random(System.currentTimeMillis());
+    static final String HOST = TestEnvUtil.getHost();
+            private final Random random = new Random(System.currentTimeMillis());
 
     @Test
     public void testCreateTooManyConnection() throws InterruptedException {
@@ -24,7 +25,7 @@ public class TaosInfoMonitorTest {
         List<Thread> threads = IntStream.range(1, 11).mapToObj(i -> new Thread(() -> {
             String url = SpecifyAddress.getInstance().getJniUrl();
             if (url == null) {
-                url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+                url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
             }
             int connSize = random.nextInt(10);
             for (int j = 0; j < connSize; j++) {
@@ -57,3 +58,4 @@ public class TaosInfoMonitorTest {
         }
     }
 }
+

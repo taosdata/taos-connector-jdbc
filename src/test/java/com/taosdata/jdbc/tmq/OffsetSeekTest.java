@@ -2,6 +2,7 @@ package com.taosdata.jdbc.tmq;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -25,7 +26,8 @@ public class OffsetSeekTest {
     private static ScheduledExecutorService scheduledExecutorService = null;
     private static Connection connection = null;
     private static Statement statement = null;
-    private static final String HOST = "127.0.0.1";
+
+    static final String HOST = TestEnvUtil.getHost();
     private static final String DB_NAME = TestUtils.camelToSnake(OffsetSeekTest.class);
     private static final String SUPER_TABLE = "st";
     private static final String TOPIC = "offset_seek_test";
@@ -33,10 +35,10 @@ public class OffsetSeekTest {
     @Test
     public void testGetOffset() throws Exception {
         Properties properties = new Properties();
-        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, HOST + ":6030");
+        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, HOST + ":" + TestEnvUtil.getJniPort());
         properties.setProperty(TMQConstants.CONNECT_TYPE, "jni");
-        properties.setProperty(TMQConstants.CONNECT_USER, "root");
-        properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
+        properties.setProperty(TMQConstants.CONNECT_USER, TestEnvUtil.getUser());
+        properties.setProperty(TMQConstants.CONNECT_PASS, TestEnvUtil.getPassword());
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
         properties.setProperty(TMQConstants.GROUP_ID, "gId");
@@ -87,7 +89,7 @@ public class OffsetSeekTest {
     public static void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
@@ -129,3 +131,4 @@ public class OffsetSeekTest {
     }
 
 }
+

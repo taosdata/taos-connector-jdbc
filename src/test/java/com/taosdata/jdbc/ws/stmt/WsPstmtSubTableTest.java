@@ -2,6 +2,7 @@ package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.TSWSPreparedStatement;
 import io.netty.util.ResourceLeakDetector;
@@ -12,8 +13,7 @@ import java.sql.*;
 import java.util.Properties;
 
 public class WsPstmtSubTableTest {
-    final String host = "127.0.0.1";
-    final String db_name = TestUtils.camelToSnake(WsPstmtSubTableTest.class);
+            final String db_name = TestUtils.camelToSnake(WsPstmtSubTableTest.class);
     final String superTable = "wpt_st";
     final String superTable1 = "wpt_st1";
     final String superTable2 = "wpt_json";
@@ -121,9 +121,9 @@ public class WsPstmtSubTableTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata&batchfetch=true";
+            url = "jdbc:TAOS-RS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
         } else {
-            url += "?user=root&password=taosdata&batchfetch=true";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
         }
         Properties properties = new Properties();
         connection = DriverManager.getConnection(url, properties);
@@ -157,3 +157,4 @@ public class WsPstmtSubTableTest {
         System.gc();
     }
 }
+

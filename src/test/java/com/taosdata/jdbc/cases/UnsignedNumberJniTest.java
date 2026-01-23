@@ -2,6 +2,7 @@ package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import org.junit.*;
 import org.junit.runners.MethodSorters;
 
@@ -11,7 +12,6 @@ import java.util.Properties;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class UnsignedNumberJniTest {
 
-    private static final String HOST = "127.0.0.1";
     private static Connection conn;
     private static long ts;
 
@@ -146,7 +146,7 @@ public class UnsignedNumberJniTest {
 
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         conn = DriverManager.getConnection(url, properties);
         Statement stmt = conn.createStatement();
@@ -169,3 +169,4 @@ public class UnsignedNumberJniTest {
     }
 
 }
+

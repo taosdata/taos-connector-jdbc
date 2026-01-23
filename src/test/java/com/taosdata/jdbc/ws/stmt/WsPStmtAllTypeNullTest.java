@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.TSWSPreparedStatement;
 import io.netty.util.ResourceLeakDetector;
@@ -13,8 +14,7 @@ import java.util.Properties;
 import static com.taosdata.jdbc.TSDBConstants.*;
 
 public class WsPStmtAllTypeNullTest {
-    final String host = "127.0.0.1";
-    final String dbName = TestUtils.camelToSnake(WsPStmtAllTypeNullTest.class);
+            final String dbName = TestUtils.camelToSnake(WsPStmtAllTypeNullTest.class);
     final String tableName = "wpt";
     final String stableName = "swpt";
     Connection connection;
@@ -75,7 +75,6 @@ public class WsPStmtAllTypeNullTest {
         statement.close();
     }
 
-
     @Test
     public void testExecuteUpdate2() throws SQLException {
         String sql = "insert into stb_1 using " + dbName + "." + stableName + " tags (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) values (?, ?)";
@@ -98,12 +97,10 @@ public class WsPStmtAllTypeNullTest {
         statement.setTagNull(11, TSDB_DATA_TYPE_VARBINARY);
         statement.setTagNull(12, TSDB_DATA_TYPE_GEOMETRY);
 
-
         statement.setTagNull(13, TSDB_DATA_TYPE_UTINYINT);
         statement.setTagNull(14, TSDB_DATA_TYPE_USMALLINT);
         statement.setTagNull(15, TSDB_DATA_TYPE_UINT);
         statement.setTagNull(16, TSDB_DATA_TYPE_UBIGINT);
-
 
         statement.setTimestamp(0, Collections.singletonList(current));
         statement.setByte(1, Collections.singletonList(null));
@@ -113,9 +110,7 @@ public class WsPStmtAllTypeNullTest {
         ResultSet resultSet = statement.executeQuery("select * from " + dbName + "." + stableName);
         resultSet.next();
 
-
         Assert.assertEquals(resultSet.getTimestamp(1), new Timestamp(current));
-
 
         resultSet.getByte(2);
         Assert.assertTrue(resultSet.wasNull());
@@ -163,7 +158,6 @@ public class WsPStmtAllTypeNullTest {
         Object obj = resultSet.getObject(19);
         Assert.assertNull(obj);
 
-
         resultSet.close();
         statement.close();
     }
@@ -172,9 +166,9 @@ public class WsPStmtAllTypeNullTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata&batchfetch=true";
+            url = "jdbc:TAOS-RS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
         } else {
-            url += "?user=root&password=taosdata&batchfetch=true";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
         }
         Properties properties = new Properties();
         connection = DriverManager.getConnection(url, properties);
@@ -212,3 +206,4 @@ public class WsPStmtAllTypeNullTest {
         System.gc();
     }
 }
+

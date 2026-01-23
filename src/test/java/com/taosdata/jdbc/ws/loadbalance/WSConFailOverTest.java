@@ -6,6 +6,7 @@ import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.common.Endpoint;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.TaosAdapterMock;
 import org.junit.*;
@@ -16,14 +17,13 @@ import java.net.URISyntaxException;
 import java.sql.*;
 import java.util.Properties;
 
-
 @RunWith(CatalogRunner.class)
 @FixMethodOrder
 public class WSConFailOverTest {
-    private static final String HOST_A = "127.0.0.1";
-    private static final int PORT_A = 6041;
+    private static final String HOST_A = TestEnvUtil.getHost();
+    private static final int PORT_A = TestEnvUtil.getWsPort();
 
-    private static final String HOST_B = "127.0.0.1";
+    private static final String HOST_B = TestEnvUtil.getHost();
     private static final int PORT_B = 9041;
     private final String dbName = TestUtils.camelToSnake(WSConFailOverTest.class);
     private static final String TABLE_NAME = "meters";
@@ -79,9 +79,9 @@ public class WSConFailOverTest {
         String url;
         url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + HOST_A + ":" + PORT_A + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST_A + ":" + PORT_A + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         } else {
-            url += "?user=root&password=taosdata";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_HEALTH_CHECK_INIT_INTERVAL, "1");
@@ -100,9 +100,9 @@ public class WSConFailOverTest {
 
         url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + HOST_B + ":" + PORT_B + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST_B + ":" + PORT_B + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         } else {
-            url += "?user=root&password=taosdata";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_HOST, HOST_A);
         properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_PORT, String.valueOf(PORT_A));

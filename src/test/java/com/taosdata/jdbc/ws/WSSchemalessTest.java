@@ -8,6 +8,7 @@ import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -20,8 +21,9 @@ import java.util.List;
 
 @SuppressWarnings("java:S1874")
 public class WSSchemalessTest {
-    private static final String HOST = "127.0.0.1";
-    private static final String DB_NAME = TestUtils.camelToSnake(WSSchemalessTest.class);
+
+        static final String HOST = TestEnvUtil.getHost();
+        private static final String DB_NAME = TestUtils.camelToSnake(WSSchemalessTest.class);
     private static final String DB_NAME_TTL = "test_schemaless_ws_ttl";
     public static SchemalessWriter writer;
     public static Connection connection;
@@ -30,14 +32,14 @@ public class WSSchemalessTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         connection = DriverManager.getConnection(url);
         try (Statement statement = connection.createStatement()) {
             statement.executeUpdate("drop database if exists " + DB_NAME);
             statement.executeUpdate("create database " + DB_NAME);
         }
-        writer = new SchemalessWriter(url, "root", "taosdata", DB_NAME);
+        writer = new SchemalessWriter(url, TestEnvUtil.getUser(), TestEnvUtil.getPassword(), DB_NAME);
     }
 
     @Test
@@ -153,7 +155,6 @@ public class WSSchemalessTest {
         writer.write(lines, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS, DB_NAME_TTL, 1000, 1L);
         writer.close();
     }
-
 
     @Test
     public void telnetInsert() throws SQLException {
@@ -272,3 +273,4 @@ public class WSSchemalessTest {
     }
 
 }
+

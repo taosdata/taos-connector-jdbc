@@ -39,7 +39,6 @@ public class DataTypeConvertUtilTest {
     private static final int COLUMN_INDEX = 1;
     private static final int TIMESTAMP_PRECISION_MS = TimestampPrecision.MS;
 
-
     @Test
     public void testGetBoolean() throws SQLDataException {
         // Test TINYINT
@@ -312,7 +311,7 @@ public class DataTypeConvertUtilTest {
         // BINARY
         assertEquals(2147483647, DataTypeConvertUtil.getInt(TSDB_DATA_TYPE_BINARY, "2147483647".getBytes(), 1));
         assertEquals(-2147483648, DataTypeConvertUtil.getInt(TSDB_DATA_TYPE_BINARY, "-2147483648".getBytes(), 1));
-  }
+    }
 
     @Test
     public void testGetLong() throws SQLException {
@@ -1108,7 +1107,6 @@ public class DataTypeConvertUtilTest {
         }
     }
 
-
     @Before
     public void setUpAdditional() {
         closeable = MockitoAnnotations.openMocks(this);
@@ -1123,3 +1121,4 @@ public class DataTypeConvertUtilTest {
         }
     }
 }
+

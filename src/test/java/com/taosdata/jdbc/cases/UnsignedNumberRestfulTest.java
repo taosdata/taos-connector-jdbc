@@ -2,6 +2,7 @@ package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 import org.junit.runners.MethodSorters;
@@ -9,13 +10,13 @@ import org.junit.runners.MethodSorters;
 import java.sql.*;
 import java.util.Properties;
 
-
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class UnsignedNumberRestfulTest {
 
-    private static final String HOST = "127.0.0.1";
     private static Connection conn;
     private static long ts;
+
+    static final String HOST = TestEnvUtil.getHost();
     private static final String DB_NAME = TestUtils.camelToSnake(UnsignedNumberRestfulTest.class);
 
     @Test
@@ -149,7 +150,7 @@ public class UnsignedNumberRestfulTest {
 
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         conn = DriverManager.getConnection(url, properties);
         Statement stmt = conn.createStatement();
@@ -176,3 +177,4 @@ public class UnsignedNumberRestfulTest {
     }
 
 }
+

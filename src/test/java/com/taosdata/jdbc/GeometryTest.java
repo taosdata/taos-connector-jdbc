@@ -3,6 +3,7 @@ package com.taosdata.jdbc;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.TestUtils;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -13,14 +14,13 @@ import java.util.ArrayList;
 import java.util.Properties;
 
 public class GeometryTest {
-    static final String HOST = "127.0.0.1";
+    static final String HOST = TestEnvUtil.getHost();
     static final String DB_NAME = TestUtils.camelToSnake(GeometryTest.class);
     static final String TABLE_NATIVE = "geometry_noraml";
     static final String TABLE_STMT = "geometry_stmt";
     static Connection connection;
     static Statement statement;
     final byte[] expectedArray = StringUtils.hexToBytes("0101000000000000000000F03F0000000000000040");
-
 
     @Test
     public void testInsert() throws Exception {
@@ -33,7 +33,6 @@ public class GeometryTest {
         byte[] result1 = resultSet.getBytes(1);
         Assert.assertArrayEquals(expectedArray, result1);
     }
-
 
     @Test
     public void testPrepare() throws SQLException {
@@ -68,7 +67,7 @@ public class GeometryTest {
     public static void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
@@ -97,3 +96,4 @@ public class GeometryTest {
         }
     }
 }
+

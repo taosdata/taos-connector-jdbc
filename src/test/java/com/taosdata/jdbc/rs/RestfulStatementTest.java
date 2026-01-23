@@ -2,6 +2,7 @@ package com.taosdata.jdbc.rs;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -12,7 +13,7 @@ import java.util.Properties;
 import java.util.UUID;
 
 public class RestfulStatementTest {
-    private static final String HOST = "127.0.0.1";
+    static final String HOST = TestEnvUtil.getHost();
 
     private static Connection conn;
     private static Statement stmt;
@@ -357,7 +358,7 @@ public class RestfulStatementTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         conn = DriverManager.getConnection(url, properties);
         stmt = conn.createStatement();
@@ -372,3 +373,4 @@ public class RestfulStatementTest {
     }
 
 }
+

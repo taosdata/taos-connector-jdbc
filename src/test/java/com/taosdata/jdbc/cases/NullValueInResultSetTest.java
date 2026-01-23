@@ -2,6 +2,7 @@ package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.utils.TimestampUtil;
 import org.junit.*;
@@ -10,7 +11,10 @@ import java.sql.*;
 import java.util.Properties;
 
 public class NullValueInResultSetTest {
-    private static final String HOST = "127.0.0.1";
+
+        static final String HOST = TestEnvUtil.getHost();
+
+
     private static Properties properties;
     private Connection conn;
     private final String dbName = TestUtils.camelToSnake(NullValueInResultSetTest.class);
@@ -19,7 +23,7 @@ public class NullValueInResultSetTest {
     public void testRestful() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         conn = DriverManager.getConnection(url, properties);
 
@@ -47,14 +51,13 @@ public class NullValueInResultSetTest {
             e.printStackTrace();
         }
 
-
     }
 
     @Test
     public void testJNI() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         conn = DriverManager.getConnection(url, properties);
 
@@ -101,3 +104,4 @@ public class NullValueInResultSetTest {
         }
     }
 }
+

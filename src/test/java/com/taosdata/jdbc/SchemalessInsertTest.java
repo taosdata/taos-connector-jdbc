@@ -9,6 +9,7 @@ import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -24,15 +25,16 @@ import java.util.List;
 @TestTarget(alias = "Schemaless", author = "huolibo", version = "2.0.36")
 @SuppressWarnings("java:S1874")
 public class SchemalessInsertTest {
-    private static final String HOST = "127.0.0.1";
-    private final String dbname = TestUtils.camelToSnake(SchemalessInsertTest.class);
+
+    static final String HOST = TestEnvUtil.getHost();
+            private final String dbname = TestUtils.camelToSnake(SchemalessInsertTest.class);
     private Connection conn;
 
     /**
-     * schemaless insert compatible with influxdb
-     *
-     * @throws SQLException execute error
-     */
+        * schemaless insert compatible with influxdb
+        *
+        * @throws SQLException execute error
+        */
     @Test
     @Description("line insert")
     public void schemalessInsert() throws SQLException {
@@ -164,10 +166,10 @@ public class SchemalessInsertTest {
         writer.close();
     }
     /**
-     * telnet insert compatible with opentsdb
-     *
-     * @throws SQLException execute error
-     */
+        * telnet insert compatible with opentsdb
+        *
+        * @throws SQLException execute error
+        */
     @Test
     @Description("telnet insert")
     public void telnetInsert() throws SQLException {
@@ -200,10 +202,10 @@ public class SchemalessInsertTest {
     }
 
     /**
-     * json insert compatible with opentsdb json format
-     *
-     * @throws SQLException execute error
-     */
+        * json insert compatible with opentsdb json format
+        *
+        * @throws SQLException execute error
+        */
     @Test
     @Description("json insert")
     public void jsonInsert() throws SQLException, JsonProcessingException {
@@ -285,7 +287,7 @@ public class SchemalessInsertTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         conn = DriverManager.getConnection(url);
         Statement stmt = conn.createStatement();
@@ -302,3 +304,4 @@ public class SchemalessInsertTest {
         conn.close();
     }
 }
+

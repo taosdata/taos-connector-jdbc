@@ -2,6 +2,7 @@ package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -18,13 +19,13 @@ public class QueryDataTest {
     static Statement statement;
     static final String DB_NAME = TestUtils.camelToSnake(QueryDataTest.class);
     static final String STB_NAME = "meters";
-    static final String HOST = "127.0.0.1";
+    static final String HOST = TestEnvUtil.getHost();
 
     @Before
     public void createDatabase() throws SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "en_US.UTF-8");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");

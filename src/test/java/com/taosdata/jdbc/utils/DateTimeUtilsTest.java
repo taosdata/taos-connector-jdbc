@@ -346,7 +346,6 @@ public class DateTimeUtilsTest {
         assertNull(DateTimeUtils.toLong((ZonedDateTime) null, TimestampPrecision.MS));
     }
 
-
     // Set UTC timezone before all tests run
     @BeforeClass
     public static void setupTimeZone() {

@@ -2,6 +2,7 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
@@ -11,7 +12,7 @@ import java.util.ArrayList;
 import java.util.Properties;
 
 public class WSVarbinaryTest {
-    static final String HOST = "127.0.0.1";
+    static final String HOST = TestEnvUtil.getHost();
     static final String DB_NAME = TestUtils.camelToSnake(WSVarbinaryTest.class);
     static final String TABLE_NATIVE = "varbinary_noraml";
     static final String TABLE_STMT = "varbinary_stmt";
@@ -30,7 +31,6 @@ public class WSVarbinaryTest {
         byte[] result1 = resultSet.getBytes(1);
         Assert.assertArrayEquals(expectedArray, result1);
     }
-
 
     @Test
     public void testPrepare() throws SQLException {
@@ -71,7 +71,7 @@ public class WSVarbinaryTest {
     public static void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata&batchfetch=true";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
@@ -100,3 +100,4 @@ public class WSVarbinaryTest {
         }
     }
 }
+

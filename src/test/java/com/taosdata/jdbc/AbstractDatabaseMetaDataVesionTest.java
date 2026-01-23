@@ -1,6 +1,7 @@
 package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -13,13 +14,13 @@ import java.util.Properties;
 
 public class AbstractDatabaseMetaDataVesionTest {
     Connection connection;
-    final String host = "127.0.0.1";
+    static final String host = TestEnvUtil.getHost();
 
     @Test
     public void testJni() throws IOException, SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + host + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + host + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         connection = DriverManager.getConnection(url);
         DatabaseMetaData metaData = connection.getMetaData();
@@ -39,7 +40,7 @@ public class AbstractDatabaseMetaDataVesionTest {
     public void testRest() throws IOException, SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + host + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         connection = DriverManager.getConnection(url);
         DatabaseMetaData metaData = connection.getMetaData();
@@ -59,7 +60,7 @@ public class AbstractDatabaseMetaDataVesionTest {
     public void testWebsocket() throws IOException, SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + host + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + host + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties config = new Properties();
         config.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");

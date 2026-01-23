@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -15,7 +16,9 @@ import java.util.Random;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class InsertDbwithoutUseDbTest {
 
-    private static final String HOST = "127.0.0.1";
+        static final String HOST = TestEnvUtil.getHost();
+
+
     private static Properties properties;
     private static final Random random = new Random(System.currentTimeMillis());
     private static final String DB_NAME = TestUtils.camelToSnake(InsertDbwithoutUseDbTest.class);
@@ -25,7 +28,7 @@ public class InsertDbwithoutUseDbTest {
         // prepare schema
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://127.0.0.1:6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Connection conn = DriverManager.getConnection(url, properties);
         Statement stmt = conn.createStatement();
@@ -38,9 +41,9 @@ public class InsertDbwithoutUseDbTest {
         // execute insert
         url = SpecifyAddress.getInstance().getJniWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS://127.0.0.1:6030/" + DB_NAME + "?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/" + DB_NAME + "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         } else {
-            url = url + DB_NAME + "?user=root&password=taosdata";
+            url = url + DB_NAME + "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         conn = DriverManager.getConnection(url, properties);
         stmt = conn.createStatement();
@@ -60,7 +63,7 @@ public class InsertDbwithoutUseDbTest {
         // prepare the schema
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/" + DB_NAME + "?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/" + DB_NAME + "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Connection conn = DriverManager.getConnection(url, properties);
         Statement stmt = conn.createStatement();
@@ -93,3 +96,4 @@ public class InsertDbwithoutUseDbTest {
     }
 
 }
+

@@ -6,6 +6,7 @@ import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
 import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -23,18 +24,18 @@ import java.util.List;
 
 public class RestfulResultSetTest {
 
-    private static final String HOST = "127.0.0.1";
     private static Connection conn;
     private static Statement stmt;
     private static ResultSet rs;
-    private static final String DB_NAME = TestUtils.camelToSnake(RestfulResultSetTest.class);
 
+    static final String HOST = TestEnvUtil.getHost();
+    private static final String DB_NAME = TestUtils.camelToSnake(RestfulResultSetTest.class);
 
     @BeforeClass
     public static void beforeClass() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         conn = DriverManager.getConnection(url);
         stmt = conn.createStatement();

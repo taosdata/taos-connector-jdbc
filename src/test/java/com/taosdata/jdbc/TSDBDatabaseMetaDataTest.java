@@ -1,6 +1,7 @@
 package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -11,10 +12,11 @@ import java.sql.*;
 import java.util.Properties;
 
 public class TSDBDatabaseMetaDataTest {
-    private static final String HOST = "127.0.0.1";
     private static String url;
     private static Connection connection;
     private static TSDBDatabaseMetaData metaData;
+
+    static final String HOST = TestEnvUtil.getHost();
     private static final String DB_NAME = TestUtils.camelToSnake(TSDBDatabaseMetaDataTest.class);
 
     @Test
@@ -79,10 +81,10 @@ public class TSDBDatabaseMetaDataTest {
     }
 
     /**
-     * don't have other method to obtain server version，so just check patterns
-     *
-     * @throws SQLException
-     */
+        * don't have other method to obtain server version，so just check patterns
+        *
+        * @throws SQLException
+        */
     @Test
     public void getDatabaseProductVersion() throws SQLException {
         String version = metaData.getDatabaseProductVersion();
@@ -1198,7 +1200,7 @@ public class TSDBDatabaseMetaDataTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "UTC-8");
         url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         connection = DriverManager.getConnection(url, properties);
         try (Statement statement = connection.createStatement()) {

@@ -9,6 +9,7 @@ import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.utils.JsonUtil;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.utils.Utils;
 import org.junit.After;
@@ -24,15 +25,15 @@ import java.util.List;
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "Schemaless", author = "huolibo", version = "2.0.36")
 public class SchemalessInsertNewTest {
-    private static final String HOST = "127.0.0.1";
+    private static final String HOST = TestEnvUtil.getHost();
     private final String dbname = TestUtils.camelToSnake(SchemalessInsertNewTest.class);
     private Connection conn;
 
     /**
-     * schemaless insert compatible with influxdb
-     *
-     * @throws SQLException execute error
-     */
+        * schemaless insert compatible with influxdb
+        *
+        * @throws SQLException execute error
+        */
     @Test
     @Description("line insert")
     public void schemalessInsert() throws SQLException {
@@ -41,7 +42,7 @@ public class SchemalessInsertNewTest {
                 "st,t1=3i64,t2=4f64,t3=\"t3\" c1=3i64,c3=L\"passit\",c2=false,c4=4f64 1626006833639000000",
                 "st,t1=4i64,t3=\"t4\",t2=5f64,t4=5f64 c1=3i64,c3=L\"passitagin\",c2=true,c4=5f64,c5=5f64 1626006833640000000"};
         // when
-       ((AbstractConnection)conn).write(lines, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS);
+        ((AbstractConnection)conn).write(lines, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS);
 
         // then
         Statement statement = conn.createStatement();
@@ -163,10 +164,10 @@ public class SchemalessInsertNewTest {
         statement.close();
     }
     /**
-     * telnet insert compatible with opentsdb
-     *
-     * @throws SQLException execute error
-     */
+        * telnet insert compatible with opentsdb
+        *
+        * @throws SQLException execute error
+        */
     @Test
     @Description("telnet insert")
     public void telnetInsert() throws SQLException {
@@ -197,10 +198,10 @@ public class SchemalessInsertNewTest {
     }
 
     /**
-     * json insert compatible with opentsdb json format
-     *
-     * @throws SQLException execute error
-     */
+        * json insert compatible with opentsdb json format
+        *
+        * @throws SQLException execute error
+        */
     @Test
     @Description("json insert")
     public void jsonInsert() throws SQLException, JsonProcessingException {
@@ -278,7 +279,7 @@ public class SchemalessInsertNewTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+            url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         conn = DriverManager.getConnection(url);
         Statement stmt = conn.createStatement();
@@ -295,3 +296,4 @@ public class SchemalessInsertNewTest {
         conn.close();
     }
 }
+

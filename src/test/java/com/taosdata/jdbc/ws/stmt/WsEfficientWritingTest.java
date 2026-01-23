@@ -2,6 +2,7 @@ package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.common.Endpoint;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.TaosAdapterMock;
@@ -89,7 +90,7 @@ public class WsEfficientWritingTest {
         byte[] bytes = new byte[10];
 
         try (Connection con= getConnection(true);
-             PreparedStatement pstmt = con.prepareStatement(sql)) {
+                PreparedStatement pstmt = con.prepareStatement(sql)) {
             for (int j = 0; j < numOfRow; j++) {
                 for (int i = 1; i <= numOfSubTable; i++) {
                     // set columns
@@ -116,7 +117,6 @@ public class WsEfficientWritingTest {
         Assert.assertEquals(numOfSubTable, Utils.getSqlRows(connection, db_name + "." + tableNameCopyData + " where b = '\\x63000000000000000000'"));
     }
 
-
     @Test
     public void testReconnect() throws SQLException, InterruptedException, IOException {
         System.setProperty("ENV_TAOS_JDBC_NO_HEALTH_CHECK", "");
@@ -128,7 +128,7 @@ public class WsEfficientWritingTest {
 
         long current = System.currentTimeMillis();
         try (Connection con = getConnection(false, false, proxyPort2);
-             PreparedStatement pstmt = con.prepareStatement(sql)) {
+                PreparedStatement pstmt = con.prepareStatement(sql)) {
             for (int j = 0; j < numOfRow; j++) {
                 current = current + 1000;
                 for (int i = 1; i <= numOfSubTable; i++) {
@@ -176,7 +176,7 @@ public class WsEfficientWritingTest {
 
         long current = System.currentTimeMillis();
         try (Connection con = getConnection(false, false, proxyPort);
-             PreparedStatement pstmt = con.prepareStatement(sql)) {
+                PreparedStatement pstmt = con.prepareStatement(sql)) {
             for (int j = 0; j < numOfRow; j++) {
                 current = current + 1000;
                 for (int i = 1; i <= numOfSubTable; i++) {
@@ -210,7 +210,6 @@ public class WsEfficientWritingTest {
         }
     }
 
-
     @Test
     @Ignore
     public void manualTest() throws SQLException, InterruptedException {
@@ -219,7 +218,7 @@ public class WsEfficientWritingTest {
 
         long current = System.currentTimeMillis();
         try (Connection con = getConnection(false, false, 6041);
-             PreparedStatement pstmt = con.prepareStatement(sql)) {
+                PreparedStatement pstmt = con.prepareStatement(sql)) {
             for (int j = 0; j < numOfRow; j++) {
                 current = current + 1000;
                 for (int i = 1; i <= numOfSubTable; i++) {
@@ -245,14 +244,13 @@ public class WsEfficientWritingTest {
         Assert.assertEquals(numOfSubTable * numOfRow, Utils.getSqlRows(connection,db_name + "." + tableReconnect));
     }
 
-
     @Test
     public void testAsyncSql() throws SQLException {
         String sql = "ASYNC_INSERT INTO " + db_name + "." + asyncSqlTable + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
 
         long current = System.currentTimeMillis();
         try (Connection con = getConnectionNormal();
-             PreparedStatement pstmt = con.prepareStatement(sql)) {
+                PreparedStatement pstmt = con.prepareStatement(sql)) {
             for (int j = 0; j < numOfRow; j++) {
                 current = current + 1000;
                 for (int i = 1; i <= numOfSubTable; i++) {
@@ -287,7 +285,7 @@ public class WsEfficientWritingTest {
         byte[] bytes = new byte[100];
 
         try (Connection con= getConnection(true, true);
-             PreparedStatement pstmt = con.prepareStatement(sql)) {
+                PreparedStatement pstmt = con.prepareStatement(sql)) {
             for (int j = 0; j < numOfRow; j++) {
                 for (int i = 1; i <= numOfSubTable; i++) {
                     // set columns
@@ -319,8 +317,8 @@ public class WsEfficientWritingTest {
     public void testGetMetaDataThrowsSQLException() throws SQLException {
         String sql = "INSERT INTO " + db_name + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
         try (Connection con = getConnection(false);
-             PreparedStatement pstmt = con.prepareStatement(sql)) {
-             pstmt.getMetaData();
+                PreparedStatement pstmt = con.prepareStatement(sql)) {
+                pstmt.getMetaData();
         }
     }
 
@@ -328,7 +326,7 @@ public class WsEfficientWritingTest {
     public void testColumnDataAddBatchThrowsSQLException() throws SQLException {
         String sql = "INSERT INTO " + db_name + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
         try (Connection con = getConnection(false);
-             WSEWPreparedStatement pstmt = (WSEWPreparedStatement)con.prepareStatement(sql)) {
+                WSEWPreparedStatement pstmt = (WSEWPreparedStatement)con.prepareStatement(sql)) {
             pstmt.columnDataAddBatch();
         }
     }
@@ -337,7 +335,7 @@ public class WsEfficientWritingTest {
     public void testColumnDataExecuteBatchThrowsSQLException() throws SQLException {
         String sql = "INSERT INTO " + db_name + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
         try (Connection con = getConnection(false);
-             WSEWPreparedStatement pstmt = (WSEWPreparedStatement)con.prepareStatement(sql)) {
+                WSEWPreparedStatement pstmt = (WSEWPreparedStatement)con.prepareStatement(sql)) {
             pstmt.columnDataExecuteBatch();
         }
     }
@@ -346,7 +344,7 @@ public class WsEfficientWritingTest {
     public void testColumnDataCloseBatchThrowsSQLException() throws SQLException {
         String sql = "INSERT INTO " + db_name + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
         try (Connection con = getConnection(false);
-             WSEWPreparedStatement pstmt = (WSEWPreparedStatement)con.prepareStatement(sql)) {
+                WSEWPreparedStatement pstmt = (WSEWPreparedStatement)con.prepareStatement(sql)) {
             pstmt.columnDataCloseBatch();
         }
     }
@@ -354,7 +352,7 @@ public class WsEfficientWritingTest {
     public void testNcharTag() throws SQLException {
         String sql = "INSERT INTO " + db_name + "." + tableNcharTag + "(tbname, ts, i, tag_nchar) VALUES (?,?,?,?)";
         try (Connection con = getConnection(false);
-             PreparedStatement pstmt = con.prepareStatement(sql)) {
+                PreparedStatement pstmt = con.prepareStatement(sql)) {
             long current = System.currentTimeMillis();
             for (int i = 0; i < 1000; i++) {
                 pstmt.setString(1, "ncahr_bind_1");
@@ -386,20 +384,20 @@ public class WsEfficientWritingTest {
     }
 
     private Connection getConnection(boolean copyData) throws SQLException {
-        return getConnection(copyData, false, 6041);
+        return getConnection(copyData, false, TestEnvUtil.getWsPort());
     }
 
     private Connection getConnection(boolean copyData, boolean strictCheck) throws SQLException {
-        return getConnection(copyData, strictCheck, 6041);
+        return getConnection(copyData, strictCheck, TestEnvUtil.getWsPort());
     }
     private Connection getConnectionNormal() throws SQLException {
-        String url = "jdbc:TAOS-WS://" + host + ":" + 6041 + "/?user=root&password=taosdata";
+        String url = "jdbc:TAOS-WS://" + host + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         Properties properties = new Properties();
         return DriverManager.getConnection(url, properties);
     }
 
     private Connection getConnection(boolean copyData, boolean strictCheck, int port) throws SQLException {
-        String url = "jdbc:TAOS-WS://" + host + ":" + port + "/?user=root&password=taosdata";
+        String url = "jdbc:TAOS-WS://" + host + ":" + port + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_ASYNC_WRITE, "stmt");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_SIZE_BY_ROW, "100");
@@ -443,3 +441,4 @@ public class WsEfficientWritingTest {
         System.setProperty("ENV_TAOS_JDBC_NO_HEALTH_CHECK", "");
     }
 }
+

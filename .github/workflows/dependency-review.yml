@@ -36,12 +36,39 @@ jobs:
     steps:
       - name: 'Checkout repository'
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full repository history for 30-day commit comparison
+
+      # Get commit hash from 30 days ago with fallback logic
+      # Fallback to the previous commit if no commits exist in the 30-day window
+      - name: Get commit hash from 30 days ago
+        if: github.event_name == 'schedule'
+        id: get_30d_commit
+        run: |
+          # Get the latest commit on main branch from 30 days ago
+          OLD_COMMIT=$(git rev-list -1 --before="30 days ago" main)
+          # Fallback logic: use the second last commit of main if no 30-day commit exists
+          # Use current main commit if the fallback also fails (single commit repository)
+          if [ -z "$OLD_COMMIT" ]; then
+            OLD_COMMIT=$(git rev-parse main~1 2>/dev/null || git rev-parse main)
+          fi
+          # Output commit hashes to GitHub Action outputs for subsequent steps
+          echo "old_commit_hash=$OLD_COMMIT" >> $GITHUB_OUTPUT
+          echo "latest_commit_hash=$(git rev-parse main)" >> $GITHUB_OUTPUT        
+
       - name: 'Dependency Review'
         uses: actions/dependency-review-action@v4
         # Commonly enabled options, see https://github.com/actions/dependency-review-action#configuration-options for all available options.
         with:
-          comment-summary-in-pr: always
+          # Comment review summary in PR only for pull_request events, disable for schedule
+          comment-summary-in-pr: ${{ github.event_name == 'pull_request' && 'always' || 'never' }}
+
           fail-on-severity: moderate
           #   deny-licenses: GPL-1.0-or-later, LGPL-2.0-or-later
           #   retry-on-snapshot-warnings: true
           allow-licenses: "MIT, Apache-2.0, EPL-1.0, BSD-2-Clause"
+
+          # Manually specify base/head ref for schedule events (30-day comparison)
+          # Leave empty for pull_request events (auto-injected by GitHub)
+          base_ref: ${{ github.event_name == 'schedule' && steps.get_30d_commit.outputs.old_commit_hash || '' }}
+          head_ref: ${{ github.event_name == 'schedule' && steps.get_30d_commit.outputs.latest_commit_hash || '' }}

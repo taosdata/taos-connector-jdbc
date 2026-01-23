@@ -7,6 +7,7 @@
 //import org.junit.Test;
 //
 //import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 //
 //import java.math.BigDecimal;
 //import java.sql.*;
@@ -97,7 +98,7 @@
 //    public static void before() throws SQLException {
 //        String url = SpecifyAddress.getInstance().getJniUrl();
 //        if (url == null) {
-//            url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+//            url = "jdbc:TAOS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
 //        }
 //        Properties properties = new Properties();
 //        properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
@@ -125,3 +126,4 @@
 //        }
 //    }
 //}
+

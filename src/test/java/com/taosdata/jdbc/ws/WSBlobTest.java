@@ -3,6 +3,7 @@ package com.taosdata.jdbc.ws;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.common.TDBlob;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
@@ -50,7 +51,6 @@ public class WSBlobTest {
         preparedStatement.setTableName("subt_b");
         preparedStatement.setTagString(0, TEST_STR);
 
-
         long current = System.currentTimeMillis();
         ArrayList<Long> tsList = new ArrayList<>();
         tsList.add(current);
@@ -94,7 +94,7 @@ public class WSBlobTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + HOST + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
@@ -123,3 +123,4 @@ public class WSBlobTest {
         }
     }
 }
+

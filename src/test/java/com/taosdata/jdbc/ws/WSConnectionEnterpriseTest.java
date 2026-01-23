@@ -5,6 +5,7 @@ import com.taosdata.jdbc.annotation.CatalogRunner;
 import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.Assert;
@@ -16,8 +17,8 @@ import java.sql.*;
 import java.util.Properties;
 
 /**
- * You need to start taosadapter before testing this method
- */
+    * You need to start taosadapter before testing this method
+    */
 @RunWith(CatalogRunner.class)
 @TestTarget(alias = "test connection with server", author = "huolibo", version = "2.0.37")
 public class WSConnectionEnterpriseTest {
@@ -30,9 +31,9 @@ public class WSConnectionEnterpriseTest {
     public void bearerTokenTest() throws SQLException {
         // create token
         String token = "";
-        try (Connection conn = DriverManager.getConnection("jdbc:TAOS-WS://" + host + ":" + port + "/?user=root&password=taosdata");
-             Statement statement = conn.createStatement();){
-             ResultSet rs = statement.executeQuery("CREATE TOKEN jdbc_token FROM user root ENABLE 1 PROVIDER 'root' ttl 1");
+        try (Connection conn = DriverManager.getConnection("jdbc:TAOS-WS://" + host + ":" + port + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword());
+                Statement statement = conn.createStatement();){
+                ResultSet rs = statement.executeQuery("CREATE TOKEN jdbc_token FROM user root ENABLE 1 PROVIDER 'root' ttl 1");
             TestUtils.waitTransactionDone(conn);
             rs.next();
             token = rs.getString(1);
@@ -47,8 +48,8 @@ public class WSConnectionEnterpriseTest {
 
         String url = "jdbc:TAOS-WS://" + host + ":" + port + "/?bearerToken=" + token;
         try (Connection connection = DriverManager.getConnection(url);
-             Statement statement = connection.createStatement();
-             ResultSet rs = statement.executeQuery("show databases")) {
+                Statement statement = connection.createStatement();
+                ResultSet rs = statement.executeQuery("show databases")) {
 
             while (rs.next()) {
                 System.out.println(rs.getString(1));
@@ -56,8 +57,8 @@ public class WSConnectionEnterpriseTest {
             }
         } finally {
             // revoke token
-            try (Connection conn = DriverManager.getConnection("jdbc:TAOS-WS://" + host + ":" + port + "/?user=root&password=taosdata");
-                 Statement statement = conn.createStatement();){
+            try (Connection conn = DriverManager.getConnection("jdbc:TAOS-WS://" + host + ":" + port + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword());
+                    Statement statement = conn.createStatement();){
                 statement.executeUpdate("drop token jdbc_token");
                 TestUtils.waitTransactionDone(conn);
             }
@@ -66,11 +67,10 @@ public class WSConnectionEnterpriseTest {
         Assert.fail("Not implemented yet");
     }
 
-
     @Test
     @Description("sleep keep connection")
     public void keepConnection() throws SQLException, InterruptedException {
-        String url = "jdbc:TAOS-RS://" + host + ":" + port + "/?user=root&password=taosdata";
+        String url = "jdbc:TAOS-RS://" + host + ":" + port + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
         connection = DriverManager.getConnection(url, properties);
@@ -95,3 +95,4 @@ public class WSConnectionEnterpriseTest {
         }
     }
 }
+

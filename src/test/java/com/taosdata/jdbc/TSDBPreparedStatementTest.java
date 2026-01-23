@@ -2,6 +2,7 @@ package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.StringUtils;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
@@ -16,8 +17,9 @@ import java.util.Random;
 
 public class TSDBPreparedStatementTest {
 
-    private static final String HOST = "127.0.0.1";
     private static Connection conn;
+
+    static final String HOST = TestEnvUtil.getHost();
     private static final String SQL_INSERT = "insert into t1 values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     private static final String SQL_SELECT = "select * from t1 where ts >= ? and ts < ? and f1 >= ?";
     private static final String DB_NAME = TestUtils.camelToSnake(TSDBPreparedStatementTest.class);
@@ -46,7 +48,6 @@ public class TSDBPreparedStatementTest {
         pstmtSelect.setTimestamp(1, new Timestamp(start));
         pstmtSelect.setTimestamp(2, new Timestamp(end));
         pstmtSelect.setInt(3, 0);
-
 
         // when
         ResultSet rs = pstmtSelect.executeQuery();
@@ -531,7 +532,6 @@ public class TSDBPreparedStatementTest {
                     break;
             }
 
-
             ArrayList<Long> ts = new ArrayList<>();
             for (int i = 0; i < numOfRows; i++) {
                 ts.add(System.currentTimeMillis() + i);
@@ -567,7 +567,6 @@ public class TSDBPreparedStatementTest {
         }
     }
 
-
     @Test
     public void bindDataWithMultipleTagsTest() throws SQLException {
         Statement stmt = conn.createStatement();
@@ -581,7 +580,6 @@ public class TSDBPreparedStatementTest {
         s.setTableName("w2");
         s.setTagInt(0, 1);
         s.setTagString(1, "test");
-
 
         ArrayList<Long> ts = new ArrayList<>();
         for (int i = 0; i < numOfRows; i++) {
@@ -622,7 +620,6 @@ public class TSDBPreparedStatementTest {
         s.setTableName("w2");
         s.setTagInt(0, 1);
         s.setTagString(1, "test");
-
 
         ArrayList<Long> ts = new ArrayList<>();
         for (int i = 0; i < numOfRows; i++) {
@@ -673,7 +670,7 @@ public class TSDBPreparedStatementTest {
         s.setTagNull(6, TSDBConstants.TSDB_DATA_TYPE_BOOL);
         s.setTagNull(7, TSDBConstants.TSDB_DATA_TYPE_BINARY);
         s.setTagNull(8, TSDBConstants.TSDB_DATA_TYPE_NCHAR);
-        
+
         ArrayList<Long> ts = new ArrayList<>();
         for (int i = 0; i < numOfRows; i++) {
             ts.add(System.currentTimeMillis() + i);
@@ -729,10 +726,10 @@ public class TSDBPreparedStatementTest {
 
         s.columnDataAddBatch();
         s.columnDataExecuteBatch();
-        s.columnDataCloseBatch();        
+        s.columnDataCloseBatch();
     }
 
-    
+
     @Test(expected = SQLException.class)
     public void createTwoSameDbTest() throws SQLException {
         // when
@@ -1347,7 +1344,7 @@ public class TSDBPreparedStatementTest {
         try {
             String url = SpecifyAddress.getInstance().getJniUrl();
             if (url == null) {
-                url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+                url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
             }
             Properties properties = new Properties();
             properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");

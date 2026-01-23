@@ -2,6 +2,7 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.rs.RestfulDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -11,22 +12,22 @@ import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 
 public class WebSocketDriverTest {
-    private static final String HOST = "127.0.0.1";
+    static final String HOST = TestEnvUtil.getHost();
 
     @Test
     public void acceptsURL() throws SQLException {
         Driver driver = new WebSocketDriver();
         String url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + HOST + ":6041";
+            url = "jdbc:TAOS-WS://" + HOST + ":" + TestEnvUtil.getWsPort();
         }
         boolean isAccept = driver.acceptsURL(url);
         Assert.assertTrue(isAccept);
         String specifyHost = SpecifyAddress.getInstance().getHost();
         if (specifyHost == null) {
-            url = "jdbc:TAOS://" + HOST + ":6041";
+            url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getWsPort();
         } else {
-            url = "jdbc:TAOS://" + specifyHost + ":6041";
+            url = "jdbc:TAOS://" + specifyHost + ":" + TestEnvUtil.getWsPort();
         }
         isAccept = driver.acceptsURL(url);
         Assert.assertFalse(isAccept);
@@ -63,3 +64,4 @@ public class WebSocketDriverTest {
         new WebSocketDriver().getParentLogger();
     }
 }
+

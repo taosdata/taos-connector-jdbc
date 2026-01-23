@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -15,8 +16,8 @@ import static org.junit.Assert.*;
 
 public class MultiConnectionWithDifferentDbTest {
 
-    private static final String HOST = "127.0.0.1";
-    private static final String DB_1 = "db1";
+                    static final String HOST = TestEnvUtil.getHost();
+                    private static final String DB_1 = "db1";
     private static final String DB_2 = "db2";
 
     private long ts;
@@ -40,9 +41,9 @@ public class MultiConnectionWithDifferentDbTest {
             private void queryDb() throws SQLException {
                 String url = SpecifyAddress.getInstance().getRestWithoutUrl();
                 if (url == null) {
-                    url = "jdbc:TAOS-RS://" + HOST + ":6041/db" + i + "?user=root&password=taosdata";
+                    url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/db" + i + "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
                 } else {
-                    url = url + "db" + i + "?user=root&password=taosdata";
+                    url = url + "db" + i + "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
                 }
                 try (Connection connection = DriverManager.getConnection(url)) {
                     Statement stmt = connection.createStatement();
@@ -83,7 +84,7 @@ public class MultiConnectionWithDifferentDbTest {
 
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         try (Connection conn = DriverManager.getConnection(url)) {
             Statement stmt = conn.createStatement();
@@ -105,10 +106,10 @@ public class MultiConnectionWithDifferentDbTest {
     public void after() {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         try (Connection connection = DriverManager.getConnection(url);
-             Statement statement = connection.createStatement()) {
+                Statement statement = connection.createStatement()) {
             statement.execute("drop database if exists " + DB_1);
             statement.execute("drop database if exists " + DB_2);
         } catch (SQLException e) {
@@ -117,3 +118,4 @@ public class MultiConnectionWithDifferentDbTest {
     }
 
 }
+

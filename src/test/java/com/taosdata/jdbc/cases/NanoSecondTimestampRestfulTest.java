@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 
@@ -10,8 +11,8 @@ import java.util.Random;
 
 public class NanoSecondTimestampRestfulTest {
 
-    private static final String HOST = "127.0.0.1";
-    private static final String DB_NAME = TestUtils.camelToSnake(NanoSecondTimestampRestfulTest.class);
+                    static final String HOST = TestEnvUtil.getHost();
+                    private static final String DB_NAME = TestUtils.camelToSnake(NanoSecondTimestampRestfulTest.class);
     private static final Random random = new Random(System.currentTimeMillis());
     private static Connection conn;
 
@@ -104,7 +105,6 @@ public class NanoSecondTimestampRestfulTest {
             Assert.assertEquals(timestampStr, actual);
         }
 
-
     }
 
     @Test
@@ -152,7 +152,7 @@ public class NanoSecondTimestampRestfulTest {
     public static void beforeClass() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         conn = DriverManager.getConnection(url);
         try (Statement stmt = conn.createStatement()) {
@@ -173,3 +173,4 @@ public class NanoSecondTimestampRestfulTest {
     }
 
 }
+

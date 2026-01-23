@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.rs;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -13,8 +14,8 @@ import static org.junit.Assert.assertNotNull;
 
 public class DatabaseSpecifiedTest {
 
-    private static final String HOST = "127.0.0.1";
-    private final String dbname = TestUtils.camelToSnake(DatabaseSpecifiedTest.class);
+    static final String HOST = TestEnvUtil.getHost();
+            private final String dbname = TestUtils.camelToSnake(DatabaseSpecifiedTest.class);
 
     private Connection connection;
     private long ts;
@@ -24,9 +25,9 @@ public class DatabaseSpecifiedTest {
         // when
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/" + dbname + "?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/" + dbname + "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         } else {
-            url = url + dbname + "?user=root&password=taosdata";
+            url = url + dbname + "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         connection = DriverManager.getConnection(url);
         try (Statement stmt = connection.createStatement()) {
@@ -50,7 +51,7 @@ public class DatabaseSpecifiedTest {
         try {
             String url = SpecifyAddress.getInstance().getRestUrl();
             if (url == null) {
-                url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
+                url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
             }
             Connection connection = DriverManager.getConnection(url);
             Statement stmt = connection.createStatement();
@@ -83,3 +84,4 @@ public class DatabaseSpecifiedTest {
     }
 
 }
+

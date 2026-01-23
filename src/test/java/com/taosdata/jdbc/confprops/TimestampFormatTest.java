@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.confprops;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -11,8 +12,9 @@ import java.time.Instant;
 import java.util.Properties;
 
 public class TimestampFormatTest {
-    private static final String HOST = "127.0.0.1";
-    private final long ts = Instant.now().toEpochMilli();
+
+    static final String HOST = TestEnvUtil.getHost();
+            private final long ts = Instant.now().toEpochMilli();
     private Connection conn;
 
     @Test
@@ -21,13 +23,13 @@ public class TimestampFormatTest {
         String timestampFormat = "UTC";
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata&timestampFormat=" + timestampFormat;
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&timestampFormat=" + timestampFormat;
         } else {
             url = url + "&timestampFormat=" + timestampFormat;
         }
         // when & then
         try (Connection conn = DriverManager.getConnection(url);
-             Statement stmt = conn.createStatement()) {
+                Statement stmt = conn.createStatement()) {
             ResultSet rs = stmt.executeQuery("select * from test.weather");
             while (rs.next()) {
                 Object value = rs.getObject("ts");
@@ -44,12 +46,12 @@ public class TimestampFormatTest {
         String timestampFormat = "UTC";
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         // when
         Properties props = new Properties();
         try (Connection conn = DriverManager.getConnection(url, props);
-             Statement stmt = conn.createStatement()) {
+                Statement stmt = conn.createStatement()) {
 
             // then
             ResultSet rs = stmt.executeQuery("select * from test.weather");
@@ -66,7 +68,7 @@ public class TimestampFormatTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         conn = DriverManager.getConnection(url);
         Statement stmt = conn.createStatement();
@@ -93,3 +95,4 @@ public class TimestampFormatTest {
     }
 
 }
+

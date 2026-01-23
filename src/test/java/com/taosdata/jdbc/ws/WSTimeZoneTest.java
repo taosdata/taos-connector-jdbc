@@ -4,6 +4,7 @@ import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.*;
 import org.junit.runner.RunWith;
@@ -20,6 +21,8 @@ import java.util.*;
 public class WSTimeZoneTest {
 
     // 定义参数
+
+    static final String HOST = TestEnvUtil.getHost();
     private final String precision;
 
     // 构造函数
@@ -27,8 +30,7 @@ public class WSTimeZoneTest {
         this.precision = precision;
     }
 
-    private static final String HOST = "127.0.0.1";
-    private static final int PORT = 6041;
+        static final int PORT = TestEnvUtil.getWsPort();
     private final String dbName = TestUtils.camelToSnake(WSTimeZoneTest.class) + "_" + UUID.randomUUID().toString().replace("-", "_");
     private static final String TABLE_NAME = "simple_t";
     private static final String FULL_TABLE_NAME = "full_t";
@@ -49,7 +51,7 @@ public class WSTimeZoneTest {
     @Test
     public void TimeZoneQueryTest() throws SQLException, InterruptedException {
         try (Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery("select * from "  + dbName + "." + TABLE_NAME + " limit 1")) {
+                ResultSet resultSet = statement.executeQuery("select * from "  + dbName + "." + TABLE_NAME + " limit 1")) {
             while (resultSet.next()) {
 
                 Timestamp ts = resultSet.getTimestamp("ts");
@@ -83,7 +85,7 @@ public class WSTimeZoneTest {
         statement.close();
 
         try (Statement qStmt = connection.createStatement();
-             ResultSet resultSet = qStmt.executeQuery("select * from "  + dbName + "." + TABLE_NAME + " where f = 2 limit 1")) {
+                ResultSet resultSet = qStmt.executeQuery("select * from "  + dbName + "." + TABLE_NAME + " where f = 2 limit 1")) {
             while (resultSet.next()) {
 
                 Timestamp ts = resultSet.getTimestamp("ts");
@@ -146,7 +148,7 @@ public class WSTimeZoneTest {
         statement.close();
 
         try (Statement qStmt = connection.createStatement();
-             ResultSet resultSet = qStmt.executeQuery("select * from "  + dbName + "." + FULL_TABLE_NAME + " limit 1")) {
+                ResultSet resultSet = qStmt.executeQuery("select * from "  + dbName + "." + FULL_TABLE_NAME + " limit 1")) {
             while (resultSet.next()) {
 
                 Timestamp ts1 = resultSet.getTimestamp("ts1");
@@ -170,7 +172,6 @@ public class WSTimeZoneTest {
         }
     }
 
-
     @Test
     public void TimeZoneTest3() throws SQLException, InterruptedException {
         long value = 1704038400000L; // 示例时间戳
@@ -193,9 +194,9 @@ public class WSTimeZoneTest {
     public void InvalidTimeZoneTest() throws SQLException, InterruptedException {
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + HOST + ":" + PORT + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         } else {
-            url += "?user=root&password=taosdata";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "invalid/Tokyo");
@@ -206,9 +207,9 @@ public class WSTimeZoneTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + HOST + ":" + PORT + "/?user=root&password=taosdata";
+            url = "jdbc:TAOS-WS://" + HOST + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         } else {
-            url += "?user=root&password=taosdata";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "Asia/Tokyo");
@@ -238,3 +239,4 @@ public class WSTimeZoneTest {
         }
     }
 }
+

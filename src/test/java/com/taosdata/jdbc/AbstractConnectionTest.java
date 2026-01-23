@@ -53,7 +53,6 @@ public class AbstractConnectionTest {
                 return 0;
             }
 
-
         };
     }
 
@@ -287,9 +286,6 @@ public class AbstractConnectionTest {
         connection.clearWarnings();
         Assert.assertNotNull(connection);
     }
-
-
-
 
     @Test(expected = SQLException.class)
     public void testCreateClob_ConnectionClosed() throws SQLException {

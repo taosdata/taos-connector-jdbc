@@ -1,6 +1,7 @@
 package com.taosdata.jdbc;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -11,8 +12,9 @@ import java.sql.*;
 
 public class TSDBParameterMetaDataTest {
 
-    private static final String HOST = "127.0.0.1";
     private static Connection conn;
+
+    static final String HOST = TestEnvUtil.getHost();
     private static final String SQL_INSERT = "insert into t1 values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     private static PreparedStatement pstmtInsert;
     private static final String SQL_SELECT = "select * from t1 where ts > ? and ts <= ? and f1 >= ?";
@@ -155,7 +157,7 @@ public class TSDBParameterMetaDataTest {
         try {
             String url = SpecifyAddress.getInstance().getJniUrl();
             if (url == null) {
-                url = "jdbc:TAOS://" + HOST + ":6030/?user=root&password=taosdata";
+                url = "jdbc:TAOS://" + HOST + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
             }
             conn = DriverManager.getConnection(url);
             try (Statement stmt = conn.createStatement()) {
