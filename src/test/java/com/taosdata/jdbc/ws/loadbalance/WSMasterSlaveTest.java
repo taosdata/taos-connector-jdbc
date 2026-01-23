@@ -36,9 +36,9 @@ public class WSMasterSlaveTest {
     @Test
     public void consumerException() {
         Properties properties = new Properties();
-        properties.setProperty(TMQConstants.CONNECT_USER, "root");
-        properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
-        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, "127.0.0.1:6041");
+        properties.setProperty(TMQConstants.CONNECT_USER, TestEnvUtil.getUser());
+        properties.setProperty(TMQConstants.CONNECT_PASS, TestEnvUtil.getPassword());
+        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, TestEnvUtil.getHost() + ":" + TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_HOST, HOST_B);
         properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_PORT, String.valueOf(PORT_B));
 
@@ -90,9 +90,9 @@ public class WSMasterSlaveTest {
         statement.executeUpdate("create topic if not exists " + topic + " as select ts, c1, c2, c3, c4, c5, t1 from ct0");
 
         Properties properties = new Properties();
-        properties.setProperty(TMQConstants.CONNECT_USER, "root");
-        properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
-        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, "127.0.0.1:" + port + ",127.0.0.1:6041");
+        properties.setProperty(TMQConstants.CONNECT_USER, TestEnvUtil.getUser());
+        properties.setProperty(TMQConstants.CONNECT_PASS, TestEnvUtil.getPassword());
+        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, TestEnvUtil.getHost() + ":" + port + "," + TestEnvUtil.getHost() + ":" + TestEnvUtil.getWsPort());
 
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");

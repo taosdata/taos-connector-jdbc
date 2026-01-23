@@ -382,7 +382,7 @@ public class ConnectionRebalanceTest {
         System.setProperty("ENV_TAOS_JDBC_TEST", "test");
         String url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":" + 6030 + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
+            url = "jdbc:TAOS-WS://" + HOST + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         } else {
             url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }

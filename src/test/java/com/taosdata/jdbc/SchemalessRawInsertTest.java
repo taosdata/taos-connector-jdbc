@@ -132,12 +132,13 @@ public class SchemalessRawInsertTest {
 
     @Test
     public void testSchemalessWriterConstructorWithHostPortUserPassword() throws SQLException {
-        String host = "127.0.0.1";
-        String port = "6030";
+        String host = TestEnvUtil.getHost();
+        String port = String.valueOf(TestEnvUtil.getJniPort());
 
         // This will fail if server is not running, but we test the constructor
         try {
-            SchemalessWriter writer = new SchemalessWriter(host, port, "root", "taosdata", dbname, "jni");
+            SchemalessWriter writer = new SchemalessWriter(host, port, TestEnvUtil.getUser(), TestEnvUtil.getPassword(), dbname, "jni");
+            Assert.assertNotNull(writer);
             writer.close();
         } catch (SQLException e) {
             // Expected if server not running
@@ -146,11 +147,12 @@ public class SchemalessRawInsertTest {
 
     @Test
     public void testSchemalessWriterConstructorWithHostPortUserPasswordSSL() throws SQLException {
-        String host = "127.0.0.1";
-        String port = "6041";
+        String host = TestEnvUtil.getHost();
+        String port = String.valueOf(TestEnvUtil.getWsPort());
 
         try {
-            SchemalessWriter writer = new SchemalessWriter(host, port, "root", "taosdata", dbname, "ws", false);
+            SchemalessWriter writer = new SchemalessWriter(host, port, TestEnvUtil.getUser(), TestEnvUtil.getPassword(), dbname, "ws", false);
+            Assert.assertNotNull(writer);
             writer.close();
         } catch (SQLException e) {
             // Expected if server not running
@@ -159,11 +161,12 @@ public class SchemalessRawInsertTest {
 
     @Test
     public void testSchemalessWriterConstructorWithHostPortToken() throws SQLException {
-        String host = "127.0.0.1";
-        String port = "6041";
+        String host = TestEnvUtil.getHost();
+        String port = String.valueOf(TestEnvUtil.getWsPort());
 
         try {
             SchemalessWriter writer = new SchemalessWriter(host, port, "test-token", dbname, false);
+            Assert.assertNotNull(writer);
             writer.close();
         } catch (SQLException e) {
             // Expected if server not running

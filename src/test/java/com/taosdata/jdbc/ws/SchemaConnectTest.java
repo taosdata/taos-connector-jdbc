@@ -26,7 +26,12 @@ public class SchemaConnectTest {
 
     @Test
     public void testAllParam() throws SQLException {
-        SchemalessWriter writer = new SchemalessWriter("127.0.0.1", "6041", "root", "taosdata", "sml_test", "ws");
+        SchemalessWriter writer = new SchemalessWriter(TestEnvUtil.getHost(),
+                String.valueOf(TestEnvUtil.getWsPort()),
+                TestEnvUtil.getUser(),
+                TestEnvUtil.getPassword(),
+                "sml_test",
+                "ws");
     }
 
     @BeforeClass

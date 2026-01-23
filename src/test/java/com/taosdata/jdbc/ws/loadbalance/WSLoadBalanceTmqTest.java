@@ -63,13 +63,13 @@ public class WSLoadBalanceTmqTest {
         statement.executeUpdate("create topic if not exists " + topic + " as select ts, c1, c2, c3, c4, c5, t1 from ct1");
 
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_ENDPOINTS, HOST + mockA.getListenPort() + "," + HOST + ":6041");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_ENDPOINTS, HOST + mockA.getListenPort() + "," + HOST + ":" + TestEnvUtil.getWsPort());
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
         properties.setProperty(TMQConstants.GROUP_ID, "withBean");
         properties.setProperty(TMQConstants.CONNECT_TYPE, "ws");
-        properties.setProperty(TMQConstants.CONNECT_USER, "root");
-        properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
+        properties.setProperty(TMQConstants.CONNECT_USER, TestEnvUtil.getUser());
+        properties.setProperty(TMQConstants.CONNECT_PASS, TestEnvUtil.getPassword());
         properties.setProperty(TMQConstants.VALUE_DESERIALIZER, "com.taosdata.jdbc.tmq.ResultDeserializer");
         properties.setProperty("fetch.max.wait.ms", "5000");
         properties.setProperty("min.poll.rows", "1000");
@@ -104,13 +104,13 @@ public class WSLoadBalanceTmqTest {
         statement.executeUpdate("create topic if not exists " + topic + " as select ts, c1, c2, c3, c4, c5, t1 from ct1");
 
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_ENDPOINTS, HOST + ":" + mockA.getListenPort() + "," + HOST + ":6041");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_ENDPOINTS, HOST + ":" + mockA.getListenPort() + "," + HOST + ":" + TestEnvUtil.getWsPort());
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
         properties.setProperty(TMQConstants.GROUP_ID, "withBean");
         properties.setProperty(TMQConstants.CONNECT_TYPE, "ws");
-        properties.setProperty(TMQConstants.CONNECT_USER, "root");
-        properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
+        properties.setProperty(TMQConstants.CONNECT_USER, TestEnvUtil.getUser());
+        properties.setProperty(TMQConstants.CONNECT_PASS, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_REBALANCE_CON_BASE_COUNT, "1");
         properties.setProperty(TMQConstants.VALUE_DESERIALIZER, "com.taosdata.jdbc.tmq.ResultDeserializer");
         properties.setProperty("fetch.max.wait.ms", "5000");
@@ -159,7 +159,7 @@ public class WSLoadBalanceTmqTest {
 
         String url = SpecifyAddress.getInstance().getJniUrl();
         if (url == null) {
-            url = "jdbc:TAOS://" + HOST + ":6030/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
+            url = "jdbc:TAOS-WS://" + HOST + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");

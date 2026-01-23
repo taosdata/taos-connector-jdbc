@@ -11,8 +11,8 @@ import java.sql.*;
 
 public class AuthenticationTest {
 
-        static final String HOST = TestEnvUtil.getHost();
-        private static final String USER = "root";
+    static final String HOST = TestEnvUtil.getHost();
+    private static final String USER = TestEnvUtil.getUser();
     private static final String PASSWORD = "taos?data";
     @Test
     public void connectWithoutUserByJni() {
@@ -33,7 +33,7 @@ public class AuthenticationTest {
         try {
             String url = SpecifyAddress.getInstance().getRestWithoutUrl();
             if (url == null) {
-                url = "jdbc:TAOS-RS://" + HOST + ":6041/?";
+                url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/?";
             }
             DriverManager.getConnection(url);
         } catch (SQLException e) {
@@ -47,9 +47,9 @@ public class AuthenticationTest {
         try {
             String url = SpecifyAddress.getInstance().getJniWithoutUrl();
             if (url == null) {
-                url = "jdbc:TAOS://" + HOST + ":0/?user=root";
+                url = "jdbc:TAOS://" + HOST + ":0/?user=" + USER;
             } else {
-                url += "?user=root";
+                url += "?user=" + USER;
             }
             DriverManager.getConnection(url);
         } catch (SQLException e) {
@@ -63,9 +63,9 @@ public class AuthenticationTest {
         try {
             String url = SpecifyAddress.getInstance().getRestWithoutUrl();
             if (url == null) {
-                url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=root";
+                url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/?user=" + USER;
             } else {
-                url += "?user=root";
+                url += "?user=" + USER;
             }
             DriverManager.getConnection(url);
         } catch (SQLException e) {
@@ -81,7 +81,7 @@ public class AuthenticationTest {
         // change password
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=" + USER + "&password=taosdata";
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/?user=" + USER + "&password=" + TestEnvUtil.getPassword();
         }
         conn = DriverManager.getConnection(url);
         Statement stmt = conn.createStatement();
@@ -92,7 +92,7 @@ public class AuthenticationTest {
         // use new to login and execute query
         url = SpecifyAddress.getInstance().getRestWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":6041/?user=" + USER + "&password=" + PASSWORD;
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/?user=" + USER + "&password=" + PASSWORD;
         } else {
             url += "?user=" + USER + "&password=" + PASSWORD;
         }
@@ -112,7 +112,7 @@ public class AuthenticationTest {
         // change password back
         conn = DriverManager.getConnection(url);
         stmt = conn.createStatement();
-        stmt.execute("alter user " + USER + " pass 'taosdata'");
+        stmt.execute("alter user " + USER + " pass '" + TestEnvUtil.getPassword() + "'");
         stmt.close();
         conn.close();
     }

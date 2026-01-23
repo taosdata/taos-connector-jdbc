@@ -52,10 +52,10 @@ public class WSConsumerAutoCommitTest {
         }, 20, 10, TimeUnit.MILLISECONDS);
 
         Properties properties = new Properties();
-        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, HOST + ":6041");
         properties.setProperty(TMQConstants.CONNECT_TYPE, "ws");
-        properties.setProperty(TMQConstants.CONNECT_USER, "root");
-        properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
+        properties.setProperty(TMQConstants.CONNECT_USER, TestEnvUtil.getUser());
+        properties.setProperty(TMQConstants.CONNECT_PASS, TestEnvUtil.getPassword());
+        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, HOST + ":" + TestEnvUtil.getWsPort());
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
         properties.setProperty(TMQConstants.AUTO_COMMIT_INTERVAL, "30");

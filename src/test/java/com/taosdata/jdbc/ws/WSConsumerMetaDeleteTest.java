@@ -51,9 +51,9 @@ public class WSConsumerMetaDeleteTest {
         statement.executeUpdate("create topic if not exists " + topic + " with meta as " + topicWith);
 
         Properties properties = new Properties();
-        properties.setProperty(TMQConstants.CONNECT_USER, "root");
-        properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
-        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, "127.0.0.1:6041");
+        properties.setProperty(TMQConstants.CONNECT_USER, TestEnvUtil.getUser());
+        properties.setProperty(TMQConstants.CONNECT_PASS, TestEnvUtil.getPassword());
+        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, HOST + ":" + TestEnvUtil.getWsPort());
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
         properties.setProperty(TMQConstants.AUTO_OFFSET_RESET, "latest");

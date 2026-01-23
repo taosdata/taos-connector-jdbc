@@ -22,8 +22,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class WSVarcharAsStringTest {
 
-        static final String HOST = TestEnvUtil.getHost();
-        static final int PORT = TestEnvUtil.getWsPort();
+    static final String HOST = TestEnvUtil.getHost();
+    static final int PORT = TestEnvUtil.getWsPort();
     private final String dbName = TestUtils.camelToSnake(WSVarcharAsStringTest.class);
     private Connection connection;
     private Statement statement;
@@ -76,8 +76,8 @@ public class WSVarcharAsStringTest {
         statement.executeUpdate("create topic if not exists " + TOPIC + " as select ts, c1 from `中文`");
 
         Properties properties = new Properties();
-        properties.setProperty(TMQConstants.CONNECT_USER, "root");
-        properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
+        properties.setProperty(TMQConstants.CONNECT_USER, TestEnvUtil.getUser());
+        properties.setProperty(TMQConstants.CONNECT_PASS, TestEnvUtil.getPassword());
         properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, TestEnvUtil.getHost() + ":"+TestEnvUtil.getWsPort());
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
@@ -111,8 +111,8 @@ public class WSVarcharAsStringTest {
         statement.executeUpdate("create topic if not exists " + topic + " as database " + dbName);
 
         Properties properties = new Properties();
-        properties.setProperty(TMQConstants.CONNECT_USER, "root");
-        properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
+        properties.setProperty(TMQConstants.CONNECT_USER, TestEnvUtil.getUser());
+        properties.setProperty(TMQConstants.CONNECT_PASS, TestEnvUtil.getPassword());
         properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, TestEnvUtil.getHost() + ":"+TestEnvUtil.getWsPort());
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");

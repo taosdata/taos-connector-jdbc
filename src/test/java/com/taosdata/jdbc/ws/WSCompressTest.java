@@ -129,8 +129,8 @@ public class WSCompressTest {
         Properties properties = new Properties();
         properties.setProperty("td.connect.type", "ws");
         properties.setProperty("bootstrap.servers", TestEnvUtil.getHost() + ":" + TestEnvUtil.getWsPort());
-        properties.setProperty(TMQConstants.CONNECT_USER, "root");
-        properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
+        properties.setProperty(TMQConstants.CONNECT_USER, TestEnvUtil.getUser());
+        properties.setProperty(TMQConstants.CONNECT_PASS, TestEnvUtil.getPassword());
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
         properties.setProperty(TMQConstants.GROUP_ID, "withBean");

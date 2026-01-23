@@ -37,10 +37,10 @@ public class ConsumerCommittedTest {
     @Test
     public void testJNI() throws Exception {
         Properties properties = new Properties();
-        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, HOST + ":6030");
         properties.setProperty(TMQConstants.CONNECT_TYPE, "jni");
-        properties.setProperty(TMQConstants.CONNECT_USER, "root");
-        properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
+        properties.setProperty(TMQConstants.CONNECT_USER, TestEnvUtil.getUser());
+        properties.setProperty(TMQConstants.CONNECT_PASS, TestEnvUtil.getPassword());
+        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, HOST + ":" + TestEnvUtil.getJniPort());
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "false");
         properties.setProperty(TMQConstants.GROUP_ID, "g_jni");
@@ -90,10 +90,10 @@ public class ConsumerCommittedTest {
     public void testWS() throws Exception {
         TimeUnit.MILLISECONDS.sleep(1000);
         Properties properties = new Properties();
-        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, HOST + ":6041");
         properties.setProperty(TMQConstants.CONNECT_TYPE, "ws");
-        properties.setProperty(TMQConstants.CONNECT_USER, "root");
-        properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
+        properties.setProperty(TMQConstants.CONNECT_USER, TestEnvUtil.getUser());
+        properties.setProperty(TMQConstants.CONNECT_PASS, TestEnvUtil.getPassword());
+        properties.setProperty(TMQConstants.BOOTSTRAP_SERVERS, HOST + ":" + TestEnvUtil.getWsPort());
         properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
         properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "false");
         properties.setProperty(TMQConstants.GROUP_ID, "g_ws");

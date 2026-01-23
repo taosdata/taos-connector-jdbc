@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.cases;
 
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -13,11 +14,11 @@ import java.util.Properties;
 public class ConnectMultiTaosdByRestfulWithDifferentTokenTest {
 
     private static final String HOST_1 = "192.168.17.156";
-    private static final String USER_1 = "root";
+    private static final String USER_1 = TestEnvUtil.getUser();
     private static final String PASSWORD_1 = "tqueue";
     private Connection conn1;
     private static final String HOST_2 = "192.168.17.82";
-    private static final String USER_2 = "root";
+    private static final String USER_2 = TestEnvUtil.getUser();
     private static final String PASSWORD_2 = "taosdata";
     private Connection conn2;
 

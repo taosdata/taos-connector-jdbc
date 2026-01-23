@@ -9,6 +9,7 @@ import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.tmq.TMQConstants;
 import com.taosdata.jdbc.utils.JsonUtil;
+import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.ws.entity.Request;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -28,8 +29,8 @@ public class TMQRequestFactoryTest {
     @Description("Generate Subscribe")
     public void testGenerateSubscribe() throws JsonProcessingException, SQLException {
         Properties properties = new Properties();
-        properties.setProperty(TMQConstants.CONNECT_USER, "root");
-        properties.setProperty(TMQConstants.CONNECT_PASS, "taosdata");
+        properties.setProperty(TMQConstants.CONNECT_USER, TestEnvUtil.getUser());
+        properties.setProperty(TMQConstants.CONNECT_PASS, TestEnvUtil.getPassword());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_DBNAME, "test");
 
         properties.setProperty(TSDBDriver.PROPERTY_KEY_TIME_ZONE, "Asia/Shanghai");
@@ -51,8 +52,8 @@ public class TMQRequestFactoryTest {
         JsonNode jsonObject = objectMapper.readTree(request.toString());
         SubscribeReq req = objectMapper.treeToValue(jsonObject.get("args"), SubscribeReq.class);
         Assert.assertEquals(1, req.getReqId());
-        Assert.assertEquals("root", req.getUser());
-        Assert.assertEquals("taosdata", req.getPassword());
+        Assert.assertEquals(TestEnvUtil.getUser(), req.getUser());
+        Assert.assertEquals(TestEnvUtil.getPassword(), req.getPassword());
         Assert.assertEquals("test", req.getDb());
         Assert.assertEquals("gId", req.getGroupId());
         Assert.assertEquals("cId", req.getClientId());

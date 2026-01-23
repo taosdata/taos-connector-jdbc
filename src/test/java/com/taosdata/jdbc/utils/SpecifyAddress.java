@@ -15,39 +15,40 @@ public class SpecifyAddress {
     private String webSocketUrl = null;
     private String webSocketWithoutPropUrl = null;
     private String webSocketPort = null;
+    private String userAndPassword = "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
     private SpecifyAddress() {
         String host = System.getProperty("maven.test.host");
         if (null != host && !"".equals(host.trim())) {
             this.host = host.trim();
             String jni = System.getProperty("maven.test.port.jni");
             if (null != jni && !"".equals(jni.trim())) {
-                jniUrl = "jdbc:TAOS://" + host.trim() + ":" + jni.trim() + "/?user=root&password=taosdata";
+                jniUrl = "jdbc:TAOS://" + host.trim() + ":" + jni.trim() + "/?" + userAndPassword;
                 jniWithoutPropUrl = "jdbc:TAOS://" + host.trim() + ":" + jni.trim() + "/";
 
                 jniPort = jni.trim();
             } else {
-                jniUrl = "jdbc:TAOS://" + host.trim() + ":" + JNI_PORT_DEFAULT + "/?user=root&password=taosdata";
+                jniUrl = "jdbc:TAOS://" + host.trim() + ":" + JNI_PORT_DEFAULT + "/?" + userAndPassword;
                 jniWithoutPropUrl = "jdbc:TAOS://" + host.trim() + ":" + JNI_PORT_DEFAULT + "/";
                 jniPort = JNI_PORT_DEFAULT + "";
             }
             String rest = System.getProperty("maven.test.port.rest");
             if (null != rest && !"".equals(rest.trim())) {
-                restUrl = "jdbc:TAOS-RS://" + host.trim() + ":" + rest.trim() + "/?user=root&password=taosdata";
+                restUrl = "jdbc:TAOS-RS://" + host.trim() + ":" + rest.trim() + "/?" + userAndPassword;
                 restWithoutPropUrl = "jdbc:TAOS-RS://" + host.trim() + ":" + rest.trim() + "/";
                 restPort = rest.trim();
             } else {
-                restUrl = "jdbc:TAOS-RS://" + host.trim() + ":" + REST_PORT_DEFAULT + "/?user=root&password=taosdata";
+                restUrl = "jdbc:TAOS-RS://" + host.trim() + ":" + REST_PORT_DEFAULT + "/?" + userAndPassword;
                 restWithoutPropUrl = "jdbc:TAOS-RS://" + host.trim() + ":" + REST_PORT_DEFAULT + "/";
                 restPort = REST_PORT_DEFAULT + "";
             }
 
             String websocket = System.getProperty("maven.test.port.websocket");
             if (null != websocket && !"".equals(websocket.trim())) {
-                webSocketUrl = "jdbc:TAOS-WS://" + host.trim() + ":" + rest.trim() + "/?user=root&password=taosdata";
+                webSocketUrl = "jdbc:TAOS-WS://" + host.trim() + ":" + rest.trim() + "/?" + userAndPassword;
                 webSocketWithoutPropUrl = "jdbc:TAOS-WS://" + host.trim() + ":" + rest.trim() + "/";
                 webSocketPort = websocket.trim();
             } else {
-                webSocketUrl = "jdbc:TAOS-WS://" + host.trim() + ":" + WEB_SOCKET_PORT_DEFAULT + "/?user=root&password=taosdata";
+                webSocketUrl = "jdbc:TAOS-WS://" + host.trim() + ":" + WEB_SOCKET_PORT_DEFAULT + "/?" + userAndPassword;
                 webSocketWithoutPropUrl = "jdbc:TAOS-WS://" + host.trim() + ":" + WEB_SOCKET_PORT_DEFAULT + "/";
                 webSocketPort = WEB_SOCKET_PORT_DEFAULT + "";
             }

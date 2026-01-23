@@ -352,7 +352,7 @@ public class WSConnectionValidationTest {private static volatile int queryExecut
         System.setProperty("ENV_TAOS_JDBC_TEST", "test");
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS://localhost:6030/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
+            url = "jdbc:TAOS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
