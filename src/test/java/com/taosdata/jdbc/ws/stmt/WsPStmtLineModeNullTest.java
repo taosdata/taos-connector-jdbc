@@ -14,6 +14,7 @@ import java.io.InputStream;
 import java.io.Reader;
 import java.io.StringReader;
 import java.net.MalformedURLException;
+import java.math.BigDecimal;
 import java.net.URL;
 import java.sql.*;
 import java.util.Calendar;
@@ -29,169 +30,253 @@ public class WsPStmtLineModeNullTest {
 
     @Test
     public void testExecuteUpdate() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        PreparedStatement statement = connection.prepareStatement(sql);
-        long current = System.currentTimeMillis();
-        statement.setTimestamp(1, new Timestamp(current));
-        statement.setNull(2, Types.TINYINT);
-        statement.setNull(3, Types.SMALLINT);
-        statement.setNull(4, Types.INTEGER);
-        statement.setNull(5, Types.BIGINT);
-        statement.setNull(6, Types.FLOAT);
-        statement.setNull(7, Types.DOUBLE);
-        statement.setNull(8, Types.BOOLEAN);
+        String sql = "insert into " + db_name + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            long current = System.currentTimeMillis();
+            statement.setTimestamp(1, new Timestamp(current));
+            statement.setNull(2, Types.TINYINT);
+            statement.setNull(3, Types.SMALLINT);
+            statement.setNull(4, Types.INTEGER);
+            statement.setNull(5, Types.BIGINT);
+            statement.setNull(6, Types.FLOAT);
+            statement.setNull(7, Types.DOUBLE);
+            statement.setNull(8, Types.BOOLEAN);
 
-        statement.setString(9, null);
-        statement.setNString(10, null);
-        statement.setString(11, null);
-        statement.setNull(12, Types.VARBINARY);
-        statement.setNull(13, Types.VARBINARY);
-        statement.executeUpdate();
+            statement.setString(9, null);
+            statement.setNString(10, null);
+            statement.setString(11, null);
+            statement.setNull(12, Types.VARBINARY);
+            statement.setNull(13, Types.VARBINARY);
 
-        ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + tableName);
-        resultSet.next();
-        Assert.assertEquals(resultSet.getTimestamp(1), new Timestamp(current));
+            // Unsigned types
+            statement.setNull(14, Types.SMALLINT);
+            statement.setNull(15, Types.INTEGER);
+            statement.setNull(16, Types.BIGINT);
+            statement.setNull(17, Types.BIGINT);
 
-        resultSet.getByte(2);
-        Assert.assertTrue(resultSet.wasNull());
+            // Decimal
+            statement.setNull(18, Types.DECIMAL);
+            statement.setNull(19, Types.DECIMAL);
 
-        resultSet.getShort(3);
-        Assert.assertTrue(resultSet.wasNull());
+            statement.executeUpdate();
 
-        resultSet.getInt(4);
-        Assert.assertTrue(resultSet.wasNull());
+            try (ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + tableName)) {
+                resultSet.next();
+                Assert.assertEquals(resultSet.getTimestamp(1), new Timestamp(current));
 
-        resultSet.getLong(5);
-        Assert.assertTrue(resultSet.wasNull());
+                resultSet.getByte(2);
+                Assert.assertTrue(resultSet.wasNull());
 
-        resultSet.getFloat(6);
-        Assert.assertTrue(resultSet.wasNull());
+                resultSet.getShort(3);
+                Assert.assertTrue(resultSet.wasNull());
 
-        resultSet.getDouble(7);
-        Assert.assertTrue(resultSet.wasNull());
+                resultSet.getInt(4);
+                Assert.assertTrue(resultSet.wasNull());
 
-        resultSet.getBoolean(8);
-        Assert.assertTrue(resultSet.wasNull());
+                resultSet.getLong(5);
+                Assert.assertTrue(resultSet.wasNull());
 
-        Assert.assertNull(resultSet.getString(9));
-        Assert.assertNull(resultSet.getString(10));
-        Assert.assertNull(resultSet.getString(11));
+                resultSet.getFloat(6);
+                Assert.assertTrue(resultSet.wasNull());
 
-        Assert.assertNull(resultSet.getBytes(12));
-        Assert.assertNull(resultSet.getBytes(13));
-        resultSet.close();
-        statement.close();
+                resultSet.getDouble(7);
+                Assert.assertTrue(resultSet.wasNull());
+
+                resultSet.getBoolean(8);
+                Assert.assertTrue(resultSet.wasNull());
+
+                Assert.assertNull(resultSet.getString(9));
+                Assert.assertNull(resultSet.getString(10));
+                Assert.assertNull(resultSet.getString(11));
+
+                Assert.assertNull(resultSet.getBytes(12));
+                Assert.assertNull(resultSet.getBytes(13));
+
+                // Unsigned types
+                resultSet.getShort(14);
+                Assert.assertTrue(resultSet.wasNull());
+
+                resultSet.getInt(15);
+                Assert.assertTrue(resultSet.wasNull());
+
+                resultSet.getLong(16);
+                Assert.assertTrue(resultSet.wasNull());
+
+                resultSet.getObject(17);
+                Assert.assertTrue(resultSet.wasNull());
+
+                // Decimal
+                Assert.assertNull(resultSet.getBigDecimal(18));
+                Assert.assertNull(resultSet.getBigDecimal(19));
+            }
+        }
     }
 
     @Test
     public void testSetObject() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        PreparedStatement statement = connection.prepareStatement(sql);
-        long current = System.currentTimeMillis();
-        statement.setTimestamp(1, new Timestamp(current));
-        statement.setObject(2, null, Types.TINYINT);
-        statement.setObject(3, null, Types.SMALLINT);
-        statement.setObject(4, null, Types.INTEGER);
-        statement.setObject(5, null, Types.BIGINT);
-        statement.setObject(6, null, Types.FLOAT);
-        statement.setObject(7, null, Types.DOUBLE);
-        statement.setObject(8, null, Types.BOOLEAN);
+        String sql = "insert into " + db_name + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            long current = System.currentTimeMillis();
+            statement.setTimestamp(1, new Timestamp(current));
+            statement.setObject(2, null, Types.TINYINT);
+            statement.setObject(3, null, Types.SMALLINT);
+            statement.setObject(4, null, Types.INTEGER);
+            statement.setObject(5, null, Types.BIGINT);
+            statement.setObject(6, null, Types.FLOAT);
+            statement.setObject(7, null, Types.DOUBLE);
+            statement.setObject(8, null, Types.BOOLEAN);
 
-        statement.setObject(9, null, Types.VARCHAR);
-        statement.setObject(10, null, Types.NCHAR);
-        statement.setObject(11, null, Types.VARCHAR);
-        statement.setObject(12, null, Types.VARBINARY);
-        statement.setObject(13, null, Types.VARBINARY);
-        statement.executeUpdate();
+            statement.setObject(9, null, Types.VARCHAR);
+            statement.setObject(10, null, Types.NCHAR);
+            statement.setObject(11, null, Types.VARCHAR);
+            statement.setObject(12, null, Types.VARBINARY);
+            statement.setObject(13, null, Types.VARBINARY);
 
-        ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + tableName);
-        resultSet.next();
-        Assert.assertEquals(resultSet.getTimestamp(1), new Timestamp(current));
+            // Unsigned types
+            statement.setObject(14, null, Types.SMALLINT);
+            statement.setObject(15, null, Types.INTEGER);
+            statement.setObject(16, null, Types.BIGINT);
+            statement.setObject(17, null, Types.BIGINT);
 
-        resultSet.getByte(2);
-        Assert.assertTrue(resultSet.wasNull());
+            // Decimal
+            statement.setObject(18, null, Types.DECIMAL);
+            statement.setObject(19, null, Types.DECIMAL);
 
-        resultSet.getShort(3);
-        Assert.assertTrue(resultSet.wasNull());
+            statement.executeUpdate();
 
-        resultSet.getInt(4);
-        Assert.assertTrue(resultSet.wasNull());
+            try (ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + tableName)) {
+                resultSet.next();
+                Assert.assertEquals(resultSet.getTimestamp(1), new Timestamp(current));
 
-        resultSet.getLong(5);
-        Assert.assertTrue(resultSet.wasNull());
+                resultSet.getByte(2);
+                Assert.assertTrue(resultSet.wasNull());
 
-        resultSet.getFloat(6);
-        Assert.assertTrue(resultSet.wasNull());
+                resultSet.getShort(3);
+                Assert.assertTrue(resultSet.wasNull());
 
-        resultSet.getDouble(7);
-        Assert.assertTrue(resultSet.wasNull());
+                resultSet.getInt(4);
+                Assert.assertTrue(resultSet.wasNull());
 
-        resultSet.getBoolean(8);
-        Assert.assertTrue(resultSet.wasNull());
+                resultSet.getLong(5);
+                Assert.assertTrue(resultSet.wasNull());
 
-        Assert.assertNull(resultSet.getString(9));
-        Assert.assertNull(resultSet.getString(10));
-        Assert.assertNull(resultSet.getString(11));
+                resultSet.getFloat(6);
+                Assert.assertTrue(resultSet.wasNull());
 
-        Assert.assertNull(resultSet.getBytes(12));
-        Assert.assertNull(resultSet.getBytes(13));
-        resultSet.close();
-        statement.close();
+                resultSet.getDouble(7);
+                Assert.assertTrue(resultSet.wasNull());
+
+                resultSet.getBoolean(8);
+                Assert.assertTrue(resultSet.wasNull());
+
+                Assert.assertNull(resultSet.getString(9));
+                Assert.assertNull(resultSet.getString(10));
+                Assert.assertNull(resultSet.getString(11));
+
+                Assert.assertNull(resultSet.getBytes(12));
+                Assert.assertNull(resultSet.getBytes(13));
+
+                // Unsigned types
+                resultSet.getShort(14);
+                Assert.assertTrue(resultSet.wasNull());
+
+                resultSet.getInt(15);
+                Assert.assertTrue(resultSet.wasNull());
+
+                resultSet.getLong(16);
+                Assert.assertTrue(resultSet.wasNull());
+
+                resultSet.getObject(17);
+                Assert.assertTrue(resultSet.wasNull());
+
+                // Decimal
+                Assert.assertNull(resultSet.getBigDecimal(18));
+                Assert.assertNull(resultSet.getBigDecimal(19));
+            }
+        }
     }
     @Test
     public void testSetObject2() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        PreparedStatement statement = connection.prepareStatement(sql);
-        long current = System.currentTimeMillis();
-        statement.setTimestamp(1, new Timestamp(current));
-        statement.setObject(2, null);
-        statement.setObject(3, null);
-        statement.setObject(4, null);
-        statement.setObject(5, null);
-        statement.setObject(6, null);
-        statement.setObject(7, null);
-        statement.setObject(8, null);
+        String sql = "insert into " + db_name + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            long current = System.currentTimeMillis();
+            statement.setTimestamp(1, new Timestamp(current));
+            statement.setObject(2, null);
+            statement.setObject(3, null);
+            statement.setObject(4, null);
+            statement.setObject(5, null);
+            statement.setObject(6, null);
+            statement.setObject(7, null);
+            statement.setObject(8, null);
 
-        statement.setObject(9, null);
-        statement.setObject(10, null);
-        statement.setObject(11, null);
-        statement.setObject(12, null);
-        statement.setObject(13, null);
-        statement.executeUpdate();
+            statement.setObject(9, null);
+            statement.setObject(10, null);
+            statement.setObject(11, null);
+            statement.setObject(12, null);
+            statement.setObject(13, null);
 
-        ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + tableName);
-        resultSet.next();
-        Assert.assertEquals(resultSet.getTimestamp(1), new Timestamp(current));
+            // Unsigned types
+            statement.setObject(14, null);
+            statement.setObject(15, null);
+            statement.setObject(16, null);
+            statement.setObject(17, null);
 
-        resultSet.getByte(2);
-        Assert.assertTrue(resultSet.wasNull());
+            // Decimal
+            statement.setObject(18, null);
+            statement.setObject(19, null);
 
-        resultSet.getShort(3);
-        Assert.assertTrue(resultSet.wasNull());
+            statement.executeUpdate();
 
-        resultSet.getInt(4);
-        Assert.assertTrue(resultSet.wasNull());
+            try (ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + tableName)) {
+                resultSet.next();
+                Assert.assertEquals(resultSet.getTimestamp(1), new Timestamp(current));
 
-        resultSet.getLong(5);
-        Assert.assertTrue(resultSet.wasNull());
+                resultSet.getByte(2);
+                Assert.assertTrue(resultSet.wasNull());
 
-        resultSet.getFloat(6);
-        Assert.assertTrue(resultSet.wasNull());
+                resultSet.getShort(3);
+                Assert.assertTrue(resultSet.wasNull());
 
-        resultSet.getDouble(7);
-        Assert.assertTrue(resultSet.wasNull());
+                resultSet.getInt(4);
+                Assert.assertTrue(resultSet.wasNull());
 
-        resultSet.getBoolean(8);
-        Assert.assertTrue(resultSet.wasNull());
+                resultSet.getLong(5);
+                Assert.assertTrue(resultSet.wasNull());
 
-        Assert.assertNull(resultSet.getString(9));
-        Assert.assertNull(resultSet.getString(10));
-        Assert.assertNull(resultSet.getString(11));
+                resultSet.getFloat(6);
+                Assert.assertTrue(resultSet.wasNull());
 
-        Assert.assertNull(resultSet.getBytes(12));
-        Assert.assertNull(resultSet.getBytes(13));
-        resultSet.close();
-        statement.close();
+                resultSet.getDouble(7);
+                Assert.assertTrue(resultSet.wasNull());
+
+                resultSet.getBoolean(8);
+                Assert.assertTrue(resultSet.wasNull());
+
+                Assert.assertNull(resultSet.getString(9));
+                Assert.assertNull(resultSet.getString(10));
+                Assert.assertNull(resultSet.getString(11));
+
+                Assert.assertNull(resultSet.getBytes(12));
+                Assert.assertNull(resultSet.getBytes(13));
+
+                // Unsigned types
+                resultSet.getShort(14);
+                Assert.assertTrue(resultSet.wasNull());
+
+                resultSet.getInt(15);
+                Assert.assertTrue(resultSet.wasNull());
+
+                resultSet.getLong(16);
+                Assert.assertTrue(resultSet.wasNull());
+
+                resultSet.getObject(17);
+                Assert.assertTrue(resultSet.wasNull());
+
+                // Decimal
+                Assert.assertNull(resultSet.getBigDecimal(18));
+                Assert.assertNull(resultSet.getBigDecimal(19));
+            }
+        }
     }
 
     @Test(expected = SQLException.class)
@@ -393,15 +478,16 @@ public class WsPStmtLineModeNullTest {
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_PBS_MODE, "line");
         connection = DriverManager.getConnection(url, properties);
-        Statement statement = connection.createStatement();
-        statement.execute("drop database if exists " + db_name);
-        statement.execute("create database " + db_name + " keep 36500");
-        statement.execute("use " + db_name);
-        statement.execute("create table if not exists " + db_name + "." + tableName +
-                "(ts timestamp, c1 tinyint, c2 smallint, c3 int, c4 bigint, " +
-                "c5 float, c6 double, c7 bool, c8 binary(10), c9 nchar(10), c10 varchar(20), c11 varbinary(100), c12 geometry(100))");
-
-        statement.close();
+        try (Statement statement = connection.createStatement()) {
+            statement.execute("drop database if exists " + db_name);
+            statement.execute("create database " + db_name + " keep 36500");
+            statement.execute("use " + db_name);
+            statement.execute("create table if not exists " + db_name + "." + tableName +
+                    "(ts timestamp, c1 tinyint, c2 smallint, c3 int, c4 bigint, " +
+                    "c5 float, c6 double, c7 bool, c8 binary(10), c9 nchar(10), c10 varchar(20), c11 varbinary(100), c12 geometry(100), " +
+                    "c13 tinyint unsigned, c14 smallint unsigned, c15 int unsigned, c16 bigint unsigned, " +
+                    "c17 decimal(4,2), c18 decimal(30,10))");
+        }
         preparedStatement = connection.prepareStatement("insert into " + db_name + "." + tableName + " (ts, c1) values (?, ?)");
     }
 

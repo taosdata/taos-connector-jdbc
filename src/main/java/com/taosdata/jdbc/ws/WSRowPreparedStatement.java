@@ -21,6 +21,7 @@ import java.io.Reader;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -156,6 +157,8 @@ public class WSRowPreparedStatement extends WSRetryableStmt implements PreparedS
                 break;
             case TSDB_DATA_TYPE_BINARY:
             case TSDB_DATA_TYPE_BLOB:
+            case TSDB_DATA_TYPE_DECIMAL64:
+            case TSDB_DATA_TYPE_DECIMAL128:
             case TSDB_DATA_TYPE_VARBINARY:
             case TSDB_DATA_TYPE_GEOMETRY:
             case TSDB_DATA_TYPE_NCHAR:
@@ -226,6 +229,14 @@ public class WSRowPreparedStatement extends WSRetryableStmt implements PreparedS
                     seStringInner(parameterIndex, null, true, fieldType);
                 } else {
                     seStringInner(parameterIndex, null, true, (byte)TSDB_DATA_TYPE_JSON);
+                }
+                break;
+            case Types.DECIMAL:
+                fieldType = stmtInfo.getFields().get(parameterIndex - 1).getFieldType();
+                if (fieldType > 0){
+                    seStringInner(parameterIndex, null, true, fieldType);
+                } else {
+                    seStringInner(parameterIndex, null, true, (byte)TSDB_DATA_TYPE_DECIMAL128);
                 }
                 break;
             default:
@@ -353,7 +364,13 @@ public class WSRowPreparedStatement extends WSRetryableStmt implements PreparedS
     }
     @Override
     public void setBigDecimal(int parameterIndex, BigDecimal x) throws SQLException {
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
+        if (x == null) {
+            setNull(parameterIndex, Types.DECIMAL);
+            return;
+        }
+        setBytesInner(parameterIndex, x.toPlainString().getBytes(StandardCharsets.UTF_8),
+                false,
+                getTSDBType(parameterIndex, (byte)TSDB_DATA_TYPE_DECIMAL128));
     }
 
     private void seStringInner(int parameterIndex, String x, boolean isNull, byte type) throws SQLException {
@@ -591,6 +608,13 @@ public class WSRowPreparedStatement extends WSRetryableStmt implements PreparedS
                     throw new SQLException("Invalid type for blob: " + x.getClass().getName());
                 }
                 break;
+            case Types.DECIMAL:
+                if (x instanceof BigDecimal) {
+                    setBytes(parameterIndex, ((BigDecimal) x).toPlainString().getBytes(StandardCharsets.UTF_8));
+                } else {
+                    throw new SQLException("Invalid type for decimal: " + x.getClass().getName());
+                }
+                break;
             default:
                 throw new SQLException("unsupported type: " + targetSqlType);
         }
@@ -651,6 +675,10 @@ public class WSRowPreparedStatement extends WSRetryableStmt implements PreparedS
         } else if (x instanceof Blob){
             byte[] bytes = ((Blob) x).getBytes(1, (int) ((Blob) x).length());
             setBytesInner(parameterIndex, bytes, false, getTSDBType(parameterIndex, (byte)TSDB_DATA_TYPE_BLOB));
+        } else if (x instanceof BigDecimal) {
+            setBytesInner(parameterIndex, ((BigDecimal) x).toPlainString().getBytes(StandardCharsets.UTF_8),
+                    false,
+                    getTSDBType(parameterIndex, (byte)TSDB_DATA_TYPE_DECIMAL128));
         }
         else {
             throw new SQLException("Unsupported data type: " + x.getClass().getName());

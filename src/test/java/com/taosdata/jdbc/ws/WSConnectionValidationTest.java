@@ -58,6 +58,19 @@ public class WSConnectionValidationTest {private static volatile int queryExecut
 
     @Before
     public void setup() throws Exception {
+        // Skip this test on JDK 16+ due to strong encapsulation of Field.modifiers
+        String javaVersion = System.getProperty("java.version");
+        int majorVersion;
+        if (javaVersion.startsWith("1.")) {
+            // JDK 8 format: 1.8.x
+            majorVersion = Integer.parseInt(javaVersion.substring(2, 3));
+        } else {
+            // JDK 9+ format: 11.x, 17.x, etc.
+            int dotIndex = javaVersion.indexOf('.');
+            majorVersion = Integer.parseInt(dotIndex > 0 ? javaVersion.substring(0, dotIndex) : javaVersion);
+        }
+        org.junit.Assume.assumeTrue("Test skipped on JDK " + majorVersion + " due to Field.modifiers encapsulation", majorVersion < 16);
+
         MockitoAnnotations.openMocks(this);
 
         clearStaticField(WSConnection.class, "conCheckInfoMap");

@@ -72,6 +72,8 @@ public class SerializeBlock {
                     case TSDB_DATA_TYPE_BLOB:
                     case TSDB_DATA_TYPE_VARBINARY:
                     case TSDB_DATA_TYPE_GEOMETRY:
+                    case TSDB_DATA_TYPE_DECIMAL64:
+                    case TSDB_DATA_TYPE_DECIMAL128:
                     case TSDB_DATA_TYPE_NCHAR:{
                         byte[] v = (byte[]) o;
                         buf.writeIntLE(v.length);
@@ -287,6 +289,8 @@ public class SerializeBlock {
             case TSDB_DATA_TYPE_JSON:
             case TSDB_DATA_TYPE_BINARY:
             case TSDB_DATA_TYPE_BLOB:
+            case TSDB_DATA_TYPE_DECIMAL64:
+            case TSDB_DATA_TYPE_DECIMAL128:
             case TSDB_DATA_TYPE_VARBINARY:
             case TSDB_DATA_TYPE_GEOMETRY:
             case TSDB_DATA_TYPE_NCHAR: {
@@ -349,6 +353,8 @@ public class SerializeBlock {
             case TSDB_DATA_TYPE_JSON:
             case TSDB_DATA_TYPE_BINARY:
             case TSDB_DATA_TYPE_BLOB:
+            case TSDB_DATA_TYPE_DECIMAL64:
+            case TSDB_DATA_TYPE_DECIMAL128:
             case TSDB_DATA_TYPE_VARBINARY:
             case TSDB_DATA_TYPE_GEOMETRY:
             case TSDB_DATA_TYPE_NCHAR:{

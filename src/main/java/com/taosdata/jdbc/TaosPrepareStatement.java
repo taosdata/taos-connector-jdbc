@@ -1,5 +1,6 @@
 package com.taosdata.jdbc;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Blob;
 import java.sql.PreparedStatement;
@@ -47,6 +48,7 @@ public interface TaosPrepareStatement extends PreparedStatement {
 
     void setLong(int columnIndex, List<Long> list) throws SQLException;
     void setBigInteger(int columnIndex, List<BigInteger> list) throws SQLException;
+    void setBigDecimal(int columnIndex, List<BigDecimal> list) throws SQLException;
 
     void setDouble(int columnIndex, List<Double> list) throws SQLException;
 

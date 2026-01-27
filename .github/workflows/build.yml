@@ -27,7 +27,7 @@ jobs:
     strategy:
       matrix:
         os: [ Ubuntu-22.04 ]
-        java: [ 8 ]
+        java: [ 8, 11, 17 ]
         maven: [ '3.6.3' ]
     runs-on: ${{ matrix.os }}
     steps:
@@ -240,6 +240,7 @@ jobs:
         run: mvn -B clean verify --file pom.xml
 
       - name: Upload coverage to Codecov
+        if: matrix.java == 8
         uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

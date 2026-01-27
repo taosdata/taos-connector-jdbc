@@ -356,6 +356,9 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
             case Types.OTHER:
                 colOrderedMap.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_JSON, parameterIndex));
                 break;
+            case Types.DECIMAL:
+                colOrderedMap.put(parameterIndex, new Column(null, TSDB_DATA_TYPE_DECIMAL128, parameterIndex));
+                break;
             default:
                 throw new SQLException("unsupported type: " + sqlType);
         }
@@ -398,7 +401,11 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
 
     @Override
     public void setBigDecimal(int parameterIndex, BigDecimal x) throws SQLException {
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
+        if (x == null) {
+            setNull(parameterIndex, Types.DECIMAL);
+            return;
+        }
+        colOrderedMap.put(parameterIndex, new Column(x.toPlainString().getBytes(StandardCharsets.UTF_8), TSDB_DATA_TYPE_DECIMAL128, parameterIndex));
     }
 
     @Override
@@ -532,6 +539,12 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
                     colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_JSON, parameterIndex));
                 }
                 break;
+            case Types.DECIMAL:
+                colOrderedMap.put(parameterIndex,
+                        new Column(((BigDecimal)x).toPlainString().getBytes(StandardCharsets.UTF_8),
+                        TSDB_DATA_TYPE_DECIMAL128,
+                                parameterIndex));
+                break;
             default:
                 throw new SQLException("unsupported type: " + targetSqlType);
         }
@@ -588,6 +601,9 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
         } else if (x instanceof Blob) {
             byte[] bytes = ((Blob) x).getBytes(1, (int) ((Blob) x).length());
             colOrderedMap.put(parameterIndex, new Column(bytes, TSDB_DATA_TYPE_BLOB, parameterIndex));
+        } else if (x instanceof BigDecimal) {
+            byte[] bytes = ((BigDecimal) x).toPlainString().getBytes(StandardCharsets.UTF_8);
+            colOrderedMap.put(parameterIndex, new Column(bytes, TSDB_DATA_TYPE_DECIMAL128, parameterIndex));
         }
         else {
             throw new SQLException("Unsupported data type: " + x.getClass().getName());
@@ -954,6 +970,19 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
     public void setBigInteger(int columnIndex, List<BigInteger> list) throws SQLException {
         setValueImpl(columnIndex, list, TSDB_DATA_TYPE_UBIGINT, Long.BYTES);
     }
+
+    @Override
+    public void setBigDecimal(int columnIndex, List<BigDecimal> list) throws SQLException {
+        List<byte[]> bytesList = list.stream().map(x -> {
+            if (x == null) {
+                return null;
+            }
+            return x.toPlainString().getBytes(StandardCharsets.UTF_8);
+        }).collect(Collectors.toList());
+
+        setValueImpl(columnIndex, bytesList, TSDB_DATA_TYPE_DECIMAL128, 16);
+    }
+
     @Override
     public void setDouble(int columnIndex, List<Double> list) throws SQLException {
         setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_DOUBLE, Double.BYTES);

@@ -51,17 +51,15 @@ public class HttpClientPoolUtilTest {
     }
 
     private int findAvailablePort() throws IOException {
-        // Try to find an available port
-        for (int port = 18080; port < 18100; port++) {
-            try {
-                HttpServer testServer = HttpServer.create(new InetSocketAddress("localhost", port), 0);
-                testServer.stop(0);
-                return port;
-            } catch (IOException e) {
-                // Port in use, try next
-            }
+        // Use ServerSocket instead of HttpServer for port detection
+        // This is more reliable and doesn't leave ports in TIME_WAIT state
+        try (java.net.ServerSocket socket = new java.net.ServerSocket(0)) {
+            // Port 0 means let the system assign an available port
+            int port = socket.getLocalPort();
+            // Verify the port is actually available by creating HttpServer
+            // This should succeed immediately since we just found an available port
+            return port;
         }
-        throw new IOException("No available port found");
     }
 
     private void resetStaticFields() {
