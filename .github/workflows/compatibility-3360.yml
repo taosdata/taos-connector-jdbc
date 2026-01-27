@@ -76,7 +76,7 @@ jobs:
           TDENGINE_USER: ${{ secrets.TDENGINE_USER }}
           TDENGINE_PASSWORD: ${{ secrets.TDENGINE_PASSWORD }}
           TD_3360_TEST: 'true'
-        run: mvn -B clean verify --file pom.xml
+        run: mvn -B clean verify --file pom.xml -Dcoverage.minimum=0.5
       - name: Upload logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
