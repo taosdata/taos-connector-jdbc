@@ -576,6 +576,10 @@ public class TSDBPreparedStatement extends TSDBStatement implements TaosPrepareS
     }
 
     @Override
+    public void setBigDecimal(int columnIndex, List<BigDecimal> list) throws SQLException{
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
+    }
+    @Override
     public void setDouble(int columnIndex, List<Double> list) throws SQLException {
         setValueImpl(columnIndex, list, TSDBConstants.TSDB_DATA_TYPE_DOUBLE, Double.BYTES);
     }

@@ -7,9 +7,6 @@ public class ColumnInfo implements Comparable<ColumnInfo> {
     // taos data type
     private final int type;
     private final int index;
-
-
-
     private int serializeSize;
 
     public ColumnInfo(int columnIndex, List<Object> dataList, int type) {

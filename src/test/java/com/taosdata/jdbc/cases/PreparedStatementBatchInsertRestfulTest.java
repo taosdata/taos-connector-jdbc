@@ -55,6 +55,7 @@ public class PreparedStatementBatchInsertRestfulTest {
             }
             pstmt.executeBatch();
         } catch (SQLException e) {
+            e.printStackTrace();
             Assert.fail();
         }
 

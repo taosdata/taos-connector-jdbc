@@ -7,7 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
-**Full Changelog**: [3.7.8...](https://github.com/taosdata/taos-connector-jdbc/compare/3.7.8...)
+**Full Changelog**: [3.8.0...](https://github.com/taosdata/taos-connector-jdbc/compare/3.8.0...)
+
+### Features
+
+
+- Add dependency check actions (#307) ([2811a31](https://github.com/taosdata/taos-connector-jdbc/commit/2811a318fdc9f01ca3f5265b3f0c1768c5f58c11))
+- Feat: support blob and decimal in parameter binding
+Closes: feat/6662931308 ([9e9c2f0](https://github.com/taosdata/taos-connector-jdbc/commit/9e9c2f0146fb539adf93d79254172075ac47794c))
+
+
+## [3.8.0] - 2025-12-31
+
+**Full Changelog**: [3.7.9...3.8.0](https://github.com/taosdata/taos-connector-jdbc/compare/3.7.9...3.8.0)
+
+### Bug Fixes
+
+
+- Fix sonar error and security issues (#295) ([ca06cee](https://github.com/taosdata/taos-connector-jdbc/commit/ca06cee9fab9e5cfdbb456c106d49869e31822ec))
+- Error info contains password (#301) ([1746ee8](https://github.com/taosdata/taos-connector-jdbc/commit/1746ee8e1588cfc1dc42c0cb2c6c013a25be1f88))
+
+
+### Features
+
+
+- Report connector version when connecting. (#298) ([76e8c7b](https://github.com/taosdata/taos-connector-jdbc/commit/76e8c7b0b56b8e69ffc0fa19662cd78655834c2d))
+- Support token (#302) ([9d14c50](https://github.com/taosdata/taos-connector-jdbc/commit/9d14c50ac411ba3cb65122a5225ee374a18c5520))
+
+
+## [3.7.9] - 2025-12-06
+
+**Full Changelog**: [3.7.8...3.7.9](https://github.com/taosdata/taos-connector-jdbc/compare/3.7.8...3.7.9)
+
+### Bug Fixes
+
+
+- Websocket reconnect null point error (#296) ([b0a3738](https://github.com/taosdata/taos-connector-jdbc/commit/b0a3738138af99e8e20df060fc4f0f250f080fa5))
+
 
 ### Features
 
