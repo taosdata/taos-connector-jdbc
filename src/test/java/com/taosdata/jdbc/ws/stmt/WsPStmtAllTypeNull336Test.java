@@ -13,15 +13,15 @@ import java.util.Properties;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
 
-public class WsPStmtAllTypeNullTest {
-            final String dbName = TestUtils.camelToSnake(WsPStmtAllTypeNullTest.class);
+public class WsPStmtAllTypeNull336Test {
+            final String dbName = TestUtils.camelToSnake(WsPStmtAllTypeNull336Test.class);
     final String tableName = "wpt";
     final String stableName = "swpt";
     Connection connection;
 
     @Test
     public void testExecuteUpdate() throws SQLException {
-        String sql = "insert into " + dbName + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "insert into " + dbName + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             long current = System.currentTimeMillis();
             statement.setTimestamp(1, new Timestamp(current));
@@ -44,13 +44,6 @@ public class WsPStmtAllTypeNullTest {
             statement.setNull(15, Types.INTEGER);
             statement.setNull(16, Types.BIGINT);
             statement.setNull(17, Types.BIGINT);
-
-            // BLOB
-            statement.setNull(18, Types.BLOB);
-
-            // Decimal
-            statement.setNull(19, Types.DECIMAL);
-            statement.setNull(20, Types.DECIMAL);
 
             statement.executeUpdate();
 
@@ -98,13 +91,6 @@ public class WsPStmtAllTypeNullTest {
 
                 resultSet.getObject(17);
                 Assert.assertTrue(resultSet.wasNull());
-
-                // BLOB
-                Assert.assertNull(resultSet.getBlob(18));
-
-                // Decimal
-                Assert.assertNull(resultSet.getBigDecimal(19));
-                Assert.assertNull(resultSet.getBigDecimal(20));
             }
         }
     }
@@ -242,11 +228,11 @@ public class WsPStmtAllTypeNullTest {
 
     @Before
     public void before() throws SQLException {
-        String url = SpecifyAddress.getInstance().getRestWithoutUrl();
+        String url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
+            url = "jdbc:TAOS-WS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         } else {
-            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
+            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
         connection = DriverManager.getConnection(url, properties);
@@ -257,8 +243,7 @@ public class WsPStmtAllTypeNullTest {
             statement.execute("create table if not exists " + dbName + "." + tableName +
                     "(ts timestamp, c1 tinyint, c2 smallint, c3 int, c4 bigint, " +
                     "c5 float, c6 double, c7 bool, c8 binary(10), c9 nchar(10), c10 varchar(20), c11 varbinary(100), c12 geometry(100), " +
-                    "c13 tinyint unsigned, c14 smallint unsigned, c15 int unsigned, c16 bigint unsigned, c17 blob, " +
-                    "c18 decimal(4,2), c19 decimal(30,10))");
+                    "c13 tinyint unsigned, c14 smallint unsigned, c15 int unsigned, c16 bigint unsigned)");
 
             statement.execute("create stable if not exists " + dbName + "." + stableName +
                     "(ts timestamp, c1 tinyint) tags (t1 timestamp, t2 tinyint, t3 smallint, t4 int, t5 bigint, " +
@@ -277,7 +262,7 @@ public class WsPStmtAllTypeNullTest {
 
     @BeforeClass
     public static void setUp() {
-        TestUtils.runInMain();
+        TestUtils.runIn336();
         ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
     }
 

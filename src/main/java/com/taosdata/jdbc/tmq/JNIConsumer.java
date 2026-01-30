@@ -1,6 +1,8 @@
 package com.taosdata.jdbc.tmq;
 
 import com.taosdata.jdbc.TSDBConstants;
+import com.taosdata.jdbc.TSDBError;
+import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.common.Consumer;
 import com.taosdata.jdbc.enums.TmqMessageType;
 import com.taosdata.jdbc.utils.StringUtils;
@@ -22,16 +24,26 @@ public class JNIConsumer<V> implements  Consumer<V> {
 
     @Override
     public void create(Properties properties) throws SQLException {
-        if (!StringUtils.isEmpty(properties.getProperty(TMQConstants.CONNECT_IP)) &&
-                properties.getProperty(TMQConstants.CONNECT_IP).startsWith("[")
-        ) {
-            // IPv6 address
-            String ip = properties.getProperty(TMQConstants.CONNECT_IP);
-            if (ip.endsWith("]")) {
-                ip = ip.substring(1, ip.length() - 1);
+        String servers = properties.getProperty(TMQConstants.BOOTSTRAP_SERVERS);
+        if (!StringUtils.isEmpty(servers)) {
+            int lastColonIndex = servers.lastIndexOf(":");
+            if (lastColonIndex == -1 || lastColonIndex == servers.length() - 1) {
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid bootstrap.servers format: " + servers);
             }
-            properties.setProperty(TMQConstants.CONNECT_IP, ip);
+
+            String hostPart = servers.substring(0, lastColonIndex);
+            String port = servers.substring(lastColonIndex + 1);
+            properties.setProperty(TMQConstants.CONNECT_IP, hostPart);
+            properties.setProperty(TMQConstants.CONNECT_PORT, port);
         }
+
+        String host = properties.getProperty(TMQConstants.CONNECT_IP);
+        if (host != null && host.startsWith("[") && host.endsWith("]")) {
+            // IPv6 address
+            host = host.substring(1, host.length() - 1);
+            properties.setProperty(TMQConstants.CONNECT_IP, host);
+        }
+
         long config = connector.createConfig(properties);
         try {
             connector.createConsumer(config);
