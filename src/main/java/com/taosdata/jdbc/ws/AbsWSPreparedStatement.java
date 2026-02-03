@@ -454,7 +454,11 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
 
     @Override
     public void setTimestamp(int parameterIndex, Timestamp x) throws SQLException {
-        colOrderedMap.put(parameterIndex, new Column(DateTimeUtils.toInstant(x, this.zoneId), TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
+        if (!stmtInfo.isInsert()) {
+            colOrderedMap.put(parameterIndex, new Column( x.toString().getBytes(StandardCharsets.UTF_8), TSDB_DATA_TYPE_VARCHAR, parameterIndex));
+        } else {
+            colOrderedMap.put(parameterIndex, new Column(DateTimeUtils.toInstant(x, this.zoneId), TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
+        }
     }
 
     @Override
@@ -589,12 +593,17 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
         } else if (x instanceof Timestamp) {
             setTimestamp(parameterIndex, (Timestamp) x);
         } else if (x instanceof LocalDateTime) {
-            if (zoneId == null) {
-                setTimestamp(parameterIndex, Timestamp.valueOf((LocalDateTime) x));
+            if (!stmtInfo.isInsert()) {
+                colOrderedMap.put(parameterIndex, new Column( x.toString().getBytes(StandardCharsets.UTF_8), TSDB_DATA_TYPE_VARCHAR, parameterIndex));
             } else {
-                ZonedDateTime zonedDateTime = ((LocalDateTime) x).atZone(zoneId);
-                Instant instant = zonedDateTime.toInstant();
-                colOrderedMap.put(parameterIndex, new Column( instant, TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
+
+                if (zoneId == null) {
+                    setTimestamp(parameterIndex, Timestamp.valueOf((LocalDateTime) x));
+                } else {
+                    ZonedDateTime zonedDateTime = ((LocalDateTime) x).atZone(zoneId);
+                    Instant instant = zonedDateTime.toInstant();
+                    colOrderedMap.put(parameterIndex, new Column(instant, TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
+                }
             }
         } else if (x instanceof Instant) {
             colOrderedMap.put(parameterIndex, new Column( x, TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
