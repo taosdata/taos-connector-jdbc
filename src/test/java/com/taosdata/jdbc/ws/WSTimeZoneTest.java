@@ -69,8 +69,31 @@ public class WSTimeZoneTest {
     @Test
     public void TimeZoneQueryTest2() throws SQLException, InterruptedException {
         try (PreparedStatement statement = connection.prepareStatement("select * from "  + dbName + "." + TABLE_NAME + " where ts > ? and ts < ?")) {
-            statement.setObject(1, LocalDateTime.of(2023, 12, 31, 23, 59, 59));
+            statement.setObject(1, LocalDateTime.of(2023, 12, 31, 0, 0, 0));
             statement.setObject(2, LocalDateTime.of(2024, 1, 1, 1, 1, 1));
+            try (ResultSet resultSet = statement.executeQuery()){
+                resultSet.next();
+
+                Timestamp ts = resultSet.getTimestamp("ts");
+
+                System.out.println("ts: " + ts);
+                System.out.println("ts: " + ts.getTime());
+                Assert.assertEquals("2024-01-01 01:00:00." + precisionMap.get(this.precision), ts.toString());
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw e;
+        }
+    }
+
+    @Test
+    public void TimeZoneQueryTest3() throws SQLException, InterruptedException {
+        try (PreparedStatement statement = connection.prepareStatement("select * from "  + dbName + "." + TABLE_NAME + " where ts > ? and ts < ?")) {
+            Timestamp t1 = Timestamp.valueOf(LocalDateTime.of(2023, 12, 31, 0, 0, 0));
+            Timestamp t2 = Timestamp.valueOf(LocalDateTime.of(2024, 1, 1, 1, 1, 1));
+
+            statement.setTimestamp(1, t1);
+            statement.setTimestamp(2, t2);
             try (ResultSet resultSet = statement.executeQuery()){
                 resultSet.next();
 

@@ -1,12 +1,8 @@
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.*;
-import com.taosdata.jdbc.common.Column;
-import com.taosdata.jdbc.common.ColumnInfo;
-import com.taosdata.jdbc.common.SerializeBlock;
-import com.taosdata.jdbc.common.TableInfo;
+import com.taosdata.jdbc.common.*;
 import com.taosdata.jdbc.enums.FieldBindType;
-import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.utils.BlobUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.ReqId;
@@ -27,6 +23,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -40,6 +37,8 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
     private final PriorityQueue<ColumnInfo> colListQueue = new PriorityQueue<>();
     private final HashMap<ByteBuffer, TableInfo> tableInfoMap = new HashMap<>();
     private TableInfo tableInfo;
+    private static final DateTimeFormatter FULL_ISO_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
     public AbsWSPreparedStatement(Transport transport,
                                   ConnectionParam param,
@@ -594,7 +593,7 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
             setTimestamp(parameterIndex, (Timestamp) x);
         } else if (x instanceof LocalDateTime) {
             if (!stmtInfo.isInsert()) {
-                colOrderedMap.put(parameterIndex, new Column( x.toString().getBytes(StandardCharsets.UTF_8), TSDB_DATA_TYPE_VARCHAR, parameterIndex));
+                colOrderedMap.put(parameterIndex, new Column( ((LocalDateTime) x).format(FULL_ISO_FORMATTER).getBytes(StandardCharsets.UTF_8), TSDB_DATA_TYPE_VARCHAR, parameterIndex));
             } else {
 
                 if (zoneId == null) {
