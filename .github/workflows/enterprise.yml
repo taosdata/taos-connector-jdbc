@@ -68,7 +68,7 @@ jobs:
           TDENGINE_USER: ${{ secrets.TDENGINE_USER }}
           TDENGINE_PASSWORD: ${{ secrets.TDENGINE_PASSWORD }}
           TD_ENTERPRISE_TEST: 'true'
-        run: mvn -B clean verify --file pom.xml -Dtest=com.taosdata.jdbc.ws.WSConnectionEnterpriseTest -Djacoco.skip=true
+        run: mvn -B clean verify --file pom.xml -Dtest=com.taosdata.jdbc.ws.*EnterpriseTest -Djacoco.skip=true -Dsurefire.execution.id=parallel-tests
       - name: Upload logs on failure
         if: failure()
         uses: actions/upload-artifact@v4

@@ -3,6 +3,7 @@ package com.taosdata.jdbc;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestEnvUtil;
 import org.junit.*;
+import com.taosdata.jdbc.utils.TestUtils;
 
 import java.sql.*;
 import java.time.Instant;
@@ -14,6 +15,7 @@ import java.util.Random;
 import java.util.stream.Collectors;
 
 public class ParameterBindTest {
+    private final String DB_NAME = TestUtils.camelToSnake(ParameterBindTest.class);
 
     static final String HOST = TestEnvUtil.getHost();
     private static final String STABLE = "weather";
@@ -171,9 +173,9 @@ public class ParameterBindTest {
         try {
             conn = DriverManager.getConnection(url);
             Statement stmt = conn.createStatement();
-            stmt.execute("drop database if exists test_pd");
-            stmt.execute("create database if not exists test_pd");
-            stmt.execute("use test_pd");
+            stmt.execute("drop database if exists " + DB_NAME);
+            stmt.execute("create database if not exists " + DB_NAME);
+            stmt.execute("use " + DB_NAME);
             stmt.execute("create table " + STABLE + "(ts timestamp, f1 int, f2 int) tags(t1 int, t2 int)");
         } catch (SQLException e) {
             e.printStackTrace();
@@ -184,7 +186,7 @@ public class ParameterBindTest {
     public void after() {
         try {
             Statement stmt = conn.createStatement();
-            stmt.execute("drop database if exists test_pd");
+            stmt.execute("drop database if exists " + DB_NAME);
             if (conn != null)
                 conn.close();
         } catch (SQLException e) {

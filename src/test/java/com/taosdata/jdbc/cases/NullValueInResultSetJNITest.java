@@ -3,6 +3,7 @@ package com.taosdata.jdbc.cases;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestEnvUtil;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -11,6 +12,7 @@ import java.sql.*;
 import java.util.Properties;
 
 public class NullValueInResultSetJNITest {
+    private static final String DB_NAME = TestUtils.camelToSnake(NullValueInResultSetJNITest.class);
 
                     Connection conn;
 
@@ -36,9 +38,9 @@ public class NullValueInResultSetJNITest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_CHARSET, "UTF-8");
         conn = DriverManager.getConnection(url, properties);
         try (Statement stmt = conn.createStatement()) {
-            stmt.execute("drop database if exists test_null");
-            stmt.execute("create database if not exists test_null");
-            stmt.execute("use test_null");
+            stmt.execute("drop database if exists " + DB_NAME);
+            stmt.execute("create database if not exists " + DB_NAME);
+            stmt.execute("use " + DB_NAME);
             stmt.execute("create table weather(ts timestamp, f1 int, f2 bigint, f3 float, f4 double, f5 smallint, f6 tinyint, f7 bool, f8 binary(64), f9 nchar(64))");
             stmt.executeUpdate("insert into weather(ts, f1) values(now+1s, 1)");
             stmt.executeUpdate("insert into weather(ts, f2) values(now+2s, 2)");
@@ -56,7 +58,7 @@ public class NullValueInResultSetJNITest {
     public void after() throws SQLException {
         if (conn != null) {
             Statement statement = conn.createStatement();
-            statement.execute("drop database if exists test_null");
+            statement.execute("drop database if exists " + DB_NAME);
             statement.close();
             conn.close();
         }

@@ -74,6 +74,11 @@ public class TMQConstants {
     public static final String CONNECT_PASS = "td.connect.pass";
 
     /**
+     * connection token for TMQ subscription authentication
+     */
+    public static final String TMQ_CONNECT_TOKEN = "td.connect.token";
+
+    /**
      * connect type websocket or jni, default is jni
      */
     public static final String CONNECT_TYPE = "td.connect.type";

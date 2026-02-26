@@ -2,6 +2,7 @@ package com.taosdata.jdbc.rs;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestEnvUtil;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -15,6 +16,7 @@ import java.util.Calendar;
 
 public class RestfulPreparedStatementTest {
     private static Connection conn;
+    private static final String DB_NAME = TestUtils.camelToSnake(RestfulPreparedStatementTest.class);
 
     static final String HOST = TestEnvUtil.getHost();
     private static final String SQL_INSERT = "insert into t1 values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -898,9 +900,9 @@ public class RestfulPreparedStatementTest {
             conn = DriverManager.getConnection(url);
 
             Statement stmt = conn.createStatement();
-            stmt.execute("drop database if exists test_pstmt");
-            stmt.execute("create database if not exists test_pstmt");
-            stmt.execute("use test_pstmt");
+            stmt.execute("drop database if exists " + DB_NAME);
+            stmt.execute("create database if not exists " + DB_NAME);
+            stmt.execute("use " + DB_NAME);
             stmt.execute("create table weather(ts timestamp, f1 int, f2 bigint, f3 float, f4 double, f5 smallint, f6 tinyint, f7 bool, f8 binary(64), f9 nchar(64)) tags(loc nchar(64))");
             stmt.execute("create table t1 using weather tags('beijing')");
             stmt.close();
@@ -924,7 +926,7 @@ public class RestfulPreparedStatementTest {
                 pstmtWithoutParameters.close();
             if (conn != null) {
                 Statement statement = conn.createStatement();
-                statement.execute("drop database if exists test_pstmt");
+                statement.execute("drop database if exists " + DB_NAME);
                 statement.close();
                 conn.close();
             }

@@ -577,7 +577,7 @@ public class SQLTest {
     @AfterClass
     public static void after() throws SQLException {
         Statement stmt = connection.createStatement();
-        stmt.execute("drop database if exists " + DB_NAME + "");
+        stmt.execute("drop database if exists " + DB_NAME);
         stmt.close();
         connection.close();
     }

@@ -4,6 +4,7 @@ import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestEnvUtil;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -27,6 +28,7 @@ public class TSDBJNIConnectorTest {
     private static String host = TestEnvUtil.getHost();
     private static int port = TestEnvUtil.getJniPort();
     private static TSDBResultSetRowData rowData;
+    private static final String DB_NAME = TestUtils.camelToSnake(TSDBJNIConnectorTest.class);
 
     @BeforeClass
     public static void beforeClass() {
@@ -138,9 +140,9 @@ public class TSDBJNIConnectorTest {
     public void param_bind_one_batch_multi_table() throws SQLException {
         TSDBJNIConnector connector = new TSDBJNIConnector();
         connector.connect(host, port, null, TestEnvUtil.getUser(), TestEnvUtil.getPassword());
-        connector.executeQuery("drop database if exists test");
-        connector.executeQuery("create database if not exists test");
-        connector.executeQuery("use test");
+        connector.executeQuery("drop database if exists " + DB_NAME);
+        connector.executeQuery("create database if not exists " + DB_NAME);
+        connector.executeQuery("use " + DB_NAME);
         connector.executeQuery("create table weather(ts timestamp, f1 int) tags(t1 int)");
 
         // 1. init + prepare
@@ -169,9 +171,9 @@ public class TSDBJNIConnectorTest {
     public void param_bind_multi_batch_multi_table() throws SQLException {
         TSDBJNIConnector connector = new TSDBJNIConnector();
         connector.connect(host, port, null, TestEnvUtil.getUser(), TestEnvUtil.getPassword());
-        connector.executeQuery("drop database if exists test");
-        connector.executeQuery("create database if not exists test");
-        connector.executeQuery("use test");
+        connector.executeQuery("drop database if exists " + DB_NAME);
+        connector.executeQuery("create database if not exists " + DB_NAME);
+        connector.executeQuery("use " + DB_NAME);
         connector.executeQuery("create table weather(ts timestamp, f1 int) tags(t1 int)");
 
         // 1. init + prepare
@@ -209,9 +211,9 @@ public class TSDBJNIConnectorTest {
     public void paramBindWithoutTableNameJNI() throws SQLException {
         TSDBJNIConnector connector = new TSDBJNIConnector();
         connector.connect(host, port, null, TestEnvUtil.getUser(), TestEnvUtil.getPassword());
-        connector.executeQuery("drop database if exists test");
-        connector.executeQuery("create database if not exists test");
-        connector.executeQuery("use test");
+        connector.executeQuery("drop database if exists " + DB_NAME);
+        connector.executeQuery("create database if not exists " + DB_NAME);
+        connector.executeQuery("use " + DB_NAME);
         connector.executeQuery("create table weather(ts timestamp, f1 int) tags(t1 int)");
         connector.executeQuery("create table t1 using weather tags (1)");
 
@@ -238,9 +240,9 @@ public class TSDBJNIConnectorTest {
         String url = "jdbc:TAOS://" + host + ":" + port + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         Connection connection = DriverManager.getConnection(url);
         try (Statement statement = connection.createStatement()) {
-            statement.executeUpdate("drop database if exists test");
-            statement.executeUpdate("create database if not exists test");
-            statement.executeUpdate("use test");
+            statement.executeUpdate("drop database if exists " + DB_NAME);
+            statement.executeUpdate("create database if not exists " + DB_NAME);
+            statement.executeUpdate("use " + DB_NAME);
             statement.executeUpdate("create table weather(ts timestamp, f1 int, f2 nchar(30)) tags(t1 int)");
             statement.executeUpdate("create table t1 using weather tags (2)");
         }
@@ -282,13 +284,13 @@ public class TSDBJNIConnectorTest {
         TSDBJNIConnector conn = new TSDBJNIConnector();
         conn.connect("localhost", port, null, TestEnvUtil.getUser(), TestEnvUtil.getPassword());
 
-        conn.executeQuery("drop database if exists test_get_table_vgroup_id");
-        conn.executeQuery("create database if not exists test_get_table_vgroup_id");
-        conn.executeQuery("use test_get_table_vgroup_id");
+        conn.executeQuery("drop database if exists " + DB_NAME + "_get_table_vgroup_id");
+        conn.executeQuery("create database if not exists " + DB_NAME + "_get_table_vgroup_id");
+        conn.executeQuery("use " + DB_NAME + "_get_table_vgroup_id");
         conn.executeQuery("create table weather(ts timestamp, f1 int, f2 nchar(30)) tags(t1 int)");
         conn.executeQuery("create table t1 using weather tags (2)");
 
-        int vgID = conn.getTableVGroupID("test_get_table_vgroup_id", "t1");
+        int vgID = conn.getTableVGroupID(DB_NAME + "_get_table_vgroup_id", "t1");
         System.out.println(vgID);
     }
 

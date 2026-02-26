@@ -56,12 +56,7 @@ public abstract class AbstractDriver implements Driver {
     protected Connection getWSConnection(String url, ConnectionParam param, Properties props) throws SQLException {
         if (log.isDebugEnabled()){
             log.debug("getWSConnection, url = {}", StringUtils.getBasicUrl(url));
-            try {
-                ObjectMapper objectMapper = JsonUtil.getObjectMapper();
-                log.debug("getWSConnection, ConnectionParam = {}", objectMapper.writeValueAsString(param));
-            } catch (JsonProcessingException e) {
-                log.error("Error serializing ConnectionParam", e);
-            }
+            log.debug("getWSConnection, ConnectionParam = {}", param);
         }
         InFlightRequest inFlightRequest = new InFlightRequest(param.getMaxRequest());
         param.setTextMessageHandler(message -> {

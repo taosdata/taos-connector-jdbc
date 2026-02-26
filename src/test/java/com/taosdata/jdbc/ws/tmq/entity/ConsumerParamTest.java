@@ -218,4 +218,42 @@ public class ConsumerParamTest {
 
         assertNull(param.getEnableBatchMeta());
     }
+
+    @Test
+    public void testTMQConnectToken() throws SQLException {
+        Properties props = new Properties();
+        props.setProperty(TMQConstants.CONNECT_USER, "user");
+        props.setProperty(TMQConstants.CONNECT_PASS, "pass");
+        props.setProperty(TMQConstants.GROUP_ID, "group1");
+        props.setProperty(TMQConstants.TMQ_CONNECT_TOKEN, "test-token-abc123");
+
+        ConsumerParam param = new ConsumerParam(props);
+
+        assertEquals("test-token-abc123", param.getConfig().get(TMQConstants.TMQ_CONNECT_TOKEN));
+    }
+
+    @Test
+    public void testTMQConnectTokenEmpty() throws SQLException {
+        Properties props = new Properties();
+        props.setProperty(TMQConstants.CONNECT_USER, "user");
+        props.setProperty(TMQConstants.CONNECT_PASS, "pass");
+        props.setProperty(TMQConstants.GROUP_ID, "group1");
+        props.setProperty(TMQConstants.TMQ_CONNECT_TOKEN, "");
+
+        ConsumerParam param = new ConsumerParam(props);
+
+        assertNull(param.getConfig().get(TMQConstants.TMQ_CONNECT_TOKEN));
+    }
+
+    @Test
+    public void testTMQConnectTokenNull() throws SQLException {
+        Properties props = new Properties();
+        props.setProperty(TMQConstants.CONNECT_USER, "user");
+        props.setProperty(TMQConstants.CONNECT_PASS, "pass");
+        props.setProperty(TMQConstants.GROUP_ID, "group1");
+
+        ConsumerParam param = new ConsumerParam(props);
+
+        assertNull(param.getConfig().get(TMQConstants.TMQ_CONNECT_TOKEN));
+    }
 }
