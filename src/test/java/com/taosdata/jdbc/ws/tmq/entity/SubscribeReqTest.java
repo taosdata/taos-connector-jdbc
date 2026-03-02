@@ -172,7 +172,6 @@ public class SubscribeReqTest {
         assertTrue("Print string should contain connector", printStr.contains(TEST_CONNECTOR));
 
         // Check config map and reqId
-        assertTrue("Print string should contain config map", printStr.contains("config={"));
         assertTrue("Print string should contain reqId", printStr.contains("reqId=" + TEST_REQ_ID));
 
         // Negative check: No plaintext password

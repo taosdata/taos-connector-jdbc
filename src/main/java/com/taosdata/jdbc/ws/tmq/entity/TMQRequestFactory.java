@@ -34,6 +34,13 @@ public class TMQRequestFactory {
         subscribeReq.setReqId(reqId);
         subscribeReq.setUser(param.getConnectionParam().getUser());
         subscribeReq.setPassword(param.getConnectionParam().getPassword());
+
+        // Set bearerToken if td.connect.token is provided
+        String token = param.getConfig().get(com.taosdata.jdbc.tmq.TMQConstants.TMQ_CONNECT_TOKEN);
+        if (token != null && !token.isEmpty()) {
+            subscribeReq.setBearerToken(token);
+        }
+
         subscribeReq.setDb(param.getConnectionParam().getDatabase());
         subscribeReq.setGroupId(param.getGroupId());
         subscribeReq.setClientId(param.getClientId());

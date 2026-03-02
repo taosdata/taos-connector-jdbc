@@ -6,6 +6,7 @@ import com.taosdata.jdbc.enums.SchemalessProtocolType;
 import com.taosdata.jdbc.enums.SchemalessTimestampType;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestEnvUtil;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -20,6 +21,7 @@ public class RestfulConnectionTest {
 
 
     private static Connection conn;
+    private static final String DB_NAME = TestUtils.camelToSnake(RestfulConnectionTest.class);
 
     @Test
     public void getConnection() {
@@ -56,8 +58,8 @@ public class RestfulConnectionTest {
 
     @Test
     public void nativeSQL() throws SQLException {
-        String nativeSQL = conn.nativeSQL("select * from test_db");
-        Assert.assertEquals("select * from test_db", nativeSQL);
+        String nativeSQL = conn.nativeSQL("select * from " + DB_NAME);
+        Assert.assertEquals("select * from " + DB_NAME, nativeSQL);
     }
 
     @Test
@@ -110,8 +112,8 @@ public class RestfulConnectionTest {
 
     @Test
     public void setCatalog() throws SQLException {
-        conn.setCatalog("test");
-        assertEquals("test", conn.getCatalog());
+        conn.setCatalog(DB_NAME);
+        assertEquals(DB_NAME, conn.getCatalog());
     }
 
     @Test
@@ -492,7 +494,7 @@ public class RestfulConnectionTest {
         conn = DriverManager.getConnection(url, properties);
         // create test database for test cases
         try (Statement stmt = conn.createStatement()) {
-            stmt.execute("create database if not exists test");
+            stmt.execute("create database if not exists " + DB_NAME);
             Thread.sleep(3000);
         }
 
@@ -502,7 +504,7 @@ public class RestfulConnectionTest {
     public static void afterClass() throws SQLException {
         if (conn != null) {
             Statement statement = conn.createStatement();
-            statement.execute("drop database if exists test");
+            statement.execute("drop database if exists " + DB_NAME);
             statement.close();
             conn.close();
         }

@@ -34,7 +34,7 @@ public class UseNowInsertTimestampTest {
             int nanos = ts.getNanos();
             assertEquals(0, nanos % 1000_000);
 
-            stmt.execute("drop database if exists test");
+            stmt.execute("drop database if exists " + DB_NAME);
         }
     }
 
@@ -55,7 +55,7 @@ public class UseNowInsertTimestampTest {
 
             assertEquals(0, nanos % 1000);
 
-            stmt.execute("drop database if exists test");
+            stmt.execute("drop database if exists " + DB_NAME);
         }
     }
 
@@ -78,7 +78,7 @@ public class UseNowInsertTimestampTest {
             int nanos = ts.getNanos();
             assertTrue(nanos % 1000 != 0);
 
-            stmt.execute("drop database if exists test");
+            stmt.execute("drop database if exists " + DB_NAME);
         }
     }
 

@@ -60,6 +60,7 @@ public class ConsumerParam {
 
         knownKeys.add(TMQConstants.CONNECT_USER);
         knownKeys.add(TMQConstants.CONNECT_PASS);
+        knownKeys.add(TMQConstants.TMQ_CONNECT_TOKEN);
         knownKeys.add(TMQConstants.CONNECT_IP);
         knownKeys.add(TMQConstants.CONNECT_PORT);
         knownKeys.add(TMQConstants.ENABLE_AUTO_COMMIT);
@@ -96,6 +97,13 @@ public class ConsumerParam {
             properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, properties.getProperty(TMQConstants.CONNECT_USER));
         if (null != properties.getProperty(TMQConstants.CONNECT_PASS))
             properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, properties.getProperty(TMQConstants.CONNECT_PASS));
+
+        // Store td.connect.token in config for later use in SubscribeReq
+        String token = properties.getProperty(TMQConstants.TMQ_CONNECT_TOKEN);
+        if (null != token && !token.isEmpty()) {
+            config.put(TMQConstants.TMQ_CONNECT_TOKEN, token);
+        }
+
         if (null != properties.getProperty(TMQConstants.CONNECT_IP))
             properties.setProperty(TSDBDriver.PROPERTY_KEY_HOST, properties.getProperty(TMQConstants.CONNECT_IP));
         if (null != properties.getProperty(TMQConstants.CONNECT_PORT))

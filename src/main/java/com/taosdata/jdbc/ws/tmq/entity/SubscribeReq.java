@@ -37,7 +37,7 @@ public class SubscribeReq extends Payload implements Printable {
     private String ip;
     @JsonProperty("connector")
     private String connector;
-    @JsonProperty("bearer_token")
+    @JsonProperty("td.connect.token")
     private String bearerToken;
     @JsonProperty("config")
     private HashMap<String, String> config = new HashMap<>();
@@ -198,7 +198,6 @@ public class SubscribeReq extends Payload implements Printable {
                 .append(", app='").append(app).append('"')
                 .append(", ip='").append(ip).append('"')
                 .append(", connector='").append(connector).append('"')
-                .append(", config=").append(config)
                 .append(", reqId=").append(getReqId())
                 .append('}')
                 .toString();

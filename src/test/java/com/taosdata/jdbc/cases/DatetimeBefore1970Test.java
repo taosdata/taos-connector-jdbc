@@ -5,6 +5,7 @@ import com.taosdata.jdbc.annotation.Description;
 import com.taosdata.jdbc.annotation.TestTarget;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestEnvUtil;
+import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.utils.TimestampUtil;
 import org.junit.After;
 import org.junit.Assert;
@@ -18,6 +19,7 @@ import java.sql.*;
 @TestTarget(alias = "negative value convert to timestamp", author = "huolibo", version = "2.0.37")
 @Ignore // TODO 3.0 timestamp
 public class DatetimeBefore1970Test {
+    private static final String DB_NAME = TestUtils.camelToSnake(DatetimeBefore1970Test.class);
 
                     private Connection conn;
 
@@ -239,15 +241,15 @@ public class DatetimeBefore1970Test {
         } else {
             url += "&timezone=UTC";
         }
-        String createSql = "create database if not exists test_timestamp keep 36500";
+        String createSql = "create database if not exists " + DB_NAME + " keep 36500";
         if (!isEmpty(precision)) {
             createSql += " precision '" + precision + "'";
         }
         conn = DriverManager.getConnection(url);
         Statement stmt = conn.createStatement();
-        stmt.execute("drop database if exists test_timestamp");
+        stmt.execute("drop database if exists " + DB_NAME);
         stmt.execute(createSql);
-        stmt.execute("use test_timestamp");
+        stmt.execute("use " + DB_NAME);
         stmt.execute("create table weather(ts timestamp,f1 float)");
         stmt.close();
         return conn;
@@ -261,7 +263,7 @@ public class DatetimeBefore1970Test {
     public void after() throws SQLException {
         if (conn != null) {
             Statement stmt = conn.createStatement();
-            stmt.execute("drop database if exists test_timestamp");
+            stmt.execute("drop database if exists " + DB_NAME);
             stmt.close();
             conn.close();
         }

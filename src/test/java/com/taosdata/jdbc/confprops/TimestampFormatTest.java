@@ -2,6 +2,7 @@ package com.taosdata.jdbc.confprops;
 
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestEnvUtil;
+import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -12,6 +13,7 @@ import java.time.Instant;
 import java.util.Properties;
 
 public class TimestampFormatTest {
+    private static final String DB_NAME = TestUtils.camelToSnake(TimestampFormatTest.class);
 
     static final String HOST = TestEnvUtil.getHost();
             private final long ts = Instant.now().toEpochMilli();
@@ -23,14 +25,14 @@ public class TimestampFormatTest {
         String timestampFormat = "UTC";
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&timestampFormat=" + timestampFormat;
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/" + DB_NAME +  "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&timestampFormat=" + timestampFormat;
         } else {
             url = url + "&timestampFormat=" + timestampFormat;
         }
         // when & then
         try (Connection conn = DriverManager.getConnection(url);
                 Statement stmt = conn.createStatement()) {
-            ResultSet rs = stmt.executeQuery("select * from test.weather");
+            ResultSet rs = stmt.executeQuery("select * from weather");
             while (rs.next()) {
                 Object value = rs.getObject("ts");
                 Assert.assertTrue(value instanceof Timestamp);
@@ -46,7 +48,7 @@ public class TimestampFormatTest {
         String timestampFormat = "UTC";
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
+            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getRsPort() + "/" + DB_NAME +  "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         // when
         Properties props = new Properties();
@@ -54,7 +56,7 @@ public class TimestampFormatTest {
                 Statement stmt = conn.createStatement()) {
 
             // then
-            ResultSet rs = stmt.executeQuery("select * from test.weather");
+            ResultSet rs = stmt.executeQuery("select * from weather");
             while (rs.next()) {
                 Object value = rs.getObject("ts");
                 Assert.assertTrue(value instanceof Timestamp);
@@ -72,9 +74,9 @@ public class TimestampFormatTest {
         }
         conn = DriverManager.getConnection(url);
         Statement stmt = conn.createStatement();
-        stmt.execute("drop database if exists test");
-        stmt.execute("create database if not exists test");
-        stmt.execute("use test");
+        stmt.execute("drop database if exists " + DB_NAME);
+        stmt.execute("create database if not exists " + DB_NAME);
+        stmt.execute("use " + DB_NAME);
         stmt.execute("create table weather(ts timestamp, temperature nchar(10))");
         stmt.execute("insert into weather values(" + ts + ", '北京')");
         stmt.close();
@@ -85,7 +87,7 @@ public class TimestampFormatTest {
         try {
             if (null != conn) {
                 Statement stmt = conn.createStatement();
-                stmt.execute("drop database if exists test");
+                stmt.execute("drop database if exists " + DB_NAME);
                 stmt.close();
                 conn.close();
             }

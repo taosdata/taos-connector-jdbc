@@ -668,6 +668,56 @@ public class ConnectionParam {
                 .build();
     }
 
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder("ConnectionParam{");
+        sb.append("endpoints=").append(endpoints);
+        sb.append(", database='").append(database).append('\'');
+        sb.append(", user='").append(user).append('\'');
+        sb.append(", password='******'");
+        if (cloudToken != null && !cloudToken.isEmpty()) {
+            sb.append(", cloudToken='******'");
+        }
+        if (bearerToken != null && !bearerToken.isEmpty()) {
+            sb.append(", bearerToken='******'");
+        }
+        sb.append(", tz='").append(tz).append('\'');
+        sb.append(", useSsl=").append(useSsl);
+        sb.append(", maxRequest=").append(maxRequest);
+        sb.append(", connectTimeout=").append(connectTimeout);
+        sb.append(", requestTimeout=").append(requestTimeout);
+        sb.append(", connectMode=").append(connectMode);
+        sb.append(", varcharAsString=").append(varcharAsString);
+        sb.append(", enableCompression=").append(enableCompression);
+        sb.append(", enableAutoConnect=").append(enableAutoConnect);
+        sb.append(", slaveClusterHost='").append(slaveClusterHost).append('\'');
+        sb.append(", slaveClusterPort=").append(slaveClusterPort);
+        sb.append(", reconnectIntervalMs=").append(reconnectIntervalMs);
+        sb.append(", reconnectRetryCount=").append(reconnectRetryCount);
+        sb.append(", disableSslCertValidation=").append(disableSslCertValidation);
+        sb.append(", appName='").append(appName).append('\'');
+        sb.append(", appIp='").append(appIp).append('\'');
+        sb.append(", copyData=").append(copyData);
+        sb.append(", batchSizeByRow=").append(batchSizeByRow);
+        sb.append(", cacheSizeByRow=").append(cacheSizeByRow);
+        sb.append(", backendWriteThreadNum=").append(backendWriteThreadNum);
+        sb.append(", strictCheck=").append(strictCheck);
+        sb.append(", retryTimes=").append(retryTimes);
+        sb.append(", asyncWrite='").append(asyncWrite).append('\'');
+        sb.append(", pbsMode='").append(pbsMode).append('\'');
+        sb.append(", wsKeepAlive=").append(wsKeepAlive);
+        sb.append(", healthCheckInitInterval=").append(healthCheckInitInterval);
+        sb.append(", healthCheckMaxInterval=").append(healthCheckMaxInterval);
+        sb.append(", healthCheckConTimeout=").append(healthCheckConTimeout);
+        sb.append(", healthCheckCmdTimeout=").append(healthCheckCmdTimeout);
+        sb.append(", healthCheckRecoveryCount=").append(healthCheckRecoveryCount);
+        sb.append(", healthCheckRecoveryInterval=").append(healthCheckRecoveryInterval);
+        sb.append(", rebalanceThreshold=").append(rebalanceThreshold);
+        sb.append(", rebalanceConBaseCount=").append(rebalanceConBaseCount);
+        sb.append('}');
+        return sb.toString();
+    }
+
     public static class Builder {
         private final List<Endpoint> endpoints;
         private String database;
