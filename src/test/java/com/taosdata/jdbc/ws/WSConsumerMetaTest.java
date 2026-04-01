@@ -441,6 +441,7 @@ public class WSConsumerMetaTest {
     }
 
     @Test
+    @Ignore // tsdb bug
     public void testDropChildTable() throws Exception {
         String topic = topics[0];
         // create topic
@@ -503,6 +504,7 @@ public class WSConsumerMetaTest {
     }
 
     @Test
+    @Ignore // tsdb compatible bug, fixed next version
     public void testAlterTable() throws Exception {
         String topic = topics[0];
         // create topic
