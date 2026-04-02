@@ -14,6 +14,7 @@ public class Column {
     private String encode;
     private String compress;
     private String level;
+    private ColRef ref;
 
     public Column() {
     }
@@ -26,8 +27,7 @@ public class Column {
         this.encode = encode;
         this.compress = compress;
         this.level = level;
-    }
-    public String getName() {
+    }    public String getName() {
         return name;
     }
 
@@ -83,16 +83,24 @@ public class Column {
         this.level = level;
     }
 
+    public ColRef getRef() {
+        return ref;
+    }
+
+    public void setRef(ColRef ref) {
+        this.ref = ref;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Column column = (Column) o;
-        return type == column.type && Objects.equals(name, column.name) && Objects.equals(length, column.length) && Objects.equals(primarykey, column.primarykey) && Objects.equals(encode, column.encode) && Objects.equals(compress, column.compress) && Objects.equals(level, column.level);
+        return type == column.type && Objects.equals(name, column.name) && Objects.equals(length, column.length) && Objects.equals(primarykey, column.primarykey) && Objects.equals(encode, column.encode) && Objects.equals(compress, column.compress) && Objects.equals(level, column.level) && Objects.equals(ref, column.ref);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, type, length, primarykey, encode, compress, level);
+        return Objects.hash(name, type, length, primarykey, encode, compress, level, ref);
     }
 }

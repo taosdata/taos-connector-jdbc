@@ -8,7 +8,7 @@ public class AlterTypeTest {
 
     @Test
     public void testEnumValues() {
-        assertEquals(10, AlterType.values().length);
+        assertEquals(19, AlterType.values().length);
 
         assertEquals(AlterType.ADD_TAG, AlterType.valueOf("ADD_TAG"));
         assertEquals(AlterType.DROP_TAG, AlterType.valueOf("DROP_TAG"));
@@ -20,6 +20,15 @@ public class AlterTypeTest {
         assertEquals(AlterType.MODIFY_TAG_LENGTH, AlterType.valueOf("MODIFY_TAG_LENGTH"));
         assertEquals(AlterType.MODIFY_TABLE_OPTION, AlterType.valueOf("MODIFY_TABLE_OPTION"));
         assertEquals(AlterType.RENAME_COLUMN_NAME, AlterType.valueOf("RENAME_COLUMN_NAME"));
+        assertEquals(AlterType.ADD_TAG_INDEX, AlterType.valueOf("ADD_TAG_INDEX"));
+        assertEquals(AlterType.UPDATE_COLUMN_COMPRESS, AlterType.valueOf("UPDATE_COLUMN_COMPRESS"));
+        assertEquals(AlterType.ADD_COLUMN_WITH_COMPRESS, AlterType.valueOf("ADD_COLUMN_WITH_COMPRESS"));
+        assertEquals(AlterType.SET_MULTI_TAG, AlterType.valueOf("SET_MULTI_TAG"));
+        assertEquals(AlterType.ALTER_COLUMN_REF, AlterType.valueOf("ALTER_COLUMN_REF"));
+        assertEquals(AlterType.SET_REF_NULL, AlterType.valueOf("SET_REF_NULL"));
+        assertEquals(AlterType.ADD_COLUMN_WITH_REF, AlterType.valueOf("ADD_COLUMN_WITH_REF"));
+        assertEquals(AlterType.ALTER_MULTI_TABLE_TAG, AlterType.valueOf("ALTER_MULTI_TABLE_TAG"));
+        assertEquals(AlterType.ALTER_STABLE_TAG_WITH_FILTER, AlterType.valueOf("ALTER_STABLE_TAG_WITH_FILTER"));
     }
 
     @Test
@@ -34,6 +43,15 @@ public class AlterTypeTest {
         assertEquals(8, AlterType.MODIFY_TAG_LENGTH.getValue());
         assertEquals(9, AlterType.MODIFY_TABLE_OPTION.getValue());
         assertEquals(10, AlterType.RENAME_COLUMN_NAME.getValue());
+        assertEquals(11, AlterType.ADD_TAG_INDEX.getValue());
+        assertEquals(13, AlterType.UPDATE_COLUMN_COMPRESS.getValue());
+        assertEquals(14, AlterType.ADD_COLUMN_WITH_COMPRESS.getValue());
+        assertEquals(15, AlterType.SET_MULTI_TAG.getValue());
+        assertEquals(16, AlterType.ALTER_COLUMN_REF.getValue());
+        assertEquals(17, AlterType.SET_REF_NULL.getValue());
+        assertEquals(18, AlterType.ADD_COLUMN_WITH_REF.getValue());
+        assertEquals(19, AlterType.ALTER_MULTI_TABLE_TAG.getValue());
+        assertEquals(20, AlterType.ALTER_STABLE_TAG_WITH_FILTER.getValue());
     }
 
     @Test
@@ -94,9 +112,12 @@ public class AlterTypeTest {
 
     @Test
     public void testEnumIteration() {
-        int expectedValue = 1;
-        for (AlterType type : AlterType.values()) {
-            assertEquals(expectedValue++, type.getValue());
+        // Values are non-sequential (12 is not used), verify expected set
+        int[] expectedValues = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20};
+        AlterType[] types = AlterType.values();
+        assertEquals(expectedValues.length, types.length);
+        for (int i = 0; i < expectedValues.length; i++) {
+            assertEquals(expectedValues[i], types[i].getValue());
         }
     }
 

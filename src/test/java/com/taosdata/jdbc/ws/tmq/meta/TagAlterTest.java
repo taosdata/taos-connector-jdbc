@@ -18,6 +18,8 @@ public class TagAlterTest {
         assertNull(tagAlter.getColName());
         assertNull(tagAlter.getColValue());
         assertFalse(tagAlter.isColValueNull());
+        assertNull(tagAlter.getRegexp());
+        assertNull(tagAlter.getReplacement());
     }
 
     @Test
@@ -202,5 +204,50 @@ public class TagAlterTest {
         assertEquals("location_tag", tagAlter.getColName());
         assertEquals("building_5", tagAlter.getColValue());
         assertFalse(tagAlter.isColValueNull());
+    }
+
+    @Test
+    public void testRegexpGetterAndSetter() {
+        tagAlter.setRegexp("tianji[a-z]");
+        assertEquals("tianji[a-z]", tagAlter.getRegexp());
+
+        tagAlter.setRegexp(null);
+        assertNull(tagAlter.getRegexp());
+    }
+
+    @Test
+    public void testReplacementGetterAndSetter() {
+        tagAlter.setReplacement("zhengzhou");
+        assertEquals("zhengzhou", tagAlter.getReplacement());
+
+        tagAlter.setReplacement(null);
+        assertNull(tagAlter.getReplacement());
+    }
+
+    @Test
+    public void testEqualsWithRegexpFields() {
+        TagAlter t1 = new TagAlter();
+        t1.setColName("region");
+        t1.setRegexp("tianji[a-z]");
+        t1.setReplacement("zhengzhou");
+
+        TagAlter t2 = new TagAlter();
+        t2.setColName("region");
+        t2.setRegexp("tianji[a-z]");
+        t2.setReplacement("zhengzhou");
+
+        assertEquals(t1, t2);
+        assertEquals(t1.hashCode(), t2.hashCode());
+    }
+
+    @Test
+    public void testNotEqualsWhenRegexpDiffers() {
+        TagAlter t1 = new TagAlter();
+        t1.setRegexp("pattern1");
+
+        TagAlter t2 = new TagAlter();
+        t2.setRegexp("pattern2");
+
+        assertNotEquals(t1, t2);
     }
 }

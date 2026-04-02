@@ -5,7 +5,6 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.List;
-
 import static org.junit.Assert.*;
 
 public class MetaAlterTableTest {
@@ -26,6 +25,14 @@ public class MetaAlterTableTest {
         assertNull(metaAlterTable.getColValue());
         assertFalse(metaAlterTable.isColValueNull());
         assertNull(metaAlterTable.getTags());
+        assertNull(metaAlterTable.getEncode());
+        assertNull(metaAlterTable.getCompress());
+        assertNull(metaAlterTable.getLevel());
+        assertNull(metaAlterTable.getRefDbName());
+        assertNull(metaAlterTable.getRefTbName());
+        assertNull(metaAlterTable.getRefColName());
+        assertNull(metaAlterTable.getTables());
+        assertNull(metaAlterTable.getWhere());
     }
 
     @Test
@@ -352,5 +359,86 @@ public class MetaAlterTableTest {
         table2.setAlterType(5);
 
         assertEquals(table1, table2);
+    }
+
+    @Test
+    public void testEncodeCompressLevelGetterAndSetter() {
+        metaAlterTable.setEncode("simple8b");
+        metaAlterTable.setCompress("lz4");
+        metaAlterTable.setLevel("medium");
+
+        assertEquals("simple8b", metaAlterTable.getEncode());
+        assertEquals("lz4", metaAlterTable.getCompress());
+        assertEquals("medium", metaAlterTable.getLevel());
+
+        metaAlterTable.setEncode(null);
+        assertNull(metaAlterTable.getEncode());
+    }
+
+    @Test
+    public void testRefFieldsGetterAndSetter() {
+        metaAlterTable.setRefDbName("db_src");
+        metaAlterTable.setRefTbName("src_table");
+        metaAlterTable.setRefColName("src_col");
+
+        assertEquals("db_src", metaAlterTable.getRefDbName());
+        assertEquals("src_table", metaAlterTable.getRefTbName());
+        assertEquals("src_col", metaAlterTable.getRefColName());
+
+        metaAlterTable.setRefDbName(null);
+        assertNull(metaAlterTable.getRefDbName());
+    }
+
+    @Test
+    public void testTablesGetterAndSetter() {
+        TagAlter tag = new TagAlter("t1", "100", false);
+        AlterTableTagsInfo info = new AlterTableTagsInfo("ct1", Arrays.asList(tag));
+        metaAlterTable.setTables(Arrays.asList(info));
+
+        assertEquals(1, metaAlterTable.getTables().size());
+        assertEquals("ct1", metaAlterTable.getTables().get(0).getTableName());
+
+        metaAlterTable.setTables(null);
+        assertNull(metaAlterTable.getTables());
+    }
+
+    @Test
+    public void testWhereGetterAndSetter() {
+        metaAlterTable.setWhere("`groupid` = 100");
+        assertEquals("`groupid` = 100", metaAlterTable.getWhere());
+
+        metaAlterTable.setWhere(null);
+        assertNull(metaAlterTable.getWhere());
+    }
+
+    @Test
+    public void testEqualsWithNewFields() {
+        MetaAlterTable t1 = new MetaAlterTable();
+        t1.setAlterType(13);
+        t1.setColName("c1");
+        t1.setEncode("simple8b");
+        t1.setCompress("lz4");
+        t1.setLevel("medium");
+
+        MetaAlterTable t2 = new MetaAlterTable();
+        t2.setAlterType(13);
+        t2.setColName("c1");
+        t2.setEncode("simple8b");
+        t2.setCompress("lz4");
+        t2.setLevel("medium");
+
+        assertEquals(t1, t2);
+        assertEquals(t1.hashCode(), t2.hashCode());
+    }
+
+    @Test
+    public void testNotEqualsWhenEncodeDiffers() {
+        MetaAlterTable t1 = new MetaAlterTable();
+        t1.setEncode("simple8b");
+
+        MetaAlterTable t2 = new MetaAlterTable();
+        t2.setEncode("delta-i");
+
+        assertNotEquals(t1, t2);
     }
 }

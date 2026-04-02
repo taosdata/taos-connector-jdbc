@@ -6,6 +6,8 @@ public class TagAlter {
     private String colName;
     private String colValue;
     private boolean colValueNull;
+    private String regexp;
+    private String replacement;
 
     public TagAlter() {
     }
@@ -14,7 +16,6 @@ public class TagAlter {
         this.colValue = colValue;
         this.colValueNull = colValueNull;
     }
-
     public String getColName() {
         return colName;
     }
@@ -39,16 +40,34 @@ public class TagAlter {
         this.colValueNull = colValueNull;
     }
 
+    public String getRegexp() {
+        return regexp;
+    }
+
+    public void setRegexp(String regexp) {
+        this.regexp = regexp;
+    }
+
+    public String getReplacement() {
+        return replacement;
+    }
+
+    public void setReplacement(String replacement) {
+        this.replacement = replacement;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         TagAlter tagAlter = (TagAlter) o;
-        return colValueNull == tagAlter.colValueNull && Objects.equals(colName, tagAlter.colName) && Objects.equals(colValue, tagAlter.colValue);
+        return colValueNull == tagAlter.colValueNull && Objects.equals(colName, tagAlter.colName)
+                && Objects.equals(colValue, tagAlter.colValue) && Objects.equals(regexp, tagAlter.regexp)
+                && Objects.equals(replacement, tagAlter.replacement);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(colName, colValue, colValueNull);
+        return Objects.hash(colName, colValue, colValueNull, regexp, replacement);
     }
 }

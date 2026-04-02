@@ -6,6 +6,7 @@ public class ChildTableInfo extends Meta {
     private String using;
     private int tagNum;
     private List<Tag> tags;
+    private List<ChildColRef> refs;
 
     public String getUsing() {
         return using;
@@ -29,5 +30,13 @@ public class ChildTableInfo extends Meta {
 
     public void setTags(List<Tag> tags) {
         this.tags = tags;
+    }
+
+    public List<ChildColRef> getRefs() {
+        return refs;
+    }
+
+    public void setRefs(List<ChildColRef> refs) {
+        this.refs = refs;
     }
 }

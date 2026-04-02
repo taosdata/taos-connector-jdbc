@@ -7,7 +7,7 @@ public class MetaCreateChildTable extends Meta {
     private String using;
     private int tagNum;
     private List<Tag> tags;
-
+    private List<ChildColRef> refs;
     private List<ChildTableInfo> createList;
 
     public String getUsing() {
@@ -33,6 +33,15 @@ public class MetaCreateChildTable extends Meta {
     public void setTags(List<Tag> tags) {
         this.tags = tags;
     }
+
+    public List<ChildColRef> getRefs() {
+        return refs;
+    }
+
+    public void setRefs(List<ChildColRef> refs) {
+        this.refs = refs;
+    }
+
     public List<ChildTableInfo> getCreateList() {
         return createList;
     }
@@ -47,11 +56,12 @@ public class MetaCreateChildTable extends Meta {
         if (o == null || getClass() != o.getClass()) return false;
         if (!super.equals(o)) return false;
         MetaCreateChildTable that = (MetaCreateChildTable) o;
-        return tagNum == that.tagNum && Objects.equals(using, that.using) && Objects.equals(tags, that.tags) && Objects.equals(createList, that.createList);
+        return tagNum == that.tagNum && Objects.equals(using, that.using) && Objects.equals(tags, that.tags)
+                && Objects.equals(refs, that.refs) && Objects.equals(createList, that.createList);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), using, tagNum, tags, createList);
+        return Objects.hash(super.hashCode(), using, tagNum, tags, refs, createList);
     }
 }
