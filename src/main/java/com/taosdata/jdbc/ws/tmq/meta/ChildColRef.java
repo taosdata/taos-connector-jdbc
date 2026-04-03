@@ -1,5 +1,7 @@
 package com.taosdata.jdbc.ws.tmq.meta;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+
 import java.util.Objects;
 
 public class ChildColRef {
@@ -38,6 +40,7 @@ public class ChildColRef {
         return refTableName;
     }
 
+    @JsonAlias("refTbName")
     public void setRefTableName(String refTableName) {
         this.refTableName = refTableName;
     }

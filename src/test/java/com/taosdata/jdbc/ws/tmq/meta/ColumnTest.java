@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.ws.tmq.meta;
 
+import com.taosdata.jdbc.utils.JsonUtil;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -22,6 +23,7 @@ public class ColumnTest {
         assertNull(column.getEncode());
         assertNull(column.getCompress());
         assertNull(column.getLevel());
+        assertNull(column.getRef());
     }
 
     @Test
@@ -111,6 +113,16 @@ public class ColumnTest {
 
         column.setLevel("");
         assertEquals("", column.getLevel());
+    }
+
+    @Test
+    public void testRefGetterAndSetter() {
+        ColRef ref = new ColRef("testDb", "testTable", "testCol");
+        column.setRef(ref);
+        assertEquals(ref, column.getRef());
+
+        column.setRef(null);
+        assertNull(column.getRef());
     }
 
     @Test
@@ -331,5 +343,17 @@ public class ColumnTest {
         assertEquals("UTF16", column.getEncode());
         assertEquals("ZSTD", column.getCompress());
         assertEquals("high", column.getLevel());
+    }
+
+    @Test
+    public void testDeserializeRefWithRefTbNameAlias() throws Exception {
+        String json = "{\"name\":\"c1\",\"type\":4,\"ref\":{\"refDbName\":\"src_db\",\"refTbName\":\"src_table\",\"refColName\":\"src_col\"}}";
+
+        Column deserialized = JsonUtil.getObjectReader(Column.class).readValue(json);
+
+        assertNotNull(deserialized.getRef());
+        assertEquals("src_db", deserialized.getRef().getRefDbName());
+        assertEquals("src_table", deserialized.getRef().getRefTableName());
+        assertEquals("src_col", deserialized.getRef().getRefColName());
     }
 }

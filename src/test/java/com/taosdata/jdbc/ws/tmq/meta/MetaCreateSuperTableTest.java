@@ -212,6 +212,26 @@ public class MetaCreateSuperTableTest {
     }
 
     @Test
+    public void testIsVirtualAffectsEqualsAndHashCode() {
+        MetaCreateSuperTable table1 = new MetaCreateSuperTable();
+        table1.setType(MetaType.CREATE);
+        table1.setTableName("vt_super");
+        table1.setTableType(TableType.SUPER);
+        table1.setIsVirtual(true);
+        table1.setColumns(Arrays.asList(new Column("col1", 1, 10, true, "UTF8", "GZIP", "low")));
+
+        MetaCreateSuperTable table2 = new MetaCreateSuperTable();
+        table2.setType(MetaType.CREATE);
+        table2.setTableName("vt_super");
+        table2.setTableType(TableType.SUPER);
+        table2.setIsVirtual(false);
+        table2.setColumns(Arrays.asList(new Column("col1", 1, 10, true, "UTF8", "GZIP", "low")));
+
+        assertNotEquals(table1, table2);
+        assertNotEquals(table1.hashCode(), table2.hashCode());
+    }
+
+    @Test
     public void testAllFieldsTogether() {
         List<Column> columns = Arrays.asList(
                 new Column("id", 1, 10, true, "UTF8", "GZIP", "low"),

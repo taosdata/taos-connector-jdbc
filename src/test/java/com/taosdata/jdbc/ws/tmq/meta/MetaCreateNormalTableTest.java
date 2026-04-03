@@ -212,6 +212,26 @@ public class MetaCreateNormalTableTest {
     }
 
     @Test
+    public void testIsVirtualAffectsEqualsAndHashCode() {
+        MetaCreateNormalTable table1 = new MetaCreateNormalTable();
+        table1.setType(MetaType.CREATE);
+        table1.setTableName("vt_normal");
+        table1.setTableType(TableType.NORMAL);
+        table1.setIsVirtual(true);
+        table1.setColumns(Arrays.asList(new Column("col1", 1, 10, true, "UTF8", "GZIP", "low")));
+
+        MetaCreateNormalTable table2 = new MetaCreateNormalTable();
+        table2.setType(MetaType.CREATE);
+        table2.setTableName("vt_normal");
+        table2.setTableType(TableType.NORMAL);
+        table2.setIsVirtual(false);
+        table2.setColumns(Arrays.asList(new Column("col1", 1, 10, true, "UTF8", "GZIP", "low")));
+
+        assertNotEquals(table1, table2);
+        assertNotEquals(table1.hashCode(), table2.hashCode());
+    }
+
+    @Test
     public void testAllFieldsTogether() {
         List<Column> columns = Arrays.asList(
                 new Column("id", 1, 10, true, "UTF8", "GZIP", "low"),

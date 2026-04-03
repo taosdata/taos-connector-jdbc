@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.ws.tmq.meta;
 
+import com.taosdata.jdbc.utils.JsonUtil;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -22,6 +23,7 @@ public class MetaCreateChildTableTest {
         assertNull(metaCreateChildTable.getUsing());
         assertEquals(0, metaCreateChildTable.getTagNum());
         assertNull(metaCreateChildTable.getTags());
+        assertNull(metaCreateChildTable.getRefs());
         assertNull(metaCreateChildTable.getCreateList());
     }
 
@@ -64,6 +66,22 @@ public class MetaCreateChildTableTest {
         metaCreateChildTable.setTags(emptyTags);
         assertEquals(emptyTags, metaCreateChildTable.getTags());
         assertTrue(metaCreateChildTable.getTags().isEmpty());
+    }
+
+    @Test
+    public void testRefsGetterAndSetter() {
+        List<ChildColRef> refs = Arrays.asList(new ChildColRef(), new ChildColRef());
+        metaCreateChildTable.setRefs(refs);
+        assertEquals(refs, metaCreateChildTable.getRefs());
+        assertEquals(2, metaCreateChildTable.getRefs().size());
+
+        metaCreateChildTable.setRefs(null);
+        assertNull(metaCreateChildTable.getRefs());
+
+        List<ChildColRef> emptyRefs = Collections.emptyList();
+        metaCreateChildTable.setRefs(emptyRefs);
+        assertEquals(emptyRefs, metaCreateChildTable.getRefs());
+        assertTrue(metaCreateChildTable.getRefs().isEmpty());
     }
 
     @Test
@@ -267,5 +285,25 @@ public class MetaCreateChildTableTest {
         assertEquals(3, metaCreateChildTable.getTags().size());
         assertEquals(createList, metaCreateChildTable.getCreateList());
         assertEquals(2, metaCreateChildTable.getCreateList().size());
+    }
+
+    @Test
+    public void testDeserializeRefsWithRefTbNameAlias() throws Exception {
+        String json = "{"
+                + "\"using\":\"st\","
+                + "\"refs\":[{\"colName\":\"c1\",\"refDbName\":\"src_db\",\"refTbName\":\"src_table\",\"refColName\":\"src_col\"}],"
+                + "\"createList\":[{"
+                + "\"using\":\"st\","
+                + "\"refs\":[{\"colName\":\"c2\",\"refDbName\":\"src_db_2\",\"refTbName\":\"src_table_2\",\"refColName\":\"src_col_2\"}]"
+                + "}]"
+                + "}";
+
+        MetaCreateChildTable deserialized = JsonUtil.getObjectReader(MetaCreateChildTable.class).readValue(json);
+
+        assertNotNull(deserialized.getRefs());
+        assertEquals("src_table", deserialized.getRefs().get(0).getRefTableName());
+        assertNotNull(deserialized.getCreateList());
+        assertNotNull(deserialized.getCreateList().get(0).getRefs());
+        assertEquals("src_table_2", deserialized.getCreateList().get(0).getRefs().get(0).getRefTableName());
     }
 }
