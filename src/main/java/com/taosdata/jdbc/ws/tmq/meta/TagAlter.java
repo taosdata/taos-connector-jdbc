@@ -3,71 +3,74 @@ package com.taosdata.jdbc.ws.tmq.meta;
 import java.util.Objects;
 
 public class TagAlter {
-    private String colName;
-    private String colValue;
-    private boolean colValueNull;
-    private String regexp;
-    private String replacement;
+  private String colName;
+  private String colValue;
+  private boolean colValueNull;
+  private String regexp;
+  private String replacement;
 
-    public TagAlter() {
-    }
-    public TagAlter(String colName, String colValue, boolean colValueNull) {
-        this.colName = colName;
-        this.colValue = colValue;
-        this.colValueNull = colValueNull;
-    }
-    public String getColName() {
-        return colName;
-    }
+  public TagAlter() {}
 
-    public void setColName(String colName) {
-        this.colName = colName;
-    }
+  public TagAlter(String colName, String colValue, boolean colValueNull) {
+    this.colName = colName;
+    this.colValue = colValue;
+    this.colValueNull = colValueNull;
+  }
 
-    public String getColValue() {
-        return colValue;
-    }
+  public String getColName() {
+    return colName;
+  }
 
-    public void setColValue(String colValue) {
-        this.colValue = colValue;
-    }
+  public void setColName(String colName) {
+    this.colName = colName;
+  }
 
-    public boolean isColValueNull() {
-        return colValueNull;
-    }
+  public String getColValue() {
+    return colValue;
+  }
 
-    public void setColValueNull(boolean colValueNull) {
-        this.colValueNull = colValueNull;
-    }
+  public void setColValue(String colValue) {
+    this.colValue = colValue;
+  }
 
-    public String getRegexp() {
-        return regexp;
-    }
+  public boolean isColValueNull() {
+    return colValueNull;
+  }
 
-    public void setRegexp(String regexp) {
-        this.regexp = regexp;
-    }
+  public void setColValueNull(boolean colValueNull) {
+    this.colValueNull = colValueNull;
+  }
 
-    public String getReplacement() {
-        return replacement;
-    }
+  public String getRegexp() {
+    return regexp;
+  }
 
-    public void setReplacement(String replacement) {
-        this.replacement = replacement;
-    }
+  public void setRegexp(String regexp) {
+    this.regexp = regexp;
+  }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        TagAlter tagAlter = (TagAlter) o;
-        return colValueNull == tagAlter.colValueNull && Objects.equals(colName, tagAlter.colName)
-                && Objects.equals(colValue, tagAlter.colValue) && Objects.equals(regexp, tagAlter.regexp)
-                && Objects.equals(replacement, tagAlter.replacement);
-    }
+  public String getReplacement() {
+    return replacement;
+  }
 
-    @Override
-    public int hashCode() {
-        return Objects.hash(colName, colValue, colValueNull, regexp, replacement);
-    }
+  public void setReplacement(String replacement) {
+    this.replacement = replacement;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    TagAlter tagAlter = (TagAlter) o;
+    return colValueNull == tagAlter.colValueNull
+        && Objects.equals(colName, tagAlter.colName)
+        && Objects.equals(colValue, tagAlter.colValue)
+        && Objects.equals(regexp, tagAlter.regexp)
+        && Objects.equals(replacement, tagAlter.replacement);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(colName, colValue, colValueNull, regexp, replacement);
+  }
 }
