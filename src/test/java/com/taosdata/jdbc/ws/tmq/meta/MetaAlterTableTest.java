@@ -441,4 +441,86 @@ public class MetaAlterTableTest {
 
         assertNotEquals(t1, t2);
     }
+
+    @Test
+    public void testAlterTableTagsInfoEqualsWithSameObject() {
+        TagAlter tag = new TagAlter("t1", "100", false);
+        AlterTableTagsInfo info = new AlterTableTagsInfo("ct1", Arrays.asList(tag));
+        assertEquals(info, info);
+    }
+
+    @Test
+    public void testAlterTableTagsInfoEqualsWithNull() {
+        TagAlter tag = new TagAlter("t1", "100", false);
+        AlterTableTagsInfo info = new AlterTableTagsInfo("ct1", Arrays.asList(tag));
+        assertNotEquals(null, info);
+    }
+
+    @Test
+    public void testAlterTableTagsInfoEqualsWithDifferentClass() {
+        TagAlter tag = new TagAlter("t1", "100", false);
+        AlterTableTagsInfo info = new AlterTableTagsInfo("ct1", Arrays.asList(tag));
+        assertNotEquals(info, new Object());
+    }
+
+    @Test
+    public void testAlterTableTagsInfoEqualsWithSameValues() {
+        TagAlter tag1 = new TagAlter("t1", "100", false);
+        AlterTableTagsInfo info1 = new AlterTableTagsInfo("ct1", Arrays.asList(tag1));
+
+        TagAlter tag2 = new TagAlter("t1", "100", false);
+        AlterTableTagsInfo info2 = new AlterTableTagsInfo("ct1", Arrays.asList(tag2));
+
+        assertEquals(info1, info2);
+        assertEquals(info1.hashCode(), info2.hashCode());
+    }
+
+    @Test
+    public void testAlterTableTagsInfoEqualsWithDifferentTableName() {
+        TagAlter tag = new TagAlter("t1", "100", false);
+        AlterTableTagsInfo info1 = new AlterTableTagsInfo("ct1", Arrays.asList(tag));
+        AlterTableTagsInfo info2 = new AlterTableTagsInfo("ct2", Arrays.asList(tag));
+
+        assertNotEquals(info1, info2);
+    }
+
+    @Test
+    public void testAlterTableTagsInfoEqualsWithDifferentTags() {
+        TagAlter tag1 = new TagAlter("t1", "100", false);
+        AlterTableTagsInfo info1 = new AlterTableTagsInfo("ct1", Arrays.asList(tag1));
+
+        TagAlter tag2 = new TagAlter("t2", "200", false);
+        AlterTableTagsInfo info2 = new AlterTableTagsInfo("ct1", Arrays.asList(tag2));
+
+        assertNotEquals(info1, info2);
+    }
+
+    @Test
+    public void testAlterTableTagsInfoEqualsWithNullTags() {
+        AlterTableTagsInfo info1 = new AlterTableTagsInfo("ct1", null);
+        AlterTableTagsInfo info2 = new AlterTableTagsInfo("ct1", null);
+
+        assertEquals(info1, info2);
+        assertEquals(info1.hashCode(), info2.hashCode());
+    }
+
+    @Test
+    public void testAlterTableTagsInfoHashCodeConsistency() {
+        TagAlter tag = new TagAlter("t1", "100", false);
+        AlterTableTagsInfo info = new AlterTableTagsInfo("ct1", Arrays.asList(tag));
+
+        int initialHashCode = info.hashCode();
+        assertEquals(initialHashCode, info.hashCode());
+    }
+
+    @Test
+    public void testAlterTableTagsInfoHashCodeWithSameValues() {
+        TagAlter tag1 = new TagAlter("t1", "100", false);
+        AlterTableTagsInfo info1 = new AlterTableTagsInfo("ct1", Arrays.asList(tag1));
+
+        TagAlter tag2 = new TagAlter("t1", "100", false);
+        AlterTableTagsInfo info2 = new AlterTableTagsInfo("ct1", Arrays.asList(tag2));
+
+        assertEquals(info1.hashCode(), info2.hashCode());
+    }
 }
