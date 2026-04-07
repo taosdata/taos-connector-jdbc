@@ -1,25 +1,36 @@
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
-import com.taosdata.jdbc.tmq.*;
+import com.taosdata.jdbc.tmq.ConsumerRecord;
+import com.taosdata.jdbc.tmq.ConsumerRecords;
+import com.taosdata.jdbc.tmq.TMQConstants;
+import com.taosdata.jdbc.tmq.TaosConsumer;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.tmq.meta.*;
-import java.sql.*;
-import java.time.Duration;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
-import org.junit.*;
+import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.time.Duration;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Tests that only run in main CI environment. These tests may fail in development environments due
  * to: - TDengine version differences - SQL syntax variations - Metadata format changes
  */
-public class WSConsumerMetaMainCITest {
+public class WSConsumerMetaMainTest {
   private static final String HOST = "127.0.0.1";
-  private static final String DB_NAME = TestUtils.camelToSnake(WSConsumerMetaMainCITest.class);
+  private static final String DB_NAME = TestUtils.camelToSnake(WSConsumerMetaMainTest.class);
   private static final String SUPER_TABLE = "st";
   private static final String SUPER_TABLE_JSON = "st_json";
   private static Connection connection;
@@ -48,8 +59,7 @@ public class WSConsumerMetaMainCITest {
                 "ct" + idx, DB_NAME, SUPER_TABLE, idx, "t" + idx, "true");
         statement.execute(sql);
 
-        String alterSql =
-            String.format("alter table ct" + idx + " set tag t1=1001, t2='tt1001', t3=false");
+        String alterSql = "alter table ct" + idx + " set tag t1=1001, t2='tt1001', t3=false";
         statement.execute(alterSql);
       }
 
@@ -162,22 +172,21 @@ public class WSConsumerMetaMainCITest {
       // Alter tags of two tables in one statement
       statement.execute("alter table ct_multi1 set tag t1=100 ct_multi2 set tag t1=200");
 
-      boolean getAlter = false;
       int loopTime = 10;
-      while (!getAlter && loopTime > 0) {
+      int getAlterCount = 0;
+      while (getAlterCount < 2 && loopTime > 0) {
         ConsumerRecords<Map<String, Object>> records = consumer.poll(Duration.ofMillis(100));
         for (ConsumerRecord<Map<String, Object>> r : records) {
           if (r.getMeta() != null && r.getMeta().getType() == MetaType.ALTER) {
             MetaAlterTable meta = (MetaAlterTable) r.getMeta();
             if (meta.getAlterType() == 19 && meta.getTables() != null) {
-              Assert.assertEquals(2, meta.getTables().size());
-              getAlter = true;
+              getAlterCount++;
             }
           }
         }
         loopTime--;
       }
-      Assert.assertTrue(getAlter);
+      Assert.assertEquals(2, getAlterCount);
       consumer.unsubscribe();
     }
     statement.executeUpdate("drop topic if exists " + topic);
@@ -412,6 +421,174 @@ public class WSConsumerMetaMainCITest {
     }
   }
 
+
+  @Test
+  public void testAlterTableAddColumnWithCompress() throws Exception {
+    String stName = "st_add_compress";
+    String topic = "topic_add_compress_" + DB_NAME;
+    statement.execute(
+            "create stable if not exists " + stName + " (ts timestamp, c1 int) tags(t1 int)");
+    statement.executeUpdate("drop topic if exists " + topic);
+    statement.executeUpdate("create topic " + topic + " only meta as STABLE " + stName);
+
+    try (TaosConsumer<Map<String, Object>> consumer =
+                 new TaosConsumer<>(buildConsumerProperties("grp_add_compress"))) {
+      consumer.subscribe(Collections.singletonList(topic));
+      consumer.poll(Duration.ofMillis(100));
+
+      statement.execute(
+              "ALTER TABLE "
+                      + stName
+                      + " ADD COLUMN c_compress_test bigint ENCODE 'simple8b' COMPRESS 'lz4' LEVEL 'medium'");
+
+      boolean getAlter = false;
+      int loopTime = 10;
+      while (!getAlter && loopTime > 0) {
+        ConsumerRecords<Map<String, Object>> records = consumer.poll(Duration.ofMillis(100));
+        for (ConsumerRecord<Map<String, Object>> r : records) {
+          if (r.getMeta() != null && r.getMeta().getType() == MetaType.ALTER) {
+            MetaAlterTable meta = (MetaAlterTable) r.getMeta();
+            Assert.assertEquals(14, meta.getAlterType());
+            Assert.assertEquals("c_compress_test", meta.getColName());
+            Assert.assertNotNull(meta.getEncode());
+            getAlter = true;
+          }
+        }
+        loopTime--;
+      }
+      Assert.assertTrue(getAlter);
+      consumer.unsubscribe();
+    }
+    statement.executeUpdate("drop topic if exists " + topic);
+  }
+
+  @Test
+  public void testAlterTableUpdateColumnCompress() throws Exception {
+    String stName = "st_update_compress";
+    String topic = "topic_update_compress_" + DB_NAME;
+    statement.execute(
+            "create stable if not exists " + stName + " (ts timestamp, c1 int) tags(t1 int)");
+    statement.executeUpdate("drop topic if exists " + topic);
+    statement.executeUpdate("create topic " + topic + " only meta as STABLE " + stName);
+
+    try (TaosConsumer<Map<String, Object>> consumer =
+                 new TaosConsumer<>(buildConsumerProperties("grp_update_compress"))) {
+      consumer.subscribe(Collections.singletonList(topic));
+      consumer.poll(Duration.ofMillis(100));
+
+      statement.execute(
+              "ALTER TABLE "
+                      + stName
+                      + " MODIFY COLUMN c1 ENCODE 'simple8b' COMPRESS 'zstd' LEVEL 'high'");
+
+      boolean getAlter = false;
+      int loopTime = 10;
+      while (!getAlter && loopTime > 0) {
+        ConsumerRecords<Map<String, Object>> records = consumer.poll(Duration.ofMillis(100));
+        for (ConsumerRecord<Map<String, Object>> r : records) {
+          if (r.getMeta() != null && r.getMeta().getType() == MetaType.ALTER) {
+            MetaAlterTable meta = (MetaAlterTable) r.getMeta();
+            Assert.assertEquals(13, meta.getAlterType());
+            Assert.assertEquals("c1", meta.getColName());
+            Assert.assertNotNull(meta.getEncode());
+            getAlter = true;
+          }
+        }
+        loopTime--;
+      }
+      Assert.assertTrue(getAlter);
+      consumer.unsubscribe();
+    }
+    statement.executeUpdate("drop topic if exists " + topic);
+  }
+
+
+  @Test
+  public void testAlterVirtualTableAlterColumnRef() throws Exception {
+    String topic = topics[1];
+    statement.executeUpdate(
+            "create topic if not exists " + topic + " only meta as database " + DB_NAME);
+
+    try (TaosConsumer<Map<String, Object>> consumer =
+                 new TaosConsumer<>(buildConsumerProperties("grp_vt_alter_col"))) {
+      consumer.subscribe(Collections.singletonList(topic));
+      consumer.poll(Duration.ofMillis(100));
+
+      // Create source tables and virtual table
+      statement.execute("create table if not exists vref_src1 (ts timestamp, c1 int)");
+      statement.execute("create table if not exists vref_src2 (ts timestamp, c1 int)");
+      statement.execute(
+              "create vtable if not exists vref_vt1 (ts timestamp, c1 int from vref_src1.c1)");
+      consumer.poll(Duration.ofMillis(200));
+
+      // Change column ref to point to different source
+      statement.execute("alter vtable vref_vt1 alter column c1 set vref_src2.c1");
+
+      boolean getAlter = false;
+      int loopTime = 10;
+      while (!getAlter && loopTime > 0) {
+        ConsumerRecords<Map<String, Object>> records = consumer.poll(Duration.ofMillis(100));
+        for (ConsumerRecord<Map<String, Object>> r : records) {
+          if (r.getMeta() != null
+                  && r.getMeta().getType() == MetaType.ALTER
+                  && "vref_vt1".equals(r.getMeta().getTableName())) {
+            MetaAlterTable meta = (MetaAlterTable) r.getMeta();
+            Assert.assertEquals(16, meta.getAlterType());
+            Assert.assertEquals("c1", meta.getColName());
+            Assert.assertNotNull(meta.getRefTbName());
+            getAlter = true;
+          }
+        }
+        loopTime--;
+      }
+      Assert.assertTrue(getAlter);
+      consumer.commitSync();
+      consumer.unsubscribe();
+    }
+  }
+
+  @Test
+  public void testAlterVirtualTableSetRefNull() throws Exception {
+    String topic = topics[1];
+    statement.executeUpdate(
+            "create topic if not exists " + topic + " only meta as database " + DB_NAME);
+
+    try (TaosConsumer<Map<String, Object>> consumer =
+                 new TaosConsumer<>(buildConsumerProperties("grp_vt_set_null"))) {
+      consumer.subscribe(Collections.singletonList(topic));
+      consumer.poll(Duration.ofMillis(100));
+
+      // Create source table and virtual table
+      statement.execute("create table if not exists vnull_src1 (ts timestamp, c1 int)");
+      statement.execute(
+              "create vtable if not exists vnull_vt1 (ts timestamp, c1 int from vnull_src1.c1)");
+      consumer.poll(Duration.ofMillis(200));
+
+      // Set column ref to null
+      statement.execute("alter vtable vnull_vt1 alter column c1 set null");
+
+      boolean getAlter = false;
+      int loopTime = 10;
+      while (!getAlter && loopTime > 0) {
+        ConsumerRecords<Map<String, Object>> records = consumer.poll(Duration.ofMillis(100));
+        for (ConsumerRecord<Map<String, Object>> r : records) {
+          if (r.getMeta() != null
+                  && r.getMeta().getType() == MetaType.ALTER
+                  && "vnull_vt1".equals(r.getMeta().getTableName())) {
+            MetaAlterTable meta = (MetaAlterTable) r.getMeta();
+            Assert.assertEquals(17, meta.getAlterType());
+            Assert.assertEquals("c1", meta.getColName());
+            getAlter = true;
+          }
+        }
+        loopTime--;
+      }
+      Assert.assertTrue(getAlter);
+      consumer.commitSync();
+      consumer.unsubscribe();
+    }
+  }
+
   @BeforeClass
   public static void before() throws SQLException {
     TestUtils.runInMain();
@@ -435,6 +612,8 @@ public class WSConsumerMetaMainCITest {
     for (String topic : topics) {
       statement.executeUpdate("drop topic if exists " + topic);
     }
+
+    TestUtils.waitTransactionDone(connection);
     statement.execute("drop database if exists " + DB_NAME);
     statement.execute("create database if not exists " + DB_NAME + " WAL_RETENTION_PERIOD 3650");
     statement.execute("use " + DB_NAME);

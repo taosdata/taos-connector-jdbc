@@ -21,7 +21,7 @@ public class WSConsumerMetaTest {
   private static Connection connection;
   private static Statement statement;
   private static final String[] topics = {
-    "topic_ws_map" + DB_NAME, "topic_db" + DB_NAME, "topic_json" + DB_NAME
+    "topic_" + DB_NAME, "topic_db" + DB_NAME, "topic_json" + DB_NAME
   };
 
   @Test
@@ -132,9 +132,9 @@ public class WSConsumerMetaTest {
       dstMeta.setTags(tags);
       dstMeta.setCreateList(new ArrayList<>());
 
-      int looptime = 10;
+      int loopTime = 10;
       boolean getCreate = false;
-      while (!getCreate && looptime > 0) {
+      while (!getCreate && loopTime > 0) {
         ConsumerRecords<Map<String, Object>> consumerRecords =
             consumer.poll(Duration.ofMillis(100));
 
@@ -145,7 +145,7 @@ public class WSConsumerMetaTest {
         if (!consumerRecords.isEmpty()) {
           getCreate = true;
         }
-        looptime--;
+        loopTime--;
       }
       Assert.assertTrue(getCreate);
       consumer.unsubscribe();
@@ -519,7 +519,7 @@ public class WSConsumerMetaTest {
 
         String dropSql = "drop table if exists ";
         for (int idx = 1; idx <= subTableNum; idx++) {
-          dropSql += String.format(" cht" + idx + ", ");
+          dropSql += " cht" + idx + ", ";
         }
 
         dropSql = dropSql.substring(0, dropSql.length() - 2);
@@ -551,190 +551,6 @@ public class WSConsumerMetaTest {
       consumer.unsubscribe();
     }
   }
-
-  private Properties buildConsumerProperties(String groupId) {
-    Properties properties = new Properties();
-    properties.setProperty(TMQConstants.CONNECT_USER, TestEnvUtil.getUser());
-    properties.setProperty(TMQConstants.CONNECT_PASS, TestEnvUtil.getPassword());
-    properties.setProperty(
-        TMQConstants.BOOTSTRAP_SERVERS, TestEnvUtil.getHost() + ":" + TestEnvUtil.getWsPort());
-    properties.setProperty(TMQConstants.MSG_WITH_TABLE_NAME, "true");
-    properties.setProperty(TMQConstants.ENABLE_AUTO_COMMIT, "true");
-    properties.setProperty(TMQConstants.AUTO_OFFSET_RESET, "latest");
-    properties.setProperty(TMQConstants.GROUP_ID, groupId);
-    properties.setProperty(TMQConstants.CONNECT_TYPE, "ws");
-    properties.setProperty(TMQConstants.MSG_ENABLE_BATCH_META, "1");
-    return properties;
-  }
-
-  @Test
-  public void testAlterTableAddColumnWithCompress() throws Exception {
-    String stName = "st_add_compress";
-    String topic = "topic_add_compress_" + DB_NAME;
-    statement.execute(
-        "create stable if not exists " + stName + " (ts timestamp, c1 int) tags(t1 int)");
-    statement.executeUpdate("drop topic if exists " + topic);
-    statement.executeUpdate("create topic " + topic + " only meta as STABLE " + stName);
-
-    try (TaosConsumer<Map<String, Object>> consumer =
-        new TaosConsumer<>(buildConsumerProperties("grp_add_compress"))) {
-      consumer.subscribe(Collections.singletonList(topic));
-      consumer.poll(Duration.ofMillis(100));
-
-      statement.execute(
-          "ALTER TABLE "
-              + stName
-              + " ADD COLUMN c_compress_test bigint ENCODE 'simple8b' COMPRESS 'lz4' LEVEL 'medium'");
-
-      boolean getAlter = false;
-      int loopTime = 10;
-      while (!getAlter && loopTime > 0) {
-        ConsumerRecords<Map<String, Object>> records = consumer.poll(Duration.ofMillis(100));
-        for (ConsumerRecord<Map<String, Object>> r : records) {
-          if (r.getMeta() != null && r.getMeta().getType() == MetaType.ALTER) {
-            MetaAlterTable meta = (MetaAlterTable) r.getMeta();
-            Assert.assertEquals(14, meta.getAlterType());
-            Assert.assertEquals("c_compress_test", meta.getColName());
-            Assert.assertNotNull(meta.getEncode());
-            getAlter = true;
-          }
-        }
-        loopTime--;
-      }
-      Assert.assertTrue(getAlter);
-      consumer.unsubscribe();
-    }
-    statement.executeUpdate("drop topic if exists " + topic);
-  }
-
-  @Test
-  public void testAlterTableUpdateColumnCompress() throws Exception {
-    String stName = "st_update_compress";
-    String topic = "topic_update_compress_" + DB_NAME;
-    statement.execute(
-        "create stable if not exists " + stName + " (ts timestamp, c1 int) tags(t1 int)");
-    statement.executeUpdate("drop topic if exists " + topic);
-    statement.executeUpdate("create topic " + topic + " only meta as STABLE " + stName);
-
-    try (TaosConsumer<Map<String, Object>> consumer =
-        new TaosConsumer<>(buildConsumerProperties("grp_update_compress"))) {
-      consumer.subscribe(Collections.singletonList(topic));
-      consumer.poll(Duration.ofMillis(100));
-
-      statement.execute(
-          "ALTER TABLE "
-              + stName
-              + " MODIFY COLUMN c1 ENCODE 'simple8b' COMPRESS 'zstd' LEVEL 'high'");
-
-      boolean getAlter = false;
-      int loopTime = 10;
-      while (!getAlter && loopTime > 0) {
-        ConsumerRecords<Map<String, Object>> records = consumer.poll(Duration.ofMillis(100));
-        for (ConsumerRecord<Map<String, Object>> r : records) {
-          if (r.getMeta() != null && r.getMeta().getType() == MetaType.ALTER) {
-            MetaAlterTable meta = (MetaAlterTable) r.getMeta();
-            Assert.assertEquals(13, meta.getAlterType());
-            Assert.assertEquals("c1", meta.getColName());
-            Assert.assertNotNull(meta.getEncode());
-            getAlter = true;
-          }
-        }
-        loopTime--;
-      }
-      Assert.assertTrue(getAlter);
-      consumer.unsubscribe();
-    }
-    statement.executeUpdate("drop topic if exists " + topic);
-  }
-
-  @Ignore("TDengine server does not deliver alterType=16 (alter column ref) meta via TMQ yet")
-  @Test
-  public void testAlterVirtualTableAlterColumnRef() throws Exception {
-    String topic = topics[1];
-    statement.executeUpdate(
-        "create topic if not exists " + topic + " only meta as database " + DB_NAME);
-
-    try (TaosConsumer<Map<String, Object>> consumer =
-        new TaosConsumer<>(buildConsumerProperties("grp_vt_alter_col"))) {
-      consumer.subscribe(Collections.singletonList(topic));
-      consumer.poll(Duration.ofMillis(100));
-
-      // Create source tables and virtual table
-      statement.execute("create table if not exists vref_src1 (ts timestamp, c1 int)");
-      statement.execute("create table if not exists vref_src2 (ts timestamp, c1 int)");
-      statement.execute(
-          "create vtable if not exists vref_vt1 (ts timestamp, c1 int from vref_src1.c1)");
-      consumer.poll(Duration.ofMillis(200));
-
-      // Change column ref to point to different source
-      statement.execute("alter vtable vref_vt1 alter column c1 set vref_src2.c1");
-
-      boolean getAlter = false;
-      int loopTime = 10;
-      while (!getAlter && loopTime > 0) {
-        ConsumerRecords<Map<String, Object>> records = consumer.poll(Duration.ofMillis(100));
-        for (ConsumerRecord<Map<String, Object>> r : records) {
-          if (r.getMeta() != null
-              && r.getMeta().getType() == MetaType.ALTER
-              && "vref_vt1".equals(r.getMeta().getTableName())) {
-            MetaAlterTable meta = (MetaAlterTable) r.getMeta();
-            Assert.assertEquals(16, meta.getAlterType());
-            Assert.assertEquals("c1", meta.getColName());
-            Assert.assertNotNull(meta.getRefTbName());
-            getAlter = true;
-          }
-        }
-        loopTime--;
-      }
-      Assert.assertTrue(getAlter);
-      consumer.commitSync();
-      consumer.unsubscribe();
-    }
-  }
-
-  @Ignore("TDengine server does not deliver alterType=17 (set ref null) meta via TMQ yet")
-  @Test
-  public void testAlterVirtualTableSetRefNull() throws Exception {
-    String topic = topics[1];
-    statement.executeUpdate(
-        "create topic if not exists " + topic + " only meta as database " + DB_NAME);
-
-    try (TaosConsumer<Map<String, Object>> consumer =
-        new TaosConsumer<>(buildConsumerProperties("grp_vt_set_null"))) {
-      consumer.subscribe(Collections.singletonList(topic));
-      consumer.poll(Duration.ofMillis(100));
-
-      // Create source table and virtual table
-      statement.execute("create table if not exists vnull_src1 (ts timestamp, c1 int)");
-      statement.execute(
-          "create vtable if not exists vnull_vt1 (ts timestamp, c1 int from vnull_src1.c1)");
-      consumer.poll(Duration.ofMillis(200));
-
-      // Set column ref to null
-      statement.execute("alter vtable vnull_vt1 alter column c1 set null");
-
-      boolean getAlter = false;
-      int loopTime = 10;
-      while (!getAlter && loopTime > 0) {
-        ConsumerRecords<Map<String, Object>> records = consumer.poll(Duration.ofMillis(100));
-        for (ConsumerRecord<Map<String, Object>> r : records) {
-          if (r.getMeta() != null
-              && r.getMeta().getType() == MetaType.ALTER
-              && "vnull_vt1".equals(r.getMeta().getTableName())) {
-            MetaAlterTable meta = (MetaAlterTable) r.getMeta();
-            Assert.assertEquals(17, meta.getAlterType());
-            Assert.assertEquals("c1", meta.getColName());
-            getAlter = true;
-          }
-        }
-        loopTime--;
-      }
-      Assert.assertTrue(getAlter);
-      consumer.commitSync();
-      consumer.unsubscribe();
-    }
-  }
-
   @BeforeClass
   public static void before() throws SQLException {
     String url = SpecifyAddress.getInstance().getRestUrl();
