@@ -198,4 +198,30 @@ public class ChildColRefTest {
     assertEquals("myTable", childColRef.getRefTableName());
     assertEquals("myRefColumn", childColRef.getRefColName());
   }
+
+  @Test
+  public void testToString() {
+    childColRef.setColName("col1");
+    childColRef.setRefDbName("db1");
+    childColRef.setRefTableName("table1");
+    childColRef.setRefColName("refCol1");
+
+    String result = childColRef.toString();
+    assertTrue(result.contains("ChildColRef"));
+    assertTrue(result.contains("colName='col1'"));
+    assertTrue(result.contains("refDbName='db1'"));
+    assertTrue(result.contains("refTableName='table1'"));
+    assertTrue(result.contains("refColName='refCol1'"));
+  }
+
+  @Test
+  public void testToStringWithNullValues() {
+    ChildColRef ref = new ChildColRef(null, null, null, null);
+    String result = ref.toString();
+    assertTrue(result.contains("ChildColRef"));
+    assertTrue(result.contains("colName='null'") || result.contains("colName=null"));
+    assertTrue(result.contains("refDbName='null'") || result.contains("refDbName=null"));
+    assertTrue(result.contains("refTableName='null'") || result.contains("refTableName=null"));
+    assertTrue(result.contains("refColName='null'") || result.contains("refColName=null"));
+  }
 }

@@ -55,4 +55,13 @@ public class ColRef {
   public int hashCode() {
     return Objects.hash(refDbName, refTableName, refColName);
   }
+
+  @Override
+  public String toString() {
+    return "ColRef{"
+        + "refDbName='" + refDbName + '\''
+        + ", refTableName='" + refTableName + '\''
+        + ", refColName='" + refColName + '\''
+        + '}';
+  }
 }

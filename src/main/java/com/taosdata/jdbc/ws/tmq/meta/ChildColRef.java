@@ -66,4 +66,14 @@ public class ChildColRef {
   public int hashCode() {
     return Objects.hash(colName, refDbName, refTableName, refColName);
   }
+
+  @Override
+  public String toString() {
+    return "ChildColRef{"
+        + "colName='" + colName + '\''
+        + ", refDbName='" + refDbName + '\''
+        + ", refTableName='" + refTableName + '\''
+        + ", refColName='" + refColName + '\''
+        + '}';
+  }
 }

@@ -42,4 +42,12 @@ public class AlterTableTagsInfo {
   public int hashCode() {
     return Objects.hash(tableName, tags);
   }
+
+  @Override
+  public String toString() {
+    return "AlterTableTagsInfo{"
+        + "tableName='" + tableName + '\''
+        + ", tags=" + tags
+        + '}';
+  }
 }

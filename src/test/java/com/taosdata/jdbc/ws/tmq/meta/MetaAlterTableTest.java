@@ -523,4 +523,25 @@ public class MetaAlterTableTest {
 
     assertEquals(info1.hashCode(), info2.hashCode());
   }
+
+  @Test
+  public void testAlterTableTagsInfoToString() {
+    TagAlter tag = new TagAlter("t1", "100", false);
+    AlterTableTagsInfo info = new AlterTableTagsInfo("ct1", Arrays.asList(tag));
+
+    String result = info.toString();
+    assertTrue(result.contains("AlterTableTagsInfo"));
+    assertTrue(result.contains("tableName='ct1'"));
+    assertTrue(result.contains("tags="));
+  }
+
+  @Test
+  public void testAlterTableTagsInfoToStringWithNullTags() {
+    AlterTableTagsInfo info = new AlterTableTagsInfo("ct1", null);
+
+    String result = info.toString();
+    assertTrue(result.contains("AlterTableTagsInfo"));
+    assertTrue(result.contains("tableName='ct1'"));
+    assertTrue(result.contains("tags="));
+  }
 }

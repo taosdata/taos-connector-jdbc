@@ -172,4 +172,27 @@ public class ColRefTest {
     assertEquals("myTable", colRef.getRefTableName());
     assertEquals("myRefColumn", colRef.getRefColName());
   }
+
+  @Test
+  public void testToString() {
+    colRef.setRefDbName("db1");
+    colRef.setRefTableName("table1");
+    colRef.setRefColName("refCol1");
+
+    String result = colRef.toString();
+    assertTrue(result.contains("ColRef"));
+    assertTrue(result.contains("refDbName='db1'"));
+    assertTrue(result.contains("refTableName='table1'"));
+    assertTrue(result.contains("refColName='refCol1'"));
+  }
+
+  @Test
+  public void testToStringWithNullValues() {
+    ColRef ref = new ColRef(null, null, null);
+    String result = ref.toString();
+    assertTrue(result.contains("ColRef"));
+    assertTrue(result.contains("refDbName='null'") || result.contains("refDbName=null"));
+    assertTrue(result.contains("refTableName='null'") || result.contains("refTableName=null"));
+    assertTrue(result.contains("refColName='null'") || result.contains("refColName=null"));
+  }
 }
