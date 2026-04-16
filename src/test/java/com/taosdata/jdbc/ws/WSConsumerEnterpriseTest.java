@@ -8,6 +8,7 @@ import com.taosdata.jdbc.tmq.ConsumerRecords;
 import com.taosdata.jdbc.tmq.TMQConstants;
 import com.taosdata.jdbc.tmq.TaosConsumer;
 import com.taosdata.jdbc.utils.SpecifyAddress;
+import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import org.junit.AfterClass;
@@ -93,7 +94,9 @@ public class WSConsumerEnterpriseTest {
             TestUtils.waitTransactionDone(conn);
             rs.next();
             String token = rs.getString(1);
-            System.out.println("created token = " + token);
+            if (StringUtils.isEmpty(token)){
+                Assert.fail("Failed to create token");
+            }
             return token;
         }
     }
