@@ -22,15 +22,19 @@ public class AutoExpandingBuffer {
     }
 
      public void writeBytes(byte[] src) throws SQLException {
+        writeBytes(src, 0, src.length);
+    }
+
+    public void writeBytes(byte[] src, int off, int len) throws SQLException {
         if (stopWrite){
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "Cannot write to buffer after stopWrite has been called");
         }
         int bytesWritten = 0;
-        while (bytesWritten < src.length) {
+        while (bytesWritten < len) {
             int writableBytes = currentBuffer.writableBytes();
-            int bytesToWrite = Math.min(writableBytes, src.length - bytesWritten);
+            int bytesToWrite = Math.min(writableBytes, len - bytesWritten);
 
-            currentBuffer.writeBytes(src, bytesWritten, bytesToWrite);
+            currentBuffer.writeBytes(src, off + bytesWritten, bytesToWrite);
 
             bytesWritten += bytesToWrite;
 
@@ -43,6 +47,62 @@ public class AutoExpandingBuffer {
                 currentBuffer = allocator.buffer(bufferSize);
             }
         }
+    }
+
+    /** Append a single byte. Avoids any intermediate allocation. */
+    public void writeByte(byte v) throws SQLException {
+        if (stopWrite) {
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "Cannot write to buffer after stopWrite has been called");
+        }
+        if (currentBuffer.writableBytes() > 0) {
+            currentBuffer.writeByte(v);
+        } else {
+            if (composite.numComponents() >= composite.maxNumComponents()) {
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "Data too long, exceeded maximum components");
+            }
+            composite.addComponent(true, currentBuffer);
+            currentBuffer = allocator.buffer(bufferSize);
+            currentBuffer.writeByte(v);
+        }
+    }
+
+    /** Append a 4-byte little-endian int. Avoids Unpooled allocation on the slow path. */
+    public void writeIntLE(int v) throws SQLException {
+        if (currentBuffer.writableBytes() >= Integer.BYTES) {
+            if (stopWrite) {
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "Cannot write to buffer after stopWrite has been called");
+            }
+            currentBuffer.writeIntLE(v);
+            return;
+        }
+        byte[] b = {(byte) v, (byte)(v >>> 8), (byte)(v >>> 16), (byte)(v >>> 24)};
+        writeBytes(b, 0, 4);
+    }
+
+    /** Append an 8-byte little-endian long. Avoids Unpooled allocation on the slow path. */
+    public void writeLongLE(long v) throws SQLException {
+        if (currentBuffer.writableBytes() >= Long.BYTES) {
+            if (stopWrite) {
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "Cannot write to buffer after stopWrite has been called");
+            }
+            currentBuffer.writeLongLE(v);
+            return;
+        }
+        byte[] b = {
+            (byte) v,          (byte)(v >>> 8),  (byte)(v >>> 16), (byte)(v >>> 24),
+            (byte)(v >>> 32),  (byte)(v >>> 40), (byte)(v >>> 48), (byte)(v >>> 56)
+        };
+        writeBytes(b, 0, 8);
+    }
+
+    /** Append a 4-byte little-endian float. Avoids Unpooled allocation on the slow path. */
+    public void writeFloatLE(float v) throws SQLException {
+        writeIntLE(Float.floatToRawIntBits(v));
+    }
+
+    /** Append an 8-byte little-endian double. Avoids Unpooled allocation on the slow path. */
+    public void writeDoubleLE(double v) throws SQLException {
+        writeLongLE(Double.doubleToRawLongBits(v));
     }
     public int writeString(String src) throws SQLException {
         if (stopWrite){
