@@ -73,7 +73,18 @@ public class WSRetryableStmt extends WSStatement {
         this.stmtInfo = stmtInfo;
         this.batchInsertedRowsInner = batchInsertedRows;
         this.reconnectCount = transport.getReconnectCount();
-        this.useBindExec = useBindExec;
+        
+        // Enforce server compatibility: even if useBindExec is requested,
+        // only honor it if the server actually supports STMT2_BIND_EXEC
+        if (useBindExec && connection instanceof WSConnection) {
+            WSConnection wsConn = (WSConnection) connection;
+            this.useBindExec = wsConn.supportsStmt2BindExec();
+            if (!this.useBindExec) {
+                log.debug("STMT2_BIND_EXEC requested but server does not support it; falling back to legacy STMT2_BIND + STMT2_EXEC");
+            }
+        } else {
+            this.useBindExec = false;
+        }
     }
 
     public void initStmt(int retryTimes) throws SQLException {
