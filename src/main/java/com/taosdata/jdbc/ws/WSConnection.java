@@ -120,6 +120,16 @@ public class WSConnection extends AbstractConnection {
                         throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_LINE_BIND_MODE_UNSUPPORTED_IN_SERVER);
                     }
                 }
+                // Route insert statements to the columnar bind-exec producer on supported servers.
+                if (isInsert && supportsStmt2BindExec()) {
+                    return new WSColumnPreparedStatement(transport,
+                            param,
+                            database,
+                            this,
+                            sql,
+                            idGenerator.getAndIncrement(),
+                            prepareResp);
+                }
                 return new TSWSPreparedStatement(transport,
                         param,
                         database,
