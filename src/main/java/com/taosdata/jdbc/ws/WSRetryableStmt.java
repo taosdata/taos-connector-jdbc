@@ -47,7 +47,9 @@ public class WSRetryableStmt extends WSStatement {
     }
 
     /**
-     * Constructor with explicit bind execution mode control.
+     * Package-private constructor with explicit bind execution mode control.
+     * This constructor is NOT public to prevent premature activation of the STMT2_BIND_EXEC path.
+     * It exists to preserve internal plumbing for future tasks that will activate this feature.
      *
      * @param connection AbstractConnection instance
      * @param param ConnectionParam instance
@@ -58,14 +60,14 @@ public class WSRetryableStmt extends WSStatement {
      * @param batchInsertedRows batch inserted rows counter
      * @param useBindExec whether to use STMT2_BIND_EXEC (true) or legacy STMT2_BIND+STMT2_EXEC (false)
      */
-    public WSRetryableStmt(AbstractConnection connection,
-                           ConnectionParam param,
-                           String database,
-                           Transport transport,
-                           Long instanceId,
-                           StmtInfo stmtInfo,
-                           AtomicInteger batchInsertedRows,
-                           boolean useBindExec) {
+    WSRetryableStmt(AbstractConnection connection,
+                    ConnectionParam param,
+                    String database,
+                    Transport transport,
+                    Long instanceId,
+                    StmtInfo stmtInfo,
+                    AtomicInteger batchInsertedRows,
+                    boolean useBindExec) {
         super(transport, database, connection, instanceId, param.getZoneId());
         this.param = param;
         this.stmtInfo = stmtInfo;
@@ -280,12 +282,13 @@ public class WSRetryableStmt extends WSStatement {
     }
 
     /**
-     * Check if this statement is using the new STMT2_BIND_EXEC path.
-     * This is a capability check method for testing and debugging.
+     * Package-private method to check if this statement is using the new STMT2_BIND_EXEC path.
+     * This is NOT public to hide the dormant implementation from external code.
+     * It exists for internal testing to verify the plumbing is correct.
      *
      * @return true if using STMT2_BIND_EXEC, false if using legacy STMT2_BIND + STMT2_EXEC
      */
-    public boolean isUsingBindExec() {
+    boolean isUsingBindExec() {
         return useBindExec;
     }
 }

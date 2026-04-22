@@ -6,24 +6,22 @@ import static org.junit.Assert.*;
 
 /**
  * Test class for WSRetryableStmt bind execution mode routing.
- * Tests the isUsingBindExec method which exposes the internal routing mode.
- * These are unit tests that verify constructor behavior without requiring actual connection/transport.
+ * These tests verify the internal plumbing exists for future bind-exec support
+ * while ensuring it remains dormant (not publicly activatable) in Task 1.
  */
 public class WSRetryableStmtBindExecTest {
 
     /**
-     * Test that WSRetryableStmt exposes bind mode through isUsingBindExec()
-     * This test verifies the plumbing exists and returns the correct boolean values.
+     * Test that WSRetryableStmt has internal bind mode capability through isUsingBindExec()
+     * This method should be package-private, not public, to keep the feature dormant.
      */
     @Test
-    public void testBindExecModeExposure() {
-        // We can't instantiate WSRetryableStmt without valid dependencies in unit tests,
-        // but we can verify the method signature exists and is public by checking the class
+    public void testBindExecModeInternalCapability() {
         try {
-            java.lang.reflect.Method method = WSRetryableStmt.class.getMethod("isUsingBindExec");
-            assertNotNull("isUsingBindExec method should exist", method);
+            java.lang.reflect.Method method = WSRetryableStmt.class.getDeclaredMethod("isUsingBindExec");
+            assertNotNull("isUsingBindExec method should exist for internal testing", method);
             assertEquals("isUsingBindExec should return boolean", boolean.class, method.getReturnType());
-            assertTrue("isUsingBindExec should be public", 
+            assertFalse("isUsingBindExec should NOT be public (dormant feature)", 
                     java.lang.reflect.Modifier.isPublic(method.getModifiers()));
         } catch (NoSuchMethodException e) {
             fail("isUsingBindExec method should exist: " + e.getMessage());
@@ -31,12 +29,13 @@ public class WSRetryableStmtBindExecTest {
     }
 
     /**
-     * Test that WSRetryableStmt has a constructor accepting useBindExec parameter
+     * Test that WSRetryableStmt has a package-private constructor accepting useBindExec parameter.
+     * This preserves plumbing for future use while preventing public activation.
      */
     @Test
-    public void testConstructorWithBindExecParameter() {
+    public void testInternalConstructorWithBindExecParameter() {
         try {
-            java.lang.reflect.Constructor<?> constructor = WSRetryableStmt.class.getConstructor(
+            java.lang.reflect.Constructor<?> constructor = WSRetryableStmt.class.getDeclaredConstructor(
                     com.taosdata.jdbc.AbstractConnection.class,
                     com.taosdata.jdbc.common.ConnectionParam.class,
                     String.class,
@@ -47,7 +46,7 @@ public class WSRetryableStmtBindExecTest {
                     boolean.class
             );
             assertNotNull("Constructor with useBindExec parameter should exist", constructor);
-            assertTrue("Constructor should be public", 
+            assertFalse("Constructor with useBindExec should NOT be public (dormant feature)", 
                     java.lang.reflect.Modifier.isPublic(constructor.getModifiers()));
         } catch (NoSuchMethodException e) {
             fail("Constructor with useBindExec parameter should exist: " + e.getMessage());
@@ -55,10 +54,11 @@ public class WSRetryableStmtBindExecTest {
     }
 
     /**
-     * Test that WSRetryableStmt has a default constructor (without useBindExec parameter)
+     * Test that WSRetryableStmt has a public default constructor (without useBindExec parameter).
+     * This is the constructor that production code should use.
      */
     @Test
-    public void testDefaultConstructor() {
+    public void testPublicDefaultConstructor() {
         try {
             java.lang.reflect.Constructor<?> constructor = WSRetryableStmt.class.getConstructor(
                     com.taosdata.jdbc.AbstractConnection.class,
@@ -70,7 +70,7 @@ public class WSRetryableStmtBindExecTest {
                     java.util.concurrent.atomic.AtomicInteger.class
             );
             assertNotNull("Default constructor (without useBindExec) should exist", constructor);
-            assertTrue("Constructor should be public", 
+            assertTrue("Default constructor should be public for production use", 
                     java.lang.reflect.Modifier.isPublic(constructor.getModifiers()));
         } catch (NoSuchMethodException e) {
             fail("Default constructor should exist: " + e.getMessage());
@@ -86,7 +86,7 @@ public class WSRetryableStmtBindExecTest {
             java.lang.reflect.Field field = WSRetryableStmt.class.getDeclaredField("useBindExec");
             assertNotNull("useBindExec field should exist", field);
             assertEquals("useBindExec should be boolean type", boolean.class, field.getType());
-            assertTrue("useBindExec should be final", 
+            assertTrue("useBindExec should be final to prevent runtime modification", 
                     java.lang.reflect.Modifier.isFinal(field.getModifiers()));
         } catch (NoSuchFieldException e) {
             fail("useBindExec field should exist: " + e.getMessage());
