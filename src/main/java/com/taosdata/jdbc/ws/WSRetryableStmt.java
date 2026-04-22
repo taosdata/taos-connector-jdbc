@@ -25,11 +25,16 @@ public class WSRetryableStmt extends WSStatement {
     private static final int OPERATION_TYPE_WRITE = 1;
     private static final int OPERATION_TYPE_QUERY = 2;
 
+    // Bind execution mode constants
+    private static final int BIND_MODE_LEGACY = 0;  // STMT2_BIND + STMT2_EXEC
+    private static final int BIND_MODE_BIND_EXEC = 1;  // STMT2_BIND_EXEC
+
     protected final ConnectionParam param;
     protected StmtInfo stmtInfo;
     protected final AtomicReference<SQLException> lastError = new AtomicReference<>(null);
     protected final AtomicInteger batchInsertedRowsInner;
     private long reconnectCount;
+    private final boolean useBindExec;  // Whether to use new STMT2_BIND_EXEC path
 
     public WSRetryableStmt(AbstractConnection connection,
                            ConnectionParam param,
@@ -38,11 +43,35 @@ public class WSRetryableStmt extends WSStatement {
                            Long instanceId,
                            StmtInfo stmtInfo,
                            AtomicInteger batchInsertedRows) {
+        this(connection, param, database, transport, instanceId, stmtInfo, batchInsertedRows, false);
+    }
+
+    /**
+     * Constructor with explicit bind execution mode control.
+     *
+     * @param connection AbstractConnection instance
+     * @param param ConnectionParam instance
+     * @param database database name
+     * @param transport Transport instance
+     * @param instanceId instance ID
+     * @param stmtInfo StmtInfo instance
+     * @param batchInsertedRows batch inserted rows counter
+     * @param useBindExec whether to use STMT2_BIND_EXEC (true) or legacy STMT2_BIND+STMT2_EXEC (false)
+     */
+    public WSRetryableStmt(AbstractConnection connection,
+                           ConnectionParam param,
+                           String database,
+                           Transport transport,
+                           Long instanceId,
+                           StmtInfo stmtInfo,
+                           AtomicInteger batchInsertedRows,
+                           boolean useBindExec) {
         super(transport, database, connection, instanceId, param.getZoneId());
         this.param = param;
         this.stmtInfo = stmtInfo;
         this.batchInsertedRowsInner = batchInsertedRows;
         this.reconnectCount = transport.getReconnectCount();
+        this.useBindExec = useBindExec;
     }
 
     public void initStmt(int retryTimes) throws SQLException {
@@ -124,37 +153,65 @@ public class WSRetryableStmt extends WSStatement {
 
                 modifyStmtIdAndReqId(rawBlock, stmtInfo.getStmtId(), reqId);
 
-                // Execute bind operation
-                Stmt2Resp bindResp = (Stmt2Resp) transport.send(Action.STMT2_BIND.getAction(),
-                        reqId, rawBlock, false, this.getQueryTimeoutInMs());
-                if (Code.SUCCESS.getCode() != bindResp.getCode()) {
-                    throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
-                }
+                if (useBindExec) {
+                    // New path: STMT2_BIND_EXEC combines bind and exec
+                    Stmt2ExecResp bindExecResp = (Stmt2ExecResp) transport.send(Action.STMT2_BIND_EXEC.getAction(),
+                            reqId, rawBlock, false, this.getQueryTimeoutInMs());
+                    if (Code.SUCCESS.getCode() != bindExecResp.getCode()) {
+                        throw new SQLException("(0x" + Integer.toHexString(bindExecResp.getCode()) + "):" + bindExecResp.getMessage());
+                    }
 
-                // Execute operation
-                reqId = ReqId.getReqID();
-                Request request = RequestFactory.generateExec(stmtInfo.getStmtId(), reqId);
-                Stmt2ExecResp resp = (Stmt2ExecResp) transport.send(request, false, this.getQueryTimeoutInMs());
-                if (Code.SUCCESS.getCode() != resp.getCode()) {
-                    throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
-                }
+                    // Process result based on operation type
+                    if (operationType == OPERATION_TYPE_WRITE) {
+                        int affectedRows = bindExecResp.getAffected();
+                        batchInsertedRowsInner.addAndGet(affectedRows);
+                        return affectedRows;
+                    } else if (operationType == OPERATION_TYPE_QUERY) {
+                        // Get query result
+                        reqId = ReqId.getReqID();
+                        Request request = RequestFactory.generateUseResult(stmtInfo.getStmtId(), reqId);
+                        ResultResp useResultResp = (ResultResp) transport.send(request, false, this.getQueryTimeoutInMs());
+                        if (Code.SUCCESS.getCode() != useResultResp.getCode()) {
+                            throw new SQLException("(0x" + Integer.toHexString(useResultResp.getCode()) + "):" + useResultResp.getMessage());
+                        }
+                        return useResultResp;
+                    } else {
+                        throw new IllegalArgumentException("Unknown operation type: " + operationType);
+                    }
+                } else {
+                    // Legacy path: STMT2_BIND + STMT2_EXEC
+                    // Execute bind operation
+                    Stmt2Resp bindResp = (Stmt2Resp) transport.send(Action.STMT2_BIND.getAction(),
+                            reqId, rawBlock, false, this.getQueryTimeoutInMs());
+                    if (Code.SUCCESS.getCode() != bindResp.getCode()) {
+                        throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
+                    }
 
-                // Process result based on operation type
-                if (operationType == OPERATION_TYPE_WRITE) {
-                    int affectedRows = resp.getAffected();
-                    batchInsertedRowsInner.addAndGet(affectedRows);
-                    return affectedRows;
-                } else if (operationType == OPERATION_TYPE_QUERY) {
-                    // Get query result
+                    // Execute operation
                     reqId = ReqId.getReqID();
-                    request = RequestFactory.generateUseResult(stmtInfo.getStmtId(), reqId);
-                    ResultResp useResultResp = (ResultResp) transport.send(request, false, this.getQueryTimeoutInMs());
+                    Request request = RequestFactory.generateExec(stmtInfo.getStmtId(), reqId);
+                    Stmt2ExecResp resp = (Stmt2ExecResp) transport.send(request, false, this.getQueryTimeoutInMs());
                     if (Code.SUCCESS.getCode() != resp.getCode()) {
                         throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
                     }
-                    return useResultResp;
-                } else {
-                    throw new IllegalArgumentException("Unknown operation type: " + operationType);
+
+                    // Process result based on operation type
+                    if (operationType == OPERATION_TYPE_WRITE) {
+                        int affectedRows = resp.getAffected();
+                        batchInsertedRowsInner.addAndGet(affectedRows);
+                        return affectedRows;
+                    } else if (operationType == OPERATION_TYPE_QUERY) {
+                        // Get query result
+                        reqId = ReqId.getReqID();
+                        request = RequestFactory.generateUseResult(stmtInfo.getStmtId(), reqId);
+                        ResultResp useResultResp = (ResultResp) transport.send(request, false, this.getQueryTimeoutInMs());
+                        if (Code.SUCCESS.getCode() != resp.getCode()) {
+                            throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
+                        }
+                        return useResultResp;
+                    } else {
+                        throw new IllegalArgumentException("Unknown operation type: " + operationType);
+                    }
                 }
             } catch (SQLException e) {
                 // Handle exception based on operation type
@@ -220,5 +277,15 @@ public class WSRetryableStmt extends WSStatement {
             Request close = RequestFactory.generateClose(stmtInfo.getStmtId(), reqId);
             transport.send(close, this.getQueryTimeoutInMs());
         }
+    }
+
+    /**
+     * Check if this statement is using the new STMT2_BIND_EXEC path.
+     * This is a capability check method for testing and debugging.
+     *
+     * @return true if using STMT2_BIND_EXEC, false if using legacy STMT2_BIND + STMT2_EXEC
+     */
+    public boolean isUsingBindExec() {
+        return useBindExec;
     }
 }

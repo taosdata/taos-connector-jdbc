@@ -39,6 +39,24 @@ public class VersionUtil {
         return false;
     }
 
+    /**
+     * Check if the server supports stmt2_bind_exec action.
+     * This action allows combining bind and exec into a single binary request.
+     * Minimum supported version: 3.1.4.10
+     *
+     * @param version server version string
+     * @return true if stmt2_bind_exec is supported
+     */
+    public static boolean supportStmt2BindExec(String version) {
+        if (version != null) {
+            try {
+                return compareVersions(version, MIN_STMT2_BIND_EXEC_VERSION) >= 0;
+            } catch (SQLException ignored) {
+            }
+        }
+        return false;
+    }
+
     public static int compareVersions(String v1, String v2) throws SQLException {
         if (v1 == null || v2 == null) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "Version strings cannot be null");

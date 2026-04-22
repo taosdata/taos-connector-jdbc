@@ -247,4 +247,14 @@ public class WSConnection extends AbstractConnection {
             }
         }
     }
+
+    /**
+     * Check if the server supports stmt2_bind_exec action.
+     * This action allows combining bind and exec into a single binary request.
+     *
+     * @return true if stmt2_bind_exec is supported by the server
+     */
+    public boolean supportsStmt2BindExec() {
+        return com.taosdata.jdbc.utils.VersionUtil.supportStmt2BindExec(this.serverVersion);
+    }
 }
