@@ -1,19 +1,37 @@
 package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.TSDBConstants;
+import com.taosdata.jdbc.AbstractConnection;
+import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.utils.VersionUtil;
+import com.taosdata.jdbc.ws.Transport;
+import com.taosdata.jdbc.ws.TSWSPreparedStatement;
+import com.taosdata.jdbc.ws.WSColumnPreparedStatement;
+import com.taosdata.jdbc.ws.WSConnection;
+import com.taosdata.jdbc.ws.entity.Code;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnBindSerializer;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnFieldBuffer;
 import com.taosdata.jdbc.ws.stmt2.Stmt2FieldMeta;
+import com.taosdata.jdbc.ws.stmt2.entity.Field;
+import com.taosdata.jdbc.ws.stmt2.entity.Stmt2ExecResp;
+import com.taosdata.jdbc.ws.stmt2.entity.Stmt2PrepareResp;
+import com.taosdata.jdbc.ws.stmt2.entity.Stmt2Resp;
+import io.netty.buffer.ByteBuf;
 import org.junit.Test;
 
 import java.nio.charset.StandardCharsets;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.util.Arrays;
+import java.util.Properties;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
 import static com.taosdata.jdbc.ws.stmt2.Stmt2ColumnBindSerializer.*;
 import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 /**
  * Unit-level regression and routing-fallback tests for the stmt2 bind-exec path.
@@ -633,5 +651,225 @@ public class WsStmt2BindExecFallbackTest {
             assertTrue("message mentions mismatch",
                     e.getMessage().contains("mismatch") || e.getMessage().contains("row count"));
         }
+    }
+
+    // -----------------------------------------------------------------------
+    // 8. Runtime routing: WSConnection.prepareStatement class dispatch
+    // -----------------------------------------------------------------------
+
+    /** Builds a mocked Transport that satisfies StmtUtils.initStmtWithRetry + WSStatement init. */
+    private static Transport buildMockTransport(Stmt2PrepareResp prepResp) {
+        ConnectionParam connParam = buildMockConnectionParam();
+        Transport transport = mock(Transport.class);
+        when(transport.getReconnectCount()).thenReturn(0);
+        when(transport.isConnected()).thenReturn(true);
+        when(transport.isClosed()).thenReturn(false);
+        when(transport.getConnectionParam()).thenReturn(connParam);
+
+        // stmt2_init response (one-arg send for StmtUtils)
+        Stmt2Resp initResp = new Stmt2Resp();
+        initResp.setCode(Code.SUCCESS.getCode());
+        initResp.setStmtId(42L);
+        try {
+            when(transport.send(any(com.taosdata.jdbc.ws.entity.Request.class))).thenReturn(initResp);
+            // stmt2_prepare response (three-arg send)
+            when(transport.send(any(com.taosdata.jdbc.ws.entity.Request.class), anyBoolean(), anyLong()))
+                    .thenReturn(prepResp);
+            // stmt2_close response (two-arg send used by releaseStmt / close)
+            Stmt2Resp closeResp = new Stmt2Resp();
+            closeResp.setCode(Code.SUCCESS.getCode());
+            when(transport.send(any(com.taosdata.jdbc.ws.entity.Request.class), anyLong()))
+                    .thenReturn(closeResp);
+        } catch (SQLException e) {
+            throw new RuntimeException("Unexpected Mockito exception", e);
+        }
+        return transport;
+    }
+
+    private static ConnectionParam buildMockConnectionParam() {
+        ConnectionParam param = mock(ConnectionParam.class);
+        when(param.getZoneId()).thenReturn(null);
+        when(param.getRequestTimeout()).thenReturn(30_000);
+        when(param.getRetryTimes()).thenReturn(1);
+        when(param.isEnableAutoConnect()).thenReturn(false);
+        when(param.getDatabase()).thenReturn("testdb");
+        return param;
+    }
+
+    /** Builds a two-field (TIMESTAMP, INT) insert prepare response. */
+    private static Stmt2PrepareResp buildInsertPrepareResp() {
+        Field tsField = new Field();
+        tsField.setBindType((byte) FieldBindType.TAOS_FIELD_COL.getValue());
+        tsField.setFieldType((byte) TSDB_DATA_TYPE_TIMESTAMP);
+        Field intField = new Field();
+        intField.setBindType((byte) FieldBindType.TAOS_FIELD_COL.getValue());
+        intField.setFieldType((byte) TSDB_DATA_TYPE_INT);
+        Stmt2PrepareResp resp = new Stmt2PrepareResp();
+        resp.setCode(Code.SUCCESS.getCode());
+        resp.setInsert(true);
+        resp.setStmtId(42L);
+        resp.setFields(Arrays.asList(tsField, intField));
+        return resp;
+    }
+
+    @Test
+    public void testRouting_capableServer_returnsWSColumnPreparedStatement() throws Exception {
+        Stmt2PrepareResp prepResp = buildInsertPrepareResp();
+        Transport transport = buildMockTransport(prepResp);
+        ConnectionParam param = buildMockConnectionParam();
+        WSConnection conn = new WSConnection("jdbc:TAOS-RS://localhost:6041/testdb",
+                new Properties(), transport, param, "3.1.4.10");
+
+        PreparedStatement stmt = conn.prepareStatement("INSERT INTO t VALUES(?,?)");
+
+        assertTrue("capable server (3.1.4.10) must return WSColumnPreparedStatement",
+                stmt instanceof WSColumnPreparedStatement);
+    }
+
+    @Test
+    public void testRouting_legacyServer_returnsTSWSPreparedStatement() throws Exception {
+        Stmt2PrepareResp prepResp = buildInsertPrepareResp();
+        Transport transport = buildMockTransport(prepResp);
+        ConnectionParam param = buildMockConnectionParam();
+        WSConnection conn = new WSConnection("jdbc:TAOS-RS://localhost:6041/testdb",
+                new Properties(), transport, param, "3.1.4.9");
+
+        PreparedStatement stmt = conn.prepareStatement("INSERT INTO t VALUES(?,?)");
+
+        assertTrue("legacy server (3.1.4.9) must return TSWSPreparedStatement",
+                stmt instanceof TSWSPreparedStatement);
+    }
+
+    @Test
+    public void testRouting_capableVersions_allReturnWSColumnPreparedStatement() throws Exception {
+        for (String ver : new String[]{"3.1.4.10", "3.1.4.11", "3.1.5.0", "3.2.0.0"}) {
+            Stmt2PrepareResp prepResp = buildInsertPrepareResp();
+            Transport transport = buildMockTransport(prepResp);
+            ConnectionParam param = buildMockConnectionParam();
+            WSConnection conn = new WSConnection("jdbc:TAOS-RS://localhost:6041/testdb",
+                    new Properties(), transport, param, ver);
+
+            PreparedStatement stmt = conn.prepareStatement("INSERT INTO t VALUES(?,?)");
+
+            assertTrue("v" + ver + " must return WSColumnPreparedStatement",
+                    stmt instanceof WSColumnPreparedStatement);
+        }
+    }
+
+    @Test
+    public void testRouting_legacyVersions_allReturnTSWSPreparedStatement() throws Exception {
+        for (String ver : new String[]{"3.1.4.9", "3.1.3.0", "3.0.0.0", "2.6.0.0"}) {
+            Stmt2PrepareResp prepResp = buildInsertPrepareResp();
+            Transport transport = buildMockTransport(prepResp);
+            ConnectionParam param = buildMockConnectionParam();
+            WSConnection conn = new WSConnection("jdbc:TAOS-RS://localhost:6041/testdb",
+                    new Properties(), transport, param, ver);
+
+            PreparedStatement stmt = conn.prepareStatement("INSERT INTO t VALUES(?,?)");
+
+            assertTrue("v" + ver + " must return TSWSPreparedStatement",
+                    stmt instanceof TSWSPreparedStatement);
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // 9. WSColumnPreparedStatement runtime send-path (STMT2_BIND_EXEC)
+    // -----------------------------------------------------------------------
+
+    /** Creates WSColumnPreparedStatement directly with a capable-server WSConnection. */
+    private static WSColumnPreparedStatement buildWSColumnPreparedStatement(
+            Transport transport, ConnectionParam param, Stmt2PrepareResp prepResp) {
+        WSConnection conn = new WSConnection("jdbc:TAOS-RS://localhost:6041/testdb",
+                new Properties(), transport, param, "3.1.4.10");
+        return new WSColumnPreparedStatement(transport, param, "testdb", conn,
+                "INSERT INTO t VALUES(?,?)", 1L, prepResp);
+    }
+
+    private static Transport buildExecuteTransport(ConnectionParam param, int affectedRows) {
+        Transport transport = mock(Transport.class);
+        when(transport.getReconnectCount()).thenReturn(0);
+        when(transport.isConnected()).thenReturn(true);
+        when(transport.isClosed()).thenReturn(false);
+        when(transport.getConnectionParam()).thenReturn(param);
+        try {
+            Stmt2ExecResp execResp = new Stmt2ExecResp();
+            execResp.setCode(Code.SUCCESS.getCode());
+            execResp.setAffected(affectedRows);
+            execResp.setStmtId(42L);
+            when(transport.send(eq("stmt2_bind_exec"), anyLong(), any(ByteBuf.class),
+                    eq(false), anyLong())).thenReturn(execResp);
+            Stmt2Resp closeResp = new Stmt2Resp();
+            closeResp.setCode(Code.SUCCESS.getCode());
+            when(transport.send(any(com.taosdata.jdbc.ws.entity.Request.class), anyLong()))
+                    .thenReturn(closeResp);
+        } catch (SQLException e) {
+            throw new RuntimeException("Unexpected Mockito exception", e);
+        }
+        return transport;
+    }
+
+    @Test
+    public void testColumnStmt_executeUpdate_sendsSingleStmt2BindExec() throws Exception {
+        ConnectionParam param = buildMockConnectionParam();
+        Transport transport = buildExecuteTransport(param, 1);
+        WSColumnPreparedStatement stmt =
+                buildWSColumnPreparedStatement(transport, param, buildInsertPrepareResp());
+
+        stmt.setTimestamp(1, new Timestamp(1700000000000L));
+        stmt.setInt(2, 42);
+
+        int affected = stmt.executeUpdate();
+
+        verify(transport, times(1)).send(eq("stmt2_bind_exec"), anyLong(),
+                any(ByteBuf.class), eq(false), anyLong());
+        verify(transport, never()).send(eq("stmt2_bind"), anyLong(),
+                any(ByteBuf.class), eq(false), anyLong());
+        assertEquals("affected rows from server must be propagated", 1, affected);
+    }
+
+    @Test
+    public void testColumnStmt_executeBatch_sendsSingleStmt2BindExec() throws Exception {
+        ConnectionParam param = buildMockConnectionParam();
+        Transport transport = buildExecuteTransport(param, 3);
+        WSColumnPreparedStatement stmt =
+                buildWSColumnPreparedStatement(transport, param, buildInsertPrepareResp());
+
+        for (int i = 0; i < 3; i++) {
+            stmt.setTimestamp(1, new Timestamp(1700000000000L + (long) i * 1000L));
+            stmt.setInt(2, i);
+            stmt.addBatch();
+        }
+
+        int[] results = stmt.executeBatch();
+
+        verify(transport, times(1)).send(eq("stmt2_bind_exec"), anyLong(),
+                any(ByteBuf.class), eq(false), anyLong());
+        assertEquals("result array length equals affected count", 3, results.length);
+    }
+
+    @Test
+    public void testColumnStmt_executeBatch_resetsBatchStateForReuse() throws Exception {
+        ConnectionParam param = buildMockConnectionParam();
+        Transport transport = buildExecuteTransport(param, 2);
+        WSColumnPreparedStatement stmt =
+                buildWSColumnPreparedStatement(transport, param, buildInsertPrepareResp());
+
+        // First batch: 2 rows
+        for (int i = 0; i < 2; i++) {
+            stmt.setTimestamp(1, new Timestamp(1700000000000L + (long) i * 1000L));
+            stmt.setInt(2, i);
+            stmt.addBatch();
+        }
+        stmt.executeBatch();
+
+        // Second single-row execution – must not throw due to stale batch state
+        stmt.setTimestamp(1, new Timestamp(1700000002000L));
+        stmt.setInt(2, 99);
+        int secondResult = stmt.executeUpdate();
+
+        // Two separate STMT2_BIND_EXEC calls, not one combined 3-row call
+        verify(transport, times(2)).send(eq("stmt2_bind_exec"), anyLong(),
+                any(ByteBuf.class), eq(false), anyLong());
+        assertEquals("second executeUpdate returns server affected rows", 2, secondResult);
     }
 }

@@ -1,37 +1,45 @@
 package com.taosdata.jdbc.ws.stmt;
 
+import com.taosdata.jdbc.AbstractConnection;
+import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.enums.FieldBindType;
+import com.taosdata.jdbc.ws.Transport;
+import com.taosdata.jdbc.ws.WSRowPreparedStatement;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnBindSerializer;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnFieldBuffer;
 import com.taosdata.jdbc.ws.stmt2.Stmt2FieldMeta;
+import com.taosdata.jdbc.ws.stmt2.entity.Field;
+import com.taosdata.jdbc.ws.stmt2.entity.Stmt2PrepareResp;
+import io.netty.buffer.CompositeByteBuf;
 import org.junit.Test;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.util.Arrays;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
 import static com.taosdata.jdbc.ws.stmt2.Stmt2ColumnBindSerializer.HEADER_SIZE;
 import static com.taosdata.jdbc.ws.stmt2.Stmt2ColumnBindSerializer.HEADER_TOTAL_LENGTH_OFFSET;
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 /**
- * Serialization comparison harness: columnar (new stmt2 path) vs row-serial (line-mode proxy).
+ * Serialization comparison harness: columnar (new stmt2 path) vs row-serial
+ * ({@link WSRowPreparedStatement} line-mode path).
  *
  * <h3>Purpose</h3>
  * <p>Verifies that {@link Stmt2ColumnBindSerializer} produces a well-formed binary payload
  * and provides a repeatable in-process timing harness that illustrates the relative effort
  * of the two serialization strategies without imposing a hard performance SLA.
  *
- * <h3>Row-serial proxy</h3>
- * <p>The row-serial approach below is a synthetic stand-in for the byte-layout produced by
- * {@code WSRowPreparedStatement}.  It writes values in row-major order (timestamp then int
- * per row) into a growing buffer – the same fundamental work that the line-mode producer
- * does, without needing a live server or Transport.  This makes the timing loop
- * directly comparable: both harnesses produce a byte payload for the same logical N-row
- * dataset.
+ * <h3>Row-serial baseline</h3>
+ * <p>The row-serial measurement uses the production class {@link WSRowPreparedStatement}
+ * directly: fields are bound via its public setter API, and the internal raw block is
+ * extracted via reflection (calling private {@code buffersStopWrite()} then
+ * {@code getRawBlock()}) so that no live server is required.  This produces an
+ * apples-to-apples comparison because both paths serialise the same logical N-row dataset.
  *
  * <h3>Assertion philosophy</h3>
  * <ul>
@@ -72,50 +80,78 @@ public class WsStmt2SerializationPerfCompareTest {
     }
 
     // -----------------------------------------------------------------------
-    // Row-serial proxy (approximates WSRowPreparedStatement line-mode output)
+    // Row-serial baseline via real WSRowPreparedStatement
     // -----------------------------------------------------------------------
 
     /**
-     * Builds a simple row-major byte payload for N rows of (timestamp, int).
+     * Builds a {@link WSRowPreparedStatement} for a 2-field (TIMESTAMP, INT) insert,
+     * binds {@code rows} rows via the public setter API, and returns the size in bytes
+     * of the raw binary block it would send over the wire.
      *
-     * <p>Each row is written sequentially: 8 bytes (timestamp LE) + 4 bytes (int LE).
-     * A minimal 8-byte header (row count + field count) is prepended to make the output
-     * structurally comparable with a real protocol frame.
+     * <p>The raw block is extracted via reflection to avoid the need for a live server.
+     * No transport calls are made; the mock transport is never actually invoked for send.
      *
-     * @param rows number of rows to serialise
-     * @return byte array whose length equals 8 + rows * 12
+     * <p>For N rows of (TIMESTAMP, INT) the expected size is:
+     * <pre>
+     *   header(58) + colLensBuf(N*4) + colsBuf(N*48) = 58 + N*52
+     * </pre>
+     * where each timestamp serialises to 26 bytes and each int to 22 bytes.
+     *
+     * @param rows number of rows to bind
+     * @return byte count of the produced raw block
      */
-    private static byte[] rowSerialSerialize(int rows) throws IOException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream(8 + rows * 12);
-        DataOutputStream dos = new DataOutputStream(baos);
+    private static int wsRowPayloadBytes(int rows) throws Exception {
+        Transport transport = mock(Transport.class);
+        ConnectionParam param = mock(ConnectionParam.class);
+        when(transport.getReconnectCount()).thenReturn(0);
+        when(transport.isConnected()).thenReturn(true);
+        when(transport.isClosed()).thenReturn(false);
+        when(transport.getConnectionParam()).thenReturn(param);
+        when(param.getRequestTimeout()).thenReturn(30_000);
+        when(param.getZoneId()).thenReturn(null);
+        when(param.getRetryTimes()).thenReturn(1);
+        when(param.isEnableAutoConnect()).thenReturn(false);
+        when(param.getDatabase()).thenReturn("testdb");
 
-        // Minimal header: row count (4 LE) + field count (4 LE)
-        writeLE32(dos, rows);
-        writeLE32(dos, 2);
+        AbstractConnection conn = mock(AbstractConnection.class);
+
+        Field tsField = new Field();
+        tsField.setBindType((byte) FieldBindType.TAOS_FIELD_COL.getValue());
+        tsField.setFieldType((byte) TSDB_DATA_TYPE_TIMESTAMP);
+        Field intField = new Field();
+        intField.setBindType((byte) FieldBindType.TAOS_FIELD_COL.getValue());
+        intField.setFieldType((byte) TSDB_DATA_TYPE_INT);
+
+        Stmt2PrepareResp prepResp = new Stmt2PrepareResp();
+        prepResp.setCode(0);
+        prepResp.setInsert(true);
+        prepResp.setStmtId(0L); // 0 → close() does not call transport
+        prepResp.setFields(Arrays.asList(tsField, intField));
+
+        WSRowPreparedStatement stmt = new WSRowPreparedStatement(
+                transport, param, "testdb", conn,
+                "INSERT INTO t VALUES(?,?)", 0L, prepResp);
 
         for (int i = 0; i < rows; i++) {
-            writeLE64(dos, 1700000000000L + i * 1000L);  // timestamp
-            writeLE32(dos, i);                             // int value
+            stmt.setTimestamp(1, new Timestamp(1700000000000L + (long) i * 1000L));
+            stmt.setInt(2, i);
+            stmt.addBatch();
         }
-        return baos.toByteArray();
-    }
 
-    private static void writeLE32(DataOutputStream dos, int v) throws IOException {
-        dos.write(v & 0xFF);
-        dos.write((v >>> 8) & 0xFF);
-        dos.write((v >>> 16) & 0xFF);
-        dos.write((v >>> 24) & 0xFF);
-    }
+        // Extract raw block via reflection (private buffersStopWrite + getRawBlock)
+        Method buffersStopWrite =
+                WSRowPreparedStatement.class.getDeclaredMethod("buffersStopWrite");
+        buffersStopWrite.setAccessible(true);
+        buffersStopWrite.invoke(stmt);
 
-    private static void writeLE64(DataOutputStream dos, long v) throws IOException {
-        dos.write((int)(v & 0xFF));
-        dos.write((int)((v >>> 8) & 0xFF));
-        dos.write((int)((v >>> 16) & 0xFF));
-        dos.write((int)((v >>> 24) & 0xFF));
-        dos.write((int)((v >>> 32) & 0xFF));
-        dos.write((int)((v >>> 40) & 0xFF));
-        dos.write((int)((v >>> 48) & 0xFF));
-        dos.write((int)((v >>> 56) & 0xFF));
+        Method getRawBlock =
+                WSRowPreparedStatement.class.getDeclaredMethod("getRawBlock");
+        getRawBlock.setAccessible(true);
+        CompositeByteBuf rawBlock = (CompositeByteBuf) getRawBlock.invoke(stmt);
+
+        int size = rawBlock.readableBytes();
+        rawBlock.release();
+        return size;
     }
 
     // -----------------------------------------------------------------------
@@ -169,17 +205,18 @@ public class WsStmt2SerializationPerfCompareTest {
     }
 
     @Test
-    public void testRowSerialPayloadSize_singleRow() throws IOException {
-        byte[] payload = rowSerialSerialize(1);
-        // 8 header + 1 row * (8 ts + 4 int) = 8 + 12 = 20
-        assertEquals("row-serial 1 row", 20, payload.length);
+    public void testRowSerialPayloadSize_singleRow() throws Exception {
+        int actual = wsRowPayloadBytes(1);
+        // header(58) + colLensBuf(1*4) + colsBuf(1*(26+22)) = 58 + 52 = 110
+        assertEquals("WSRowPreparedStatement 1-row payload", 58 + 1 * 52, actual);
     }
 
     @Test
-    public void testRowSerialPayloadSize_scalesLinearly() throws IOException {
+    public void testRowSerialPayloadSize_scalesLinearly() throws Exception {
+        // Expected: 58 + N*52 for N rows of (TIMESTAMP, INT)
         for (int rows : new int[]{1, 10, 100}) {
-            byte[] payload = rowSerialSerialize(rows);
-            assertEquals("row-serial " + rows + " rows", 8 + rows * 12, payload.length);
+            int actual = wsRowPayloadBytes(rows);
+            assertEquals("WSRowPreparedStatement " + rows + "-row payload", 58 + rows * 52, actual);
         }
     }
 
@@ -192,7 +229,7 @@ public class WsStmt2SerializationPerfCompareTest {
             throws Exception {
         // For small N, columnar has higher per-row cost due to header overhead.
         // For large N, per-row overhead approaches (8+1) ts + (4+1) int = 14 bytes/row
-        // vs row-serial 12 bytes/row (no null markers).
+        // vs WSRowPreparedStatement ≈ 52 bytes/row (per-column metadata per row).
         // This test validates that both approaches grow linearly with N and that
         // the columnar byte count / row is bounded above by a reasonable constant.
 
@@ -207,23 +244,27 @@ public class WsStmt2SerializationPerfCompareTest {
 
         byte[] columnarPayload = Stmt2ColumnBindSerializer.serialize(
                 new Stmt2ColumnFieldBuffer[]{tsCol, intCol});
-        byte[] rowSerialPayload = rowSerialSerialize(rows);
+        int wsRowBytes = wsRowPayloadBytes(rows);
 
         double columnarBytesPerRow = (double) columnarPayload.length / rows;
-        double rowSerialBytesPerRow = (double) rowSerialPayload.length / rows;
+        double rowSerialBytesPerRow = (double) wsRowBytes / rows;
 
         System.out.printf("[PerfCompare] %d rows | columnar: %d bytes (%.1f/row) | " +
                         "row-serial: %d bytes (%.1f/row)%n",
                 rows,
                 columnarPayload.length, columnarBytesPerRow,
-                rowSerialPayload.length, rowSerialBytesPerRow);
+                wsRowBytes, rowSerialBytesPerRow);
 
-        // Columnar payload should be less than 25 bytes/row for ts+int (fixed-width only).
+        // Columnar payload should be < 25 bytes/row for ts+int (fixed-width only).
         // Actual = (20 + 26 + 22) / 1000 ≈ 14 bytes/row – well within this bound.
         assertTrue("columnar bytes/row must be bounded above 5",
                 columnarBytesPerRow > 5);
         assertTrue("columnar bytes/row for ts+int must be < 25",
                 columnarBytesPerRow < 25);
+
+        // WSRowPreparedStatement per-row cost is ~52 bytes; columnar is more compact
+        assertTrue("columnar must be more compact than WSRowPreparedStatement for 1000 rows",
+                columnarPayload.length < wsRowBytes);
     }
 
     // -----------------------------------------------------------------------
@@ -239,7 +280,7 @@ public class WsStmt2SerializationPerfCompareTest {
         // Warm-up
         for (int w = 0; w < warmupRounds; w++) {
             buildColumnarPayload(rows);
-            rowSerialSerialize(rows);
+            wsRowPayloadBytes(rows);
         }
 
         // Measure columnar
@@ -251,13 +292,13 @@ public class WsStmt2SerializationPerfCompareTest {
             assertNotNull(p);
         }
 
-        // Measure row-serial
+        // Measure WSRowPreparedStatement row-serial
         long rowSerialNs = 0;
         for (int r = 0; r < measureRounds; r++) {
             long t0 = System.nanoTime();
-            byte[] p = rowSerialSerialize(rows);
+            int size = wsRowPayloadBytes(rows);
             rowSerialNs += System.nanoTime() - t0;
-            assertNotNull(p);
+            assertTrue("wsRowPayloadBytes must return a positive size", size > 0);
         }
 
         long avgColumnarUs = columnarNs / measureRounds / 1_000;
@@ -300,11 +341,9 @@ public class WsStmt2SerializationPerfCompareTest {
 
     @Test
     public void testVarWidthPayloadSize_rowSerialComparison() throws Exception {
-        // row-serial sends values in-line without a length array overhead.
-        // columnar adds a per-row length[] array (4 bytes each) but groups by column.
+        // Columnar adds a per-row length[] array (4 bytes each) but groups by column.
         // For N=100 rows of 5-byte strings:
         //   columnar block overhead per row: 1(null) + 4(length) = 5 extra bytes / row
-        //   row-serial: just the 5 bytes + 2(len16) per row in typical wire formats
         // This test validates that the columnar payload length matches the formula.
 
         int rows = 100;
