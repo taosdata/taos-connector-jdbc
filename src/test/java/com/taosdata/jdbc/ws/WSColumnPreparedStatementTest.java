@@ -12,6 +12,7 @@ import org.mockito.Mockito;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -392,5 +393,93 @@ public class WSColumnPreparedStatementTest {
     public void noFields_rowCountStartsAtZero() {
         WSColumnPreparedStatement stmt = buildStmt(new ArrayList<>());
         assertEquals(0, stmt.getExpectedRowCount());
+    }
+
+    // -----------------------------------------------------------------------
+    // setObject(Types.TIMESTAMP, LocalDateTime) – no recursion, stages correctly
+    // -----------------------------------------------------------------------
+
+    @Test
+    public void setObject_localDateTimeWithTimestampType_noRecursion_stagesRow() throws Exception {
+        List<Field> fields = new ArrayList<>();
+        fields.add(makeField((byte) FieldBindType.TAOS_FIELD_COL.getValue(),
+                (byte) TSDB_DATA_TYPE_TIMESTAMP, (byte) 0));
+
+        WSColumnPreparedStatement stmt = buildStmt(fields);
+        LocalDateTime ldt = LocalDateTime.of(2024, 6, 1, 12, 0, 0);
+
+        // Must not throw StackOverflowError (infinite recursion in old code)
+        stmt.setObject(1, ldt, Types.TIMESTAMP);
+        stmt.addBatch();
+
+        assertEquals(1, stmt.getExpectedRowCount());
+        assertEquals(1, bufRowCount(stmt, 0));
+    }
+
+    @Test
+    public void setObject_localDateTimeWithoutSqlType_stagesRow() throws Exception {
+        List<Field> fields = new ArrayList<>();
+        fields.add(makeField((byte) FieldBindType.TAOS_FIELD_COL.getValue(),
+                (byte) TSDB_DATA_TYPE_TIMESTAMP, (byte) 0));
+
+        WSColumnPreparedStatement stmt = buildStmt(fields);
+        LocalDateTime ldt = LocalDateTime.of(2024, 6, 1, 12, 0, 0);
+
+        stmt.setObject(1, ldt);
+        stmt.addBatch();
+
+        assertEquals(1, stmt.getExpectedRowCount());
+        assertEquals(1, bufRowCount(stmt, 0));
+    }
+
+    // -----------------------------------------------------------------------
+    // clearBatch – drops batched rows, preserves current-row staging
+    // -----------------------------------------------------------------------
+
+    @Test
+    public void clearBatch_dropsBatchedRows_resetsCountAndBuffers() throws Exception {
+        List<Field> fields = new ArrayList<>();
+        fields.add(makeField((byte) FieldBindType.TAOS_FIELD_COL.getValue(),
+                (byte) TSDB_DATA_TYPE_INT, (byte) 0));
+
+        WSColumnPreparedStatement stmt = buildStmt(fields);
+        stmt.setInt(1, 10);
+        stmt.addBatch();
+        stmt.setInt(1, 20);
+        stmt.addBatch();
+
+        assertEquals(2, stmt.getExpectedRowCount());
+
+        stmt.clearBatch();
+
+        assertEquals("clearBatch must reset row count to 0", 0, stmt.getExpectedRowCount());
+        assertEquals("clearBatch must reset column buffer", 0, bufRowCount(stmt, 0));
+    }
+
+    @Test
+    public void clearBatch_preservesCurrentRowStaging() throws Exception {
+        List<Field> fields = new ArrayList<>();
+        fields.add(makeField((byte) FieldBindType.TAOS_FIELD_COL.getValue(),
+                (byte) TSDB_DATA_TYPE_INT, (byte) 0));
+
+        WSColumnPreparedStatement stmt = buildStmt(fields);
+
+        // Batch two rows
+        stmt.setInt(1, 10);
+        stmt.addBatch();
+        stmt.setInt(1, 20);
+        stmt.addBatch();
+
+        // Stage a new value (not yet committed to batch)
+        stmt.setInt(1, 99);
+
+        // Clear the batch (drops the two committed rows)
+        stmt.clearBatch();
+        assertEquals(0, stmt.getExpectedRowCount());
+
+        // The staged value (99) must survive clearBatch; flushing it should produce one row
+        stmt.addBatch();
+        assertEquals("Staged value must survive clearBatch", 1, stmt.getExpectedRowCount());
+        assertEquals(1, bufRowCount(stmt, 0));
     }
 }

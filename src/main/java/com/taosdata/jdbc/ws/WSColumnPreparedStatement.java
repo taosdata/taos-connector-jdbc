@@ -550,7 +550,14 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements Prepar
                 } else if (x instanceof Time) {
                     setTime(parameterIndex, (Time) x);
                 } else if (x instanceof LocalDateTime) {
-                    setObject(parameterIndex, x, Types.TIMESTAMP);
+                    LocalDateTime ldt = (LocalDateTime) x;
+                    if (zoneId == null) {
+                        setTimestamp(parameterIndex, Timestamp.valueOf(ldt));
+                    } else {
+                        ZonedDateTime zdt = ldt.atZone(zoneId);
+                        long ts = DateTimeUtils.toLong(zdt.toInstant(), stmtInfo.getPrecision());
+                        stageTimestamp(parameterIndex, ts);
+                    }
                 } else if (x instanceof Instant) {
                     long ts = DateTimeUtils.toLong((Instant) x, stmtInfo.getPrecision());
                     stageTimestamp(parameterIndex, ts);
@@ -819,6 +826,20 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements Prepar
     public void addBatch() throws SQLException {
         flushCurrentRow();
         expectedRowCount++;
+    }
+
+    /**
+     * Drops rows already accumulated in column buffers via {@link #addBatch()},
+     * but preserves any current-row staged parameter values that have not yet
+     * been committed to the batch.
+     */
+    @Override
+    public void clearBatch() throws SQLException {
+        if (isClosed()) {
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
+        }
+        expectedRowCount = 0;
+        columnBuffers = allocateColumnBuffers();
     }
 
     @Override

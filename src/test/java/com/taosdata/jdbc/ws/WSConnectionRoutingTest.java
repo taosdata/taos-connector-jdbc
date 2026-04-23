@@ -217,4 +217,54 @@ public class WSConnectionRoutingTest {
                     stmt instanceof TSWSPreparedStatement);
         }
     }
+
+    // -----------------------------------------------------------------------
+    // Test: insert with TAOS_FIELD_QUERY field + supported server → still WSColumnPreparedStatement
+    // Verifies routing is version-based only; there is no shape gate for query fields.
+    // -----------------------------------------------------------------------
+
+    @Test
+    public void insert_bindExecServer_withQueryField_stillRoutesToWSColumnPreparedStatement()
+            throws Exception {
+        // Build a prepare response that includes a TAOS_FIELD_QUERY field
+        Stmt2Resp initResp = new Stmt2Resp();
+        initResp.setCode(0);
+        initResp.setStmtId(44L);
+
+        List<Field> fields = new ArrayList<>();
+        Field queryField = new Field();
+        queryField.setBindType((byte) FieldBindType.TAOS_FIELD_QUERY.getValue());
+        queryField.setFieldType((byte) TSDB_DATA_TYPE_INT);
+        queryField.setPrecision((byte) 0);
+        fields.add(queryField);
+
+        Field tsField = new Field();
+        tsField.setBindType((byte) FieldBindType.TAOS_FIELD_COL.getValue());
+        tsField.setFieldType((byte) TSDB_DATA_TYPE_TIMESTAMP);
+        tsField.setPrecision((byte) 0);
+        fields.add(tsField);
+
+        Stmt2PrepareResp prepResp = new Stmt2PrepareResp();
+        prepResp.setCode(0);
+        prepResp.setStmtId(44L);
+        prepResp.setInsert(true);
+        prepResp.setFields(fields);
+
+        Mockito.when(transport.send(any(Request.class))).thenReturn(initResp);
+        Mockito.when(transport.send(any(Request.class), anyBoolean(), anyLong()))
+                .thenReturn(prepResp);
+
+        Mockito.when(param.getPbsMode()).thenReturn(null);
+        Mockito.when(param.getAsyncWrite()).thenReturn(null);
+
+        WSConnection conn = makeConnection("3.3.0.0");
+
+        try (PreparedStatement stmt = conn.prepareStatement("INSERT INTO t VALUES (?,?)")) {
+            assertNotNull(stmt);
+            assertTrue(
+                    "Routing must be version-based only; TAOS_FIELD_QUERY shape must not gate "
+                            + "WSColumnPreparedStatement. Got: " + stmt.getClass().getSimpleName(),
+                    stmt instanceof WSColumnPreparedStatement);
+        }
+    }
 }
