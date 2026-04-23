@@ -596,4 +596,78 @@ public class AbsWSPreparedStatementColumnDataTest {
         verify(transport, never()).send(
                 eq(Action.STMT2_BIND_EXEC.getAction()), anyLong(), any(ByteBuf.class), anyBoolean(), anyLong());
     }
+
+    // -----------------------------------------------------------------------
+    // Task-4 correctness fix: bind-exec insert goes through retry layer, not
+    // directly via transport.send
+    // -----------------------------------------------------------------------
+
+    /**
+     * INSERT column-data path on a bind-exec-capable server must recover from a
+     * transient failure by retrying through the {@link WSRetryableStmt} layer.
+     *
+     * <p>If the path called {@code transport.send} directly (as the previous
+     * buggy implementation did), a single failure would propagate as an exception
+     * immediately. Going through {@code writeBlockWithRetrySync} means the
+     * retry-loop re-attempts the call, so the overall execute succeeds.
+     */
+    @Test
+    public void insertColumnData_onCapableServer_retriesOnTransientFailure() throws Exception {
+        List<Field> fields = new ArrayList<>();
+        fields.add(makeField((byte) FieldBindType.TAOS_FIELD_COL.getValue(), (byte) TSDB_DATA_TYPE_INT));
+
+        // Configure param for auto-connect with enough retries
+        Mockito.when(param.isEnableAutoConnect()).thenReturn(true);
+        Mockito.when(param.getRetryTimes()).thenReturn(3);
+
+        TSWSPreparedStatement stmt = buildStmt(fields, /* bindExecServer= */ true);
+
+        stmt.setInt(0, Arrays.asList(7));
+        stmt.columnDataAddBatch();
+
+        // First attempt: simulate transient connection-closed failure
+        Stmt2ExecResp successResp = new Stmt2ExecResp();
+        successResp.setCode(0);
+        successResp.setAffected(1);
+        when(transport.send(
+                eq(Action.STMT2_BIND_EXEC.getAction()), anyLong(), any(ByteBuf.class), anyBoolean(), anyLong()))
+                .thenThrow(new java.sql.SQLException("connection closed", null,
+                        com.taosdata.jdbc.TSDBErrorNumbers.ERROR_CONNECTION_CLOSED))
+                .thenReturn(successResp);
+
+        // If path goes through WSRetryableStmt.writeBlockWithRetrySync the retry will
+        // succeed.  If it were direct transport.send, the exception would propagate.
+        stmt.columnDataExecuteBatch();
+
+        // Verify transport.send was called twice: once failing, once succeeding
+        verify(transport, times(2)).send(
+                eq(Action.STMT2_BIND_EXEC.getAction()), anyLong(), any(ByteBuf.class), anyBoolean(), anyLong());
+    }
+
+    /**
+     * Confirms that the constructor-wide {@code useBindExec} flag on
+     * {@link WSRetryableStmt} is {@code false} even on a bind-exec-capable server.
+     *
+     * <p>The per-call bind mode is injected via
+     * {@link WSRetryableStmt#writeBlockWithRetrySync(ByteBuf, boolean)} so that SELECT
+     * prepared statements sharing the same server are never accidentally routed
+     * through {@code STMT2_BIND_EXEC} by the generic retry mechanism.
+     */
+    @Test
+    public void retryableStmt_useBindExecFlag_isFalse_forColumnDataStmt() throws Exception {
+        List<Field> fields = new ArrayList<>();
+        fields.add(makeField((byte) FieldBindType.TAOS_FIELD_COL.getValue(), (byte) TSDB_DATA_TYPE_INT));
+
+        TSWSPreparedStatement stmt = buildStmt(fields, /* bindExecServer= */ true);
+
+        // The base WSRetryableStmt flag must be false; bind-exec is chosen per-call
+        assertFalse(
+                "WSRetryableStmt.useBindExec must remain false to isolate SELECT paths; "
+                        + "bind-exec is selected per write invocation in executeInsertImplWithBindExec",
+                stmt.isUsingBindExec());
+
+        // But the connection-level routing flag should be true
+        assertTrue("connection should be flagged as bind-exec capable",
+                stmt.isUsingBindExecForTesting());
+    }
 }

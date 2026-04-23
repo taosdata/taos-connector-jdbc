@@ -10,8 +10,6 @@ import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.utils.BlobUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.ReqId;
-import com.taosdata.jdbc.ws.entity.Action;
-import com.taosdata.jdbc.ws.entity.Code;
 import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnBindSerializer;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnFieldBuffer;
@@ -1132,13 +1130,13 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
      * Bind-exec path for column-data inserts.
      *
      * <p>Converts the {@code tableInfoMap} (populated by the column-data API)
-     * into the shared {@link Stmt2ColumnFieldBuffer} format and sends it via
-     * the {@code stmt2_bind_exec} action directly on the transport.
+     * into the shared {@link Stmt2ColumnFieldBuffer} format and sends it through
+     * {@link WSRetryableStmt#writeBlockWithRetrySync(ByteBuf, boolean)} with
+     * {@code useBindExec=true}, so that retry/reconnect semantics are preserved.
      *
-     * <p>This method bypasses {@link #writeBlockWithRetrySync} so that the
-     * {@code STMT2_BIND_EXEC} action is always used regardless of the
-     * {@code WSRetryableStmt.useBindExec} constructor flag (which is now
-     * always {@code false} to keep SELECT prepared statements on the legacy path).
+     * <p>The constructor-wide {@code useBindExec} flag is intentionally left
+     * {@code false} so that SELECT prepared statements on the same capable server
+     * are never routed through the bind-exec code path.
      */
     private int executeInsertImplWithBindExec() throws SQLException {
         Stmt2ColumnFieldBuffer[] columnBuffers;
@@ -1150,20 +1148,17 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
 
         byte[] payload = Stmt2ColumnBindSerializer.serialize(columnBuffers);
 
-        long reqId = ReqId.getReqID();
+        // Build the 16-byte header (reqId placeholder + stmtId placeholder) that
+        // WSRetryableStmt.modifyStmtIdAndReqId will overwrite on each retry attempt,
+        // followed by the serialized column-data payload.
         ByteBuf rawBuf = PooledByteBufAllocator.DEFAULT.directBuffer(16 + payload.length);
-        rawBuf.writeLongLE(reqId);
-        rawBuf.writeLongLE(stmtInfo.getStmtId());
+        rawBuf.writeLongLE(0L); // reqId placeholder – overwritten by executeWithRetry
+        rawBuf.writeLongLE(0L); // stmtId placeholder – overwritten by executeWithRetry
         rawBuf.writeBytes(payload);
 
         try {
-            Stmt2ExecResp resp = (Stmt2ExecResp) transport.send(
-                    Action.STMT2_BIND_EXEC.getAction(), reqId, rawBuf, false, this.getQueryTimeoutInMs());
-            if (Code.SUCCESS.getCode() != resp.getCode()) {
-                throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
-            }
-            this.affectedRows = resp.getAffected();
-            batchInsertedRowsInner.addAndGet(this.affectedRows);
+            writeBlockWithRetrySync(rawBuf, true);
+            this.affectedRows = batchInsertedRowsInner.getAndSet(0);
         } finally {
             rawBuf.release();
         }

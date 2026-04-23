@@ -106,16 +106,34 @@ public class WSRetryableStmt extends WSStatement {
     public void writeBlockWithRetry(ByteBuf rawBlock) throws SQLException {
         Utils.retainByteBuf(rawBlock);
         try {
-            executeWithRetry(rawBlock, OPERATION_TYPE_WRITE, param.isEnableAutoConnect());
+            executeWithRetry(rawBlock, OPERATION_TYPE_WRITE, param.isEnableAutoConnect(), this.useBindExec);
         } finally {
             Utils.releaseByteBuf(rawBlock);
         }
     }
 
     public void writeBlockWithRetrySync(ByteBuf rawBlock) throws SQLException {
+        writeBlockWithRetrySync(rawBlock, this.useBindExec);
+    }
+
+    /**
+     * Sync write with an explicit per-call bind mode, bypassing the constructor-wide
+     * {@code useBindExec} flag.  Callers that need bind-exec for only one execution
+     * path (e.g. the column-data insert path in {@link AbsWSPreparedStatement}) can
+     * pass {@code true} here without activating bind-exec globally for the statement.
+     *
+     * <p>The caller is responsible for allocating {@code rawBlock} with the header
+     * layout expected by {@link #modifyStmtIdAndReqId}: reqId (8 bytes LE) at offset 0
+     * followed by stmtId (8 bytes LE) at offset 8, then the payload.
+     *
+     * @param rawBlock   the raw binary payload to send
+     * @param useBindExec {@code true} to send via {@code STMT2_BIND_EXEC};
+     *                   {@code false} to use the legacy {@code STMT2_BIND} + {@code STMT2_EXEC}
+     */
+    protected void writeBlockWithRetrySync(ByteBuf rawBlock, boolean useBindExec) throws SQLException {
         Utils.retainByteBuf(rawBlock);
         try {
-            executeWithRetry(rawBlock, OPERATION_TYPE_WRITE, param.isEnableAutoConnect());
+            executeWithRetry(rawBlock, OPERATION_TYPE_WRITE, param.isEnableAutoConnect(), useBindExec);
             if (lastError.get() != null) {
                 SQLException e = lastError.get();
                 lastError.set(null);
@@ -129,7 +147,7 @@ public class WSRetryableStmt extends WSStatement {
     public ResultResp queryWithRetry(ByteBuf rawBlock) throws SQLException {
         Utils.retainByteBuf(rawBlock);
         try {
-            ResultResp resultResp = (ResultResp) executeWithRetry(rawBlock, OPERATION_TYPE_QUERY, param.isEnableAutoConnect());
+            ResultResp resultResp = (ResultResp) executeWithRetry(rawBlock, OPERATION_TYPE_QUERY, param.isEnableAutoConnect(), this.useBindExec);
             if (lastError.get() != null) {
                 SQLException e = lastError.get();
                 lastError.set(null);
@@ -142,6 +160,10 @@ public class WSRetryableStmt extends WSStatement {
     }
 
     private Object executeWithRetry(ByteBuf orgRawBlock, int operationType, boolean isRetry) throws SQLException {
+        return executeWithRetry(orgRawBlock, operationType, isRetry, this.useBindExec);
+    }
+
+    private Object executeWithRetry(ByteBuf orgRawBlock, int operationType, boolean isRetry, boolean useBindExec) throws SQLException {
         ByteBuf rawBlock = orgRawBlock.duplicate();
         int originalReaderIndex = orgRawBlock.readerIndex();
         int originalWriterIndex = orgRawBlock.writerIndex();
