@@ -1101,18 +1101,19 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
     }
 
 
+    /**
+     * Executes a prepared-statement insert using the legacy STMT2_BIND + STMT2_EXEC protocol.
+     *
+     * <p>This method is the execution path for ordinary prepared-statement inserts triggered
+     * by {@link #executeUpdate()} and {@link #executeBatch()}.  It <em>always</em> uses the
+     * legacy path regardless of server capability; bind-exec is reserved exclusively for
+     * {@link #columnDataExecuteInsert()}, which is called only from the column-data API.
+     */
     private int executeInsertImpl() throws SQLException {
         if (tableInfoMap.isEmpty()) {
             throw new SQLException("batch data is empty");
         }
 
-        // Dynamically choose bind-exec only for the column-data insert path on
-        // capable servers; SELECT statements and unsupported servers keep the legacy path.
-        if (connectionSupportsBindExec()) {
-            return executeInsertImplWithBindExec();
-        }
-
-        // Legacy path: STMT2_BIND + STMT2_EXEC via binary block
         ByteBuf rawBlock;
         long reqId = ReqId.getReqID();
         try {
@@ -1124,6 +1125,24 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
         writeBlockWithRetrySync(rawBlock);
         this.affectedRows = batchInsertedRowsInner.getAndSet(0);
         return this.affectedRows;
+    }
+
+    /**
+     * Executes the column-data insert batch.
+     *
+     * <p>This is the <em>only</em> code path that may choose {@code STMT2_BIND_EXEC} on
+     * capable servers.  Ordinary prepared-statement inserts ({@link #executeUpdate()} /
+     * {@link #executeBatch()}) always go through {@link #executeInsertImpl()}, which
+     * unconditionally uses the legacy STMT2_BIND + STMT2_EXEC path.
+     */
+    private int columnDataExecuteInsert() throws SQLException {
+        if (tableInfoMap.isEmpty()) {
+            throw new SQLException("batch data is empty");
+        }
+        if (connectionSupportsBindExec()) {
+            return executeInsertImplWithBindExec();
+        }
+        return executeInsertImpl();
     }
 
     /**
@@ -1373,7 +1392,7 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
 
     @Override
     public void columnDataExecuteBatch() throws SQLException {
-        executeInsertImpl();
+        columnDataExecuteInsert();
     }
 
     public void columnDataCloseBatch() throws SQLException {
@@ -1405,9 +1424,9 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
     /**
      * Returns {@code true} when the current connection is a {@link WSConnection} that supports
      * {@code STMT2_BIND_EXEC}.  Used to decide the execution path in
-     * {@link #executeInsertImpl()} at call time rather than at construction time, so that
-     * SELECT prepared statements on the same capable server are never routed through
-     * the bind-exec code path.
+     * {@link #columnDataExecuteInsert()} at call time rather than at construction time, so that
+     * ordinary prepared-statement inserts and SELECT prepared statements on the same capable
+     * server are never routed through the bind-exec code path.
      */
     private boolean connectionSupportsBindExec() {
         try {

@@ -670,4 +670,98 @@ public class AbsWSPreparedStatementColumnDataTest {
         assertTrue("connection should be flagged as bind-exec capable",
                 stmt.isUsingBindExecForTesting());
     }
+
+    // -----------------------------------------------------------------------
+    // Task-4 scope fix: ordinary PreparedStatement inserts must NOT use bind-exec
+    // -----------------------------------------------------------------------
+
+    /**
+     * {@link AbsWSPreparedStatement#executeUpdate()} on a bind-exec-capable server must
+     * send the legacy {@code stmt2_bind} + {@code stmt2_exec} protocol, not
+     * {@code stmt2_bind_exec}.
+     *
+     * <p>This is the primary regression guard for the Task-4 scope fix: before the fix
+     * {@code executeInsertImpl()} checked {@code connectionSupportsBindExec()} and switched
+     * all insert execution—including ordinary {@code executeUpdate()}—to bind-exec on
+     * capable servers.
+     */
+    @Test
+    public void executeUpdate_onCapableServer_usesLegacyBindPath() throws Exception {
+        // One COL field (INT) for a normal (non-supertable) insert.
+        List<Field> fields = new ArrayList<>();
+        fields.add(makeField((byte) FieldBindType.TAOS_FIELD_COL.getValue(), (byte) TSDB_DATA_TYPE_INT));
+
+        // Build against a bind-exec-capable server.
+        TSWSPreparedStatement stmt = buildStmt(fields, /* bindExecServer= */ true);
+
+        // Bind one value via the standard JDBC parameter API (populates colOrderedMap).
+        stmt.setInt(1, 42);
+
+        // Stub transport for the two-step legacy protocol.
+        Stmt2Resp bindResp = new Stmt2Resp();
+        bindResp.setCode(0);
+        bindResp.setStmtId(1L);
+        Stmt2ExecResp execResp = new Stmt2ExecResp();
+        execResp.setCode(0);
+        execResp.setAffected(1);
+
+        when(transport.send(
+                eq(Action.STMT2_BIND.getAction()), anyLong(), any(ByteBuf.class), anyBoolean(), anyLong()))
+                .thenReturn(bindResp);
+        when(transport.send(any(com.taosdata.jdbc.ws.entity.Request.class), anyBoolean(), anyLong()))
+                .thenReturn(execResp);
+
+        stmt.executeUpdate();
+
+        // Must have used the legacy STMT2_BIND action (not bind-exec).
+        verify(transport, times(1)).send(
+                eq(Action.STMT2_BIND.getAction()), anyLong(), any(ByteBuf.class), anyBoolean(), anyLong());
+
+        // Must NOT have used STMT2_BIND_EXEC.
+        verify(transport, never()).send(
+                eq(Action.STMT2_BIND_EXEC.getAction()), anyLong(), any(ByteBuf.class), anyBoolean(), anyLong());
+    }
+
+    /**
+     * {@link AbsWSPreparedStatement#executeBatch()} on a bind-exec-capable server must
+     * also use the legacy {@code stmt2_bind} + {@code stmt2_exec} protocol.
+     *
+     * <p>Complements {@link #executeUpdate_onCapableServer_usesLegacyBindPath()} by
+     * covering the batch execution path.
+     */
+    @Test
+    public void executeBatch_onCapableServer_usesLegacyBindPath() throws Exception {
+        List<Field> fields = new ArrayList<>();
+        fields.add(makeField((byte) FieldBindType.TAOS_FIELD_COL.getValue(), (byte) TSDB_DATA_TYPE_INT));
+
+        TSWSPreparedStatement stmt = buildStmt(fields, /* bindExecServer= */ true);
+
+        // Bind and queue one batch row via the standard JDBC parameter API.
+        stmt.setInt(1, 99);
+        stmt.addBatch();
+
+        // Stub transport for the two-step legacy protocol.
+        Stmt2Resp bindResp = new Stmt2Resp();
+        bindResp.setCode(0);
+        bindResp.setStmtId(1L);
+        Stmt2ExecResp execResp = new Stmt2ExecResp();
+        execResp.setCode(0);
+        execResp.setAffected(1);
+
+        when(transport.send(
+                eq(Action.STMT2_BIND.getAction()), anyLong(), any(ByteBuf.class), anyBoolean(), anyLong()))
+                .thenReturn(bindResp);
+        when(transport.send(any(com.taosdata.jdbc.ws.entity.Request.class), anyBoolean(), anyLong()))
+                .thenReturn(execResp);
+
+        stmt.executeBatch();
+
+        // Must have used the legacy STMT2_BIND action.
+        verify(transport, times(1)).send(
+                eq(Action.STMT2_BIND.getAction()), anyLong(), any(ByteBuf.class), anyBoolean(), anyLong());
+
+        // Must NOT have used STMT2_BIND_EXEC.
+        verify(transport, never()).send(
+                eq(Action.STMT2_BIND_EXEC.getAction()), anyLong(), any(ByteBuf.class), anyBoolean(), anyLong());
+    }
 }
