@@ -11,8 +11,12 @@ import com.taosdata.jdbc.utils.BlobUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.ws.entity.Request;
+import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnBindSerializer;
+import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnFieldBuffer;
+import com.taosdata.jdbc.ws.stmt2.Stmt2FieldMeta;
 import com.taosdata.jdbc.ws.stmt2.entity.*;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
 
 import java.io.InputStream;
 import java.io.Reader;
@@ -57,7 +61,8 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
                                   String sql,
                                   Long instanceId,
                                   Stmt2PrepareResp prepareResp) {
-        super(connection, param, database, transport, instanceId, new StmtInfo(prepareResp, sql), new AtomicInteger());
+        // Pass useBindExec=true so that WSRetryableStmt enables bind-exec when the server supports it.
+        super(connection, param, database, transport, instanceId, new StmtInfo(prepareResp, sql), new AtomicInteger(), true);
         this.tableInfo = TableInfo.getEmptyTableInfo();
     }
     @Override
@@ -1099,6 +1104,11 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
             throw new SQLException("batch data is empty");
         }
 
+        if (isUsingBindExec()) {
+            return executeInsertImplWithBindExec();
+        }
+
+        // Legacy path: STMT2_BIND + STMT2_EXEC via binary block
         ByteBuf rawBlock;
         long reqId = ReqId.getReqID();
         try {
@@ -1111,6 +1121,230 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
         this.affectedRows = batchInsertedRowsInner.getAndSet(0);
         return this.affectedRows;
     }
+
+    /**
+     * Bind-exec path for column-data inserts.
+     *
+     * <p>Converts the {@code tableInfoMap} (populated by the column-data API)
+     * into the shared {@link Stmt2ColumnFieldBuffer} format and sends it via
+     * the {@code stmt2_bind_exec} action.
+     */
+    private int executeInsertImplWithBindExec() throws SQLException {
+        Stmt2ColumnFieldBuffer[] columnBuffers;
+        try {
+            columnBuffers = buildColumnBuffersFromTableInfoMap();
+        } finally {
+            this.clearParameters();
+        }
+
+        byte[] payload = Stmt2ColumnBindSerializer.serialize(columnBuffers);
+
+        // Build the ByteBuf: 16-byte header (reqId + stmtId placeholders) + columnar payload.
+        // WSRetryableStmt.modifyStmtIdAndReqId() patches the first 16 bytes before sending.
+        ByteBuf rawBuf = PooledByteBufAllocator.DEFAULT.directBuffer(16 + payload.length);
+        rawBuf.writeLongLE(0L); // reqId placeholder
+        rawBuf.writeLongLE(0L); // stmtId placeholder
+        rawBuf.writeBytes(payload);
+
+        try {
+            this.affectedRows = 0;
+            writeBlockWithRetrySync(rawBuf);
+            this.affectedRows = batchInsertedRowsInner.getAndSet(0);
+        } finally {
+            rawBuf.release();
+        }
+
+        return this.affectedRows;
+    }
+
+    /**
+     * Converts the {@code tableInfoMap} entries (column-data API representation) into an array of
+     * {@link Stmt2ColumnFieldBuffer}s suitable for {@link Stmt2ColumnBindSerializer}.
+     *
+     * <p>Iterates each table in insertion order.  For supertable inserts the table-name field
+     * buffer is populated by repeating the table name once per row.  Tag buffers are likewise
+     * repeated once per row so that the total row count is consistent across all field buffers.
+     * Column buffers receive each row value in order.
+     */
+    private Stmt2ColumnFieldBuffer[] buildColumnBuffersFromTableInfoMap() throws SQLException {
+        List<Field> fields = stmtInfo.getFields();
+        if (fields == null || fields.isEmpty()) {
+            throw new SQLException(
+                    "field metadata not available for bind-exec conversion; "
+                            + "statement may not have been prepared with a server response");
+        }
+
+        int n = fields.size();
+        Stmt2ColumnFieldBuffer[] buffers = new Stmt2ColumnFieldBuffer[n];
+        for (int i = 0; i < n; i++) {
+            buffers[i] = new Stmt2ColumnFieldBuffer(Stmt2FieldMeta.fromField(fields.get(i)));
+        }
+
+        // Pre-compute 0-based ordinals for TAG and COL fields so we can index into
+        // tableInfo.tagInfo and tableInfo.dataList respectively.
+        int[] tagOrdinalForField = new int[n];
+        int[] colOrdinalForField = new int[n];
+        int tagOrd = 0, colOrd = 0;
+        for (int i = 0; i < n; i++) {
+            byte bt = fields.get(i).getBindType();
+            if (bt == (byte) FieldBindType.TAOS_FIELD_TAG.getValue()) {
+                tagOrdinalForField[i] = tagOrd++;
+            } else if (bt == (byte) FieldBindType.TAOS_FIELD_COL.getValue()) {
+                colOrdinalForField[i] = colOrd++;
+            } else {
+                tagOrdinalForField[i] = -1;
+                colOrdinalForField[i] = -1;
+            }
+        }
+
+        int tbNameIdx = stmtInfo.getToBeBindTableNameIndex();
+        int precision = stmtInfo.getPrecision();
+
+        for (TableInfo table : tableInfoMap.values()) {
+            List<ColumnInfo> dataList = table.getDataList();
+
+            // Validate column count matches the prepared schema
+            if (stmtInfo.getToBeBindColCount() > 0 && dataList.size() != stmtInfo.getToBeBindColCount()) {
+                throw new SQLException(
+                        "table column size does not match: expected "
+                                + stmtInfo.getToBeBindColCount() + " but got " + dataList.size());
+            }
+
+            // Determine number of data rows for this table
+            int numRows = dataList.isEmpty() ? 1 : dataList.get(0).getDataList().size();
+
+            // Resolve table name string (only needed when a TBNAME field exists)
+            String tableNameStr = null;
+            if (tbNameIdx >= 0) {
+                ByteBuffer tb = table.getTableName();
+                tableNameStr = new String(tb.array(), 0, tb.capacity(), StandardCharsets.UTF_8);
+            }
+
+            for (int i = 0; i < n; i++) {
+                byte bt = fields.get(i).getBindType();
+                Stmt2ColumnFieldBuffer buf = buffers[i];
+
+                if (bt == (byte) FieldBindType.TAOS_FIELD_TBNAME.getValue()) {
+                    // Repeat the table name for every row in this table
+                    for (int r = 0; r < numRows; r++) {
+                        buf.appendTbName(tableNameStr);
+                    }
+                } else if (bt == (byte) FieldBindType.TAOS_FIELD_TAG.getValue()) {
+                    int ord = tagOrdinalForField[i];
+                    List<ColumnInfo> tagInfo = table.getTagInfo();
+                    if (ord >= tagInfo.size()) {
+                        throw new SQLException(
+                                "tag ordinal " + ord + " out of range (tagInfo.size()=" + tagInfo.size() + ")");
+                    }
+                    ColumnInfo tagCol = tagInfo.get(ord);
+                    Object tagVal = tagCol.getDataList().isEmpty() ? null : tagCol.getDataList().get(0);
+                    // Repeat the single tag value for every row in this table
+                    for (int r = 0; r < numRows; r++) {
+                        appendObjectToBuffer(buf, tagVal, tagCol.getType(), precision);
+                    }
+                } else if (bt == (byte) FieldBindType.TAOS_FIELD_COL.getValue()) {
+                    int ord = colOrdinalForField[i];
+                    if (ord >= dataList.size()) {
+                        throw new SQLException(
+                                "col ordinal " + ord + " out of range (dataList.size()=" + dataList.size() + ")");
+                    }
+                    ColumnInfo colInfo = dataList.get(ord);
+                    for (Object val : colInfo.getDataList()) {
+                        appendObjectToBuffer(buf, val, colInfo.getType(), precision);
+                    }
+                }
+            }
+        }
+
+        return buffers;
+    }
+
+    /**
+     * Appends a single value from the column-data API representation into a
+     * {@link Stmt2ColumnFieldBuffer}.
+     *
+     * <p>Handles all value types produced by the tag/column setters in this class.
+     * A {@code null} value always results in a null row.
+     */
+    private static void appendObjectToBuffer(Stmt2ColumnFieldBuffer buf,
+                                             Object value,
+                                             int fieldType,
+                                             int precision) throws SQLException {
+        if (value == null) {
+            buf.appendNull();
+            return;
+        }
+
+        switch (fieldType) {
+            case TSDB_DATA_TYPE_BOOL:
+                buf.appendBool((Boolean) value);
+                break;
+            case TSDB_DATA_TYPE_TINYINT:
+                buf.appendTinyInt(((Number) value).byteValue());
+                break;
+            case TSDB_DATA_TYPE_UTINYINT:
+                buf.appendUTinyInt(((Number) value).byteValue());
+                break;
+            case TSDB_DATA_TYPE_SMALLINT:
+                buf.appendSmallInt(((Number) value).shortValue());
+                break;
+            case TSDB_DATA_TYPE_USMALLINT:
+                buf.appendUSmallInt(((Number) value).shortValue());
+                break;
+            case TSDB_DATA_TYPE_INT:
+                buf.appendInt(((Number) value).intValue());
+                break;
+            case TSDB_DATA_TYPE_UINT:
+                buf.appendUInt(((Number) value).intValue());
+                break;
+            case TSDB_DATA_TYPE_BIGINT:
+                buf.appendBigInt(((Number) value).longValue());
+                break;
+            case TSDB_DATA_TYPE_UBIGINT:
+                if (value instanceof BigInteger) {
+                    buf.appendUBigInt(((BigInteger) value).longValue());
+                } else {
+                    buf.appendUBigInt(((Number) value).longValue());
+                }
+                break;
+            case TSDB_DATA_TYPE_FLOAT:
+                buf.appendFloat(((Number) value).floatValue());
+                break;
+            case TSDB_DATA_TYPE_DOUBLE:
+                buf.appendDouble(((Number) value).doubleValue());
+                break;
+            case TSDB_DATA_TYPE_TIMESTAMP:
+                if (value instanceof Long) {
+                    buf.appendTimestamp((Long) value);
+                } else if (value instanceof Instant) {
+                    buf.appendTimestamp(DateTimeUtils.toLong((Instant) value, precision));
+                } else if (value instanceof Timestamp) {
+                    buf.appendTimestamp(DateTimeUtils.toLong(((Timestamp) value).toInstant(), precision));
+                } else if (value instanceof OffsetDateTime) {
+                    buf.appendTimestamp(DateTimeUtils.toLong((OffsetDateTime) value, precision));
+                } else if (value instanceof ZonedDateTime) {
+                    buf.appendTimestamp(DateTimeUtils.toLong((ZonedDateTime) value, precision));
+                } else {
+                    throw new SQLException(
+                            "Unsupported timestamp value type: " + value.getClass().getName());
+                }
+                break;
+            case TSDB_DATA_TYPE_BINARY:
+            case TSDB_DATA_TYPE_NCHAR:
+            case TSDB_DATA_TYPE_JSON:
+            case TSDB_DATA_TYPE_VARBINARY:
+            case TSDB_DATA_TYPE_GEOMETRY:
+            case TSDB_DATA_TYPE_BLOB:
+            case TSDB_DATA_TYPE_DECIMAL64:
+            case TSDB_DATA_TYPE_DECIMAL128:
+                buf.appendBytes((byte[]) value);
+                break;
+            default:
+                throw new SQLException(
+                        "Unsupported field type for bind-exec conversion: " + fieldType);
+        }
+    }
+
     private ResultResp executeQueryImpl() throws SQLException {
         if (tableInfoMap.isEmpty()) {
             throw new SQLException("batch data is empty");
@@ -1140,5 +1374,22 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
     @Override
     public void setTableName(String name) throws SQLException {
         this.tableInfo.setTableName(ByteBuffer.wrap(name.getBytes(StandardCharsets.UTF_8)));
+    }
+
+    // -----------------------------------------------------------------------
+    // Package-private test accessors
+    // -----------------------------------------------------------------------
+
+    /**
+     * Package-private, test-only: exposes the column-buffer conversion without clearing state.
+     * Only valid to call after populating tableInfoMap via the column-data API.
+     */
+    Stmt2ColumnFieldBuffer[] buildColumnBuffersForTesting() throws SQLException {
+        return buildColumnBuffersFromTableInfoMap();
+    }
+
+    /** Package-private, test-only: exposes the bind-exec routing flag. */
+    boolean isUsingBindExecForTesting() {
+        return isUsingBindExec();
     }
 }
