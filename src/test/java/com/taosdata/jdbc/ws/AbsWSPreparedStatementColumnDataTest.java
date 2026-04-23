@@ -3,9 +3,13 @@ package com.taosdata.jdbc.ws;
 import com.taosdata.jdbc.AbstractConnection;
 import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.common.ConnectionParam;
+import com.taosdata.jdbc.ws.entity.Action;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnFieldBuffer;
 import com.taosdata.jdbc.ws.stmt2.entity.Field;
+import com.taosdata.jdbc.ws.stmt2.entity.Stmt2ExecResp;
 import com.taosdata.jdbc.ws.stmt2.entity.Stmt2PrepareResp;
+import com.taosdata.jdbc.ws.stmt2.entity.Stmt2Resp;
+import io.netty.buffer.ByteBuf;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -18,9 +22,12 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
 import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for the column-data API path in {@link AbsWSPreparedStatement}.
@@ -466,5 +473,127 @@ public class AbsWSPreparedStatementColumnDataTest {
                 | ((buf[offset + 1] & 0xFF) << 8)
                 | ((buf[offset + 2] & 0xFF) << 16)
                 | ((buf[offset + 3] & 0xFF) << 24);
+    }
+
+    // -----------------------------------------------------------------------
+    // Task-4 regression: bind-exec routing must not leak into SELECT path
+    // -----------------------------------------------------------------------
+
+    /**
+     * INSERT column-data path on a bind-exec-capable server must send
+     * {@code stmt2_bind_exec}, not the legacy {@code stmt2_bind}.
+     *
+     * <p>This verifies the positive half of the routing fix: the column-data
+     * insert path still opts into the faster STMT2_BIND_EXEC action on capable
+     * servers.
+     */
+    @Test
+    public void insertColumnData_onCapableServer_sendsBindExecAction() throws Exception {
+        List<Field> fields = new ArrayList<>();
+        fields.add(makeField((byte) FieldBindType.TAOS_FIELD_COL.getValue(), (byte) TSDB_DATA_TYPE_INT));
+
+        TSWSPreparedStatement stmt = buildStmt(fields, /* bindExecServer= */ true);
+
+        // Stage one data row via the column-data API
+        stmt.setInt(0, Arrays.asList(42));
+        stmt.columnDataAddBatch();
+
+        // Stub transport: STMT2_BIND_EXEC returns success
+        Stmt2ExecResp bindExecResp = new Stmt2ExecResp();
+        bindExecResp.setCode(0);
+        bindExecResp.setAffected(1);
+        when(transport.send(
+                eq(Action.STMT2_BIND_EXEC.getAction()), anyLong(), any(ByteBuf.class), anyBoolean(), anyLong()))
+                .thenReturn(bindExecResp);
+
+        stmt.columnDataExecuteBatch();
+
+        // Must have called STMT2_BIND_EXEC exactly once
+        verify(transport, times(1)).send(
+                eq(Action.STMT2_BIND_EXEC.getAction()), anyLong(), any(ByteBuf.class), anyBoolean(), anyLong());
+
+        // Must NOT have fallen back to the legacy STMT2_BIND action
+        verify(transport, never()).send(
+                eq(Action.STMT2_BIND.getAction()), anyLong(), any(ByteBuf.class), anyBoolean(), anyLong());
+    }
+
+    /**
+     * A SELECT prepared statement on a bind-exec-capable server must NOT set the
+     * {@code useBindExec} flag in {@link WSRetryableStmt}.
+     *
+     * <p>This is the regression path: the previous implementation unconditionally
+     * passed {@code useBindExec=true} in the prepare-response constructor, which
+     * caused {@link WSRetryableStmt#queryWithRetry} to route the legacy-format
+     * SELECT payload through {@code STMT2_BIND_EXEC} on capable servers.
+     *
+     * <p>After the fix, the constructor never sets {@code useBindExec=true}; the
+     * bind-exec choice is deferred to execute time inside
+     * {@code executeInsertImpl()}, so SELECT paths are unaffected.
+     */
+    @Test
+    public void queryPreparedStatement_onCapableServer_doesNotSetUseBindExecFlag() throws Exception {
+        // Build a SELECT (non-insert) statement against a bind-exec-capable server.
+        Properties props = new Properties();
+        WSConnection wsConn = new WSConnection(
+                "jdbc:TAOS-RS://localhost:6041/testdb", props, transport, param, "3.1.4.10");
+
+        Stmt2PrepareResp selectResp = new Stmt2PrepareResp();
+        selectResp.setInsert(false); // SELECT
+        selectResp.setStmtId(1L);
+        // No fields; fieldsCount=0 → colTypeList stays empty, no parameterised columns.
+
+        TSWSPreparedStatement stmt = new TSWSPreparedStatement(
+                transport, param, "testdb", wsConn, "SELECT * FROM t WHERE id=?", 1L, selectResp);
+
+        // WSRetryableStmt.useBindExec must be false so queryWithRetry never picks
+        // STMT2_BIND_EXEC.  isUsingBindExec() is package-private and reachable here.
+        assertFalse(
+                "WSRetryableStmt.useBindExec must be false for SELECT prepared statements "
+                        + "even on a bind-exec-capable server (regression guard)",
+                stmt.isUsingBindExec());
+    }
+
+    /**
+     * INSERT column-data path on a server that does not support bind-exec must
+     * fall back to the legacy {@code stmt2_bind} + {@code stmt2_exec} protocol.
+     *
+     * <p>This verifies the negative half: unsupported servers continue to work
+     * via the legacy path after the routing change.
+     */
+    @Test
+    public void insertColumnData_onLegacyServer_sendsLegacyBindAction() throws Exception {
+        List<Field> fields = new ArrayList<>();
+        fields.add(makeField((byte) FieldBindType.TAOS_FIELD_COL.getValue(), (byte) TSDB_DATA_TYPE_INT));
+
+        // buildStmt with bindExecServer=false → non-WSConnection mock → connectionSupportsBindExec()=false
+        TSWSPreparedStatement stmt = buildStmt(fields, /* bindExecServer= */ false);
+
+        stmt.setInt(0, Arrays.asList(99));
+        stmt.columnDataAddBatch();
+
+        // Stub transport for the two-step legacy protocol
+        Stmt2Resp bindResp = new Stmt2Resp();
+        bindResp.setCode(0);
+        bindResp.setStmtId(1L);
+        Stmt2ExecResp execResp = new Stmt2ExecResp();
+        execResp.setCode(0);
+        execResp.setAffected(1);
+
+        when(transport.send(
+                eq(Action.STMT2_BIND.getAction()), anyLong(), any(ByteBuf.class), anyBoolean(), anyLong()))
+                .thenReturn(bindResp);
+        // The legacy exec step goes through transport.send(Request, boolean, long)
+        when(transport.send(any(com.taosdata.jdbc.ws.entity.Request.class), anyBoolean(), anyLong()))
+                .thenReturn(execResp);
+
+        stmt.columnDataExecuteBatch();
+
+        // Must have used the legacy STMT2_BIND action
+        verify(transport, times(1)).send(
+                eq(Action.STMT2_BIND.getAction()), anyLong(), any(ByteBuf.class), anyBoolean(), anyLong());
+
+        // Must NOT have used STMT2_BIND_EXEC
+        verify(transport, never()).send(
+                eq(Action.STMT2_BIND_EXEC.getAction()), anyLong(), any(ByteBuf.class), anyBoolean(), anyLong());
     }
 }

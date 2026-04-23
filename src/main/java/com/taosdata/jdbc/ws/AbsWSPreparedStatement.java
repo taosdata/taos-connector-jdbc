@@ -10,6 +10,8 @@ import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.utils.BlobUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.ReqId;
+import com.taosdata.jdbc.ws.entity.Action;
+import com.taosdata.jdbc.ws.entity.Code;
 import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnBindSerializer;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnFieldBuffer;
@@ -61,8 +63,10 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
                                   String sql,
                                   Long instanceId,
                                   Stmt2PrepareResp prepareResp) {
-        // Pass useBindExec=true so that WSRetryableStmt enables bind-exec when the server supports it.
-        super(connection, param, database, transport, instanceId, new StmtInfo(prepareResp, sql), new AtomicInteger(), true);
+        // Do NOT pass useBindExec=true globally; bind-exec is chosen per-execute in
+        // executeInsertImpl() for the column-data insert path only.  SELECT prepared
+        // statements on the same capable server must stay on the legacy bind path.
+        super(connection, param, database, transport, instanceId, new StmtInfo(prepareResp, sql), new AtomicInteger());
         this.tableInfo = TableInfo.getEmptyTableInfo();
     }
     @Override
@@ -1104,7 +1108,9 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
             throw new SQLException("batch data is empty");
         }
 
-        if (isUsingBindExec()) {
+        // Dynamically choose bind-exec only for the column-data insert path on
+        // capable servers; SELECT statements and unsupported servers keep the legacy path.
+        if (connectionSupportsBindExec()) {
             return executeInsertImplWithBindExec();
         }
 
@@ -1127,7 +1133,12 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
      *
      * <p>Converts the {@code tableInfoMap} (populated by the column-data API)
      * into the shared {@link Stmt2ColumnFieldBuffer} format and sends it via
-     * the {@code stmt2_bind_exec} action.
+     * the {@code stmt2_bind_exec} action directly on the transport.
+     *
+     * <p>This method bypasses {@link #writeBlockWithRetrySync} so that the
+     * {@code STMT2_BIND_EXEC} action is always used regardless of the
+     * {@code WSRetryableStmt.useBindExec} constructor flag (which is now
+     * always {@code false} to keep SELECT prepared statements on the legacy path).
      */
     private int executeInsertImplWithBindExec() throws SQLException {
         Stmt2ColumnFieldBuffer[] columnBuffers;
@@ -1139,17 +1150,20 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
 
         byte[] payload = Stmt2ColumnBindSerializer.serialize(columnBuffers);
 
-        // Build the ByteBuf: 16-byte header (reqId + stmtId placeholders) + columnar payload.
-        // WSRetryableStmt.modifyStmtIdAndReqId() patches the first 16 bytes before sending.
+        long reqId = ReqId.getReqID();
         ByteBuf rawBuf = PooledByteBufAllocator.DEFAULT.directBuffer(16 + payload.length);
-        rawBuf.writeLongLE(0L); // reqId placeholder
-        rawBuf.writeLongLE(0L); // stmtId placeholder
+        rawBuf.writeLongLE(reqId);
+        rawBuf.writeLongLE(stmtInfo.getStmtId());
         rawBuf.writeBytes(payload);
 
         try {
-            this.affectedRows = 0;
-            writeBlockWithRetrySync(rawBuf);
-            this.affectedRows = batchInsertedRowsInner.getAndSet(0);
+            Stmt2ExecResp resp = (Stmt2ExecResp) transport.send(
+                    Action.STMT2_BIND_EXEC.getAction(), reqId, rawBuf, false, this.getQueryTimeoutInMs());
+            if (Code.SUCCESS.getCode() != resp.getCode()) {
+                throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
+            }
+            this.affectedRows = resp.getAffected();
+            batchInsertedRowsInner.addAndGet(this.affectedRows);
         } finally {
             rawBuf.release();
         }
@@ -1390,6 +1404,24 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
 
     /** Package-private, test-only: exposes the bind-exec routing flag. */
     boolean isUsingBindExecForTesting() {
-        return isUsingBindExec();
+        return connectionSupportsBindExec();
+    }
+
+    /**
+     * Returns {@code true} when the current connection is a {@link WSConnection} that supports
+     * {@code STMT2_BIND_EXEC}.  Used to decide the execution path in
+     * {@link #executeInsertImpl()} at call time rather than at construction time, so that
+     * SELECT prepared statements on the same capable server are never routed through
+     * the bind-exec code path.
+     */
+    private boolean connectionSupportsBindExec() {
+        try {
+            java.sql.Connection conn = getConnection();
+            if (conn instanceof WSConnection) {
+                return ((WSConnection) conn).supportsStmt2BindExec();
+            }
+        } catch (SQLException ignored) {
+        }
+        return false;
     }
 }
