@@ -264,6 +264,12 @@ public class WSRetryableStmt extends WSStatement {
                 }
             } finally {
                 log.trace("buffer {}, refCnt: {}", Integer.toHexString(System.identityHashCode(rawBlock)), rawBlock.refCnt());
+                // Retry iterations (i > 0) use orgRawBlock.copy() which this method owns;
+                // release each copy after use.  i == 0 uses duplicate() which the caller
+                // manages via retainByteBuf / releaseByteBuf – do NOT release it here.
+                if (i > 0) {
+                    rawBlock.release();
+                }
             }
         }
 
