@@ -1,6 +1,9 @@
-package com.taosdata.jdbc.ws.stmt2;
+package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.enums.FieldBindType;
+import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnBindSerializer;
+import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnFieldBuffer;
+import com.taosdata.jdbc.ws.stmt2.Stmt2FieldMeta;
 import org.junit.Test;
 
 import java.lang.reflect.Field;

@@ -1,19 +1,22 @@
-package com.taosdata.jdbc.ws.stmt2;
+package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.enums.FieldBindType;
+import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnBindSerializer;
+import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnFieldBuffer;
+import com.taosdata.jdbc.ws.stmt2.Stmt2FieldMeta;
 
 import java.sql.SQLException;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
 
-public final class Stmt2ColumnBatchState {
+final class Stmt2ColumnBatchState {
 
     private final Stmt2FieldMeta[] fieldMetas;
     private final int tbNameFieldIdx;
     private Stmt2ColumnFieldBuffer[] columnBuffers;
     private int expectedRowCount;
 
-    public Stmt2ColumnBatchState(Stmt2FieldMeta[] fieldMetas) {
+    Stmt2ColumnBatchState(Stmt2FieldMeta[] fieldMetas) {
         this.fieldMetas = fieldMetas;
         int tbIdx = -1;
         for (int i = 0; i < fieldMetas.length; i++) {
@@ -25,7 +28,7 @@ public final class Stmt2ColumnBatchState {
         this.columnBuffers = allocateColumnBuffers();
     }
 
-    public void flushRow(Stmt2CurrentRowState rowState) throws SQLException {
+    void flushRow(Stmt2CurrentRowState rowState) throws SQLException {
         validateRowForFlush(rowState);
         for (int i = 0; i < fieldMetas.length; i++) {
             Stmt2FieldMeta meta = fieldMetas[i];
@@ -55,7 +58,7 @@ public final class Stmt2ColumnBatchState {
         }
     }
 
-    public void checkRowCounts() throws SQLException {
+    void checkRowCounts() throws SQLException {
         for (int i = 0; i < columnBuffers.length; i++) {
             int actual = columnBuffers[i].getRowCount();
             if (actual != expectedRowCount) {
@@ -65,24 +68,24 @@ public final class Stmt2ColumnBatchState {
         }
     }
 
-    public byte[] buildPayload() throws SQLException {
+    byte[] buildPayload() throws SQLException {
         return Stmt2ColumnBindSerializer.serialize(columnBuffers);
     }
 
-    public void reset() {
+    void reset() {
         expectedRowCount = 0;
         columnBuffers = allocateColumnBuffers();
     }
 
-    public int getExpectedRowCount() {
+    int getExpectedRowCount() {
         return expectedRowCount;
     }
 
-    public int getTbNameFieldIdx() {
+    int getTbNameFieldIdx() {
         return tbNameFieldIdx;
     }
 
-    public Stmt2ColumnFieldBuffer getColumnBuffer(int index) {
+    Stmt2ColumnFieldBuffer getColumnBuffer(int index) {
         return columnBuffers[index];
     }
 

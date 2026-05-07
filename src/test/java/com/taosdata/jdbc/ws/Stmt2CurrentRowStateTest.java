@@ -1,4 +1,4 @@
-package com.taosdata.jdbc.ws.stmt2;
+package com.taosdata.jdbc.ws;
 
 import org.junit.Test;
 

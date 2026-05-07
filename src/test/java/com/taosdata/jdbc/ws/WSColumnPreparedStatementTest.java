@@ -471,15 +471,19 @@ public class WSColumnPreparedStatementTest {
         java.lang.reflect.Field rowStateField =
                 WSColumnPreparedStatement.class.getDeclaredField("currentRowState");
         rowStateField.setAccessible(true);
-        assertEquals("com.taosdata.jdbc.ws.stmt2.Stmt2CurrentRowState",
+        assertEquals("com.taosdata.jdbc.ws.Stmt2CurrentRowState",
                 rowStateField.getType().getName());
+        assertFalse("Stmt2CurrentRowState must not be public",
+                java.lang.reflect.Modifier.isPublic(rowStateField.getType().getModifiers()));
         assertNotNull(rowStateField.get(stmt));
 
         java.lang.reflect.Field batchStateField =
                 WSColumnPreparedStatement.class.getDeclaredField("batchState");
         batchStateField.setAccessible(true);
-        assertEquals("com.taosdata.jdbc.ws.stmt2.Stmt2ColumnBatchState",
+        assertEquals("com.taosdata.jdbc.ws.Stmt2ColumnBatchState",
                 batchStateField.getType().getName());
+        assertFalse("Stmt2ColumnBatchState must not be public",
+                java.lang.reflect.Modifier.isPublic(batchStateField.getType().getModifiers()));
         assertNotNull(batchStateField.get(stmt));
     }
 
