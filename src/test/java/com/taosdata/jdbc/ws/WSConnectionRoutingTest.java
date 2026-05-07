@@ -183,11 +183,9 @@ public class WSConnectionRoutingTest {
         Mockito.when(param.getPbsMode()).thenReturn("line");
         Mockito.when(param.getAsyncWrite()).thenReturn(null);
 
-        // Server version that supports both line-bind and bind-exec;
-        // the "line" pbsMode takes priority → WSRowPreparedStatement.
-        // supportLineBind is derived from VersionUtil.surpportBlob() which requires >= 3.3.7.0.alpha.
-        // Use "3.3.7.0" which satisfies that constraint.
-        WSConnection conn = makeConnection("3.3.7.0");
+        // Use the exact bind-exec threshold so this test proves that pbsMode=line
+        // still routes to WSRowPreparedStatement even when stmt2 bind-exec is available.
+        WSConnection conn = makeConnection(TSDBConstants.MIN_STMT2_BIND_EXEC_VERSION);
 
         try (PreparedStatement stmt = conn.prepareStatement("INSERT INTO t VALUES (?,?)")) {
             assertNotNull(stmt);
