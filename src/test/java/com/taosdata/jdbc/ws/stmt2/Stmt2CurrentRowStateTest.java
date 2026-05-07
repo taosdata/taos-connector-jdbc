@@ -56,9 +56,22 @@ public class Stmt2CurrentRowStateTest {
 
         state.clear();
         state.stageNull(0);
-        assertFalse(state.hasPendingValues());
+        assertTrue(state.hasPendingValues());
 
         state.stageFixed(1, 7L);
         assertTrue(state.hasPendingValues());
+    }
+
+    @Test
+    public void hasPendingValues_trueWhenNullWasExplicitlyStaged() {
+        Stmt2CurrentRowState state = new Stmt2CurrentRowState(1);
+
+        assertFalse(state.hasPendingValues());
+
+        state.stageNull(0);
+        assertTrue(state.hasPendingValues());
+
+        state.clear();
+        assertFalse(state.hasPendingValues());
     }
 }
