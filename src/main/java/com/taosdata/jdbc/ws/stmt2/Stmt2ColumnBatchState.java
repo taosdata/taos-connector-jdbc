@@ -26,9 +26,7 @@ final class Stmt2ColumnBatchState {
     }
 
     void flushRow(Stmt2CurrentRowState rowState) throws SQLException {
-        if (tbNameFieldIdx >= 0 && rowState.tableName() == null) {
-            throw new SQLException("Table name not set for row; call setString on the tbname parameter");
-        }
+        validateRowForFlush(rowState);
         for (int i = 0; i < fieldMetas.length; i++) {
             Stmt2FieldMeta meta = fieldMetas[i];
             Stmt2ColumnFieldBuffer buffer = columnBuffers[i];
@@ -46,6 +44,15 @@ final class Stmt2ColumnBatchState {
         }
         expectedRowCount++;
         rowState.clear();
+    }
+
+    private void validateRowForFlush(Stmt2CurrentRowState rowState) throws SQLException {
+        if (tbNameFieldIdx >= 0) {
+            String tableName = rowState.tableName();
+            if (tableName == null || tableName.isEmpty()) {
+                throw new SQLException("Table name not set for row; call setString on the tbname parameter");
+            }
+        }
     }
 
     void checkRowCounts() throws SQLException {

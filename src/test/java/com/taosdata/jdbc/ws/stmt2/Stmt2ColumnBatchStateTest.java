@@ -112,6 +112,25 @@ public class Stmt2ColumnBatchStateTest {
         assertTrue(rowState.hasPendingValues());
     }
 
+    @Test
+    public void flushRow_emptyTbName_doesNotPartiallyAppendBuffers() {
+        Stmt2FieldMeta[] fieldMetas = new Stmt2FieldMeta[]{
+                Stmt2FieldMeta.of((byte) FieldBindType.TAOS_FIELD_COL.getValue(), (byte) TSDB_DATA_TYPE_INT, (byte) 0),
+                Stmt2FieldMeta.of((byte) FieldBindType.TAOS_FIELD_TBNAME.getValue(), (byte) TSDB_DATA_TYPE_VARCHAR, (byte) 0)
+        };
+        Stmt2ColumnBatchState state = new Stmt2ColumnBatchState(fieldMetas);
+        Stmt2CurrentRowState rowState = new Stmt2CurrentRowState(fieldMetas.length);
+
+        rowState.stageFixed(0, 11L);
+        rowState.stageTbName("");
+
+        assertThrows(SQLException.class, () -> state.flushRow(rowState));
+        assertEquals(0, state.getExpectedRowCount());
+        assertEquals(0, state.getColumnBuffer(0).getRowCount());
+        assertEquals(0, state.getColumnBuffer(1).getRowCount());
+        assertTrue(rowState.hasPendingValues());
+    }
+
     private static void replaceColumnBuffer(
             Stmt2ColumnBatchState state,
             int index,
