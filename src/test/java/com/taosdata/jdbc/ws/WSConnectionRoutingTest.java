@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.ws;
 
+import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.ws.entity.CommonResp;
@@ -138,8 +139,8 @@ public class WSConnectionRoutingTest {
         Mockito.when(param.getPbsMode()).thenReturn(null);
         Mockito.when(param.getAsyncWrite()).thenReturn(null);
 
-        // Server version >= 3.1.4.10 → supportsStmt2BindExec() returns true
-        WSConnection conn = makeConnection("3.3.0.0");
+        // Server version >= MIN_STMT2_BIND_EXEC_VERSION → supportsStmt2BindExec() returns true
+        WSConnection conn = makeConnection(TSDBConstants.MIN_STMT2_BIND_EXEC_VERSION);
 
         try (PreparedStatement stmt = conn.prepareStatement("INSERT INTO t VALUES (?,?)")) {
             assertNotNull(stmt);
@@ -160,8 +161,8 @@ public class WSConnectionRoutingTest {
         Mockito.when(param.getPbsMode()).thenReturn(null);
         Mockito.when(param.getAsyncWrite()).thenReturn(null);
 
-        // Server version < 3.1.4.10 → supportsStmt2BindExec() returns false
-        WSConnection conn = makeConnection("3.1.4.9");
+        // Server version < MIN_STMT2_BIND_EXEC_VERSION → supportsStmt2BindExec() returns false
+        WSConnection conn = makeConnection("3.4.1.9");
 
         try (PreparedStatement stmt = conn.prepareStatement("INSERT INTO t VALUES (?,?)")) {
             assertNotNull(stmt);
@@ -207,7 +208,7 @@ public class WSConnectionRoutingTest {
         Mockito.when(param.getPbsMode()).thenReturn(null);
         Mockito.when(param.getAsyncWrite()).thenReturn(null);
 
-        WSConnection conn = makeConnection("3.3.0.0");
+        WSConnection conn = makeConnection(TSDBConstants.MIN_STMT2_BIND_EXEC_VERSION);
 
         try (PreparedStatement stmt = conn.prepareStatement("SELECT * FROM t WHERE id=?")) {
             assertNotNull(stmt);
@@ -257,7 +258,7 @@ public class WSConnectionRoutingTest {
         Mockito.when(param.getPbsMode()).thenReturn(null);
         Mockito.when(param.getAsyncWrite()).thenReturn(null);
 
-        WSConnection conn = makeConnection("3.3.0.0");
+        WSConnection conn = makeConnection(TSDBConstants.MIN_STMT2_BIND_EXEC_VERSION);
 
         try (PreparedStatement stmt = conn.prepareStatement("INSERT INTO t VALUES (?,?)")) {
             assertNotNull(stmt);

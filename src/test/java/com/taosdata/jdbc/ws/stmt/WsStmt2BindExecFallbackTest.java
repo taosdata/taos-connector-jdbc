@@ -38,8 +38,8 @@ import static org.mockito.Mockito.*;
  *
  * <p>Covers:
  * <ol>
- *   <li>Version capability gate: distinguishes legacy (&lt; 3.1.4.10) from
- *       bind-exec (&ge; 3.1.4.10) servers.</li>
+ *   <li>Version capability gate: distinguishes legacy (&lt; 3.4.1.10) from
+ *       bind-exec (&ge; 3.4.1.10) servers.</li>
  *   <li>Normal-table insert: TAOS_FIELD_COL fields only; table_count == 1.</li>
  *   <li>Supertable insert: TAOS_FIELD_TBNAME + TAOS_FIELD_TAG + TAOS_FIELD_COL;
  *       table_count derived from tbname column.</li>
@@ -140,26 +140,26 @@ public class WsStmt2BindExecFallbackTest {
 
     @Test
     public void testVersionGate_minVersionConstant() {
-        assertEquals("version constant must equal 3.1.4.10",
-                "3.1.4.10", TSDBConstants.MIN_STMT2_BIND_EXEC_VERSION);
+        assertEquals("version constant must equal 3.4.1.10",
+                "3.4.1.10", TSDBConstants.MIN_STMT2_BIND_EXEC_VERSION);
     }
 
     @Test
     public void testVersionGate_atThreshold_returnsTrue() {
-        assertTrue("3.1.4.10 must enable bind-exec",
-                VersionUtil.supportStmt2BindExec("3.1.4.10"));
+        assertTrue(TSDBConstants.MIN_STMT2_BIND_EXEC_VERSION + " must enable bind-exec",
+                VersionUtil.supportStmt2BindExec(TSDBConstants.MIN_STMT2_BIND_EXEC_VERSION));
     }
 
     @Test
     public void testVersionGate_justBelowThreshold_returnsFalse() {
-        assertFalse("3.1.4.9 must stay on legacy path",
-                VersionUtil.supportStmt2BindExec("3.1.4.9"));
+        assertFalse("3.4.1.9 must stay on legacy path",
+                VersionUtil.supportStmt2BindExec("3.4.1.9"));
     }
 
     @Test
     public void testVersionGate_minorBelowThreshold_returnsFalse() {
-        assertFalse("3.1.3.0 must stay on legacy path",
-                VersionUtil.supportStmt2BindExec("3.1.3.0"));
+        assertFalse("3.4.0.10 must stay on legacy path",
+                VersionUtil.supportStmt2BindExec("3.4.0.10"));
     }
 
     @Test
@@ -170,20 +170,20 @@ public class WsStmt2BindExecFallbackTest {
 
     @Test
     public void testVersionGate_aboveThreshold_patchMinor_returnsTrue() {
-        assertTrue("3.1.4.11 must enable bind-exec",
-                VersionUtil.supportStmt2BindExec("3.1.4.11"));
+        assertTrue("3.4.1.11 must enable bind-exec",
+                VersionUtil.supportStmt2BindExec("3.4.1.11"));
     }
 
     @Test
     public void testVersionGate_aboveThreshold_minor_returnsTrue() {
-        assertTrue("3.1.5.0 must enable bind-exec",
-                VersionUtil.supportStmt2BindExec("3.1.5.0"));
+        assertTrue("3.4.2.0 must enable bind-exec",
+                VersionUtil.supportStmt2BindExec("3.4.2.0"));
     }
 
     @Test
     public void testVersionGate_aboveThreshold_major_returnsTrue() {
-        assertTrue("3.2.0.0 must enable bind-exec",
-                VersionUtil.supportStmt2BindExec("3.2.0.0"));
+        assertTrue("4.0.0.0 must enable bind-exec",
+                VersionUtil.supportStmt2BindExec("4.0.0.0"));
     }
 
     @Test
@@ -718,11 +718,12 @@ public class WsStmt2BindExecFallbackTest {
         Transport transport = buildMockTransport(prepResp);
         ConnectionParam param = buildMockConnectionParam();
         WSConnection conn = new WSConnection("jdbc:TAOS-RS://localhost:6041/testdb",
-                new Properties(), transport, param, "3.1.4.10");
+                new Properties(), transport, param, TSDBConstants.MIN_STMT2_BIND_EXEC_VERSION);
 
         PreparedStatement stmt = conn.prepareStatement("INSERT INTO t VALUES(?,?)");
 
-        assertTrue("capable server (3.1.4.10) must return WSColumnPreparedStatement",
+        assertTrue("capable server (" + TSDBConstants.MIN_STMT2_BIND_EXEC_VERSION
+                        + ") must return WSColumnPreparedStatement",
                 stmt instanceof WSColumnPreparedStatement);
     }
 
@@ -732,17 +733,18 @@ public class WsStmt2BindExecFallbackTest {
         Transport transport = buildMockTransport(prepResp);
         ConnectionParam param = buildMockConnectionParam();
         WSConnection conn = new WSConnection("jdbc:TAOS-RS://localhost:6041/testdb",
-                new Properties(), transport, param, "3.1.4.9");
+                new Properties(), transport, param, "3.4.1.9");
 
         PreparedStatement stmt = conn.prepareStatement("INSERT INTO t VALUES(?,?)");
 
-        assertTrue("legacy server (3.1.4.9) must return TSWSPreparedStatement",
+        assertTrue("legacy server (3.4.1.9) must return TSWSPreparedStatement",
                 stmt instanceof TSWSPreparedStatement);
     }
 
     @Test
     public void testRouting_capableVersions_allReturnWSColumnPreparedStatement() throws Exception {
-        for (String ver : new String[]{"3.1.4.10", "3.1.4.11", "3.1.5.0", "3.2.0.0"}) {
+        for (String ver : new String[]{
+                TSDBConstants.MIN_STMT2_BIND_EXEC_VERSION, "3.4.1.11", "3.4.2.0", "4.0.0.0"}) {
             Stmt2PrepareResp prepResp = buildInsertPrepareResp();
             Transport transport = buildMockTransport(prepResp);
             ConnectionParam param = buildMockConnectionParam();
@@ -758,7 +760,7 @@ public class WsStmt2BindExecFallbackTest {
 
     @Test
     public void testRouting_legacyVersions_allReturnTSWSPreparedStatement() throws Exception {
-        for (String ver : new String[]{"3.1.4.9", "3.1.3.0", "3.0.0.0", "2.6.0.0"}) {
+        for (String ver : new String[]{"3.4.1.9", "3.4.0.10", "3.0.0.0", "2.6.0.0"}) {
             Stmt2PrepareResp prepResp = buildInsertPrepareResp();
             Transport transport = buildMockTransport(prepResp);
             ConnectionParam param = buildMockConnectionParam();
@@ -780,7 +782,7 @@ public class WsStmt2BindExecFallbackTest {
     private static WSColumnPreparedStatement buildWSColumnPreparedStatement(
             Transport transport, ConnectionParam param, Stmt2PrepareResp prepResp) {
         WSConnection conn = new WSConnection("jdbc:TAOS-RS://localhost:6041/testdb",
-                new Properties(), transport, param, "3.1.4.10");
+                new Properties(), transport, param, TSDBConstants.MIN_STMT2_BIND_EXEC_VERSION);
         return new WSColumnPreparedStatement(transport, param, "testdb", conn,
                 "INSERT INTO t VALUES(?,?)", 1L, prepResp);
     }
