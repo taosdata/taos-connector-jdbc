@@ -6,14 +6,14 @@ import java.sql.SQLException;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
 
-final class Stmt2ColumnBatchState {
+public final class Stmt2ColumnBatchState {
 
     private final Stmt2FieldMeta[] fieldMetas;
     private final int tbNameFieldIdx;
     private Stmt2ColumnFieldBuffer[] columnBuffers;
     private int expectedRowCount;
 
-    Stmt2ColumnBatchState(Stmt2FieldMeta[] fieldMetas) {
+    public Stmt2ColumnBatchState(Stmt2FieldMeta[] fieldMetas) {
         this.fieldMetas = fieldMetas;
         int tbIdx = -1;
         for (int i = 0; i < fieldMetas.length; i++) {
@@ -25,7 +25,7 @@ final class Stmt2ColumnBatchState {
         this.columnBuffers = allocateColumnBuffers();
     }
 
-    void flushRow(Stmt2CurrentRowState rowState) throws SQLException {
+    public void flushRow(Stmt2CurrentRowState rowState) throws SQLException {
         validateRowForFlush(rowState);
         for (int i = 0; i < fieldMetas.length; i++) {
             Stmt2FieldMeta meta = fieldMetas[i];
@@ -55,7 +55,7 @@ final class Stmt2ColumnBatchState {
         }
     }
 
-    void checkRowCounts() throws SQLException {
+    public void checkRowCounts() throws SQLException {
         for (int i = 0; i < columnBuffers.length; i++) {
             int actual = columnBuffers[i].getRowCount();
             if (actual != expectedRowCount) {
@@ -65,24 +65,24 @@ final class Stmt2ColumnBatchState {
         }
     }
 
-    byte[] buildPayload() throws SQLException {
+    public byte[] buildPayload() throws SQLException {
         return Stmt2ColumnBindSerializer.serialize(columnBuffers);
     }
 
-    void reset() {
+    public void reset() {
         expectedRowCount = 0;
         columnBuffers = allocateColumnBuffers();
     }
 
-    int getExpectedRowCount() {
+    public int getExpectedRowCount() {
         return expectedRowCount;
     }
 
-    int getTbNameFieldIdx() {
+    public int getTbNameFieldIdx() {
         return tbNameFieldIdx;
     }
 
-    Stmt2ColumnFieldBuffer getColumnBuffer(int index) {
+    public Stmt2ColumnFieldBuffer getColumnBuffer(int index) {
         return columnBuffers[index];
     }
 

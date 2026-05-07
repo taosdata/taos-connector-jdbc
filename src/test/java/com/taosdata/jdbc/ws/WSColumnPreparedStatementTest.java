@@ -456,6 +456,33 @@ public class WSColumnPreparedStatementTest {
         assertEquals("clearBatch must reset column buffer", 0, bufRowCount(stmt, 0));
     }
 
+    // -----------------------------------------------------------------------
+    // Task 3 structural regression – dedicated state helper fields
+    // -----------------------------------------------------------------------
+
+    @Test
+    public void constructor_initializesDedicatedStateHelpers() throws Exception {
+        List<Field> fields = new ArrayList<>();
+        fields.add(makeField((byte) FieldBindType.TAOS_FIELD_COL.getValue(),
+                (byte) TSDB_DATA_TYPE_INT, (byte) 0));
+
+        WSColumnPreparedStatement stmt = buildStmt(fields);
+
+        java.lang.reflect.Field rowStateField =
+                WSColumnPreparedStatement.class.getDeclaredField("currentRowState");
+        rowStateField.setAccessible(true);
+        assertEquals("com.taosdata.jdbc.ws.stmt2.Stmt2CurrentRowState",
+                rowStateField.getType().getName());
+        assertNotNull(rowStateField.get(stmt));
+
+        java.lang.reflect.Field batchStateField =
+                WSColumnPreparedStatement.class.getDeclaredField("batchState");
+        batchStateField.setAccessible(true);
+        assertEquals("com.taosdata.jdbc.ws.stmt2.Stmt2ColumnBatchState",
+                batchStateField.getType().getName());
+        assertNotNull(batchStateField.get(stmt));
+    }
+
     @Test
     public void clearBatch_preservesCurrentRowStaging() throws Exception {
         List<Field> fields = new ArrayList<>();

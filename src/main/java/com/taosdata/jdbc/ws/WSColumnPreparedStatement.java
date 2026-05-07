@@ -8,8 +8,9 @@ import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.utils.BlobUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.ReqId;
-import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnBindSerializer;
+import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnBatchState;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnFieldBuffer;
+import com.taosdata.jdbc.ws.stmt2.Stmt2CurrentRowState;
 import com.taosdata.jdbc.ws.stmt2.Stmt2FieldMeta;
 import com.taosdata.jdbc.ws.stmt2.entity.*;
 import io.netty.buffer.ByteBuf;
@@ -53,51 +54,15 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements Prepar
     /** One descriptor per prepared field, in prepare order. */
     private final Stmt2FieldMeta[] fieldMetas;
 
-    /** Index of the TAOS_FIELD_TBNAME field; -1 if not a supertable insert. */
-    private final int tbNameFieldIdx;
-
     // -----------------------------------------------------------------------
-    // Per-field column buffers (reset after each execute)
+    // Delegated mutable state
     // -----------------------------------------------------------------------
 
-    private Stmt2ColumnFieldBuffer[] columnBuffers;
+    /** Current-row staging state (last-setter-wins per field slot). */
+    private final Stmt2CurrentRowState currentRowState;
 
-    // -----------------------------------------------------------------------
-    // Current-row staging
-    // -----------------------------------------------------------------------
-
-    /** True = slot holds a null value (default for all slots). */
-    private final boolean[] currentNull;
-
-    /**
-     * Staged fixed-width value for each field, encoded as long.
-     * <ul>
-     *   <li>BOOL, TINYINT, UTINYINT → bit 0 / byte value</li>
-     *   <li>SMALLINT, USMALLINT → short value</li>
-     *   <li>INT, UINT → int value (sign-extended to long)</li>
-     *   <li>BIGINT, UBIGINT → long value</li>
-     *   <li>FLOAT → {@link Float#floatToRawIntBits(float)} cast to long</li>
-     *   <li>DOUBLE → {@link Double#doubleToRawLongBits(double)}</li>
-     *   <li>TIMESTAMP → epoch value at column precision</li>
-     * </ul>
-     */
-    private final long[] currentFixed;
-
-    /**
-     * Staged variable-width bytes for each field.
-     * Null if the slot is null or the field is fixed-width.
-     */
-    private final byte[][] currentVar;
-
-    /** Staged table name string for the TAOS_FIELD_TBNAME field. */
-    private String currentTbName;
-
-    // -----------------------------------------------------------------------
-    // Batch tracking
-    // -----------------------------------------------------------------------
-
-    /** Number of rows that have been flushed to column buffers via addBatch(). */
-    private int expectedRowCount;
+    /** Batch accumulation and serialization state. */
+    private final Stmt2ColumnBatchState batchState;
 
     // -----------------------------------------------------------------------
     // Constructor
@@ -116,59 +81,28 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements Prepar
         List<Field> fields = stmtInfo.getFields();
         int n = (fields != null) ? fields.size() : 0;
         this.fieldMetas = new Stmt2FieldMeta[n];
-        int tbIdx = -1;
         for (int i = 0; i < n; i++) {
             fieldMetas[i] = Stmt2FieldMeta.fromField(fields.get(i));
-            if (fields.get(i).getBindType() == (byte) FieldBindType.TAOS_FIELD_TBNAME.getValue()) {
-                tbIdx = i;
-            }
         }
-        this.tbNameFieldIdx = tbIdx;
 
-        this.currentNull = new boolean[n];
-        this.currentFixed = new long[n];
-        this.currentVar = new byte[n][];
-
-        Arrays.fill(currentNull, true); // all slots start as null
-
-        this.columnBuffers = allocateColumnBuffers();
+        this.currentRowState = new Stmt2CurrentRowState(n);
+        this.batchState = new Stmt2ColumnBatchState(fieldMetas);
     }
 
     // -----------------------------------------------------------------------
-    // Metadata helpers
-    // -----------------------------------------------------------------------
-
-    private Stmt2ColumnFieldBuffer[] allocateColumnBuffers() {
-        Stmt2ColumnFieldBuffer[] bufs = new Stmt2ColumnFieldBuffer[fieldMetas.length];
-        for (int i = 0; i < fieldMetas.length; i++) {
-            bufs[i] = new Stmt2ColumnFieldBuffer(fieldMetas[i]);
-        }
-        return bufs;
-    }
-
-    // -----------------------------------------------------------------------
-    // Staging helpers
+    // Staging helpers – delegate to currentRowState
     // -----------------------------------------------------------------------
 
     private void stageFixed(int paramIdx, long value) {
-        currentNull[paramIdx] = false;
-        currentFixed[paramIdx] = value;
+        currentRowState.stageFixed(paramIdx, value);
     }
 
     private void stageVar(int paramIdx, byte[] bytes) {
-        if (bytes == null) {
-            currentNull[paramIdx] = true;
-            currentVar[paramIdx] = null;
-        } else {
-            currentNull[paramIdx] = false;
-            currentVar[paramIdx] = bytes;
-        }
+        currentRowState.stageVar(paramIdx, bytes);
     }
 
     private void stageNull(int paramIdx) {
-        currentNull[paramIdx] = true;
-        currentVar[paramIdx] = null;
-        currentFixed[paramIdx] = 0L;
+        currentRowState.stageNull(paramIdx);
     }
 
     /** Resolves the TDengine field type for the given 1-based parameter index. */
@@ -179,89 +113,6 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements Prepar
     /** Returns the bind type for the given 1-based parameter index. */
     private byte bindType(int parameterIndex) {
         return fieldMetas[parameterIndex - 1].getBindType();
-    }
-
-    // -----------------------------------------------------------------------
-    // Row flush
-    // -----------------------------------------------------------------------
-
-    /**
-     * Flushes the current staged row into the per-field column buffers.
-     * Resets all staging state afterwards.
-     */
-    private void flushCurrentRow() throws SQLException {
-        for (int i = 0; i < fieldMetas.length; i++) {
-            Stmt2FieldMeta meta = fieldMetas[i];
-            Stmt2ColumnFieldBuffer buf = columnBuffers[i];
-
-            if (meta.getBindType() == (byte) FieldBindType.TAOS_FIELD_TBNAME.getValue()) {
-                if (currentTbName == null) {
-                    throw new SQLException(
-                            "Table name not set for row; call setString on the tbname parameter");
-                }
-                buf.appendTbName(currentTbName);
-                continue;
-            }
-
-            if (currentNull[i]) {
-                buf.appendNull();
-            } else if (meta.isVariableWidth()) {
-                buf.appendBytes(currentVar[i]);
-            } else {
-                appendFixedValue(buf, meta, currentFixed[i]);
-            }
-        }
-        // Reset staging state for next row
-        Arrays.fill(currentNull, true);
-        Arrays.fill(currentVar, null);
-        Arrays.fill(currentFixed, 0L);
-        currentTbName = null;
-    }
-
-    private static void appendFixedValue(Stmt2ColumnFieldBuffer buf,
-                                          Stmt2FieldMeta meta,
-                                          long value) throws SQLException {
-        switch (meta.getFieldType() & 0xFF) {
-            case TSDB_DATA_TYPE_BOOL:
-                buf.appendBool(value != 0);
-                break;
-            case TSDB_DATA_TYPE_TINYINT:
-                buf.appendTinyInt((byte) value);
-                break;
-            case TSDB_DATA_TYPE_UTINYINT:
-                buf.appendUTinyInt((byte) value);
-                break;
-            case TSDB_DATA_TYPE_SMALLINT:
-                buf.appendSmallInt((short) value);
-                break;
-            case TSDB_DATA_TYPE_USMALLINT:
-                buf.appendUSmallInt((short) value);
-                break;
-            case TSDB_DATA_TYPE_INT:
-                buf.appendInt((int) value);
-                break;
-            case TSDB_DATA_TYPE_UINT:
-                buf.appendUInt((int) value);
-                break;
-            case TSDB_DATA_TYPE_BIGINT:
-                buf.appendBigInt(value);
-                break;
-            case TSDB_DATA_TYPE_UBIGINT:
-                buf.appendUBigInt(value);
-                break;
-            case TSDB_DATA_TYPE_FLOAT:
-                buf.appendFloat(Float.intBitsToFloat((int) value));
-                break;
-            case TSDB_DATA_TYPE_DOUBLE:
-                buf.appendDouble(Double.longBitsToDouble(value));
-                break;
-            case TSDB_DATA_TYPE_TIMESTAMP:
-                buf.appendTimestamp(value);
-                break;
-            default:
-                throw new SQLException(
-                        "Unexpected fixed-width field type: " + meta.getFieldType());
-        }
     }
 
     // -----------------------------------------------------------------------
@@ -389,7 +240,7 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements Prepar
                 throw TSDBError.createSQLException(
                         TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table name can't be null");
             }
-            currentTbName = x;
+            currentRowState.stageTbName(x);
             return;
         }
         stageVar(idx, x == null ? null : encodeString(x, fieldType(parameterIndex)));
@@ -403,7 +254,7 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements Prepar
                 throw TSDBError.createSQLException(
                         TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table name can't be null");
             }
-            currentTbName = x;
+            currentRowState.stageTbName(x);
             return;
         }
         stageVar(idx, x == null ? null : x.getBytes(StandardCharsets.UTF_8));
@@ -417,7 +268,7 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements Prepar
                 throw TSDBError.createSQLException(
                         TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table name can't be null");
             }
-            currentTbName = new String(x, StandardCharsets.UTF_8);
+            currentRowState.stageTbName(new String(x, StandardCharsets.UTF_8));
             return;
         }
         stageVar(idx, x);
@@ -812,10 +663,7 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements Prepar
 
     @Override
     public void clearParameters() {
-        Arrays.fill(currentNull, true);
-        Arrays.fill(currentVar, null);
-        Arrays.fill(currentFixed, 0L);
-        currentTbName = null;
+        currentRowState.clear();
     }
 
     // -----------------------------------------------------------------------
@@ -824,8 +672,7 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements Prepar
 
     @Override
     public void addBatch() throws SQLException {
-        flushCurrentRow();
-        expectedRowCount++;
+        batchState.flushRow(currentRowState);
     }
 
     /**
@@ -838,8 +685,7 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements Prepar
         if (isClosed()) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
         }
-        expectedRowCount = 0;
-        columnBuffers = allocateColumnBuffers();
+        batchState.reset();
     }
 
     @Override
@@ -887,9 +733,9 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements Prepar
     // -----------------------------------------------------------------------
 
     private int executeInsertImpl() throws SQLException {
-        checkRowCounts();
+        batchState.checkRowCounts();
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(columnBuffers);
+        byte[] payload = batchState.buildPayload();
 
         // Build ByteBuf: 16-byte header placeholder (reqId + stmtId) + columnar payload.
         // modifyStmtIdAndReqId() in WSRetryableStmt will patch the first 16 bytes.
@@ -904,37 +750,16 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements Prepar
             this.affectedRows = batchInsertedRowsInner.getAndSet(0);
         } finally {
             rawBuf.release();
-            resetBuffers();
+            batchState.reset();
+            currentRowState.clear();
         }
 
         return this.affectedRows;
     }
 
-    /**
-     * Lightweight O(fieldCount) row-count consistency check.
-     * Compares each field accumulator's row count against expectedRowCount.
-     */
+    /** Delegates to {@link Stmt2ColumnBatchState#checkRowCounts()} – kept for reflective tests. */
     private void checkRowCounts() throws SQLException {
-        int expected = expectedRowCount;
-        for (int i = 0; i < columnBuffers.length; i++) {
-            int actual = columnBuffers[i].getRowCount();
-            if (actual != expected) {
-                throw new SQLException(
-                        "Row count mismatch at parameter index " + (i + 1)
-                                + ": expected " + expected + " rows, got " + actual
-                                + " rows");
-            }
-        }
-    }
-
-    /** Resets column buffers and batch state after execute. */
-    private void resetBuffers() {
-        expectedRowCount = 0;
-        columnBuffers = allocateColumnBuffers();
-        Arrays.fill(currentNull, true);
-        Arrays.fill(currentVar, null);
-        Arrays.fill(currentFixed, 0L);
-        currentTbName = null;
+        batchState.checkRowCounts();
     }
 
     // -----------------------------------------------------------------------
@@ -993,7 +818,7 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements Prepar
      * Exposed for unit tests.
      */
     int getExpectedRowCount() {
-        return expectedRowCount;
+        return batchState.getExpectedRowCount();
     }
 
     /**
@@ -1001,7 +826,7 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements Prepar
      * Exposed for unit tests.
      */
     Stmt2ColumnFieldBuffer getColumnBuffer(int fieldIndex) {
-        return columnBuffers[fieldIndex];
+        return batchState.getColumnBuffer(fieldIndex);
     }
 
     /**
@@ -1009,7 +834,7 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements Prepar
      * Exposed for unit tests.
      */
     int getTbNameFieldIdx() {
-        return tbNameFieldIdx;
+        return batchState.getTbNameFieldIdx();
     }
 
     // -----------------------------------------------------------------------

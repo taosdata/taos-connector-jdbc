@@ -1,6 +1,6 @@
 package com.taosdata.jdbc.ws.stmt2;
 
-final class Stmt2CurrentRowState {
+public final class Stmt2CurrentRowState {
 
     private final boolean[] currentNull;
     private final boolean[] currentStaged;
@@ -8,7 +8,7 @@ final class Stmt2CurrentRowState {
     private final byte[][] currentVar;
     private String tableName;
 
-    Stmt2CurrentRowState(int fieldCount) {
+    public Stmt2CurrentRowState(int fieldCount) {
         this.currentNull = new boolean[fieldCount];
         this.currentStaged = new boolean[fieldCount];
         this.currentFixed = new long[fieldCount];
@@ -16,14 +16,14 @@ final class Stmt2CurrentRowState {
         clear();
     }
 
-    void stageFixed(int index, long value) {
+    public void stageFixed(int index, long value) {
         currentStaged[index] = true;
         currentNull[index] = false;
         currentFixed[index] = value;
         currentVar[index] = null;
     }
 
-    void stageVar(int index, byte[] value) {
+    public void stageVar(int index, byte[] value) {
         if (value == null) {
             stageNull(index);
             return;
@@ -34,34 +34,34 @@ final class Stmt2CurrentRowState {
         currentVar[index] = value;
     }
 
-    void stageNull(int index) {
+    public void stageNull(int index) {
         currentStaged[index] = true;
         currentNull[index] = true;
         currentFixed[index] = 0L;
         currentVar[index] = null;
     }
 
-    void stageTbName(String value) {
+    public void stageTbName(String value) {
         tableName = value;
     }
 
-    boolean isNull(int index) {
+    public boolean isNull(int index) {
         return currentNull[index];
     }
 
-    long fixedValue(int index) {
+    public long fixedValue(int index) {
         return currentFixed[index];
     }
 
-    byte[] varValue(int index) {
+    public byte[] varValue(int index) {
         return currentVar[index];
     }
 
-    String tableName() {
+    public String tableName() {
         return tableName;
     }
 
-    boolean hasPendingValues() {
+    public boolean hasPendingValues() {
         if (tableName != null) {
             return true;
         }
@@ -73,7 +73,7 @@ final class Stmt2CurrentRowState {
         return false;
     }
 
-    void clear() {
+    public void clear() {
         for (int i = 0; i < currentNull.length; i++) {
             currentStaged[i] = false;
             currentNull[i] = true;
