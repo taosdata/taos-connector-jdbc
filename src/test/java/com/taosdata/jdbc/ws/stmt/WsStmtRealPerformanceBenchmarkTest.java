@@ -4,6 +4,7 @@ import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.ws.WSColumnPreparedStatement;
+import com.taosdata.jdbc.ws.WSConnection;
 import com.taosdata.jdbc.ws.WSRowPreparedStatement;
 import org.junit.Assume;
 import org.junit.Test;
@@ -63,6 +64,7 @@ public class WsStmtRealPerformanceBenchmarkTest {
     @Test
     public void benchmark_stmt2BindExecVsLineMode_autoCreateSubtables() throws Exception {
         Assume.assumeTrue(Boolean.getBoolean(ENABLE_PROPERTY));
+        assumeStmt2BindExecSupported();
 
         long runId = System.currentTimeMillis();
         BenchmarkResult columnar = runPath(false, "columnar", runId);
@@ -169,6 +171,16 @@ public class WsStmtRealPerformanceBenchmarkTest {
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "false");
         return DriverManager.getConnection(buildWsUrl(lineMode), properties);
+    }
+
+    private static void assumeStmt2BindExecSupported() throws SQLException {
+        try (Connection conn = openConnection(false)) {
+            Assume.assumeTrue("Benchmark requires WSConnection", conn instanceof WSConnection);
+            WSConnection wsConn = (WSConnection) conn;
+            Assume.assumeTrue(
+                    "Benchmark requires a stmt2_bind_exec capable server; current server routes default inserts through legacy mode",
+                    wsConn.supportsStmt2BindExec());
+        }
     }
 
     private BenchmarkResult runPath(boolean lineMode, String label, long runId) throws Exception {
