@@ -30,6 +30,8 @@ public class ConnectReq extends Payload implements Printable {
     private String connector;
     @JsonProperty("bearer_token")
     private String bearerToken;
+    @JsonProperty("list_instances")
+    private Boolean listInstances;
     public String getUser() {
         return user;
     }
@@ -101,6 +103,15 @@ public class ConnectReq extends Payload implements Printable {
     public void setBearerToken(String bearerToken) {
         this.bearerToken = bearerToken;
     }
+
+    public Boolean getListInstances() {
+        return listInstances;
+    }
+
+    public void setListInstances(Boolean listInstances) {
+        this.listInstances = listInstances;
+    }
+
     public ConnectReq(ConnectionParam param) {
         this.setReqId(ReqId.getReqID());
         this.setUser(param.getUser());
@@ -111,6 +122,9 @@ public class ConnectReq extends Payload implements Printable {
         this.setIp(param.getAppIp());
         this.setConnector(ProductUtil.getWsConnectorVersion());
         this.setBearerToken(param.getBearerToken());
+        if (param.isAdapterHa()) {
+            this.setListInstances(true);
+        }
 
         // Currently, only BI mode is supported. The downstream interface value is 0, so a conversion is performed here.
         if(param.getConnectMode() == ConnectionParam.CONNECT_MODE_BI){
@@ -129,6 +143,7 @@ public class ConnectReq extends Payload implements Printable {
                 .append(", app='").append(app).append('"')
                 .append(", ip='").append(ip).append('"')
                 .append(", connector='").append(connector).append('"')
+                .append(", listInstances=").append(listInstances)
                 .append(", reqId=").append(getReqId())
                 .append('}')
                 .toString();
