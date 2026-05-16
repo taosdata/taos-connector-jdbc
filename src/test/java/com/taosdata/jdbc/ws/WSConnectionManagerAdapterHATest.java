@@ -87,6 +87,27 @@ public class WSConnectionManagerAdapterHATest {
     }
 
     @Test
+    public void mergeDiscoveredEndpointsDoesNothingWhenSlaveClusterConfigured() throws Exception {
+        Properties properties = new Properties();
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, "root");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, "taosdata");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_ENDPOINTS, "seed:6041");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_ADAPTER_HA, "true");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_HOST, "slave");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_SLAVE_CLUSTER_PORT, "6041");
+        properties.setProperty(TSDBDriver.HTTP_CONNECT_TIMEOUT, "1000");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, "1000");
+        ConnectionParam param = ConnectionParam.getParam(properties);
+        WSConnectionManager manager = new WSConnectionManager(WSFunction.WS, param, new InFlightRequest(64));
+
+        manager.mergeDiscoveredEndpoints(new String[]{"node2:6041"});
+
+        Assert.assertEquals(2, param.getEndpoints().size());
+        Assert.assertFalse(param.getEndpoints().contains(new Endpoint("node2", 6041, false)));
+        Assert.assertEquals(2, manager.getClientCountForTest());
+    }
+
+    @Test
     public void constructorExpandsAdapterHaEndpointsFromKnownCluster() throws Exception {
         rebalanceManager.expandCluster(Arrays.asList(
                 new Endpoint("seed", 6041, false),

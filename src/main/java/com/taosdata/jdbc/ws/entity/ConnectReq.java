@@ -5,6 +5,7 @@ import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.common.Printable;
 import com.taosdata.jdbc.utils.ProductUtil;
 import com.taosdata.jdbc.utils.ReqId;
+import com.taosdata.jdbc.utils.StringUtils;
 
 /**
  * connection request pojo
@@ -113,6 +114,10 @@ public class ConnectReq extends Payload implements Printable {
     }
 
     public ConnectReq(ConnectionParam param) {
+        this(param, shouldListInstances(param) ? Boolean.TRUE : null);
+    }
+
+    public ConnectReq(ConnectionParam param, Boolean listInstances) {
         this.setReqId(ReqId.getReqID());
         this.setUser(param.getUser());
         this.setPassword(param.getPassword());
@@ -122,15 +127,18 @@ public class ConnectReq extends Payload implements Printable {
         this.setIp(param.getAppIp());
         this.setConnector(ProductUtil.getWsConnectorVersion());
         this.setBearerToken(param.getBearerToken());
-        if (param.isAdapterHa()) {
-            this.setListInstances(true);
-        }
+        this.setListInstances(listInstances);
 
         // Currently, only BI mode is supported. The downstream interface value is 0, so a conversion is performed here.
         if(param.getConnectMode() == ConnectionParam.CONNECT_MODE_BI){
             this.setMode(0);
         }
     }
+
+    private static boolean shouldListInstances(ConnectionParam param) {
+        return param.isAdapterHa() && StringUtils.isEmpty(param.getSlaveClusterHost());
+    }
+
     @Override
     public String toPrintString() {
         return new StringBuilder("ConnectReq{")

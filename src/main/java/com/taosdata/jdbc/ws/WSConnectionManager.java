@@ -177,7 +177,7 @@ public class WSConnectionManager implements AutoCloseable {
      * @throws SQLException if authentication request fails
      */
     public boolean authenticateAfterReconnect(Transport transport) throws SQLException {
-        ConnectReq connectReq = new ConnectReq(connectionParam);
+        ConnectReq connectReq = newConnectReqWithoutListInstances();
         ConnectResp auth;
         try {
             auth = (ConnectResp) transport.sendWithoutRetry(new Request(Action.CONN.getAction(), connectReq), defaultTimeout);
@@ -319,7 +319,7 @@ public class WSConnectionManager implements AutoCloseable {
 
         currentNodeIndex = toIndex;
         try {
-            ConnectReq connectReq = new ConnectReq(connectionParam);
+            ConnectReq connectReq = newConnectReqWithoutListInstances();
             ConnectResp auth = (ConnectResp) transport.sendWithoutRetry(
                     new Request(Action.CONN.getAction(), connectReq), defaultTimeout);
 
@@ -337,6 +337,10 @@ public class WSConnectionManager implements AutoCloseable {
         clientArr.get(backCurrentIndex).closeBlocking();
         rebalanceManager.incrementConnectionCount(connectionParam.getEndpoints().get(currentNodeIndex));
         rebalanceManager.decrementConnectionCount(connectionParam.getEndpoints().get(backCurrentIndex));
+    }
+
+    private ConnectReq newConnectReqWithoutListInstances() {
+        return new ConnectReq(connectionParam, connectionParam.isAdapterHa() ? Boolean.FALSE : null);
     }
 
     /**
@@ -385,7 +389,8 @@ public class WSConnectionManager implements AutoCloseable {
     }
 
     public synchronized void mergeDiscoveredEndpoints(String[] instances) {
-        if (!connectionParam.isAdapterHa() || instances == null || instances.length == 0) {
+        if (!connectionParam.isAdapterHa() || !StringUtils.isEmpty(connectionParam.getSlaveClusterHost())
+                || instances == null || instances.length == 0) {
             return;
         }
 
