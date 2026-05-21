@@ -1,0 +1,72 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <groupId>com.taosdata.jdbc</groupId>
+        <artifactId>taos-jdbcdriver-parent</artifactId>
+        <version>${revision}</version>
+    </parent>
+    <artifactId>taos-shaded-jackson-2</artifactId>
+    <modelVersion>4.0.0</modelVersion>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <id>shade-taosdata</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <createDependencyReducedPom>true</createDependencyReducedPom>
+                            <dependencyReducedPomLocation>${project.basedir}/target/dependency-reduced-pom.xml</dependencyReducedPomLocation>
+                            <artifactSet>
+                                <includes>
+                                    <include>com.fasterxml.jackson.*:*</include>
+                                </includes>
+                            </artifactSet>
+                            <relocations>
+                                <relocation>
+                                    <!-- This needs to match flink-shaded-swagger -->
+                                    <pattern>com.fasterxml.jackson</pattern>
+                                    <shadedPattern>com.taosdata.shaded.com.fasterxml.jackson</shadedPattern>
+                                </relocation>
+                                <!--
+                                Manually relocate multi-release classes to the correct shaded package. This is needed
+                                due to a bug in the Maven Shade plugin, which only relocates the content but not
+                                the package structure itself, see https://github.com/apache/maven-shade-plugin/issues/652
+                                -->
+                                <relocation>
+                                    <pattern>META-INF/versions/(\d+)/(.+)/</pattern>
+                                    <shadedPattern>META-INF/versions/$1/com/taosdata/shaded/$2/</shadedPattern>
+                                    <rawString>true</rawString>
+                                </relocation>
+                            </relocations>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
