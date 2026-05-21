@@ -11,6 +11,7 @@ import com.taosdata.jdbc.ws.WSColumnPreparedStatement;
 import com.taosdata.jdbc.ws.WSConnection;
 import com.taosdata.jdbc.ws.entity.Code;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnBindSerializer;
+import com.taosdata.jdbc.ws.stmt2.Stmt2BindExecRequestBuilder;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnFieldBuffer;
 import com.taosdata.jdbc.ws.stmt2.Stmt2FieldMeta;
 import com.taosdata.jdbc.ws.stmt2.entity.Field;
@@ -135,8 +136,28 @@ public class WsStmt2BindExecFallbackTest {
     }
 
     // -----------------------------------------------------------------------
-    // 1. Version capability gate
+    // 1. Binary envelope and version capability gate
     // -----------------------------------------------------------------------
+
+    @Test
+    public void testBindExecEnvelope_matchesTaosAdapterWireFormat() {
+        byte[] payload = new byte[]{0x11, 0x22, 0x33};
+        ByteBuf buf = Stmt2BindExecRequestBuilder.build(payload);
+        try {
+            assertEquals("header + payload length",
+                    Stmt2BindExecRequestBuilder.HEADER_SIZE + payload.length, buf.readableBytes());
+            assertEquals("reqId placeholder", 0L, buf.getLongLE(0));
+            assertEquals("stmtId placeholder", 0L, buf.getLongLE(8));
+            assertEquals("bind-exec action id", Stmt2BindExecRequestBuilder.ACTION_ID, buf.getLongLE(16));
+            assertEquals("protocol version",
+                    Stmt2BindExecRequestBuilder.PROTOCOL_VERSION, buf.getShortLE(24));
+            assertEquals(0x11, buf.getUnsignedByte(26));
+            assertEquals(0x22, buf.getUnsignedByte(27));
+            assertEquals(0x33, buf.getUnsignedByte(28));
+        } finally {
+            buf.release();
+        }
+    }
 
     @Test
     public void testVersionGate_minVersionConstant() {
@@ -638,7 +659,7 @@ public class WsStmt2BindExecFallbackTest {
     }
 
     @Test
-    public void testPayload_rowCountMismatch_throws() {
+    public void testPayload_rowCountMismatch_throws() throws SQLException {
         Stmt2ColumnFieldBuffer c1 = new Stmt2ColumnFieldBuffer(colMeta(TSDB_DATA_TYPE_INT));
         Stmt2ColumnFieldBuffer c2 = new Stmt2ColumnFieldBuffer(colMeta(TSDB_DATA_TYPE_BIGINT));
         c1.appendInt(1);

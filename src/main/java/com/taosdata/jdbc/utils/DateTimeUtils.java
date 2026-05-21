@@ -102,7 +102,7 @@ public class DateTimeUtils {
         return toInstant(timestamp, zoneId);
     }
 
-    public static Long toLong(Instant instant, int precision) {
+    public static long toLong(Instant instant, int precision) {
         long v;
         if (precision == TimestampPrecision.MS) {
             v = instant.toEpochMilli();
@@ -130,17 +130,11 @@ public class DateTimeUtils {
         return toLong(zonedDateTime.toInstant(), precision);
     }
 
-    public static Long toLong(ZonedDateTime zonedDateTime, int precision) {
-        if (zonedDateTime == null) {
-            return null;
-        }
+    public static long toLong(ZonedDateTime zonedDateTime, int precision) {
         return toLong(zonedDateTime.toInstant(), precision);
     }
 
-    public static Long toLong(OffsetDateTime offsetDateTime, int precision) {
-        if (offsetDateTime == null) {
-            return null;
-        }
+    public static long toLong(OffsetDateTime offsetDateTime, int precision) {
         return toLong(offsetDateTime.toInstant(), precision);
     }
 

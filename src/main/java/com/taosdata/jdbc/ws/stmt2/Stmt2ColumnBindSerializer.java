@@ -1,8 +1,12 @@
 package com.taosdata.jdbc.ws.stmt2;
 
 import com.taosdata.jdbc.enums.FieldBindType;
+import com.taosdata.jdbc.utils.Utils;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.CompositeByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
 
-import java.io.ByteArrayOutputStream;
 import java.sql.SQLException;
 
 /**
@@ -67,6 +71,15 @@ public final class Stmt2ColumnBindSerializer {
      * @throws SQLException if row counts are inconsistent or query constraint is violated
      */
     public static byte[] serialize(Stmt2ColumnFieldBuffer[] columns) throws SQLException {
+        ByteBuf payload = serializeBuffer(columns);
+        try {
+            return ByteBufUtil.getBytes(payload);
+        } finally {
+            Utils.releaseByteBuf(payload);
+        }
+    }
+
+    public static ByteBuf serializeBuffer(Stmt2ColumnFieldBuffer[] columns) throws SQLException {
         if (columns == null || columns.length == 0) {
             throw new SQLException("columns must not be null or empty");
         }
@@ -101,7 +114,7 @@ public final class Stmt2ColumnBindSerializer {
             tableCount = columns[tbNameIndex].computeTableCount();
         }
 
-        return buildPayload(columns, rowCount, tableCount);
+        return buildPayloadBuffer(columns, rowCount, tableCount);
     }
 
     /**
@@ -113,6 +126,15 @@ public final class Stmt2ColumnBindSerializer {
      * @throws SQLException if row count is not 1
      */
     public static byte[] serializeQuery(Stmt2ColumnFieldBuffer[] columns) throws SQLException {
+        ByteBuf payload = serializeQueryBuffer(columns);
+        try {
+            return ByteBufUtil.getBytes(payload);
+        } finally {
+            Utils.releaseByteBuf(payload);
+        }
+    }
+
+    public static ByteBuf serializeQueryBuffer(Stmt2ColumnFieldBuffer[] columns) throws SQLException {
         if (columns == null || columns.length == 0) {
             throw new SQLException("columns must not be null or empty");
         }
@@ -123,50 +145,71 @@ public final class Stmt2ColumnBindSerializer {
                                 + " has " + columns[i].getRowCount() + " rows");
             }
         }
-        return buildPayload(columns, 1, 1);
+        return buildPayloadBuffer(columns, 1, 1);
+    }
+
+    public static ByteBuf serializeBuffer(
+            Stmt2ColumnFieldBuffer[] columns,
+            int tableCount) throws SQLException {
+        if (columns == null || columns.length == 0) {
+            throw new SQLException("columns must not be null or empty");
+        }
+        int rowCount = columns[0].getRowCount();
+        boolean hasQueryField = false;
+        for (int i = 0; i < columns.length; i++) {
+            if (columns[i].getRowCount() != rowCount) {
+                throw new SQLException(
+                        "row count mismatch at column " + i
+                                + ": expected " + rowCount
+                                + ", got " + columns[i].getRowCount());
+            }
+            if (columns[i].getMeta().getBindType() == (byte) FieldBindType.TAOS_FIELD_QUERY.getValue()) {
+                hasQueryField = true;
+            }
+        }
+        if (hasQueryField && rowCount != 1) {
+            throw new SQLException("query bind only supports one row, got " + rowCount);
+        }
+        return buildPayloadBuffer(columns, rowCount, tableCount);
     }
 
     // -----------------------------------------------------------------------
     // Internal helpers
     // -----------------------------------------------------------------------
 
-    private static byte[] buildPayload(
+    private static ByteBuf buildPayloadBuffer(
             Stmt2ColumnFieldBuffer[] columns,
             int rowCount,
-            int tableCount) throws SQLException {
-
+            int tableCount) {
         int fieldCount = columns.length;
-
-        // Reserve header; patch total_length at the end.
-        ByteArrayOutputStream out = new ByteArrayOutputStream(HEADER_SIZE + fieldCount * 64);
-        writeLE32(out, 0);              // total_length (placeholder)
-        writeLE32(out, rowCount);
-        writeLE32(out, tableCount);
-        writeLE32(out, fieldCount);
-        writeLE32(out, HEADER_SIZE);   // field_offset
-
-        for (Stmt2ColumnFieldBuffer col : columns) {
-            byte[] block = col.buildColumnBlock();
-            out.write(block, 0, block.length);
+        int componentCount = 1;
+        for (Stmt2ColumnFieldBuffer column : columns) {
+            componentCount += column.blockComponentCount();
         }
+        CompositeByteBuf payload = PooledByteBufAllocator.DEFAULT.compositeBuffer(componentCount);
+        boolean success = false;
+        try {
+            ByteBuf header = PooledByteBufAllocator.DEFAULT.directBuffer(HEADER_SIZE);
+            int totalLength = HEADER_SIZE;
+            for (int i = 0; i < fieldCount; i++) {
+                totalLength += columns[i].getSerializedSize();
+            }
 
-        byte[] payload = out.toByteArray();
-        // Patch total_length at offset 0
-        patchLE32(payload, HEADER_TOTAL_LENGTH_OFFSET, payload.length);
-        return payload;
-    }
-
-    private static void writeLE32(ByteArrayOutputStream out, int v) {
-        out.write(v & 0xFF);
-        out.write((v >>> 8) & 0xFF);
-        out.write((v >>> 16) & 0xFF);
-        out.write((v >>> 24) & 0xFF);
-    }
-
-    private static void patchLE32(byte[] buf, int offset, int v) {
-        buf[offset]     = (byte)(v);
-        buf[offset + 1] = (byte)(v >>> 8);
-        buf[offset + 2] = (byte)(v >>> 16);
-        buf[offset + 3] = (byte)(v >>> 24);
+            header.writeIntLE(totalLength);
+            header.writeIntLE(rowCount);
+            header.writeIntLE(tableCount);
+            header.writeIntLE(fieldCount);
+            header.writeIntLE(HEADER_SIZE);
+            payload.addComponent(true, header);
+            for (Stmt2ColumnFieldBuffer column : columns) {
+                column.appendColumnBlockTo(payload);
+            }
+            success = true;
+            return payload;
+        } finally {
+            if (!success) {
+                Utils.releaseByteBuf(payload);
+            }
+        }
     }
 }

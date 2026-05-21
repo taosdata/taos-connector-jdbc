@@ -98,6 +98,19 @@ public class WSConnection extends AbstractConnection {
                 }
             }
 
+            if ("line".equalsIgnoreCase(param.getPbsMode())){
+                if (super.supportLineBind) {
+                    return new WSRowPreparedStatement(transport,
+                            param,
+                            database,
+                            this,
+                            sql,
+                            idGenerator.getAndIncrement(),
+                            prepareResp);
+                } else {
+                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_LINE_BIND_MODE_UNSUPPORTED_IN_SERVER);
+                }
+            }
             if ((efficientWritingSql || "STMT".equalsIgnoreCase(param.getAsyncWrite())) && isInsert && isSuperTable) {
                 return new WSEWPreparedStatement(transport,
                         param,
@@ -107,22 +120,18 @@ public class WSConnection extends AbstractConnection {
                         idGenerator.getAndIncrement(),
                         prepareResp);
             } else {
-                if ("line".equalsIgnoreCase(param.getPbsMode())){
-                    if (super.supportLineBind) {
-                        return new WSRowPreparedStatement(transport,
+                // Route insert statements to the stmt2 bind-exec producer on supported servers.
+                if (isInsert && supportsStmt2BindExec()) {
+                    if ("jdbc".equalsIgnoreCase(param.getStmt2BindMode())) {
+                        return new WSColumnPreparedStatement(transport,
                                 param,
                                 database,
                                 this,
                                 sql,
                                 idGenerator.getAndIncrement(),
                                 prepareResp);
-                    } else {
-                        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_LINE_BIND_MODE_UNSUPPORTED_IN_SERVER);
                     }
-                }
-                // Route insert statements to the columnar bind-exec producer on supported servers.
-                if (isInsert && supportsStmt2BindExec()) {
-                    return new WSColumnPreparedStatement(transport,
+                    return new WSColumnFastPreparedStatement(transport,
                             param,
                             database,
                             this,
@@ -265,6 +274,6 @@ public class WSConnection extends AbstractConnection {
      * @return true if stmt2_bind_exec is supported by the server
      */
     public boolean supportsStmt2BindExec() {
-        return com.taosdata.jdbc.utils.VersionUtil.supportStmt2BindExec(this.serverVersion);
+        return this.supportStmt2BindExec;
     }
 }

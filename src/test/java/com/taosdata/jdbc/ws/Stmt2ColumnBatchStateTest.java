@@ -9,8 +9,11 @@ import org.junit.Test;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
+import java.util.Collections;
 
 import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_INT;
+import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_BLOB;
+import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_VARBINARY;
 import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_VARCHAR;
 import static org.junit.Assert.*;
 
@@ -29,9 +32,9 @@ public class Stmt2ColumnBatchStateTest {
         assertEquals(0, state.getExpectedRowCount());
         assertEquals(0, state.getTbNameFieldIdx());
 
-        rowState.stageTbName("meters");
-        rowState.stageFixed(1, 42L);
-        rowState.stageVar(2, "alpha".getBytes(StandardCharsets.UTF_8));
+        rowState.stageString(0, "meters");
+        rowState.stageFixed4(1, 42);
+        rowState.stageString(2, "alpha");
 
         state.flushRow(rowState);
 
@@ -40,11 +43,11 @@ public class Stmt2ColumnBatchStateTest {
         assertEquals(1, state.getColumnBuffer(1).getRowCount());
         assertEquals(1, state.getColumnBuffer(2).getRowCount());
         assertFalse(rowState.hasPendingValues());
-        assertNull(rowState.tableName());
+        assertNull(rowState.stringValue(0));
         assertTrue(rowState.isNull(1));
         assertTrue(rowState.isNull(2));
 
-        rowState.stageTbName("meters");
+        rowState.stageString(0, "meters");
         rowState.stageNull(1);
         rowState.stageVar(2, null);
 
@@ -81,7 +84,7 @@ public class Stmt2ColumnBatchStateTest {
         Stmt2ColumnBatchState state = new Stmt2ColumnBatchState(fieldMetas);
         Stmt2CurrentRowState rowState = new Stmt2CurrentRowState(fieldMetas.length);
 
-        rowState.stageFixed(0, 7L);
+        rowState.stageFixed4(0, 7);
         rowState.stageVar(1, "x".getBytes(StandardCharsets.UTF_8));
         state.flushRow(rowState);
 
@@ -104,7 +107,7 @@ public class Stmt2ColumnBatchStateTest {
                 Stmt2FieldMeta.of((byte) FieldBindType.TAOS_FIELD_COL.getValue(), (byte) TSDB_DATA_TYPE_INT, (byte) 0)
         }).getTbNameFieldIdx());
 
-        rowState.stageFixed(0, 9L);
+        rowState.stageFixed4(0, 9);
 
         SQLException ex = assertThrows(SQLException.class, () -> state.flushRow(rowState));
 
@@ -124,14 +127,56 @@ public class Stmt2ColumnBatchStateTest {
         Stmt2ColumnBatchState state = new Stmt2ColumnBatchState(fieldMetas);
         Stmt2CurrentRowState rowState = new Stmt2CurrentRowState(fieldMetas.length);
 
-        rowState.stageFixed(0, 11L);
-        rowState.stageTbName("");
+        rowState.stageFixed4(0, 11);
+        rowState.stageString(1, "");
 
         assertThrows(SQLException.class, () -> state.flushRow(rowState));
         assertEquals(0, state.getExpectedRowCount());
         assertEquals(0, state.getColumnBuffer(0).getRowCount());
         assertEquals(0, state.getColumnBuffer(1).getRowCount());
         assertTrue(rowState.hasPendingValues());
+    }
+
+    @Test
+    public void reset_reusesPreviousValueBufferSizeAsNextInitialSize() throws Exception {
+        Stmt2FieldMeta[] fieldMetas = new Stmt2FieldMeta[]{
+                Stmt2FieldMeta.of((byte) FieldBindType.TAOS_FIELD_COL.getValue(), (byte) TSDB_DATA_TYPE_VARCHAR, (byte) 0)
+        };
+        Stmt2ColumnBatchState state = new Stmt2ColumnBatchState(fieldMetas);
+        Stmt2CurrentRowState rowState = new Stmt2CurrentRowState(fieldMetas.length);
+        String largeValue = String.join("", Collections.nCopies(20_000, "a"));
+
+        rowState.stageString(0, largeValue);
+        state.flushRow(rowState);
+
+        int usedValueBytes = getAutoExpandingBufferReadableBytes(state.getColumnBuffer(0), "valueBuffer");
+        assertTrue(usedValueBytes >= 20_000);
+
+        state.reset();
+
+        int nextInitialSize = getAutoExpandingBufferBufferSize(state.getColumnBuffer(0), "valueBuffer");
+        assertTrue("reset should carry previous batch usage into next initial size", nextInitialSize >= usedValueBytes);
+    }
+
+    @Test
+    public void flushRow_usesEncodedVarBytesForBytesBackedColumns() throws Exception {
+        Stmt2FieldMeta[] fieldMetas = new Stmt2FieldMeta[]{
+                Stmt2FieldMeta.of((byte) FieldBindType.TAOS_FIELD_COL.getValue(), (byte) TSDB_DATA_TYPE_VARBINARY, (byte) 0),
+                Stmt2FieldMeta.of((byte) FieldBindType.TAOS_FIELD_COL.getValue(), (byte) TSDB_DATA_TYPE_BLOB, (byte) 0)
+        };
+        Stmt2ColumnBatchState state = new Stmt2ColumnBatchState(fieldMetas);
+        Stmt2CurrentRowState rowState = new Stmt2CurrentRowState(fieldMetas.length);
+
+        byte[] tb = "meters".getBytes(StandardCharsets.UTF_8);
+        byte[] value = "alpha".getBytes(StandardCharsets.UTF_8);
+        rowState.stageVar(0, tb, tb.length);
+        rowState.stageVar(1, value, value.length);
+
+        state.flushRow(rowState);
+
+        assertEquals(1, state.getExpectedRowCount());
+        assertEquals(1, state.getColumnBuffer(0).getRowCount());
+        assertEquals(1, state.getColumnBuffer(1).getRowCount());
     }
 
     private static void replaceColumnBuffer(
@@ -142,5 +187,27 @@ public class Stmt2ColumnBatchStateTest {
         field.setAccessible(true);
         Stmt2ColumnFieldBuffer[] columnBuffers = (Stmt2ColumnFieldBuffer[]) field.get(state);
         columnBuffers[index] = buffer;
+    }
+
+    private static int getAutoExpandingBufferReadableBytes(
+            Stmt2ColumnFieldBuffer buffer,
+            String fieldName) throws Exception {
+        Object autoBuffer = getDeclaredField(buffer, fieldName);
+        return (Integer) autoBuffer.getClass().getDeclaredMethod("readableBytes").invoke(autoBuffer);
+    }
+
+    private static int getAutoExpandingBufferBufferSize(
+            Stmt2ColumnFieldBuffer buffer,
+            String fieldName) throws Exception {
+        Object autoBuffer = getDeclaredField(buffer, fieldName);
+        Field bufferSize = autoBuffer.getClass().getDeclaredField("bufferSize");
+        bufferSize.setAccessible(true);
+        return bufferSize.getInt(autoBuffer);
+    }
+
+    private static Object getDeclaredField(Object target, String fieldName) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.get(target);
     }
 }

@@ -3,12 +3,15 @@ package com.taosdata.jdbc.ws;
 import com.taosdata.jdbc.AbstractConnection;
 import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.common.ConnectionParam;
+import com.taosdata.jdbc.ws.stmt2.entity.Stmt2ExecResp;
 import com.taosdata.jdbc.ws.stmt2.entity.Field;
 import com.taosdata.jdbc.ws.stmt2.entity.Stmt2PrepareResp;
+import io.netty.buffer.ByteBuf;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.sql.Types;
@@ -74,8 +77,45 @@ public class WSColumnPreparedStatementTest {
                 connection, "INSERT INTO t VALUES (?)", 1L, resp);
     }
 
+    private static Stmt2CurrentRowState currentRowState(WSColumnPreparedStatement stmt) throws Exception {
+        java.lang.reflect.Field field = WSColumnPreparedStatement.class.getDeclaredField("currentRowState");
+        field.setAccessible(true);
+        return (Stmt2CurrentRowState) field.get(stmt);
+    }
+
     private static int bufRowCount(WSColumnPreparedStatement stmt, int fieldIdx) {
         return stmt.getColumnBuffer(fieldIdx).getRowCount();
+    }
+
+    private static boolean endsWith(byte[] data, byte[] suffix) {
+        if (data.length < suffix.length) {
+            return false;
+        }
+        int offset = data.length - suffix.length;
+        for (int i = 0; i < suffix.length; i++) {
+            if (data[offset + i] != suffix[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void stubBindExecTransportConsumesRequestBuffer(int affectedRows) throws SQLException {
+        Mockito.when(transport.send(
+                        Mockito.anyString(),
+                        Mockito.anyLong(),
+                        Mockito.any(ByteBuf.class),
+                        Mockito.eq(false),
+                        Mockito.anyLong()))
+                .thenAnswer(invocation -> {
+                    ByteBuf request = invocation.getArgument(2);
+                    request.release();
+                    Stmt2ExecResp resp = new Stmt2ExecResp();
+                    resp.setCode(0);
+                    resp.setStmtId(1L);
+                    resp.setAffected(affectedRows);
+                    return resp;
+                });
     }
 
     // -----------------------------------------------------------------------
@@ -98,6 +138,30 @@ public class WSColumnPreparedStatementTest {
         assertEquals(1, stmt.getExpectedRowCount());
     }
 
+    @Test
+    public void executeBatch_bindExecTransportConsumesRequestBuffer_withoutDoubleRelease() throws Exception {
+        List<Field> fields = new ArrayList<>();
+        fields.add(makeField((byte) FieldBindType.TAOS_FIELD_TBNAME.getValue(),
+                (byte) TSDB_DATA_TYPE_VARCHAR, (byte) 0));
+        fields.add(makeField((byte) FieldBindType.TAOS_FIELD_COL.getValue(),
+                (byte) TSDB_DATA_TYPE_INT, (byte) 0));
+        stubBindExecTransportConsumesRequestBuffer(1);
+        WSConnection wsConnection = Mockito.mock(WSConnection.class);
+        Mockito.when(wsConnection.supportsStmt2BindExec()).thenReturn(true);
+        Stmt2PrepareResp resp = makeInsertPrepareResp(fields);
+
+        WSColumnPreparedStatement stmt = new WSColumnPreparedStatement(
+                transport, param, "test_db", wsConnection, "INSERT INTO t VALUES (?)", 1L, resp);
+        stmt.setString(1, "d000000001");
+        stmt.setInt(2, 7);
+        stmt.addBatch();
+
+        int[] result = stmt.executeBatch();
+
+        assertEquals(1, result.length);
+        assertEquals(java.sql.Statement.SUCCESS_NO_INFO, result[0]);
+    }
+
     // -----------------------------------------------------------------------
     // last-setter-wins – variable-width
     // -----------------------------------------------------------------------
@@ -116,6 +180,20 @@ public class WSColumnPreparedStatementTest {
 
         assertEquals(1, bufRowCount(stmt, 0));
         assertEquals(1, stmt.getExpectedRowCount());
+    }
+
+    @Test
+    public void setString_stagesStringUntilRowFlush() throws Exception {
+        List<Field> fields = new ArrayList<>();
+        fields.add(makeField((byte) FieldBindType.TAOS_FIELD_COL.getValue(),
+                (byte) TSDB_DATA_TYPE_VARCHAR, (byte) 0));
+
+        WSColumnPreparedStatement stmt = buildStmt(fields);
+        stmt.setString(1, "gamma");
+
+        Stmt2CurrentRowState rowState = currentRowState(stmt);
+        assertEquals("gamma", rowState.stringValue(0));
+        assertNull(rowState.varValue(0));
     }
 
     // -----------------------------------------------------------------------
@@ -250,6 +328,19 @@ public class WSColumnPreparedStatementTest {
     }
 
     @Test
+    public void setFloat_stagesRawBitsDirectly() throws Exception {
+        List<Field> fields = new ArrayList<>();
+        fields.add(makeField((byte) FieldBindType.TAOS_FIELD_COL.getValue(),
+                (byte) TSDB_DATA_TYPE_FLOAT, (byte) 0));
+
+        WSColumnPreparedStatement stmt = buildStmt(fields);
+        stmt.setFloat(1, 3.14f);
+
+        Stmt2CurrentRowState rowState = currentRowState(stmt);
+        assertEquals(Float.floatToRawIntBits(3.14f), rowState.fixed4Value(0));
+    }
+
+    @Test
     public void setFloat_staged() throws Exception {
         List<Field> fields = new ArrayList<>();
         fields.add(makeField((byte) FieldBindType.TAOS_FIELD_COL.getValue(),
@@ -308,6 +399,58 @@ public class WSColumnPreparedStatementTest {
         assertEquals(0, stmt.getTbNameFieldIdx());
         assertEquals(1, bufRowCount(stmt, 0));
         assertEquals(1, bufRowCount(stmt, 1));
+    }
+
+    @Test
+    public void tbName_setString_stagesInUtf8Lane() throws Exception {
+        List<Field> fields = new ArrayList<>();
+        fields.add(makeField((byte) FieldBindType.TAOS_FIELD_TBNAME.getValue(),
+                (byte) TSDB_DATA_TYPE_VARCHAR, (byte) 0));
+
+        WSColumnPreparedStatement stmt = buildStmt(fields);
+        stmt.setString(1, "child_table");
+
+        Stmt2CurrentRowState rowState = currentRowState(stmt);
+
+        assertEquals("child_table", rowState.stringValue(0));
+        assertNull(rowState.varValue(0));
+    }
+
+    @Test
+    public void tbName_setBytes_addBatchFlushesUtf8Value() throws Exception {
+        List<Field> fields = new ArrayList<>();
+        fields.add(makeField((byte) FieldBindType.TAOS_FIELD_TBNAME.getValue(),
+                (byte) TSDB_DATA_TYPE_VARCHAR, (byte) 0));
+        fields.add(makeField((byte) FieldBindType.TAOS_FIELD_COL.getValue(),
+                (byte) TSDB_DATA_TYPE_INT, (byte) 0));
+
+        WSColumnPreparedStatement stmt = buildStmt(fields);
+        byte[] bytes = "child_table".getBytes(StandardCharsets.UTF_8);
+        stmt.setBytes(1, bytes);
+        stmt.setInt(2, 1);
+
+        stmt.addBatch();
+
+        assertEquals(1, stmt.getExpectedRowCount());
+        assertEquals(1, bufRowCount(stmt, 0));
+        assertEquals(1, stmt.getColumnBuffer(0).computeTableCount());
+    }
+
+    @Test
+    public void utf8Field_setBytes_addBatchFlushesEncodedValue() throws Exception {
+        List<Field> fields = new ArrayList<>();
+        fields.add(makeField((byte) FieldBindType.TAOS_FIELD_COL.getValue(),
+                (byte) TSDB_DATA_TYPE_VARCHAR, (byte) 0));
+
+        WSColumnPreparedStatement stmt = buildStmt(fields);
+        byte[] bytes = "alpha".getBytes(StandardCharsets.UTF_8);
+        stmt.setBytes(1, bytes);
+
+        stmt.addBatch();
+
+        byte[] block = stmt.getColumnBuffer(0).buildColumnBlock();
+        assertEquals(1, stmt.getExpectedRowCount());
+        assertTrue(endsWith(block, bytes));
     }
 
     @Test
@@ -512,5 +655,67 @@ public class WSColumnPreparedStatementTest {
         stmt.addBatch();
         assertEquals("Staged value must survive clearBatch", 1, stmt.getExpectedRowCount());
         assertEquals(1, bufRowCount(stmt, 0));
+    }
+
+    @Test
+    public void close_releasesBatchBuffers_afterAddBatchWithoutExecuteOrClearBatch() throws Exception {
+        WSColumnPreparedStatement stmt = buildStmt(singleField(TSDB_DATA_TYPE_INT));
+
+        stmt.setInt(1, 7);
+        stmt.addBatch();
+
+        stmt.close();
+
+        assertNull(getBatchColumnBuffers(stmt));
+    }
+
+    @Test
+    public void close_whenStmtCloseSendThrows_releasesBatchStateAndLocallyCloses() throws Exception {
+        WSColumnPreparedStatement stmt = buildStmt(singleField(TSDB_DATA_TYPE_INT));
+        SQLException expected = new SQLException("stmt close failed");
+        Mockito.when(transport.isConnected()).thenReturn(true);
+        Mockito.when(transport.send(Mockito.any(com.taosdata.jdbc.ws.entity.Request.class), Mockito.anyLong()))
+                .thenThrow(expected);
+
+        stmt.setInt(1, 7);
+        stmt.addBatch();
+
+        SQLException actual = assertSqlException(stmt::close);
+
+        assertEquals(expected, actual);
+        assertNull(getBatchColumnBuffers(stmt));
+        assertTrue(stmt.isClosed());
+    }
+
+    private static List<Field> singleField(int fieldType) {
+        List<Field> fields = new ArrayList<>();
+        fields.add(makeField((byte) FieldBindType.TAOS_FIELD_COL.getValue(),
+                (byte) fieldType, (byte) 0));
+        return fields;
+    }
+
+    private static SQLException assertSqlException(ThrowingRunnable runnable) throws Exception {
+        try {
+            runnable.run();
+            fail("Expected SQLException");
+            return null;
+        } catch (SQLException ex) {
+            return ex;
+        }
+    }
+
+    private static Object getBatchColumnBuffers(WSColumnPreparedStatement stmt) throws Exception {
+        java.lang.reflect.Field batchStateField = WSColumnPreparedStatement.class.getDeclaredField("batchState");
+        batchStateField.setAccessible(true);
+        Object batchState = batchStateField.get(stmt);
+
+        java.lang.reflect.Field columnBuffersField = batchState.getClass().getDeclaredField("columnBuffers");
+        columnBuffersField.setAccessible(true);
+        return columnBuffersField.get(batchState);
+    }
+
+    @FunctionalInterface
+    private interface ThrowingRunnable {
+        void run() throws Exception;
     }
 }

@@ -4,6 +4,8 @@ import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnBindSerializer;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnFieldBuffer;
 import com.taosdata.jdbc.ws.stmt2.Stmt2FieldMeta;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import org.junit.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -156,6 +158,18 @@ public class Stmt2ColumnBindSerializerTest {
     }
 
     @Test
+    public void testFixedWidthBlock_floatRawBits() throws SQLException {
+        Stmt2ColumnFieldBuffer col = new Stmt2ColumnFieldBuffer(
+                meta(FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_FLOAT));
+        int rawBits = Float.floatToRawIntBits(3.14f);
+        col.appendFixed4Raw(rawBits);
+
+        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{col});
+        int blockStart = HEADER_SIZE;
+        assertEquals(rawBits, readLE32(payload, blockStart + 18));
+    }
+
+    @Test
     public void testFixedWidthBlock_double() throws SQLException {
         double val = Math.PI;
         Stmt2ColumnFieldBuffer col = new Stmt2ColumnFieldBuffer(
@@ -168,6 +182,18 @@ public class Stmt2ColumnBindSerializerTest {
         assertEquals(26, readLE32(payload, blockStart));
         long rawBits = readLE64(payload, blockStart + 18);
         assertEquals(val, Double.longBitsToDouble(rawBits), 0.0);
+    }
+
+    @Test
+    public void testFixedWidthBlock_doubleRawBits() throws SQLException {
+        Stmt2ColumnFieldBuffer col = new Stmt2ColumnFieldBuffer(
+                meta(FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_DOUBLE));
+        long rawBits = Double.doubleToRawLongBits(Math.PI);
+        col.appendFixed8Raw(rawBits);
+
+        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{col});
+        int blockStart = HEADER_SIZE;
+        assertEquals(rawBits, readLE64(payload, blockStart + 18));
     }
 
     @Test
@@ -211,6 +237,63 @@ public class Stmt2ColumnBindSerializerTest {
         // 17 + 1 + 1 = 19
         assertEquals(19, readLE32(payload, blockStart));
         assertEquals(99, payload[blockStart + 18] & 0xFF);
+    }
+
+    @Test
+    public void testFixedWidthBlock_usesHeaderAndValueComponents() throws SQLException {
+        Stmt2ColumnFieldBuffer col = new Stmt2ColumnFieldBuffer(
+                meta(FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_INT));
+        col.appendInt(42);
+
+        ByteBuf block = col.buildColumnBlockBuffer();
+        try {
+            assertTrue(block instanceof CompositeByteBuf);
+            assertEquals(2, ((CompositeByteBuf) block).numComponents());
+        } finally {
+            block.release();
+            col.release();
+        }
+    }
+
+    @Test
+    public void testVarWidthBlock_usesHeaderAndValueComponents() throws SQLException {
+        Stmt2ColumnFieldBuffer col = new Stmt2ColumnFieldBuffer(
+                meta(FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_VARCHAR));
+        col.appendBytes("ab".getBytes(StandardCharsets.UTF_8));
+
+        ByteBuf block = col.buildColumnBlockBuffer();
+        try {
+            assertTrue(block instanceof CompositeByteBuf);
+            assertEquals(2, ((CompositeByteBuf) block).numComponents());
+        } finally {
+            block.release();
+            col.release();
+        }
+    }
+
+    @Test
+    public void testSerializeBuffer_flattensColumnBlockComponentsIntoPayload() throws SQLException {
+        Stmt2ColumnFieldBuffer fixed = new Stmt2ColumnFieldBuffer(
+                meta(FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_INT));
+        Stmt2ColumnFieldBuffer var = new Stmt2ColumnFieldBuffer(
+                meta(FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_VARCHAR));
+        fixed.appendInt(42);
+        var.appendBytes("ab".getBytes(StandardCharsets.UTF_8));
+
+        ByteBuf payload = Stmt2ColumnBindSerializer.serializeBuffer(new Stmt2ColumnFieldBuffer[]{fixed, var});
+        try {
+            assertTrue(payload instanceof CompositeByteBuf);
+            CompositeByteBuf composite = (CompositeByteBuf) payload;
+            assertEquals(5, composite.numComponents());
+            for (int i = 0; i < composite.numComponents(); i++) {
+                assertFalse("payload component " + i + " should be flattened",
+                        composite.component(i) instanceof CompositeByteBuf);
+            }
+        } finally {
+            payload.release();
+            fixed.release();
+            var.release();
+        }
     }
 
     // ------------------------------------------------------------------

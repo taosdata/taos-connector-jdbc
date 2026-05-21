@@ -7,7 +7,6 @@ import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.utils.BlobUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
-import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.stmt2.Stmt2BindExecRequestBuilder;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnBindSerializer;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnFieldBuffer;
@@ -15,12 +14,10 @@ import com.taosdata.jdbc.ws.stmt2.Stmt2FieldMeta;
 import com.taosdata.jdbc.ws.stmt2.entity.Field;
 import com.taosdata.jdbc.ws.stmt2.entity.Stmt2PrepareResp;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -33,6 +30,7 @@ import java.util.List;
 import static com.taosdata.jdbc.TSDBConstants.*;
 
 public class WSColumnFastPreparedStatement extends WSColumnPreparedStatement implements PreparedStatement {
+    private static final BigInteger MAX_UNSIGNED_LONG_VALUE = new BigInteger(MAX_UNSIGNED_LONG);
 
     private final Stmt2FieldMeta[] fieldMetas;
     private final byte[] fixedWidths;
@@ -63,38 +61,19 @@ public class WSColumnFastPreparedStatement extends WSColumnPreparedStatement imp
     }
 
     private void stageFixed(int paramIdx, long value) throws SQLException {
+        Stmt2ColumnFieldBuffer buffer = requireNonTbNameBuffer(paramIdx);
         switch (fixedWidths[paramIdx]) {
             case 1:
-                appendNonTbNameValue(paramIdx, new ColumnAppender() {
-                    @Override
-                    public void append(Stmt2ColumnFieldBuffer buffer) throws SQLException {
-                        buffer.appendTinyInt((byte) value);
-                    }
-                });
+                buffer.appendTinyInt((byte) value);
                 break;
             case 2:
-                appendNonTbNameValue(paramIdx, new ColumnAppender() {
-                    @Override
-                    public void append(Stmt2ColumnFieldBuffer buffer) throws SQLException {
-                        buffer.appendSmallInt((short) value);
-                    }
-                });
+                buffer.appendSmallInt((short) value);
                 break;
             case 4:
-                appendNonTbNameValue(paramIdx, new ColumnAppender() {
-                    @Override
-                    public void append(Stmt2ColumnFieldBuffer buffer) throws SQLException {
-                        buffer.appendFixed4Raw((int) value);
-                    }
-                });
+                buffer.appendFixed4Raw((int) value);
                 break;
             case 8:
-                appendNonTbNameValue(paramIdx, new ColumnAppender() {
-                    @Override
-                    public void append(Stmt2ColumnFieldBuffer buffer) throws SQLException {
-                        buffer.appendFixed8Raw(value);
-                    }
-                });
+                buffer.appendFixed8Raw(value);
                 break;
             default:
                 throw new IllegalStateException("Not a fixed-width field at index " + paramIdx);
@@ -109,50 +88,33 @@ public class WSColumnFastPreparedStatement extends WSColumnPreparedStatement imp
         if (paramIdx == tbNameFieldIdx && (bytes == null || length <= 0)) {
             throw tableNameRequiredException();
         }
-        appendValue(paramIdx, new ColumnAppender() {
-            @Override
-            public void append(Stmt2ColumnFieldBuffer buffer) throws SQLException {
-                buffer.appendEncodedVar(bytes, length);
-            }
-        });
+        columnBuffer(paramIdx).appendEncodedVar(bytes, length);
     }
 
     private void stageString(int paramIdx, String value) throws SQLException {
         if (paramIdx == tbNameFieldIdx && (value == null || value.isEmpty())) {
             throw tableNameRequiredException();
         }
-        appendValue(paramIdx, new ColumnAppender() {
-            @Override
-            public void append(Stmt2ColumnFieldBuffer buffer) throws SQLException {
-                buffer.appendString(value);
-            }
-        });
+        if (paramIdx == tbNameFieldIdx) {
+            columnBuffer(paramIdx).appendTbName(value);
+            return;
+        }
+        columnBuffer(paramIdx).appendString(value);
     }
 
     private void stageNull(int paramIdx) throws SQLException {
-        appendValue(paramIdx, new ColumnAppender() {
-            @Override
-            public void append(Stmt2ColumnFieldBuffer buffer) throws SQLException {
-                buffer.appendNull();
-            }
-        });
+        if (paramIdx == tbNameFieldIdx) {
+            throw tableNameRequiredException();
+        }
+        columnBuffer(paramIdx).appendNull();
     }
 
     private void stageTimestamp(int parameterIndex, long epochValue) throws SQLException {
-        appendNonTbNameValue(parameterIndex - 1, new ColumnAppender() {
-            @Override
-            public void append(Stmt2ColumnFieldBuffer buffer) throws SQLException {
-                buffer.appendTimestamp(epochValue);
-            }
-        });
+        requireNonTbNameBuffer(parameterIndex - 1).appendTimestamp(epochValue);
     }
 
     private byte fieldType(int parameterIndex) {
         return fieldMetas[parameterIndex - 1].getFieldType();
-    }
-
-    private byte bindType(int parameterIndex) {
-        return fieldMetas[parameterIndex - 1].getBindType();
     }
 
     @Override
@@ -259,7 +221,7 @@ public class WSColumnFastPreparedStatement extends WSColumnPreparedStatement imp
     @Override
     public void setString(int parameterIndex, String x) throws SQLException {
         int idx = parameterIndex - 1;
-        if (bindType(parameterIndex) == (byte) FieldBindType.TAOS_FIELD_TBNAME.getValue() && x == null) {
+        if (idx == tbNameFieldIdx && x == null) {
             throw TSDBError.createSQLException(
                     TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table name can't be null");
         }
@@ -269,7 +231,7 @@ public class WSColumnFastPreparedStatement extends WSColumnPreparedStatement imp
     @Override
     public void setNString(int parameterIndex, String x) throws SQLException {
         int idx = parameterIndex - 1;
-        if (bindType(parameterIndex) == (byte) FieldBindType.TAOS_FIELD_TBNAME.getValue() && x == null) {
+        if (idx == tbNameFieldIdx && x == null) {
             throw TSDBError.createSQLException(
                     TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table name can't be null");
         }
@@ -279,7 +241,7 @@ public class WSColumnFastPreparedStatement extends WSColumnPreparedStatement imp
     @Override
     public void setBytes(int parameterIndex, byte[] x) throws SQLException {
         int idx = parameterIndex - 1;
-        if (bindType(parameterIndex) == (byte) FieldBindType.TAOS_FIELD_TBNAME.getValue() && x == null) {
+        if (idx == tbNameFieldIdx && x == null) {
             throw TSDBError.createSQLException(
                     TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table name can't be null");
         }
@@ -292,7 +254,7 @@ public class WSColumnFastPreparedStatement extends WSColumnPreparedStatement imp
             stageNull(parameterIndex - 1);
             return;
         }
-        stageVar(parameterIndex - 1, x.toPlainString().getBytes(StandardCharsets.UTF_8));
+        stageString(parameterIndex - 1, x.toPlainString());
     }
 
     @Override
@@ -505,7 +467,7 @@ public class WSColumnFastPreparedStatement extends WSColumnPreparedStatement imp
             stageTimestamp(parameterIndex, DateTimeUtils.toLong((OffsetDateTime) x, stmtInfo.getPrecision()));
         } else if (x instanceof BigInteger) {
             BigInteger v = (BigInteger) x;
-            if (v.compareTo(BigInteger.ZERO) < 0 || v.compareTo(new BigInteger(MAX_UNSIGNED_LONG)) > 0) {
+            if (v.compareTo(BigInteger.ZERO) < 0 || v.compareTo(MAX_UNSIGNED_LONG_VALUE) > 0) {
                 throw TSDBError.createSQLException(
                         TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "ubigint value is out of range");
             }
@@ -513,7 +475,7 @@ public class WSColumnFastPreparedStatement extends WSColumnPreparedStatement imp
         } else if (x instanceof Blob) {
             stageVar(parameterIndex - 1, ((Blob) x).getBytes(1, (int) ((Blob) x).length()));
         } else if (x instanceof BigDecimal) {
-            stageVar(parameterIndex - 1, ((BigDecimal) x).toPlainString().getBytes(StandardCharsets.UTF_8));
+            stageString(parameterIndex - 1, ((BigDecimal) x).toPlainString());
         } else {
             throw new SQLException("Unsupported data type: " + x.getClass().getName());
         }
@@ -606,9 +568,6 @@ public class WSColumnFastPreparedStatement extends WSColumnPreparedStatement imp
             writeBlockWithRetrySync(rawBuf);
             this.affectedRows = batchInsertedRowsInner.getAndSet(0);
         } finally {
-            if (rawBuf != null) {
-                rawBuf.release();
-            }
             resetFastState();
         }
         return this.affectedRows;
@@ -625,10 +584,20 @@ public class WSColumnFastPreparedStatement extends WSColumnPreparedStatement imp
     }
 
     private void resetFastState() {
-        bufferSizeHints = snapshotBufferSizeHints();
-        releaseColumnBuffers();
         expectedRowCount = 0;
-        columnBuffers = allocateColumnBuffers();
+        if (columnBuffers == null) {
+            columnBuffers = allocateColumnBuffers();
+            return;
+        }
+        for (int i = 0; i < columnBuffers.length; i++) {
+            if (fieldMetas[i].isVariableWidth()) {
+                Stmt2ColumnFieldBuffer.BufferSizeHints hints = columnBuffers[i].snapshotUsage();
+                columnBuffers[i].release();
+                columnBuffers[i] = new Stmt2ColumnFieldBuffer(fieldMetas[i], hints);
+            } else {
+                columnBuffers[i].reset();
+            }
+        }
     }
 
     private void releaseColumnBuffers() {
@@ -665,15 +634,6 @@ public class WSColumnFastPreparedStatement extends WSColumnPreparedStatement imp
         return tableCount;
     }
 
-    private byte[] buildPayload() throws SQLException {
-        ByteBuf payload = buildPayloadBuffer();
-        try {
-            return ByteBufUtil.getBytes(payload);
-        } finally {
-            Utils.releaseByteBuf(payload);
-        }
-    }
-
     private ByteBuf buildPayloadBuffer() throws SQLException {
         return Stmt2ColumnBindSerializer.serializeBuffer(columnBuffers, resolvedTableCount());
     }
@@ -700,15 +660,15 @@ public class WSColumnFastPreparedStatement extends WSColumnPreparedStatement imp
         }
     }
 
-    private void appendValue(int index, ColumnAppender appender) throws SQLException {
-        appender.append(columnBuffers[index]);
+    private Stmt2ColumnFieldBuffer columnBuffer(int index) {
+        return columnBuffers[index];
     }
 
-    private void appendNonTbNameValue(int index, ColumnAppender appender) throws SQLException {
+    private Stmt2ColumnFieldBuffer requireNonTbNameBuffer(int index) throws SQLException {
         if (index == tbNameFieldIdx) {
             throw tableNameRequiredException();
         }
-        appendValue(index, appender);
+        return columnBuffers[index];
     }
 
     private SQLException tableNameRequiredException() {
@@ -735,9 +695,5 @@ public class WSColumnFastPreparedStatement extends WSColumnPreparedStatement imp
 
     int getTbNameFieldIdx() {
         return tbNameFieldIdx;
-    }
-
-    private interface ColumnAppender {
-        void append(Stmt2ColumnFieldBuffer buffer) throws SQLException;
     }
 }

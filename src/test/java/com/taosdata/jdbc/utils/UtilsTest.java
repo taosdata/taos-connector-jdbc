@@ -277,6 +277,8 @@ public class UtilsTest {
         // Minor version comparison
         assertEquals(1, VersionUtil.compareVersions("3.1.0", "3.0.0"));
         assertEquals(-1, VersionUtil.compareVersions("3.0.0", "3.1.0"));
+        assertEquals(1, VersionUtil.compareVersions("3.4.1.6.alpha.community", "3.4.1.5"));
+
 
         // Patch version comparison
         assertEquals(1, VersionUtil.compareVersions("3.0.1", "3.0.0"));

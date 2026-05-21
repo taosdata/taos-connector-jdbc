@@ -4,17 +4,25 @@ import com.taosdata.jdbc.AbstractConnection;
 import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.ws.Transport;
+import com.taosdata.jdbc.ws.WSColumnFastPreparedStatement;
+import com.taosdata.jdbc.ws.WSColumnPreparedStatement;
 import com.taosdata.jdbc.ws.WSRowPreparedStatement;
+import com.taosdata.jdbc.ws.stmt2.Stmt2BindExecRequestBuilder;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnBindSerializer;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnFieldBuffer;
 import com.taosdata.jdbc.ws.stmt2.Stmt2FieldMeta;
 import com.taosdata.jdbc.ws.stmt2.entity.Field;
 import com.taosdata.jdbc.ws.stmt2.entity.Stmt2PrepareResp;
+import com.taosdata.jdbc.utils.Utils;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.CompositeByteBuf;
+import org.junit.Assume;
 import org.junit.Test;
 
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Arrays;
@@ -62,6 +70,48 @@ public class WsStmt2SerializationPerfCompareTest {
      * For N == ROWS: 17 + ROWS  (null array is row-major byte array)
      */
     private static final int FIXED_BLOCK_OVERHEAD = 17; // not counting null bytes or value bytes
+    private static final long BASE_TS = 1_700_000_000_000L;
+    private static final int DEFAULT_REALISTIC_ROWS = 10_000;
+    private static final int DEFAULT_WARMUP_ROUNDS = 3;
+    private static final int DEFAULT_MEASURE_ROUNDS = 5;
+
+    private enum BenchmarkMode {
+        COMPATIBILITY,
+        FAST,
+        LINE
+    }
+
+    private static final class ClientSerializationResult {
+        final int requestBytes;
+
+        private ClientSerializationResult(int requestBytes) {
+            this.requestBytes = requestBytes;
+        }
+    }
+
+    private static final class RealisticWorkload {
+        final String[] tableNames;
+        final Timestamp[] timestamps;
+        final float[] current;
+        final int[] voltage;
+        final float[] phase;
+
+        private RealisticWorkload(String[] tableNames,
+                                  Timestamp[] timestamps,
+                                  float[] current,
+                                  int[] voltage,
+                                  float[] phase) {
+            this.tableNames = tableNames;
+            this.timestamps = timestamps;
+            this.current = current;
+            this.voltage = voltage;
+            this.phase = phase;
+        }
+
+        private int rows() {
+            return tableNames.length;
+        }
+    }
 
     // -----------------------------------------------------------------------
     // Helpers
@@ -77,6 +127,158 @@ public class WsStmt2SerializationPerfCompareTest {
                 | ((buf[off + 1] & 0xFF) << 8)
                 | ((buf[off + 2] & 0xFF) << 16)
                 | ((buf[off + 3] & 0xFF) << 24);
+    }
+
+    private static float currentFor(int rowIndex) {
+        return (float) (rowIndex % 1_000) / 10.0f;
+    }
+
+    private static int voltageFor(int rowIndex) {
+        return 220 + (rowIndex % 50);
+    }
+
+    private static float phaseFor(int rowIndex) {
+        return (float) (rowIndex % 360) / 10.0f;
+    }
+
+    private static String paddedTableName(int rowIndex) {
+        String value = Integer.toString(rowIndex);
+        StringBuilder builder = new StringBuilder(10);
+        builder.append('d');
+        for (int i = value.length(); i < 9; i++) {
+            builder.append('0');
+        }
+        builder.append(value);
+        return builder.toString();
+    }
+
+    private static RealisticWorkload buildRealisticWorkload(int rows) {
+        String[] tableNames = new String[rows];
+        Timestamp[] timestamps = new Timestamp[rows];
+        float[] current = new float[rows];
+        int[] voltage = new int[rows];
+        float[] phase = new float[rows];
+        for (int i = 0; i < rows; i++) {
+            tableNames[i] = paddedTableName(i);
+            timestamps[i] = new Timestamp(BASE_TS + i);
+            current[i] = currentFor(i);
+            voltage[i] = voltageFor(i);
+            phase[i] = phaseFor(i);
+        }
+        return new RealisticWorkload(tableNames, timestamps, current, voltage, phase);
+    }
+
+    private static ConnectionParam mockParam() {
+        ConnectionParam param = mock(ConnectionParam.class);
+        when(param.getRequestTimeout()).thenReturn(30_000);
+        when(param.getZoneId()).thenReturn(null);
+        when(param.getRetryTimes()).thenReturn(1);
+        when(param.isEnableAutoConnect()).thenReturn(false);
+        when(param.getDatabase()).thenReturn("testdb");
+        return param;
+    }
+
+    private static Transport mockTransport(ConnectionParam param) {
+        Transport transport = mock(Transport.class);
+        when(transport.getReconnectCount()).thenReturn(0);
+        when(transport.isConnected()).thenReturn(true);
+        when(transport.isClosed()).thenReturn(false);
+        when(transport.getConnectionParam()).thenReturn(param);
+        return transport;
+    }
+
+    private static BenchmarkMode[] benchmarkOrderForRound(int roundIndex) {
+        BenchmarkMode[] modes = BenchmarkMode.values();
+        BenchmarkMode[] order = new BenchmarkMode[modes.length];
+        int startIndex = roundIndex % modes.length;
+        for (int i = 0; i < modes.length; i++) {
+            order[i] = modes[(startIndex + i) % modes.length];
+        }
+        return order;
+    }
+
+    private static Field stmtField(byte bindType, byte fieldType) {
+        Field field = new Field();
+        field.setBindType(bindType);
+        field.setFieldType(fieldType);
+        field.setPrecision((byte) 0);
+        return field;
+    }
+
+    private static Stmt2PrepareResp realisticInsertPrepareResp() {
+        Stmt2PrepareResp prepResp = new Stmt2PrepareResp();
+        prepResp.setCode(0);
+        prepResp.setInsert(true);
+        prepResp.setStmtId(0L);
+        prepResp.setFields(Arrays.asList(
+                stmtField((byte) FieldBindType.TAOS_FIELD_TBNAME.getValue(), (byte) TSDB_DATA_TYPE_VARCHAR),
+                stmtField((byte) FieldBindType.TAOS_FIELD_COL.getValue(), (byte) TSDB_DATA_TYPE_TIMESTAMP),
+                stmtField((byte) FieldBindType.TAOS_FIELD_COL.getValue(), (byte) TSDB_DATA_TYPE_FLOAT),
+                stmtField((byte) FieldBindType.TAOS_FIELD_COL.getValue(), (byte) TSDB_DATA_TYPE_INT),
+                stmtField((byte) FieldBindType.TAOS_FIELD_COL.getValue(), (byte) TSDB_DATA_TYPE_FLOAT)));
+        return prepResp;
+    }
+
+    private static void bindRealisticWorkload(PreparedStatement stmt, RealisticWorkload workload) throws SQLException {
+        for (int i = 0; i < workload.rows(); i++) {
+            stmt.setString(1, workload.tableNames[i]);
+            stmt.setTimestamp(2, workload.timestamps[i]);
+            stmt.setFloat(3, workload.current[i]);
+            stmt.setInt(4, workload.voltage[i]);
+            stmt.setFloat(5, workload.phase[i]);
+            stmt.addBatch();
+        }
+    }
+
+    private static final class Stmt2PayloadAccess {
+        private final Object owner;
+        private final Method buildPayloadBuffer;
+        private final Method reset;
+
+        private Stmt2PayloadAccess(Object owner, Method buildPayloadBuffer, Method reset) {
+            this.owner = owner;
+            this.buildPayloadBuffer = buildPayloadBuffer;
+            this.reset = reset;
+        }
+
+        private ByteBuf buildPayloadBuffer() throws Exception {
+            return (ByteBuf) buildPayloadBuffer.invoke(owner);
+        }
+
+        private void reset() throws Exception {
+            reset.invoke(owner);
+        }
+    }
+
+    private static Stmt2PayloadAccess stmt2PayloadAccess(Object stmt, Class<?> stmtClass) throws Exception {
+        try {
+            Method buildPayloadBuffer = stmtClass.getDeclaredMethod("buildPayloadBuffer");
+            buildPayloadBuffer.setAccessible(true);
+            Method resetFastState = stmtClass.getDeclaredMethod("resetFastState");
+            resetFastState.setAccessible(true);
+            return new Stmt2PayloadAccess(stmt, buildPayloadBuffer, resetFastState);
+        } catch (NoSuchMethodException ignored) {
+            java.lang.reflect.Field batchStateField = stmtClass.getDeclaredField("batchState");
+            batchStateField.setAccessible(true);
+            Object batchState = batchStateField.get(stmt);
+            Method buildPayloadBuffer = batchState.getClass().getDeclaredMethod("buildPayloadBuffer");
+            buildPayloadBuffer.setAccessible(true);
+            Method reset = batchState.getClass().getDeclaredMethod("reset");
+            reset.setAccessible(true);
+            return new Stmt2PayloadAccess(batchState, buildPayloadBuffer, reset);
+        }
+    }
+
+    private static byte[] buildStmt2RequestBytes(Object stmt, Class<?> stmtClass) throws Exception {
+        Stmt2PayloadAccess access = stmt2PayloadAccess(stmt, stmtClass);
+        ByteBuf payload = access.buildPayloadBuffer();
+        ByteBuf request = Stmt2BindExecRequestBuilder.build(payload);
+        try {
+            return ByteBufUtil.getBytes(request);
+        } finally {
+            Utils.releaseByteBuf(request);
+            access.reset();
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -101,18 +303,8 @@ public class WsStmt2SerializationPerfCompareTest {
      * @return byte count of the produced raw block
      */
     private static int wsRowPayloadBytes(int rows) throws Exception {
-        Transport transport = mock(Transport.class);
-        ConnectionParam param = mock(ConnectionParam.class);
-        when(transport.getReconnectCount()).thenReturn(0);
-        when(transport.isConnected()).thenReturn(true);
-        when(transport.isClosed()).thenReturn(false);
-        when(transport.getConnectionParam()).thenReturn(param);
-        when(param.getRequestTimeout()).thenReturn(30_000);
-        when(param.getZoneId()).thenReturn(null);
-        when(param.getRetryTimes()).thenReturn(1);
-        when(param.isEnableAutoConnect()).thenReturn(false);
-        when(param.getDatabase()).thenReturn("testdb");
-
+        ConnectionParam param = mockParam();
+        Transport transport = mockTransport(param);
         AbstractConnection conn = mock(AbstractConnection.class);
 
         Field tsField = new Field();
@@ -132,26 +324,177 @@ public class WsStmt2SerializationPerfCompareTest {
                 transport, param, "testdb", conn,
                 "INSERT INTO t VALUES(?,?)", 0L, prepResp);
 
-        for (int i = 0; i < rows; i++) {
-            stmt.setTimestamp(1, new Timestamp(1700000000000L + (long) i * 1000L));
-            stmt.setInt(2, i);
-            stmt.addBatch();
+        try {
+            for (int i = 0; i < rows; i++) {
+                stmt.setTimestamp(1, new Timestamp(1700000000000L + (long) i * 1000L));
+                stmt.setInt(2, i);
+                stmt.addBatch();
+            }
+
+            // Extract raw block via reflection (private buffersStopWrite + getRawBlock)
+            Method buffersStopWrite =
+                    WSRowPreparedStatement.class.getDeclaredMethod("buffersStopWrite");
+            buffersStopWrite.setAccessible(true);
+            buffersStopWrite.invoke(stmt);
+
+            Method getRawBlock =
+                    WSRowPreparedStatement.class.getDeclaredMethod("getRawBlock");
+            getRawBlock.setAccessible(true);
+            CompositeByteBuf rawBlock = (CompositeByteBuf) getRawBlock.invoke(stmt);
+            try {
+                return rawBlock.readableBytes();
+            } finally {
+                rawBlock.release();
+            }
+        } finally {
+            stmt.close();
         }
+    }
 
-        // Extract raw block via reflection (private buffersStopWrite + getRawBlock)
-        Method buffersStopWrite =
-                WSRowPreparedStatement.class.getDeclaredMethod("buffersStopWrite");
-        buffersStopWrite.setAccessible(true);
-        buffersStopWrite.invoke(stmt);
+    private static ClientSerializationResult wsRowRealisticSerialization(RealisticWorkload workload) throws Exception {
+        ConnectionParam param = mockParam();
+        Transport transport = mockTransport(param);
+        AbstractConnection conn = mock(AbstractConnection.class);
+        Stmt2PrepareResp prepResp = realisticInsertPrepareResp();
 
-        Method getRawBlock =
-                WSRowPreparedStatement.class.getDeclaredMethod("getRawBlock");
-        getRawBlock.setAccessible(true);
-        CompositeByteBuf rawBlock = (CompositeByteBuf) getRawBlock.invoke(stmt);
+        WSRowPreparedStatement stmt = new WSRowPreparedStatement(
+                transport, param, "testdb", conn,
+                "insert into meters (tbname, ts, current, voltage, phase) values(?,?,?,?,?)",
+                0L, prepResp);
 
-        int size = rawBlock.readableBytes();
-        rawBlock.release();
-        return size;
+        try {
+            for (int i = 0; i < workload.rows(); i++) {
+                stmt.setString(1, workload.tableNames[i]);
+                stmt.setTimestamp(2, workload.timestamps[i]);
+                stmt.setFloat(3, workload.current[i]);
+                stmt.setInt(4, workload.voltage[i]);
+                stmt.setFloat(5, workload.phase[i]);
+                stmt.addBatch();
+            }
+
+            Method buffersStopWrite = WSRowPreparedStatement.class.getDeclaredMethod("buffersStopWrite");
+            buffersStopWrite.setAccessible(true);
+            buffersStopWrite.invoke(stmt);
+
+            Method getRawBlock = WSRowPreparedStatement.class.getDeclaredMethod("getRawBlock");
+            getRawBlock.setAccessible(true);
+            CompositeByteBuf rawBlock = (CompositeByteBuf) getRawBlock.invoke(stmt);
+            try {
+                return new ClientSerializationResult(rawBlock.readableBytes());
+            } finally {
+                rawBlock.release();
+            }
+        } finally {
+            stmt.close();
+        }
+    }
+
+    private static ClientSerializationResult wsColumnRealisticSerialization(RealisticWorkload workload) throws Exception {
+        ConnectionParam param = mockParam();
+        Transport transport = mockTransport(param);
+        AbstractConnection conn = mock(AbstractConnection.class);
+        Stmt2PrepareResp prepResp = realisticInsertPrepareResp();
+
+        WSColumnPreparedStatement stmt = new WSColumnPreparedStatement(
+                transport, param, "testdb", conn,
+                "insert into meters (tbname, ts, current, voltage, phase) values(?,?,?,?,?)",
+                0L, prepResp);
+        Stmt2PayloadAccess access = stmt2PayloadAccess(stmt, WSColumnPreparedStatement.class);
+
+        try {
+            for (int i = 0; i < workload.rows(); i++) {
+                stmt.setString(1, workload.tableNames[i]);
+                stmt.setTimestamp(2, workload.timestamps[i]);
+                stmt.setFloat(3, workload.current[i]);
+                stmt.setInt(4, workload.voltage[i]);
+                stmt.setFloat(5, workload.phase[i]);
+                stmt.addBatch();
+            }
+
+            ByteBuf payload = access.buildPayloadBuffer();
+            ByteBuf request = Stmt2BindExecRequestBuilder.build(payload);
+            try {
+                return new ClientSerializationResult(request.readableBytes());
+            } finally {
+                Utils.releaseByteBuf(request);
+                access.reset();
+            }
+        } finally {
+            stmt.close();
+        }
+    }
+
+    private static byte[] wsColumnRealisticRequestBytes(RealisticWorkload workload) throws Exception {
+        ConnectionParam param = mockParam();
+        Transport transport = mockTransport(param);
+        AbstractConnection conn = mock(AbstractConnection.class);
+        Stmt2PrepareResp prepResp = realisticInsertPrepareResp();
+
+        WSColumnPreparedStatement stmt = new WSColumnPreparedStatement(
+                transport, param, "testdb", conn,
+                "insert into meters (tbname, ts, current, voltage, phase) values(?,?,?,?,?)",
+                0L, prepResp);
+
+        try {
+            bindRealisticWorkload(stmt, workload);
+            return buildStmt2RequestBytes(stmt, WSColumnPreparedStatement.class);
+        } finally {
+            stmt.close();
+        }
+    }
+
+    private static ClientSerializationResult wsFastColumnRealisticSerialization(RealisticWorkload workload) throws Exception {
+        ConnectionParam param = mockParam();
+        Transport transport = mockTransport(param);
+        AbstractConnection conn = mock(AbstractConnection.class);
+        Stmt2PrepareResp prepResp = realisticInsertPrepareResp();
+
+        WSColumnFastPreparedStatement stmt = new WSColumnFastPreparedStatement(
+                transport, param, "testdb", conn,
+                "insert into meters (tbname, ts, current, voltage, phase) values(?,?,?,?,?)",
+                0L, prepResp);
+        Stmt2PayloadAccess access = stmt2PayloadAccess(stmt, WSColumnFastPreparedStatement.class);
+
+        try {
+            for (int i = 0; i < workload.rows(); i++) {
+                stmt.setString(1, workload.tableNames[i]);
+                stmt.setTimestamp(2, workload.timestamps[i]);
+                stmt.setFloat(3, workload.current[i]);
+                stmt.setInt(4, workload.voltage[i]);
+                stmt.setFloat(5, workload.phase[i]);
+                stmt.addBatch();
+            }
+
+            ByteBuf payload = access.buildPayloadBuffer();
+            ByteBuf request = Stmt2BindExecRequestBuilder.build(payload);
+            try {
+                return new ClientSerializationResult(request.readableBytes());
+            } finally {
+                Utils.releaseByteBuf(request);
+                access.reset();
+            }
+        } finally {
+            stmt.close();
+        }
+    }
+
+    private static byte[] wsFastColumnRealisticRequestBytes(RealisticWorkload workload) throws Exception {
+        ConnectionParam param = mockParam();
+        Transport transport = mockTransport(param);
+        AbstractConnection conn = mock(AbstractConnection.class);
+        Stmt2PrepareResp prepResp = realisticInsertPrepareResp();
+
+        WSColumnFastPreparedStatement stmt = new WSColumnFastPreparedStatement(
+                transport, param, "testdb", conn,
+                "insert into meters (tbname, ts, current, voltage, phase) values(?,?,?,?,?)",
+                0L, prepResp);
+
+        try {
+            bindRealisticWorkload(stmt, workload);
+            return buildStmt2RequestBytes(stmt, WSColumnFastPreparedStatement.class);
+        } finally {
+            stmt.close();
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -166,8 +509,7 @@ public class WsStmt2SerializationPerfCompareTest {
         tsCol.appendTimestamp(1700000000000L);
         intCol.appendInt(42);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(
-                new Stmt2ColumnFieldBuffer[]{tsCol, intCol});
+        byte[] payload = serializeAndRelease(tsCol, intCol);
 
         // Expected: HEADER(20) + block_ts(17+1+8=26) + block_int(17+1+4=22) = 68
         int expectedTsBlock = FIXED_BLOCK_OVERHEAD + 1 /* null[1] */ + 8 /* ts bytes */;
@@ -190,8 +532,7 @@ public class WsStmt2SerializationPerfCompareTest {
                 intCol.appendInt(i);
             }
 
-            byte[] payload = Stmt2ColumnBindSerializer.serialize(
-                    new Stmt2ColumnFieldBuffer[]{tsCol, intCol});
+            byte[] payload = serializeAndRelease(tsCol, intCol);
 
             // block_ts = 17 + rows(null) + 8*rows(values) = 17 + 9*rows
             // block_int = 17 + rows(null) + 4*rows(values) = 17 + 5*rows
@@ -220,6 +561,33 @@ public class WsStmt2SerializationPerfCompareTest {
         }
     }
 
+    @Test
+    public void testFastColumnClientSerialization_matchesCompatibilityRequestBytes() throws Exception {
+        RealisticWorkload workload = buildRealisticWorkload(128);
+
+        byte[] columnarRequest = wsColumnRealisticRequestBytes(workload);
+        byte[] fastRequest = wsFastColumnRealisticRequestBytes(workload);
+
+        assertTrue("compatibility request must have bytes", columnarRequest.length > 0);
+        assertTrue("fast-mode request must have bytes", fastRequest.length > 0);
+        assertEquals("fast-mode request bytes should match compatibility columnar bytes",
+                columnarRequest.length, fastRequest.length);
+        assertArrayEquals("fast-mode request payload should match compatibility columnar payload",
+                columnarRequest, fastRequest);
+    }
+
+    @Test
+    public void testBenchmarkMeasurementOrder_rotatesAcrossRounds() {
+        assertArrayEquals(new BenchmarkMode[]{BenchmarkMode.COMPATIBILITY, BenchmarkMode.FAST, BenchmarkMode.LINE},
+                benchmarkOrderForRound(0));
+        assertArrayEquals(new BenchmarkMode[]{BenchmarkMode.FAST, BenchmarkMode.LINE, BenchmarkMode.COMPATIBILITY},
+                benchmarkOrderForRound(1));
+        assertArrayEquals(new BenchmarkMode[]{BenchmarkMode.LINE, BenchmarkMode.COMPATIBILITY, BenchmarkMode.FAST},
+                benchmarkOrderForRound(2));
+        assertArrayEquals(new BenchmarkMode[]{BenchmarkMode.COMPATIBILITY, BenchmarkMode.FAST, BenchmarkMode.LINE},
+                benchmarkOrderForRound(3));
+    }
+
     // -----------------------------------------------------------------------
     // 2. Bytes-per-row comparison (columnar vs row-serial)
     // -----------------------------------------------------------------------
@@ -242,8 +610,7 @@ public class WsStmt2SerializationPerfCompareTest {
             intCol.appendInt(i);
         }
 
-        byte[] columnarPayload = Stmt2ColumnBindSerializer.serialize(
-                new Stmt2ColumnFieldBuffer[]{tsCol, intCol});
+        byte[] columnarPayload = serializeAndRelease(tsCol, intCol);
         int wsRowBytes = wsRowPayloadBytes(rows);
 
         double columnarBytesPerRow = (double) columnarPayload.length / rows;
@@ -316,6 +683,100 @@ public class WsStmt2SerializationPerfCompareTest {
                 avgRowSerialUs < 30_000_000L);
     }
 
+    @Test
+    public void benchmarkClientOnly_realisticWorkload_columnarVsRowMode() throws Exception {
+        Assume.assumeTrue("Set -Dws.perf.client.serialize=true to run client-only benchmark",
+                Boolean.getBoolean("ws.perf.client.serialize"));
+
+        final int rows = Integer.getInteger("ws.perf.client.serialize.rows", DEFAULT_REALISTIC_ROWS);
+        final int warmupRounds = Integer.getInteger("ws.perf.client.serialize.warmup", DEFAULT_WARMUP_ROUNDS);
+        final int measureRounds = Integer.getInteger("ws.perf.client.serialize.rounds", DEFAULT_MEASURE_ROUNDS);
+        final RealisticWorkload workload = buildRealisticWorkload(rows);
+
+        for (int i = 0; i < warmupRounds; i++) {
+            for (BenchmarkMode mode : benchmarkOrderForRound(i)) {
+                switch (mode) {
+                    case COMPATIBILITY:
+                        wsColumnRealisticSerialization(workload);
+                        break;
+                    case FAST:
+                        wsFastColumnRealisticSerialization(workload);
+                        break;
+                    case LINE:
+                        wsRowRealisticSerialization(workload);
+                        break;
+                    default:
+                        throw new AssertionError("unexpected benchmark mode: " + mode);
+                }
+            }
+        }
+
+        long columnarNs = 0L;
+        long fastNs = 0L;
+        long rowNs = 0L;
+        ClientSerializationResult columnarResult = null;
+        ClientSerializationResult fastResult = null;
+        ClientSerializationResult rowResult = null;
+        for (int i = 0; i < measureRounds; i++) {
+            for (BenchmarkMode mode : benchmarkOrderForRound(i)) {
+                long t0 = System.nanoTime();
+                ClientSerializationResult result;
+                switch (mode) {
+                    case COMPATIBILITY:
+                        result = wsColumnRealisticSerialization(workload);
+                        columnarNs += System.nanoTime() - t0;
+                        columnarResult = result;
+                        break;
+                    case FAST:
+                        result = wsFastColumnRealisticSerialization(workload);
+                        fastNs += System.nanoTime() - t0;
+                        fastResult = result;
+                        break;
+                    case LINE:
+                        result = wsRowRealisticSerialization(workload);
+                        rowNs += System.nanoTime() - t0;
+                        rowResult = result;
+                        break;
+                    default:
+                        throw new AssertionError("unexpected benchmark mode: " + mode);
+                }
+            }
+        }
+
+        double avgColumnarMs = columnarNs / (double) measureRounds / 1_000_000.0;
+        double avgFastMs = fastNs / (double) measureRounds / 1_000_000.0;
+        double avgRowMs = rowNs / (double) measureRounds / 1_000_000.0;
+        double columnarSpeedup = avgRowMs / avgColumnarMs;
+        double fastSpeedup = avgRowMs / avgFastMs;
+
+        assertNotNull(columnarResult);
+        assertNotNull(fastResult);
+        assertNotNull(rowResult);
+        System.out.printf(
+                "[ClientSerializePerf] rows=%d columnarBytes=%d lineBytes=%d columnarAvgMs=%.2f lineAvgMs=%.2f speedup=%.3f%n",
+                rows,
+                columnarResult.requestBytes,
+                rowResult.requestBytes,
+                avgColumnarMs,
+                avgRowMs,
+                columnarSpeedup);
+        System.out.printf(
+                "[ClientSerializePerfFast] rows=%d fastBytes=%d lineBytes=%d fastAvgMs=%.2f lineAvgMs=%.2f speedup=%.3f%n",
+                rows,
+                fastResult.requestBytes,
+                rowResult.requestBytes,
+                avgFastMs,
+                avgRowMs,
+                fastSpeedup);
+
+        assertTrue("columnar request must have bytes", columnarResult.requestBytes > 0);
+        assertTrue("fast-mode request must have bytes", fastResult.requestBytes > 0);
+        assertTrue("line-mode request must have bytes", rowResult.requestBytes > 0);
+        assertTrue("columnar benchmark must finish in under 30s", avgColumnarMs < 30_000.0);
+        assertTrue("fast benchmark must finish in under 30s", avgFastMs < 30_000.0);
+        assertTrue("line-mode benchmark must finish in under 30s", avgRowMs < 30_000.0);
+    }
+
     // -----------------------------------------------------------------------
     // 4. Variable-width column comparison
     // -----------------------------------------------------------------------
@@ -331,7 +792,7 @@ public class WsStmt2SerializationPerfCompareTest {
             buf.appendBytes(v.getBytes(StandardCharsets.UTF_8));
         }
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{buf});
+        byte[] payload = serializeAndRelease(buf);
 
         // block: 4(totalLen) + 4(type) + 4(num) + 3(isNull) + 1(haveLen) + 3*4(lengths) + 4(bufLen) + (1+2+3)
         int expectedBlock = 4 + 4 + 4 + 3 + 1 + (3 * 4) + 4 + 6;
@@ -356,7 +817,7 @@ public class WsStmt2SerializationPerfCompareTest {
             buf.appendBytes(fixed5);
         }
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{buf});
+        byte[] payload = serializeAndRelease(buf);
 
         // Expected block: 4+4+4 + rows(null) + 1 + rows*4(lengths) + 4 + rows*5(values)
         int expectedBlock = 17 + rows + rows * 4 + rows * 5;
@@ -378,8 +839,7 @@ public class WsStmt2SerializationPerfCompareTest {
         tsCol.appendTimestamp(1700000000000L);
         intCol.appendInt(0);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(
-                new Stmt2ColumnFieldBuffer[]{tsCol, intCol});
+        byte[] payload = serializeAndRelease(tsCol, intCol);
 
         assertEquals("field_count", 2, readLE32(payload, 12));
         assertEquals("field_offset always HEADER_SIZE",
@@ -394,8 +854,7 @@ public class WsStmt2SerializationPerfCompareTest {
         tsCol.appendTimestamp(1700000000001L);
         intCol.appendInt(999);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(
-                new Stmt2ColumnFieldBuffer[]{tsCol, intCol});
+        byte[] payload = serializeAndRelease(tsCol, intCol);
 
         // ts block total_length
         int tsBlockLen = readLE32(payload, HEADER_SIZE);
@@ -422,6 +881,18 @@ public class WsStmt2SerializationPerfCompareTest {
             tsCol.appendTimestamp(1700000000000L + i * 1000L);
             intCol.appendInt(i);
         }
-        return Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{tsCol, intCol});
+        return serializeAndRelease(tsCol, intCol);
+    }
+
+    private static byte[] serializeAndRelease(Stmt2ColumnFieldBuffer... buffers) throws SQLException {
+        try {
+            return Stmt2ColumnBindSerializer.serialize(buffers);
+        } finally {
+            for (Stmt2ColumnFieldBuffer buffer : buffers) {
+                if (buffer != null) {
+                    buffer.release();
+                }
+            }
+        }
     }
 }

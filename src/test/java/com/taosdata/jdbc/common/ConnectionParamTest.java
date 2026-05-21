@@ -115,6 +115,9 @@ public class ConnectionParamTest {
         connectionParam.setPbsMode("line");
         assertEquals("line", connectionParam.getPbsMode());
 
+        connectionParam.setStmt2BindMode("jdbc");
+        assertEquals("jdbc", connectionParam.getStmt2BindMode());
+
         connectionParam.setWsKeepAlive(300);
         assertEquals(300, connectionParam.getWsKeepAlive());
 
@@ -472,6 +475,39 @@ public class ConnectionParamTest {
         ConnectionParam.getParam(properties);
     }
 
+    @Test
+    public void testStmt2BindModeDefaultsToFast() throws SQLException {
+        Properties properties = new Properties();
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
+
+        ConnectionParam param = ConnectionParam.getParam(properties);
+
+        assertEquals("fast", param.getStmt2BindMode());
+    }
+
+    @Test
+    public void testStmt2BindModeExplicitJdbcIsAccepted() throws SQLException {
+        Properties properties = new Properties();
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_STMT2_BIND_MODE, "JdBc");
+
+        ConnectionParam param = ConnectionParam.getParam(properties);
+
+        assertTrue("jdbc".equalsIgnoreCase(param.getStmt2BindMode()));
+    }
+
+    @Test(expected = SQLException.class)
+    public void testInvalidStmt2BindModeValue() throws SQLException {
+        Properties properties = new Properties();
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_STMT2_BIND_MODE, "INVALID");
+
+        ConnectionParam.getParam(properties);
+    }
+
     // Test invalid wsKeepAlive (zero or negative)
     @Test(expected = SQLException.class)
     public void testInvalidWsKeepAliveZero() throws SQLException {
@@ -605,6 +641,7 @@ public class ConnectionParamTest {
         connectionParam.setRetryTimes(3);
         connectionParam.setAsyncWrite("stmt");
         connectionParam.setPbsMode("line");
+        connectionParam.setStmt2BindMode("jdbc");
         connectionParam.setWsKeepAlive(300);
         connectionParam.setHealthCheckInitInterval(10);
         connectionParam.setHealthCheckMaxInterval(300);
@@ -654,6 +691,7 @@ public class ConnectionParamTest {
         assertEquals(connectionParam.getRetryTimes(), copiedParam.getRetryTimes());
         assertEquals(connectionParam.getAsyncWrite(), copiedParam.getAsyncWrite());
         assertEquals(connectionParam.getPbsMode(), copiedParam.getPbsMode());
+        assertEquals(connectionParam.getStmt2BindMode(), copiedParam.getStmt2BindMode());
         assertEquals(connectionParam.getWsKeepAlive(), copiedParam.getWsKeepAlive());
         assertEquals(connectionParam.getHealthCheckInitInterval(), copiedParam.getHealthCheckInitInterval());
         assertEquals(connectionParam.getHealthCheckMaxInterval(), copiedParam.getHealthCheckMaxInterval());
@@ -732,6 +770,7 @@ public class ConnectionParamTest {
         assertEquals(3, param.getRetryTimes());
         assertEquals("", param.getAsyncWrite());
         assertEquals("", param.getPbsMode());
+        assertEquals("fast", param.getStmt2BindMode());
         assertEquals(300, param.getWsKeepAlive());
         assertEquals(10, param.getHealthCheckInitInterval());
         assertEquals(300, param.getHealthCheckMaxInterval());

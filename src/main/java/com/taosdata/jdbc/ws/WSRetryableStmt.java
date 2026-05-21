@@ -250,7 +250,7 @@ public class WSRetryableStmt extends WSStatement {
                 }
             } catch (SQLException e) {
                 // Handle exception based on operation type
-                boolean shouldContinue = handleException(e, i, reconnectCount, operationType);
+                boolean shouldContinue = handleException(e, i, retryCount, reconnectCount, operationType);
                 if (!shouldContinue) {
                     lastError.set(e);
                     break;
@@ -276,16 +276,16 @@ public class WSRetryableStmt extends WSStatement {
         return null;
     }
 
-    private boolean handleException(SQLException e, int retryCount, long reconnectCount, int operationType) {
+    private boolean handleException(SQLException e, int retryIndex, int maxAttempts, long reconnectCount, int operationType) {
         String operationName = (operationType == OPERATION_TYPE_WRITE) ? "writeBlockWithRetry" : "queryWithRetry";
 
-        if (retryCount == param.getRetryTimes() - 1) {
+        if (retryIndex >= maxAttempts - 1) {
             lastError.set(e);
             return false; // Exception will be thrown externally
         }
 
         log.error("Error in {}, stmt id: {}, retry times: {}, code: {}, msg: {}",
-                operationName, stmtInfo.getStmtId(), retryCount, e.getErrorCode(), e.getMessage());
+                operationName, stmtInfo.getStmtId(), retryIndex, e.getErrorCode(), e.getMessage());
 
         // Check if retry is needed
         return shouldRetry(e, reconnectCount);

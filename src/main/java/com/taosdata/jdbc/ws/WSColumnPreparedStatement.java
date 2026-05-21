@@ -8,11 +8,11 @@ import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.utils.BlobUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.ReqId;
+import com.taosdata.jdbc.ws.stmt2.Stmt2BindExecRequestBuilder;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnFieldBuffer;
 import com.taosdata.jdbc.ws.stmt2.Stmt2FieldMeta;
 import com.taosdata.jdbc.ws.stmt2.entity.*;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.PooledByteBufAllocator;
 
 import java.io.InputStream;
 import java.io.Reader;
@@ -51,6 +51,8 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements Prepar
 
     /** One descriptor per prepared field, in prepare order. */
     private final Stmt2FieldMeta[] fieldMetas;
+    /** Cached fixed-width lane per field slot: 0/1/2/4/8 bytes. */
+    private final byte[] fixedWidths;
 
     // -----------------------------------------------------------------------
     // Delegated mutable state
@@ -79,8 +81,10 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements Prepar
         List<Field> fields = stmtInfo.getFields();
         int n = (fields != null) ? fields.size() : 0;
         this.fieldMetas = new Stmt2FieldMeta[n];
+        this.fixedWidths = new byte[n];
         for (int i = 0; i < n; i++) {
             fieldMetas[i] = Stmt2FieldMeta.fromField(fields.get(i));
+            fixedWidths[i] = (byte) fieldMetas[i].fixedWidth();
         }
 
         this.currentRowState = new Stmt2CurrentRowState(n);
@@ -92,11 +96,30 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements Prepar
     // -----------------------------------------------------------------------
 
     private void stageFixed(int paramIdx, long value) {
-        currentRowState.stageFixed(paramIdx, value);
+        switch (fixedWidths[paramIdx]) {
+            case 1:
+                currentRowState.stageFixed1(paramIdx, (byte) value);
+                break;
+            case 2:
+                currentRowState.stageFixed2(paramIdx, (short) value);
+                break;
+            case 4:
+                currentRowState.stageFixed4(paramIdx, (int) value);
+                break;
+            case 8:
+                currentRowState.stageFixed8(paramIdx, value);
+                break;
+            default:
+                throw new IllegalStateException("Not a fixed-width field at index " + paramIdx);
+        }
     }
 
     private void stageVar(int paramIdx, byte[] bytes) {
         currentRowState.stageVar(paramIdx, bytes);
+    }
+
+    private void stageString(int paramIdx, String value) {
+        currentRowState.stageString(paramIdx, value);
     }
 
     private void stageNull(int paramIdx) {
@@ -238,10 +261,8 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements Prepar
                 throw TSDBError.createSQLException(
                         TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table name can't be null");
             }
-            currentRowState.stageTbName(x);
-            return;
         }
-        stageVar(idx, x == null ? null : encodeString(x, fieldType(parameterIndex)));
+        stageString(idx, x);
     }
 
     @Override
@@ -252,10 +273,8 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements Prepar
                 throw TSDBError.createSQLException(
                         TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table name can't be null");
             }
-            currentRowState.stageTbName(x);
-            return;
         }
-        stageVar(idx, x == null ? null : x.getBytes(StandardCharsets.UTF_8));
+        stageString(idx, x);
     }
 
     @Override
@@ -266,8 +285,6 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements Prepar
                 throw TSDBError.createSQLException(
                         TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "table name can't be null");
             }
-            currentRowState.stageTbName(new String(x, StandardCharsets.UTF_8));
-            return;
         }
         stageVar(idx, x);
     }
@@ -660,7 +677,7 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements Prepar
     // -----------------------------------------------------------------------
 
     @Override
-    public void clearParameters() {
+    public void clearParameters() throws SQLException {
         currentRowState.clear();
     }
 
@@ -733,21 +750,15 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements Prepar
     private int executeInsertImpl() throws SQLException {
         batchState.checkRowCounts();
 
-        byte[] payload = batchState.buildPayload();
-
-        // Build ByteBuf: 16-byte header placeholder (reqId + stmtId) + columnar payload.
-        // modifyStmtIdAndReqId() in WSRetryableStmt will patch the first 16 bytes.
-        ByteBuf rawBuf = PooledByteBufAllocator.DEFAULT.directBuffer(16 + payload.length);
-        rawBuf.writeLongLE(0L); // reqId placeholder
-        rawBuf.writeLongLE(0L); // stmtId placeholder
-        rawBuf.writeBytes(payload);
+        // writeBlockWithRetrySync hands the request buffer to the websocket send path,
+        // so callers must not release the built request again afterward.
+        ByteBuf rawBuf = Stmt2BindExecRequestBuilder.build(batchState.buildPayloadBuffer());
 
         try {
             this.affectedRows = 0;
             writeBlockWithRetrySync(rawBuf);
             this.affectedRows = batchInsertedRowsInner.getAndSet(0);
         } finally {
-            rawBuf.release();
             batchState.reset();
             currentRowState.clear();
         }
@@ -788,13 +799,20 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements Prepar
     @Override
     public void close() throws SQLException {
         if (!isClosed()) {
-            if (transport.isConnected() && stmtInfo.getStmtId() != 0) {
-                long reqId = ReqId.getReqID();
-                com.taosdata.jdbc.ws.entity.Request close =
-                        RequestFactory.generateClose(stmtInfo.getStmtId(), reqId);
-                transport.send(close, this.getQueryTimeoutInMs());
+            try {
+                if (transport.isConnected() && stmtInfo.getStmtId() != 0) {
+                    long reqId = ReqId.getReqID();
+                    com.taosdata.jdbc.ws.entity.Request close =
+                            RequestFactory.generateClose(stmtInfo.getStmtId(), reqId);
+                    transport.send(close, this.getQueryTimeoutInMs());
+                }
+            } finally {
+                try {
+                    super.close();
+                } finally {
+                    batchState.release();
+                }
             }
-            super.close();
         }
     }
 
@@ -839,12 +857,4 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements Prepar
     // Internal utilities
     // -----------------------------------------------------------------------
 
-    private static byte[] encodeString(String s, byte fieldType) {
-        switch (fieldType & 0xFF) {
-            case TSDB_DATA_TYPE_NCHAR:
-                return s.getBytes(StandardCharsets.UTF_8);
-            default:
-                return s.getBytes(StandardCharsets.UTF_8);
-        }
-    }
 }

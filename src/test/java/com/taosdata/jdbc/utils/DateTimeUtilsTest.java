@@ -10,6 +10,7 @@ import org.junit.runners.JUnit4;
 import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.lang.reflect.Method;
 import java.time.*;
 import java.util.Calendar;
 import java.util.TimeZone;
@@ -124,17 +125,25 @@ public class DateTimeUtilsTest {
     public void testToLongWithInstantAndPrecision() {
         Instant instant = Instant.parse("2024-01-15T10:30:45.123Z");
 
-        Long millisResult = DateTimeUtils.toLong(instant, TimestampPrecision.MS);
-        assertNotNull(millisResult);
-        assertEquals(1705314645123L, millisResult.longValue());
+        long millisResult = DateTimeUtils.toLong(instant, TimestampPrecision.MS);
+        assertEquals(1705314645123L, millisResult);
 
-        Long microsResult = DateTimeUtils.toLong(instant, TimestampPrecision.US);
-        assertNotNull(microsResult);
-        assertEquals(1705314645123000L, microsResult.longValue());
+        long microsResult = DateTimeUtils.toLong(instant, TimestampPrecision.US);
+        assertEquals(1705314645123000L, microsResult);
 
-        Long nanosResult = DateTimeUtils.toLong(instant, TimestampPrecision.NS);
-        assertNotNull(nanosResult);
-        assertEquals(1705314645123000000L, nanosResult.longValue());
+        long nanosResult = DateTimeUtils.toLong(instant, TimestampPrecision.NS);
+        assertEquals(1705314645123000000L, nanosResult);
+    }
+
+    @Test
+    public void testNonNullToLongOverloadsReturnPrimitiveLong() throws Exception {
+        Method instantToLong = DateTimeUtils.class.getMethod("toLong", Instant.class, int.class);
+        Method zonedDateTimeToLong = DateTimeUtils.class.getMethod("toLong", ZonedDateTime.class, int.class);
+        Method offsetDateTimeToLong = DateTimeUtils.class.getMethod("toLong", OffsetDateTime.class, int.class);
+
+        assertEquals(long.class, instantToLong.getReturnType());
+        assertEquals(long.class, zonedDateTimeToLong.getReturnType());
+        assertEquals(long.class, offsetDateTimeToLong.getReturnType());
     }
 
     @Test
@@ -162,17 +171,15 @@ public class DateTimeUtilsTest {
     @Test
     public void testToLongWithZonedDateTime() {
         ZonedDateTime zonedDateTime = ZonedDateTime.of(2024, 1, 15, 10, 30, 45, 123000000, UTC_ZONE);
-        Long result = DateTimeUtils.toLong(zonedDateTime, TimestampPrecision.MS);
-        assertNotNull(result);
-        assertEquals(1705314645123L, result.longValue());
+        long result = DateTimeUtils.toLong(zonedDateTime, TimestampPrecision.MS);
+        assertEquals(1705314645123L, result);
     }
 
     @Test
     public void testToLongWithOffsetDateTime() {
         OffsetDateTime offsetDateTime = OffsetDateTime.of(2024, 1, 15, 10, 30, 45, 123000000, ZoneOffset.UTC);
-        Long result = DateTimeUtils.toLong(offsetDateTime, TimestampPrecision.MS);
-        assertNotNull(result);
-        assertEquals(1705314645123L, result.longValue());
+        long result = DateTimeUtils.toLong(offsetDateTime, TimestampPrecision.MS);
+        assertEquals(1705314645123L, result);
     }
 
     @Test
@@ -343,7 +350,12 @@ public class DateTimeUtilsTest {
     public void testToLongNull() {
         assertNull(DateTimeUtils.toLong((Timestamp) null, null, TimestampPrecision.MS));
         assertNull(DateTimeUtils.toLong((LocalDateTime) null, null, TimestampPrecision.MS));
-        assertNull(DateTimeUtils.toLong((ZonedDateTime) null, TimestampPrecision.MS));
+        try {
+            DateTimeUtils.toLong((ZonedDateTime) null, TimestampPrecision.MS);
+            fail("Expected NullPointerException");
+        } catch (NullPointerException expected) {
+            // expected
+        }
     }
 
     // Set UTC timezone before all tests run

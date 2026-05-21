@@ -290,4 +290,27 @@ public class WSRetryableStmtRetryBufferLeakTest {
         assertEquals("Original buffer refCnt must be 1 (not over-released)", 1, raw.refCnt());
         raw.release();
     }
+
+    @Test
+    public void testNoRetry_timeoutIsPropagated() throws Exception {
+        when(param.isEnableAutoConnect()).thenReturn(false); // single attempt
+        CapturingRetryTransport transport = new CapturingRetryTransport(param, 1);
+        WSConnection wsConn = mock(WSConnection.class);
+        when(wsConn.supportsStmt2BindExec()).thenReturn(true);
+
+        WSRetryableStmt stmt = new WSRetryableStmt(
+                wsConn, param, "db", transport, 1L, stmtInfo, batchRows);
+
+        ByteBuf raw = newRawBlock();
+        try {
+            stmt.writeBlockWithRetrySync(raw, true);
+            fail("Expected timeout to be propagated when retries are disabled");
+        } catch (SQLException e) {
+            assertEquals(TSDBErrorNumbers.ERROR_QUERY_TIMEOUT, e.getErrorCode());
+        }
+
+        assertEquals("Single send call expected", 1, transport.getCapturedBuffers().size());
+        assertEquals("Original buffer refCnt must be 1 (not over-released)", 1, raw.refCnt());
+        raw.release();
+    }
 }

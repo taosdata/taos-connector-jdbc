@@ -5,6 +5,8 @@ import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.TSWSPreparedStatement;
+import com.taosdata.jdbc.ws.WSColumnPreparedStatement;
+import com.taosdata.jdbc.ws.WSConnection;
 import io.netty.util.ResourceLeakDetector;
 import org.junit.*;
 
@@ -21,6 +23,12 @@ public class WsPstmtStmt2Test {
     final int numOfSubTable = 10;
     final int numOfRow = 10;
     private static final Random random = new Random(System.currentTimeMillis());
+
+    private void assumeBindExecSupported() throws SQLException {
+        Assume.assumeTrue("Bind-exec integration test requires WSConnection", connection instanceof WSConnection);
+        Assume.assumeTrue("Bind-exec integration test requires stmt2_bind_exec support",
+                ((WSConnection) connection).supportsStmt2BindExec());
+    }
 
     @Test
     public void testStmt2Insert() throws SQLException {
@@ -209,6 +217,39 @@ public class WsPstmtStmt2Test {
             }
             Assert.assertEquals((numOfSubTable * numOfRow), Utils.getSqlRows(connection, db_name + "." + tableName));
             Assert.assertEquals((numOfRow), Utils.getSqlRows(connection, db_name + "." + "`d_bind_中国人1`"));
+        }
+    }
+
+    @Test
+    public void testStmt2InsertStdApiBindExec_routeAndRealWrite() throws SQLException {
+        assumeBindExecSupported();
+        String sql = "INSERT INTO " + db_name + "." + tableName + "(tbname, groupId, location, ts, current, voltage, phase) VALUES (?,?,?,?,?,?,?)";
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            Assert.assertTrue("Expected WSColumnPreparedStatement, got " + pstmt.getClass().getName(),
+                    pstmt instanceof WSColumnPreparedStatement);
+
+            for (int i = 1; i <= 2; i++) {
+                long current = System.currentTimeMillis();
+                for (int j = 0; j < 2; j++) {
+                    pstmt.setString(1, "d_bind_exec_std_" + i);
+                    pstmt.setInt(2, i);
+                    pstmt.setString(3, "location_" + i);
+                    pstmt.setTimestamp(4, new Timestamp(current + j));
+                    pstmt.setFloat(5, 20.0f + j);
+                    pstmt.setInt(6, 300 + j);
+                    pstmt.setFloat(7, 0.2f + j);
+                    pstmt.addBatch();
+                }
+                int[] exeResult = pstmt.executeBatch();
+                Assert.assertEquals(2, exeResult.length);
+                for (int ele : exeResult) {
+                    Assert.assertEquals(Statement.SUCCESS_NO_INFO, ele);
+                }
+            }
+
+            Assert.assertEquals(4, Utils.getSqlRows(connection, db_name + "." + tableName));
+            Assert.assertEquals(2, Utils.getSqlRows(connection, db_name + "." + "`d_bind_exec_std_1`"));
         }
     }
 
@@ -414,4 +455,3 @@ public class WsPstmtStmt2Test {
         System.gc();
     }
 }
-

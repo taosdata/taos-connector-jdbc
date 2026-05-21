@@ -18,7 +18,7 @@ import java.util.Properties;
 public class WSAppInfoTest {
 
         static final String HOST = TestEnvUtil.getHost();
-        static final int PORT = TestEnvUtil.getWsPort();
+        static final int PORT = 6666;
     private Connection connection;
     private static final String APP_NAME = "jdbc_appName";
     private static final String APP_IP = "192.168.1.1";

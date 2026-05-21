@@ -11,12 +11,12 @@ import com.taosdata.jdbc.utils.BlobUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
 import com.taosdata.jdbc.utils.ReqId;
 import com.taosdata.jdbc.ws.entity.Request;
+import com.taosdata.jdbc.ws.stmt2.Stmt2BindExecRequestBuilder;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnBindSerializer;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnFieldBuffer;
 import com.taosdata.jdbc.ws.stmt2.Stmt2FieldMeta;
 import com.taosdata.jdbc.ws.stmt2.entity.*;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.PooledByteBufAllocator;
 
 import java.io.InputStream;
 import java.io.Reader;
@@ -1167,19 +1167,13 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
 
         byte[] payload = Stmt2ColumnBindSerializer.serialize(columnBuffers);
 
-        // Build the 16-byte header (reqId placeholder + stmtId placeholder) that
-        // WSRetryableStmt.modifyStmtIdAndReqId will overwrite on each retry attempt,
-        // followed by the serialized column-data payload.
-        ByteBuf rawBuf = PooledByteBufAllocator.DEFAULT.directBuffer(16 + payload.length);
-        rawBuf.writeLongLE(0L); // reqId placeholder – overwritten by executeWithRetry
-        rawBuf.writeLongLE(0L); // stmtId placeholder – overwritten by executeWithRetry
-        rawBuf.writeBytes(payload);
+        // stmt2_bind_exec uses reqId(8) + stmtId(8) + actionId(8) + version(2) + payload.
+        ByteBuf rawBuf = Stmt2BindExecRequestBuilder.build(payload);
 
         try {
             writeBlockWithRetrySync(rawBuf, true);
             this.affectedRows = batchInsertedRowsInner.getAndSet(0);
         } finally {
-            rawBuf.release();
         }
 
         return this.affectedRows;
