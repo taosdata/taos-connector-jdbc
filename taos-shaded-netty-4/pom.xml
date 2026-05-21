@@ -5,8 +5,7 @@
         <artifactId>taos-jdbcdriver-parent</artifactId>
         <version>${revision}</version>
     </parent>
-    <artifactId>taos-shaded-netty</artifactId>
-    <version>${revision}_${netty.version}</version>
+    <artifactId>taos-shaded-netty-4</artifactId>
     <modelVersion>4.0.0</modelVersion>
 
     <dependencies>

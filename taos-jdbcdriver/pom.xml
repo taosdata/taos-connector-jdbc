@@ -16,18 +16,18 @@
         </dependency>
         <dependency>
             <groupId>com.taosdata.jdbc</groupId>
-            <artifactId>taos-shaded-jackson</artifactId>
-            <version>${revision}_${jackson.version}</version>
+            <artifactId>taos-shaded-jackson-2</artifactId>
+            <version>${revision}</version>
         </dependency>
         <dependency>
             <groupId>com.taosdata.jdbc</groupId>
-            <artifactId>taos-shaded-guava</artifactId>
-            <version>${revision}_${guava.version}</version>
+            <artifactId>taos-shaded-guava-33</artifactId>
+            <version>${revision}</version>
         </dependency>
         <dependency>
             <groupId>com.taosdata.jdbc</groupId>
-            <artifactId>taos-shaded-netty</artifactId>
-            <version>${revision}_${netty.version}</version>
+            <artifactId>taos-shaded-netty-4</artifactId>
+            <version>${revision}</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -114,7 +114,7 @@
                 <version>0.8.12</version>
                 <configuration>
                     <excludes>
-                        <exclude>io/netty/**/*</exclude>
+                        <exclude>com/taosdata/shaded/io/netty/**/*</exclude>
                     </excludes>
                     <outputDirectory>${project.basedir}/target/site/jacoco</outputDirectory>
                 </configuration>

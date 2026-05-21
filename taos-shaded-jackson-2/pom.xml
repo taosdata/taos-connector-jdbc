@@ -5,8 +5,7 @@
         <artifactId>taos-jdbcdriver-parent</artifactId>
         <version>${revision}</version>
     </parent>
-    <artifactId>taos-shaded-jackson</artifactId>
-    <version>${revision}_${jackson.version}</version>
+    <artifactId>taos-shaded-jackson-2</artifactId>
     <modelVersion>4.0.0</modelVersion>
 
     <dependencies>

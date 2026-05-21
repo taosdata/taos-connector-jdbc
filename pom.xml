@@ -52,9 +52,9 @@
     </properties>
 
     <modules>
-        <module>taos-shaded-jackson</module>
-        <module>taos-shaded-guava</module>
-        <module>taos-shaded-netty</module>
+        <module>taos-shaded-guava-33</module>
+        <module>taos-shaded-jackson-2</module>
+        <module>taos-shaded-netty-4</module>
         <module>taos-jdbcdriver</module>
     </modules>
 
@@ -91,7 +91,7 @@
                     <artifactId>flatten-maven-plugin</artifactId>
                     <version>1.7.2</version>
                     <configuration>
-                        <!-- 是否更新pom文件，此处还有更高级的用法 -->
+                        <!-- Whether to update the pom file. More advanced usage is available here. -->
                         <updatePomFile>true</updatePomFile>
                         <flattenMode>resolveCiFriendliesOnly</flattenMode>
                     </configuration>
