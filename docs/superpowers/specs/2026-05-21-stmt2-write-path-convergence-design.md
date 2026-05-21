@@ -26,10 +26,11 @@ The intended end state is simpler:
    - capable server: columnar bind-exec
    - old server: legacy `TSWSPreparedStatement`
 2. Keep `WSEWPreparedStatement` as the dedicated efficient-writing mode, but make its backend serializer automatically choose columnar bind-exec on capable servers and the current legacy path on old servers.
-3. Remove `WSRowPreparedStatement` and `WSColumnPreparedStatement` from the write-path runtime model.
-4. Remove public `pbsMode` and `stmt2BindMode` routing controls.
+3. Retire `WSRowPreparedStatement` and `WSColumnPreparedStatement` from the write-path runtime model, with physical deletion allowed after phased validation proves parity.
+4. Retire public `pbsMode` and `stmt2BindMode` routing controls from the supported write-path contract, with hard removal allowed in a later cleanup step.
 5. Keep routing fully automatic and capability-driven.
 6. Preserve current fast-path performance work in `WSColumnFastPreparedStatement`.
+7. Deliver the convergence in small, independently testable steps that preserve existing coverage as much as possible.
 
 ## Non-goals
 
@@ -39,6 +40,12 @@ The intended end state is simpler:
 4. Preserve old compatibility-column mode as a supported runtime option.
 5. Introduce a routing facade on every setter hot path.
 6. Remove efficient writing mode.
+
+## Implementation constraints
+
+1. Prefer additive, phase-by-phase changes that can be regression-tested independently.
+2. Keep code changes narrowly targeted to routing, serializer selection, and directly affected helpers; avoid broad hierarchy reshaping unless it is required to unblock the final convergence.
+3. Preserve existing tests and coverage as much as possible. Add focused new tests first; modify old tests only when they assert removed public knobs or deleted runtime classes.
 
 ## Approved design
 
@@ -62,6 +69,8 @@ The following branches will be removed from standard runtime routing:
 
 This makes server capability the only routing decision for standard stmt2 insert writes, while keeping efficient writing as its own explicit user mode.
 
+This is the final routing target. The implementation may reach it in phases; the first steps do not need to physically delete every old class immediately, but each phase should reduce live routing dependence on those old branches.
+
 ### 2. Columnar write implementation
 
 The capable-server implementation for phase 1 remains the existing fast-path statement family, centered on `WSColumnFastPreparedStatement`.
@@ -69,7 +78,7 @@ The capable-server implementation for phase 1 remains the existing fast-path sta
 However, it should no longer depend on `WSColumnPreparedStatement` staying alive as a separate runtime path. The implementation should be refactored so that:
 
 1. `WSColumnFastPreparedStatement` can stand on its own
-2. any still-needed shared logic is moved into a minimal internal helper or base
+2. any still-needed shared logic is moved into a minimal internal helper or base only when necessary
 3. deleting `WSColumnPreparedStatement` does not break the standard insert route
 
 This design intentionally keeps the hot path direct:
@@ -77,6 +86,8 @@ This design intentionally keeps the hot path direct:
 - no routing facade per setter
 - no “first API family decides delegate” wrapper
 - no extra forwarding layer in the standard JDBC setter path
+
+The preferred implementation style is to extract only the minimum shared pieces needed for the current phase, not to redesign the whole statement hierarchy in one shot.
 
 ### 3. Legacy fallback
 
@@ -138,7 +149,7 @@ This phase does not attempt to:
 
 ### 6. Public configuration changes
 
-The following public routing knobs should be removed from the phase-1 write-path contract:
+The following public routing knobs should be retired from the supported write-path contract:
 
 - `pbsMode`
 - `stmt2BindMode`
@@ -147,7 +158,27 @@ The driver should stop advertising these as supported routing controls for stmt2
 
 Routing becomes purely automatic and based on connected-server capability.
 
-To avoid silent behavior changes, phase 1 should fail explicitly when these removed routing properties are supplied, instead of silently honoring or ignoring them.
+The final state should remove them. To keep rollout small and testable, early phases may temporarily continue parsing or tolerating them while the new routing stops depending on them; hard removal can wait until the final cleanup step.
+
+### 7. Rollout strategy
+
+Implementation should proceed in small, reviewable phases:
+
+1. **Phase 1 – ordinary write routing**
+   - narrow standard JDBC insert routing to `WSColumnFastPreparedStatement` on capable servers and `TSWSPreparedStatement` on old servers
+   - add focused routing coverage
+   - avoid broad edits to existing tests
+2. **Phase 2 – efficient writing serializer selection**
+   - make `WSEWPreparedStatement` choose columnar vs legacy serialization by capability
+   - reuse existing efficient-writing coverage and add only the focused assertions needed for the new branch
+3. **Phase 3 – contract cleanup**
+   - remove live dependence on old routing knobs and dead branches
+   - tighten public behavior and docs once phases 1 and 2 are green
+4. **Phase 4 – final physical deletion**
+   - delete `WSRowPreparedStatement` and `WSColumnPreparedStatement`
+   - update only the tests that directly reference deleted classes or removed public routing controls
+
+Each phase should be independently committable and regression-tested before moving to the next one.
 
 ## Affected files
 
@@ -168,12 +199,12 @@ Primary fallback implementation:
 - `src/main/java/com/taosdata/jdbc/ws/TSWSPreparedStatement.java`
 - `src/main/java/com/taosdata/jdbc/ws/AbsWSPreparedStatement.java`
 
-Primary deletions:
+Primary deletions (final cleanup step):
 
 - `src/main/java/com/taosdata/jdbc/ws/WSRowPreparedStatement.java`
 - `src/main/java/com/taosdata/jdbc/ws/WSColumnPreparedStatement.java`
 
-Primary tests to update:
+Primary tests to add/update (prefer additive coverage first):
 
 - `src/test/java/com/taosdata/jdbc/ws/WSConnectionRoutingTest.java`
 - `src/test/java/com/taosdata/jdbc/ws/WSConnectionStmt2BindExecTest.java`
@@ -200,7 +231,8 @@ Primary tests to update:
 1. Old-server stmt2 fallback behavior remains correct.
 2. Existing standard JDBC insert tests continue to pass on both capable and old-server scenarios.
 3. Existing efficient-writing tests continue to pass on both capable and old-server scenarios.
-4. Any tests that relied on unwrapping specific deleted classes are updated to assert behavior rather than old concrete types.
+4. Prefer additive focused tests for each phase. Existing suites should remain unchanged unless they assert removed public knobs or deleted concrete types.
+5. When an existing test must change, narrow the change to routing expectations or removed public contracts rather than rewriting broad coverage.
 
 ### Performance
 
@@ -221,5 +253,6 @@ The key decisions are:
 4. the fast path must stay direct and hot-path oriented
 5. old-server compatibility remains, but only through one legacy implementation for ordinary writes and the existing EW fallback inside `WSEWPreparedStatement`
 6. extension-API convergence is valuable, but it is deferred so the first cleanup does not overreach
+7. rollout should minimize code churn and preserve existing regression coverage as long as possible
 
 That produces a simpler and easier-to-maintain write-path model without reopening the setter hot-path performance problem that the current fast implementation already solved.
