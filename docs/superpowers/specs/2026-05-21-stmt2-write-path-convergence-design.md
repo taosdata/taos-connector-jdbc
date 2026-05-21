@@ -8,7 +8,8 @@ The current WebSocket stmt2 write path has accumulated too many runtime variants
 2. `WSRowPreparedStatement`
 3. `WSColumnPreparedStatement`
 4. `WSColumnFastPreparedStatement`
-5. user-visible routing knobs (`pbsMode`, `stmt2BindMode`)
+5. `WSEWPreparedStatement`
+6. user-visible routing knobs (`pbsMode`, `stmt2BindMode`)
 
 This makes routing harder to reason about, keeps dead or near-dead paths alive, and forces users to know internal implementation choices that should instead be decided by server capability.
 
@@ -16,6 +17,7 @@ The intended end state is simpler:
 
 - for **standard JDBC insert writes** on capable servers, use the high-performance columnar `stmt2_bind_exec` path
 - for old servers, fall back to the existing legacy implementation
+- keep **efficient writing mode** as a separate user-visible mode, but make its internal serializer capability-driven too
 - stop exposing line-mode and compatibility-column routing choices as public knobs
 
 ## Goals
@@ -23,10 +25,11 @@ The intended end state is simpler:
 1. Converge standard JDBC insert writes to only two runtime implementations:
    - capable server: columnar bind-exec
    - old server: legacy `TSWSPreparedStatement`
-2. Remove `WSRowPreparedStatement` and `WSColumnPreparedStatement` from the write-path runtime model.
-3. Remove public `pbsMode` and `stmt2BindMode` routing controls.
-4. Keep routing fully automatic and capability-driven.
-5. Preserve current fast-path performance work in `WSColumnFastPreparedStatement`.
+2. Keep `WSEWPreparedStatement` as the dedicated efficient-writing mode, but make its backend serializer automatically choose columnar bind-exec on capable servers and the current legacy path on old servers.
+3. Remove `WSRowPreparedStatement` and `WSColumnPreparedStatement` from the write-path runtime model.
+4. Remove public `pbsMode` and `stmt2BindMode` routing controls.
+5. Keep routing fully automatic and capability-driven.
+6. Preserve current fast-path performance work in `WSColumnFastPreparedStatement`.
 
 ## Non-goals
 
@@ -35,6 +38,7 @@ The intended end state is simpler:
 3. Keep line-mode as a supported runtime option.
 4. Preserve old compatibility-column mode as a supported runtime option.
 5. Introduce a routing facade on every setter hot path.
+6. Remove efficient writing mode.
 
 ## Approved design
 
@@ -42,9 +46,11 @@ The intended end state is simpler:
 
 `WSConnection.prepareStatement(...)` will be simplified so that standard JDBC insert routing becomes:
 
-1. if the prepared SQL is an insert and `supportsStmt2BindExec()` is true:
+1. if the SQL enters **efficient writing mode** (`ASYNC_INSERT` / `asyncWrite=STMT`) and matches the current efficient-writing prerequisites:
+   - return `WSEWPreparedStatement`
+2. otherwise, if the prepared SQL is an insert and `supportsStmt2BindExec()` is true:
    - return the columnar fast implementation
-2. otherwise:
+3. otherwise:
    - return `TSWSPreparedStatement`
 
 The following branches will be removed from standard runtime routing:
@@ -54,7 +60,7 @@ The following branches will be removed from standard runtime routing:
 - `WSRowPreparedStatement`
 - `WSColumnPreparedStatement`
 
-This makes server capability the only routing decision for standard stmt2 insert writes.
+This makes server capability the only routing decision for standard stmt2 insert writes, while keeping efficient writing as its own explicit user mode.
 
 ### 2. Columnar write implementation
 
@@ -76,16 +82,31 @@ This design intentionally keeps the hot path direct:
 
 `TSWSPreparedStatement` remains the only legacy fallback for old servers in phase 1.
 
-That means the write-path model becomes:
+That means the **ordinary write** model becomes:
 
 - **new server** → `WSColumnFastPreparedStatement`
 - **old server** → `TSWSPreparedStatement`
 
 No other write-path implementation remains in the standard JDBC insert route.
 
+For **efficient writing mode**, `WSEWPreparedStatement` remains the entrypoint in both cases, but its internal serializer becomes capability-driven:
+
+- **new server** → `WSEWPreparedStatement` with columnar `stmt2_bind_exec` serialization
+- **old server** → `WSEWPreparedStatement` with the current legacy EW serialization pipeline
+
+This keeps the user-visible write modes simple:
+
+1. ordinary write
+2. efficient write
+
+and makes capability selection internal to each mode where appropriate.
+
 ### 4. Extension API scope
 
-Phase 1 explicitly narrows scope to **standard JDBC insert** only.
+Phase 1 explicitly narrows scope to:
+
+1. **standard JDBC insert**
+2. **efficient writing mode (`WSEWPreparedStatement`)**
 
 `TaosPrepareStatement` extension APIs such as:
 
@@ -102,7 +123,7 @@ For phase 1, this means capable-server standard prepared statements do **not** p
 
 In other words:
 
-- phase 1 converges the standard JDBC insert path
+- phase 1 converges ordinary write and efficient write
 - extension-API convergence is a future design task
 
 ### 5. Query behavior
@@ -140,6 +161,7 @@ Primary capable-server implementation:
 
 - `src/main/java/com/taosdata/jdbc/ws/WSColumnFastPreparedStatement.java`
 - any internal stmt2 fast helpers it depends on
+- `src/main/java/com/taosdata/jdbc/ws/WSEWPreparedStatement.java`
 
 Primary fallback implementation:
 
@@ -157,6 +179,7 @@ Primary tests to update:
 - `src/test/java/com/taosdata/jdbc/ws/WSConnectionStmt2BindExecTest.java`
 - `src/test/java/com/taosdata/jdbc/ws/WSColumnFastPreparedStatementTest.java`
 - `src/test/java/com/taosdata/jdbc/ws/stmt/WsPstmtStmt2Test.java`
+- `src/test/java/com/taosdata/jdbc/ws/stmt/WsEfficientWritingTest.java`
 - `src/test/java/com/taosdata/jdbc/ws/stmt/WsStmtRealPerformanceBenchmarkTest.java`
 - Xiaomi/manual benchmark coverage under `src/test/java/com/taosdata/jdbc/ws/manual/`
 
@@ -166,21 +189,25 @@ Primary tests to update:
 
 1. On capable servers, standard JDBC insert prepared statements route to the columnar fast implementation.
 2. On old servers, standard JDBC insert prepared statements route to `TSWSPreparedStatement`.
-3. Query prepared statements remain on the legacy path.
-4. Removing `pbsMode` / `stmt2BindMode` does not leave hidden routing branches behind.
-5. Deleting `WSRowPreparedStatement` and `WSColumnPreparedStatement` does not regress standard JDBC insert behavior.
+3. On capable servers, `WSEWPreparedStatement` uses columnar bind-exec serialization.
+4. On old servers, `WSEWPreparedStatement` keeps using the current legacy EW serialization.
+5. Query prepared statements remain on the legacy path.
+6. Removing `pbsMode` / `stmt2BindMode` does not leave hidden routing branches behind.
+7. Deleting `WSRowPreparedStatement` and `WSColumnPreparedStatement` does not regress standard JDBC insert behavior.
 
 ### Compatibility
 
 1. Old-server stmt2 fallback behavior remains correct.
 2. Existing standard JDBC insert tests continue to pass on both capable and old-server scenarios.
-3. Any tests that relied on unwrapping specific deleted classes are updated to assert behavior rather than old concrete types.
+3. Existing efficient-writing tests continue to pass on both capable and old-server scenarios.
+4. Any tests that relied on unwrapping specific deleted classes are updated to assert behavior rather than old concrete types.
 
 ### Performance
 
 1. Xiaomi/manual client-only benchmark must not regress against the current fast path.
 2. Real benchmark coverage must keep the capable-server columnar route at least non-regressive versus the current branch baseline.
 3. No new per-setter routing layer is introduced into the hot path.
+4. Efficient-writing mode must not regress on its current throughput path when capability-based serializer selection is added.
 
 ## Rationale
 
@@ -188,10 +215,11 @@ This design chooses convergence over keeping every historical routing option ali
 
 The key decisions are:
 
-1. standard JDBC insert writes are the only phase-1 target
-2. server capability, not user routing knobs, decides the implementation
-3. the fast path must stay direct and hot-path oriented
-4. old-server compatibility remains, but only through one legacy implementation
-5. extension-API convergence is valuable, but it is deferred so the first cleanup does not overreach
+1. phase 1 targets ordinary write and efficient write only
+2. efficient writing is also part of phase 1, but as its own explicit mode rather than being merged into ordinary routing
+3. server capability, not user routing knobs, decides the implementation
+4. the fast path must stay direct and hot-path oriented
+5. old-server compatibility remains, but only through one legacy implementation for ordinary writes and the existing EW fallback inside `WSEWPreparedStatement`
+6. extension-API convergence is valuable, but it is deferred so the first cleanup does not overreach
 
 That produces a simpler and easier-to-maintain write-path model without reopening the setter hot-path performance problem that the current fast implementation already solved.
