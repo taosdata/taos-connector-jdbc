@@ -7,17 +7,23 @@ import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.utils.BlobUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
+import com.taosdata.jdbc.utils.ReqId;
+import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.stmt2.Stmt2BindExecRequestBuilder;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnBindSerializer;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnFieldBuffer;
 import com.taosdata.jdbc.ws.stmt2.Stmt2FieldMeta;
 import com.taosdata.jdbc.ws.stmt2.entity.Field;
+import com.taosdata.jdbc.ws.stmt2.entity.RequestFactory;
+import com.taosdata.jdbc.ws.stmt2.entity.StmtInfo;
 import com.taosdata.jdbc.ws.stmt2.entity.Stmt2PrepareResp;
 import io.netty.buffer.ByteBuf;
 
 import java.io.InputStream;
+import java.io.Reader;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.net.URL;
 import java.sql.*;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -26,10 +32,11 @@ import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
 
-public class WSColumnFastPreparedStatement extends WSColumnPreparedStatement implements PreparedStatement {
+public class WSColumnFastPreparedStatement extends WSRetryableStmt implements PreparedStatement {
     private static final BigInteger MAX_UNSIGNED_LONG_VALUE = new BigInteger(MAX_UNSIGNED_LONG);
 
     private final Stmt2FieldMeta[] fieldMetas;
@@ -46,7 +53,8 @@ public class WSColumnFastPreparedStatement extends WSColumnPreparedStatement imp
                                          String sql,
                                          Long instanceId,
                                          Stmt2PrepareResp prepareResp) {
-        super(transport, param, database, connection, sql, instanceId, prepareResp);
+        super(connection, param, database, transport, instanceId, new StmtInfo(prepareResp, sql),
+                new AtomicInteger(), true);
 
         List<Field> fields = stmtInfo.getFields();
         int n = fields != null ? fields.size() : 0;
@@ -482,6 +490,133 @@ public class WSColumnFastPreparedStatement extends WSColumnPreparedStatement imp
     }
 
     @Override
+    public void setObject(int parameterIndex, Object x, int targetSqlType, int scaleOrLength) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD,
+                "Method setObject(int parameterIndex, Object x, int targetSqlType, int scaleOrLength)"
+                        + " not implemented");
+    }
+
+    @Override
+    public void setAsciiStream(int parameterIndex, InputStream inputStream, int length) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD,
+                "Method setAsciiStream(int parameterIndex, InputStream x, int length) not implemented");
+    }
+
+    @Override
+    public void setUnicodeStream(int parameterIndex, InputStream inputStream, int length) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD,
+                "Method setUnicodeStream(int parameterIndex, InputStream x, int length) not implemented");
+    }
+
+    @Override
+    public void setBinaryStream(int parameterIndex, InputStream inputStream, int length) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD,
+                "Method setBinaryStream(int parameterIndex, InputStream x, int length) not implemented");
+    }
+
+    @Override
+    public void setCharacterStream(int parameterIndex, Reader reader, int length) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD,
+                "Method setCharacterStream(int parameterIndex, Reader reader, int length) not implemented");
+    }
+
+    @Override
+    public void setAsciiStream(int parameterIndex, InputStream inputStream, long length) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD,
+                "Method setAsciiStream(int parameterIndex, InputStream x, long length) not implemented");
+    }
+
+    @Override
+    public void setBinaryStream(int parameterIndex, InputStream inputStream, long length) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD,
+                "Method setBinaryStream(int parameterIndex, InputStream x, long length) not implemented");
+    }
+
+    @Override
+    public void setAsciiStream(int parameterIndex, InputStream inputStream) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD,
+                "Method setAsciiStream(int parameterIndex, InputStream x) not implemented");
+    }
+
+    @Override
+    public void setBinaryStream(int parameterIndex, InputStream inputStream) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD,
+                "Method setBinaryStream(int parameterIndex, InputStream x) not implemented");
+    }
+
+    @Override
+    public void setCharacterStream(int parameterIndex, Reader reader, long length) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD,
+                "Method setCharacterStream(int parameterIndex, Reader reader, long length) not implemented");
+    }
+
+    @Override
+    public void setCharacterStream(int parameterIndex, Reader reader) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD,
+                "Method setCharacterStream(int parameterIndex, Reader reader) not implemented");
+    }
+
+    @Override
+    public void setNCharacterStream(int parameterIndex, Reader value, long length) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD,
+                "Method setNCharacterStream(int parameterIndex, Reader value, long length) not implemented");
+    }
+
+    @Override
+    public void setNCharacterStream(int parameterIndex, Reader value) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD,
+                "Method setNCharacterStream(int parameterIndex, Reader value) not implemented");
+    }
+
+    @Override
+    public void setClob(int parameterIndex, Clob x) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD,
+                "Method setClob(int parameterIndex, Clob x) not implemented");
+    }
+
+    @Override
+    public void setClob(int parameterIndex, Reader reader, long length) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD,
+                "Method setClob(int parameterIndex, Reader reader, long length) not implemented");
+    }
+
+    @Override
+    public void setClob(int parameterIndex, Reader reader) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD,
+                "Method setClob(int parameterIndex, Reader reader) not implemented");
+    }
+
+    @Override
+    public void setNClob(int parameterIndex, NClob value) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD,
+                "Method setNClob(int parameterIndex, NClob value) not implemented");
+    }
+
+    @Override
+    public void setNClob(int parameterIndex, Reader reader, long length) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD,
+                "Method setNClob(int parameterIndex, Reader reader, long length) not implemented");
+    }
+
+    @Override
+    public void setNClob(int parameterIndex, Reader reader) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD,
+                "Method setNClob(int parameterIndex, Reader reader) not implemented");
+    }
+
+    @Override
+    public void setDate(int parameterIndex, Date date, Calendar cal) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD,
+                "Method setDate(int parameterIndex, Date x, Calendar cal) not implemented");
+    }
+
+    @Override
+    public void setTime(int parameterIndex, Time time, Calendar cal) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD,
+                "Method setTime(int parameterIndex, Time x, Calendar cal) not implemented");
+    }
+
+    @Override
     public void clearParameters() throws SQLException {
         throw TSDBError.createSQLException(
                 TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD,
@@ -527,7 +662,8 @@ public class WSColumnFastPreparedStatement extends WSColumnPreparedStatement imp
 
     @Override
     public ResultSet executeQuery() throws SQLException {
-        return super.executeQuery();
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE,
+                "WSColumnFastPreparedStatement only supports insert; use TSWSPreparedStatement for queries");
     }
 
     @Override
@@ -547,16 +683,39 @@ public class WSColumnFastPreparedStatement extends WSColumnPreparedStatement imp
     }
 
     @Override
+    public ResultSetMetaData getMetaData() throws SQLException {
+        if (this.getResultSet() == null) {
+            return null;
+        }
+        return getResultSet().getMetaData();
+    }
+
+    @Override
+    public ParameterMetaData getParameterMetaData() throws SQLException {
+        if (isClosed()) {
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
+        }
+        return new WSParameterMetaData(stmtInfo.isInsert(), stmtInfo.getFields(),
+                stmtInfo.getColTypeList());
+    }
+
+    @Override
     public void close() throws SQLException {
-        if (!isClosed()) {
-            try {
-                super.close();
-            } finally {
-                releaseColumnBuffers();
-                columnBuffers = null;
-                bufferSizeHints = null;
-                expectedRowCount = 0;
+        if (isClosed()) {
+            return;
+        }
+        try {
+            if (transport.isConnected() && stmtInfo.getStmtId() != 0) {
+                long reqId = ReqId.getReqID();
+                Request close = RequestFactory.generateClose(stmtInfo.getStmtId(), reqId);
+                transport.send(close, this.getQueryTimeoutInMs());
             }
+        } finally {
+            releaseColumnBuffers();
+            columnBuffers = null;
+            bufferSizeHints = null;
+            expectedRowCount = 0;
+            super.close();
         }
     }
 
@@ -695,5 +854,43 @@ public class WSColumnFastPreparedStatement extends WSColumnPreparedStatement imp
 
     int getTbNameFieldIdx() {
         return tbNameFieldIdx;
+    }
+
+    @Override
+    public void setArray(int parameterIndex, Array array) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD,
+                "Method setArray(int parameterIndex, Array x) not implemented");
+    }
+
+    @Override
+    public void setRef(int parameterIndex, Ref ref) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD,
+                "Method setRef(int parameterIndex, Ref x) not implemented");
+    }
+
+    @Override
+    public void setRowId(int parameterIndex, RowId rowId) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD,
+                "Method setRowId(int parameterIndex, RowId x) not implemented");
+    }
+
+    @Override
+    public void setSQLXML(int parameterIndex, SQLXML sqlxml) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD,
+                "Method setSQLXML(int parameterIndex, SQLXML xmlObject) not implemented");
+    }
+
+    @Override
+    public void setURL(int parameterIndex, URL url) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD,
+                "Method setURL(int parameterIndex, URL x) not implemented");
+    }
+
+    @Override
+    public void addBatch(String sql) throws SQLException {
+        if (isClosed()) {
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
+        }
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
     }
 }

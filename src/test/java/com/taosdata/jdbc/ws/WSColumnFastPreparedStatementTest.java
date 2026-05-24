@@ -48,6 +48,11 @@ public class WSColumnFastPreparedStatementTest {
     }
 
     @Test
+    public void standaloneFastStatement_extendsWSRetryableStmtDirectly() {
+        assertEquals(WSRetryableStmt.class, WSColumnFastPreparedStatement.class.getSuperclass());
+    }
+
+    @Test
     public void executeBatch_rowCountMismatch_resetsStateAndThrows() throws Exception {
         WSColumnFastPreparedStatement stmt = buildStmt(twoFields(TSDB_DATA_TYPE_INT, TSDB_DATA_TYPE_VARCHAR));
 

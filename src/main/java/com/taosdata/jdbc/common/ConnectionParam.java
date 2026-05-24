@@ -17,7 +17,6 @@ import java.time.DateTimeException;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Properties;
 import java.util.function.Consumer;
 
@@ -53,8 +52,6 @@ public class ConnectionParam {
     private boolean strictCheck;
     private int retryTimes;
     private String asyncWrite;
-    private String pbsMode;
-    private String stmt2BindMode;
     private int wsKeepAlive;
     private int healthCheckInitInterval;
     private int healthCheckMaxInterval;
@@ -100,8 +97,6 @@ public class ConnectionParam {
         this.asyncWrite = builder.asyncWrite;
         this.textMessageHandler = builder.textMessageHandler;
         this.binaryMessageHandler = builder.binaryMessageHandler;
-        this.pbsMode = builder.pbsMode;
-        this.stmt2BindMode = builder.stmt2BindMode;
         this.wsKeepAlive = builder.wsKeepAlive;
         this.healthCheckInitInterval = builder.healthCheckInitInterval;
         this.healthCheckMaxInterval = builder.healthCheckMaxInterval;
@@ -227,12 +222,6 @@ public class ConnectionParam {
         this.asyncWrite = asyncWrite;
     }
 
-    public void setPbsMode(String pbsMode) {
-        this.pbsMode = pbsMode;
-    }
-    public void setStmt2BindMode(String stmt2BindMode) {
-        this.stmt2BindMode = stmt2BindMode;
-    }
     public void setWsKeepAlive(int wsKeepAlive) {
         this.wsKeepAlive = wsKeepAlive;
     }
@@ -368,12 +357,6 @@ public class ConnectionParam {
         return asyncWrite;
     }
 
-    public String getPbsMode() {
-        return pbsMode;
-    }
-    public String getStmt2BindMode() {
-        return stmt2BindMode;
-    }
     public int getWsKeepAlive() {
         return wsKeepAlive;
     }
@@ -588,17 +571,6 @@ public class ConnectionParam {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "PROPERTY_KEY_ASYNC_WRITE only support STMT");
         }
 
-        String pbsMode = properties.getProperty(TSDBDriver.PROPERTY_KEY_PBS_MODE, "");
-        if (!pbsMode.equals("") && !pbsMode.equalsIgnoreCase("line")){
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "PROPERTY_KEY_PBS_MODE only support line");
-        }
-
-        String stmt2BindMode = properties.getProperty(TSDBDriver.PROPERTY_KEY_STMT2_BIND_MODE, "fast");
-        if (!stmt2BindMode.equalsIgnoreCase("fast") && !stmt2BindMode.equalsIgnoreCase("jdbc")){
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "PROPERTY_KEY_STMT2_BIND_MODE only support fast or jdbc");
-        }
-        stmt2BindMode = stmt2BindMode.toLowerCase(Locale.ROOT);
-
         int wsKeepAlive = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_WS_KEEP_ALIVE_SECONDS, "300"));
         if (wsKeepAlive <= 0){
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_WS_KEEP_ALIVE_SECONDS");
@@ -670,8 +642,6 @@ public class ConnectionParam {
                 .setStrictCheck(strictCheck)
                 .setRetryTimes(retryTimes)
                 .setAsyncWrite(asyncWrite)
-                .setPbsMode(pbsMode)
-                .setStmt2BindMode(stmt2BindMode)
                 .setWsKeepAlive(wsKeepAlive)
                 .setHealthCheckInitInterval(healthCheckInitInterval)
                 .setHealthCheckMaxInterval(healthCheckMaxInterval)
@@ -720,8 +690,6 @@ public class ConnectionParam {
         sb.append(", strictCheck=").append(strictCheck);
         sb.append(", retryTimes=").append(retryTimes);
         sb.append(", asyncWrite='").append(asyncWrite).append('\'');
-        sb.append(", pbsMode='").append(pbsMode).append('\'');
-        sb.append(", stmt2BindMode='").append(stmt2BindMode).append('\'');
         sb.append(", wsKeepAlive=").append(wsKeepAlive);
         sb.append(", healthCheckInitInterval=").append(healthCheckInitInterval);
         sb.append(", healthCheckMaxInterval=").append(healthCheckMaxInterval);
@@ -767,8 +735,6 @@ public class ConnectionParam {
         private boolean strictCheck;
         private int retryTimes;
         private String asyncWrite;
-        private String pbsMode;
-        private String stmt2BindMode = "fast";
         private int wsKeepAlive;
         private int healthCheckInitInterval;
         private int healthCheckMaxInterval;
@@ -916,16 +882,6 @@ public class ConnectionParam {
             return this;
         }
 
-        public Builder setPbsMode(String pbsMode) {
-            this.pbsMode = pbsMode;
-            return this;
-        }
-
-        public Builder setStmt2BindMode(String stmt2BindMode) {
-            this.stmt2BindMode = stmt2BindMode;
-            return this;
-        }
-
         public Builder setWsKeepAlive(int wsKeepAlive) {
             this.wsKeepAlive = wsKeepAlive;
             return this;
@@ -1015,8 +971,6 @@ public class ConnectionParam {
                 .setStrictCheck(original.isStrictCheck())
                 .setRetryTimes(original.getRetryTimes())
                 .setAsyncWrite(original.getAsyncWrite())
-                .setPbsMode(original.getPbsMode())
-                .setStmt2BindMode(original.getStmt2BindMode())
                 .setWsKeepAlive(original.getWsKeepAlive())
                 .setHealthCheckInitInterval(original.getHealthCheckInitInterval())
                 .setHealthCheckMaxInterval(original.getHealthCheckMaxInterval())

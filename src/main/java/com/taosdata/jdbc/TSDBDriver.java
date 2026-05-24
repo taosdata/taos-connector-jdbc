@@ -167,12 +167,6 @@ public class TSDBDriver extends AbstractDriver {
     public static final String PROPERTY_KEY_REBALANCE_CON_BASE_COUNT = "rebalanceConBaseCount";
 
     /**
-     * for stmt bind mode
-     */
-    public static final String PROPERTY_KEY_PBS_MODE = "pbsMode";
-    public static final String PROPERTY_KEY_STMT2_BIND_MODE = "stmt2BindMode";
-
-    /**
      * max message number send to server concurrently
      */
     public static final String PROPERTY_KEY_MAX_CONCURRENT_REQUEST = "maxConcurrentRequest";

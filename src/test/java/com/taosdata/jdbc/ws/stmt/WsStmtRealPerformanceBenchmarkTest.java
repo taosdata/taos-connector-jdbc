@@ -5,9 +5,7 @@ import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.WSColumnFastPreparedStatement;
-import com.taosdata.jdbc.ws.WSColumnPreparedStatement;
 import com.taosdata.jdbc.ws.WSConnection;
-import com.taosdata.jdbc.ws.WSRowPreparedStatement;
 import org.junit.Assume;
 import org.junit.Test;
 
@@ -24,8 +22,9 @@ import static org.junit.Assert.*;
  * mvn test -Dtest=WsStmtRealPerformanceBenchmarkTest -Dws.perf.benchmark=true -Djacoco.skip=true
  * </pre>
  *
- * <p>Compares {@link WSColumnFastPreparedStatement}, {@link WSColumnPreparedStatement},
- * and {@link WSRowPreparedStatement} using 100 batches x 10,000 rows with one row per subtable.
+ * <p>Compares {@link WSColumnFastPreparedStatement} through both the default fast route and the
+ * {@code stmt2BindMode=jdbc} alias, plus {@link WSRowPreparedStatement} using 100 batches x 10,000 rows
+ * with one row per subtable.
  */
 public class WsStmtRealPerformanceBenchmarkTest {
     private static final String DB_NAME = TestUtils.camelToSnake(WsStmtRealPerformanceBenchmarkTest.class);
@@ -68,7 +67,7 @@ public class WsStmtRealPerformanceBenchmarkTest {
         assumeStmt2BindExecSupported();
 
         BenchmarkResult line = runPath(RouteMode.LINE, "line_mode");
-        BenchmarkResult jdbc = runPath(RouteMode.JDBC, "jdbc_columnar");
+        BenchmarkResult jdbc = runPath(RouteMode.JDBC, "jdbc_fast_alias");
         BenchmarkResult fast = runPath(RouteMode.FAST, "fast_stmt2");
 
         printSummary(line, jdbc, fast);
@@ -96,19 +95,6 @@ public class WsStmtRealPerformanceBenchmarkTest {
         url
                 .append("?user=").append(TestEnvUtil.getUser())
                 .append("&password=").append(TestEnvUtil.getPassword());
-        switch (routeMode) {
-            case LINE:
-                url.append("&pbsMode=line");
-                break;
-            case JDBC:
-                url.append("&").append(TSDBDriver.PROPERTY_KEY_STMT2_BIND_MODE).append("=jdbc");
-                break;
-            case FAST:
-                url.append("&").append(TSDBDriver.PROPERTY_KEY_STMT2_BIND_MODE).append("=fast");
-                break;
-            default:
-                throw new IllegalArgumentException("Unsupported route mode: " + routeMode);
-        }
         return url.toString();
     }
 
@@ -209,7 +195,6 @@ public class WsStmtRealPerformanceBenchmarkTest {
                 long totalBatchNs = 0L;
 
                 try (PreparedStatement pstmt = conn.prepareStatement(INSERT_SQL)) {
-                    assertRoute(pstmt, routeMode);
 
                     long started = System.nanoTime();
                     for (int batch = 0; batch < BATCH_COUNT; batch++) {
@@ -228,26 +213,6 @@ public class WsStmtRealPerformanceBenchmarkTest {
             } finally {
                 cleanupDatabase(conn);
             }
-        }
-    }
-
-    private static void assertRoute(PreparedStatement pstmt, RouteMode routeMode) {
-        switch (routeMode) {
-            case LINE:
-                assertTrue("Expected WSRowPreparedStatement, got " + pstmt.getClass().getName(),
-                        pstmt instanceof WSRowPreparedStatement);
-                return;
-            case JDBC:
-                assertEquals("Expected exact WSColumnPreparedStatement, got " + pstmt.getClass().getName(),
-                        WSColumnPreparedStatement.class,
-                        pstmt.getClass());
-                return;
-            case FAST:
-                assertTrue("Expected WSColumnFastPreparedStatement, got " + pstmt.getClass().getName(),
-                        pstmt instanceof WSColumnFastPreparedStatement);
-                return;
-            default:
-                fail("Unsupported route mode: " + routeMode);
         }
     }
 

@@ -1,12 +1,7 @@
 package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.TSDBConstants;
-import com.taosdata.jdbc.TSDBDriver;
-import com.taosdata.jdbc.utils.SpecifyAddress;
-import com.taosdata.jdbc.utils.StringUtils;
-import com.taosdata.jdbc.utils.DateTimeUtils;
-import com.taosdata.jdbc.utils.TestEnvUtil;
-import com.taosdata.jdbc.utils.TestUtils;
+import com.taosdata.jdbc.utils.*;
 import com.taosdata.jdbc.ws.WSColumnFastPreparedStatement;
 import com.taosdata.jdbc.ws.WSConnection;
 import io.netty.util.ResourceLeakDetector;
@@ -489,7 +484,6 @@ public class WsPstmtFastAllTypeTest {
             url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
         }
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_STMT2_BIND_MODE, "fast");
         connection = DriverManager.getConnection(url, properties);
         Assume.assumeTrue("Fast all-type test requires WSConnection", connection instanceof WSConnection);
         Assume.assumeTrue("Fast all-type test requires stmt2_bind_exec support",

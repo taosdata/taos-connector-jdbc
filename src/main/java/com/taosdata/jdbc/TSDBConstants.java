@@ -99,7 +99,7 @@ public abstract class TSDBConstants {
     public static final String MAX_UNSIGNED_LONG = "18446744073709551615";
     public static final String MIN_SUPPORT_VERSION = "3.3.6.0";  // NOSONAR
     public static final String MIN_BLOB_SUPPORT_VERSION = "3.3.7.0.alpha";
-    public static final String MIN_STMT2_BIND_EXEC_VERSION = "3.4.0.0";
+    public static final String MIN_STMT2_BIND_EXEC_VERSION = "3.4.1.10";
     public static final String UNKNOWN_VERSION = "unknown";
 
     public static String jdbcType2TaosTypeName(int jdbcType) throws SQLException {

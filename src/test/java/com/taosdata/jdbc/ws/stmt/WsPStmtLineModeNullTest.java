@@ -1,6 +1,5 @@
 package com.taosdata.jdbc.ws.stmt;
 
-import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
@@ -14,7 +13,6 @@ import java.io.InputStream;
 import java.io.Reader;
 import java.io.StringReader;
 import java.net.MalformedURLException;
-import java.math.BigDecimal;
 import java.net.URL;
 import java.sql.*;
 import java.util.Calendar;
@@ -476,7 +474,6 @@ public class WsPStmtLineModeNullTest {
             url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
         }
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PBS_MODE, "line");
         connection = DriverManager.getConnection(url, properties);
         try (Statement statement = connection.createStatement()) {
             statement.execute("drop database if exists " + db_name);

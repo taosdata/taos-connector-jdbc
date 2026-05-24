@@ -38,7 +38,6 @@ public class TSDBErrorNumbers {
     public static final int ERROR_RESOURCE_FREEED = 0x2322;
 
     public static final int ERROR_BLOB_UNSUPPORTED_IN_SERVER = 0x2323;
-    public static final int ERROR_LINE_BIND_MODE_UNSUPPORTED_IN_SERVER = 0x2324;
 
     public static final int ERROR_UNKNOWN = 0x2350;    //unknown error
 

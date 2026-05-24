@@ -98,20 +98,16 @@ public class WSConnection extends AbstractConnection {
                 }
             }
 
-            if ("line".equalsIgnoreCase(param.getPbsMode())){
-                if (super.supportLineBind) {
-                    return new WSRowPreparedStatement(transport,
+            if ((efficientWritingSql || "STMT".equalsIgnoreCase(param.getAsyncWrite())) && isInsert && isSuperTable) {
+                if (supportsStmt2BindExec()) {
+                    return new WSEWColumnPreparedStatement(transport,
                             param,
                             database,
                             this,
                             sql,
                             idGenerator.getAndIncrement(),
                             prepareResp);
-                } else {
-                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_LINE_BIND_MODE_UNSUPPORTED_IN_SERVER);
                 }
-            }
-            if ((efficientWritingSql || "STMT".equalsIgnoreCase(param.getAsyncWrite())) && isInsert && isSuperTable) {
                 return new WSEWPreparedStatement(transport,
                         param,
                         database,
@@ -122,15 +118,6 @@ public class WSConnection extends AbstractConnection {
             } else {
                 // Route insert statements to the stmt2 bind-exec producer on supported servers.
                 if (isInsert && supportsStmt2BindExec()) {
-                    if ("jdbc".equalsIgnoreCase(param.getStmt2BindMode())) {
-                        return new WSColumnPreparedStatement(transport,
-                                param,
-                                database,
-                                this,
-                                sql,
-                                idGenerator.getAndIncrement(),
-                                prepareResp);
-                    }
                     return new WSColumnFastPreparedStatement(transport,
                             param,
                             database,

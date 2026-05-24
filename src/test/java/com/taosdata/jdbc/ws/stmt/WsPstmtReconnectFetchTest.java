@@ -47,10 +47,6 @@ public class WsPstmtReconnectFetchTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_RETRY_COUNT, "3");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, "5000");
 
-        if ("line".equalsIgnoreCase(this.mode)) {
-            properties.setProperty(TSDBDriver.PROPERTY_KEY_PBS_MODE, this.mode);
-        }
-
         String sql = "select * from " + DB_NAME + "." + TABLE_NAME + " where ts > ? and ts < ?";
         int resultCount = 0;
 

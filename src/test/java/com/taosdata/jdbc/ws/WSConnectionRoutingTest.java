@@ -1,9 +1,8 @@
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBConstants;
-import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.common.ConnectionParam;
-import com.taosdata.jdbc.ws.entity.CommonResp;
+import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.stmt2.entity.Field;
 import com.taosdata.jdbc.ws.stmt2.entity.Stmt2PrepareResp;
@@ -56,7 +55,7 @@ public class WSConnectionRoutingTest {
 
     /**
      * Creates a WSConnection whose server version is set to the given string.
-     * The AbstractConnection constructor uses the version to compute supportBlob / supportLineBind.
+     * The AbstractConnection constructor uses the version to compute cached capability flags.
      */
     private WSConnection makeConnection(String serverVersion) {
         Properties props = new Properties();
@@ -141,9 +140,7 @@ public class WSConnectionRoutingTest {
     public void insert_bindExecServer_defaultStmt2BindMode_returnsWSColumnFastPreparedStatement() throws Exception {
         stubInsertPrepare();
         // pbsMode is NOT "line"
-        Mockito.when(param.getPbsMode()).thenReturn(null);
         Mockito.when(param.getAsyncWrite()).thenReturn(null);
-        Mockito.when(param.getStmt2BindMode()).thenReturn(null);
 
         // Server version >= MIN_STMT2_BIND_EXEC_VERSION → supportsStmt2BindExec() returns true
         WSConnection conn = makeConnection(TSDBConstants.MIN_STMT2_BIND_EXEC_VERSION);
@@ -160,9 +157,7 @@ public class WSConnectionRoutingTest {
     @Test
     public void insert_bindExecServer_fastStmt2BindMode_returnsWSColumnFastPreparedStatement() throws Exception {
         stubInsertPrepare();
-        Mockito.when(param.getPbsMode()).thenReturn(null);
         Mockito.when(param.getAsyncWrite()).thenReturn(null);
-        Mockito.when(param.getStmt2BindMode()).thenReturn("fast");
 
         WSConnection conn = makeConnection(TSDBConstants.MIN_STMT2_BIND_EXEC_VERSION);
 
@@ -176,20 +171,18 @@ public class WSConnectionRoutingTest {
     }
 
     @Test
-    public void insert_bindExecServer_jdbcStmt2BindMode_returnsWSColumnPreparedStatement() throws Exception {
+    public void insert_bindExecServer_jdbcStmt2BindMode_returnsWSColumnFastPreparedStatement() throws Exception {
         stubInsertPrepare();
-        Mockito.when(param.getPbsMode()).thenReturn(null);
         Mockito.when(param.getAsyncWrite()).thenReturn(null);
-        Mockito.when(param.getStmt2BindMode()).thenReturn("JDBC");
 
         WSConnection conn = makeConnection(TSDBConstants.MIN_STMT2_BIND_EXEC_VERSION);
 
         try (PreparedStatement stmt = conn.prepareStatement("INSERT INTO t VALUES (?,?)")) {
             assertNotNull(stmt);
-            assertEquals(
-                    "Expected exact WSColumnPreparedStatement for stmt2BindMode=jdbc",
-                    WSColumnPreparedStatement.class,
-                    stmt.getClass());
+            assertTrue(
+                    "Expected WSColumnFastPreparedStatement for stmt2BindMode=jdbc, got: "
+                            + stmt.getClass().getSimpleName(),
+                    stmt instanceof WSColumnFastPreparedStatement);
         }
     }
 
@@ -200,9 +193,7 @@ public class WSConnectionRoutingTest {
     @Test
     public void insert_oldServer_returnsTSWSPreparedStatement() throws Exception {
         stubInsertPrepare();
-        Mockito.when(param.getPbsMode()).thenReturn(null);
         Mockito.when(param.getAsyncWrite()).thenReturn(null);
-        Mockito.when(param.getStmt2BindMode()).thenReturn("fast");
 
         // Server version < MIN_STMT2_BIND_EXEC_VERSION → supportsStmt2BindExec() returns false
         WSConnection conn = makeConnection("3.4.1.4");
@@ -217,44 +208,56 @@ public class WSConnectionRoutingTest {
     }
 
     // -----------------------------------------------------------------------
-    // Test: pbsMode=line + bind-exec server → WSRowPreparedStatement
+    // Test: pbsMode=line no longer forces the removed row-mode implementation
     // -----------------------------------------------------------------------
 
     @Test
-    public void insert_lineModeOnBindExecServer_returnsWSRowPreparedStatement() throws Exception {
+    public void insert_lineModeOnBindExecServer_returnsWSColumnFastPreparedStatement() throws Exception {
         stubInsertPrepare();
-        Mockito.when(param.getPbsMode()).thenReturn("line");
         Mockito.when(param.getAsyncWrite()).thenReturn(null);
-        Mockito.when(param.getStmt2BindMode()).thenReturn("fast");
 
-        // Use the exact bind-exec threshold so this test proves that pbsMode=line
-        // still routes to WSRowPreparedStatement even when stmt2 bind-exec is available.
         WSConnection conn = makeConnection(TSDBConstants.MIN_STMT2_BIND_EXEC_VERSION);
 
         try (PreparedStatement stmt = conn.prepareStatement("INSERT INTO t VALUES (?,?)")) {
             assertNotNull(stmt);
             assertTrue(
-                    "Expected WSRowPreparedStatement for pbsMode=line, got: "
+                    "Expected WSColumnFastPreparedStatement when pbsMode=line is ignored, got: "
                             + stmt.getClass().getSimpleName(),
-                    stmt instanceof WSRowPreparedStatement);
+                    stmt instanceof WSColumnFastPreparedStatement);
         }
     }
 
     @Test
-    public void supertableInsert_lineModeOnBindExecServer_returnsWSRowPreparedStatement() throws Exception {
+    public void asyncInsert_bindExecServer_returnsWSEWColumnPreparedStatement() throws Exception {
         stubInsertPrepare(true);
-        Mockito.when(param.getPbsMode()).thenReturn("line");
         Mockito.when(param.getAsyncWrite()).thenReturn(null);
-        Mockito.when(param.getStmt2BindMode()).thenReturn("fast");
+        Mockito.when(param.getBackendWriteThreadNum()).thenReturn(1);
+        Mockito.when(param.getCacheSizeByRow()).thenReturn(1000);
+        Mockito.when(param.getBatchSizeByRow()).thenReturn(100);
 
         WSConnection conn = makeConnection(TSDBConstants.MIN_STMT2_BIND_EXEC_VERSION);
 
         try (PreparedStatement stmt = conn.prepareStatement("ASYNC_INSERT INTO ? USING meters TAGS (?) VALUES (?,?)")) {
             assertNotNull(stmt);
             assertEquals(
-                    "pbsMode=line must win over efficient-writing supertable routing",
-                    WSRowPreparedStatement.class,
+                    WSEWColumnPreparedStatement.class,
                     stmt.getClass());
+        }
+    }
+
+    @Test
+    public void asyncInsert_oldServer_returnsLegacyWSEWPreparedStatement() throws Exception {
+        stubInsertPrepare(true);
+        Mockito.when(param.getAsyncWrite()).thenReturn(null);
+        Mockito.when(param.getBackendWriteThreadNum()).thenReturn(1);
+        Mockito.when(param.getCacheSizeByRow()).thenReturn(1000);
+        Mockito.when(param.getBatchSizeByRow()).thenReturn(100);
+
+        WSConnection conn = makeConnection("3.4.1.4");
+
+        try (PreparedStatement stmt = conn.prepareStatement("ASYNC_INSERT INTO ? USING meters TAGS (?) VALUES (?,?)")) {
+            assertNotNull(stmt);
+            assertEquals(WSEWPreparedStatement.class, stmt.getClass());
         }
     }
 
@@ -265,9 +268,7 @@ public class WSConnectionRoutingTest {
     @Test
     public void query_bindExecServer_returnsTSWSPreparedStatement() throws Exception {
         stubQueryPrepare();
-        Mockito.when(param.getPbsMode()).thenReturn(null);
         Mockito.when(param.getAsyncWrite()).thenReturn(null);
-        Mockito.when(param.getStmt2BindMode()).thenReturn("fast");
 
         WSConnection conn = makeConnection(TSDBConstants.MIN_STMT2_BIND_EXEC_VERSION);
 
@@ -316,9 +317,7 @@ public class WSConnectionRoutingTest {
         Mockito.when(transport.send(any(Request.class), anyBoolean(), anyLong()))
                 .thenReturn(prepResp);
 
-        Mockito.when(param.getPbsMode()).thenReturn(null);
         Mockito.when(param.getAsyncWrite()).thenReturn(null);
-        Mockito.when(param.getStmt2BindMode()).thenReturn(null);
 
         WSConnection conn = makeConnection(TSDBConstants.MIN_STMT2_BIND_EXEC_VERSION);
 

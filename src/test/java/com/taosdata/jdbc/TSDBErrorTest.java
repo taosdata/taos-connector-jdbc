@@ -121,6 +121,22 @@ public class TSDBErrorTest {
         assertEquals(expectedMsg, ex.getMessage());
     }
 
+    @Test
+    public void lineModeUnsupportedErrorCode_isRemovedFromTSDBErrorNumbers() {
+        try {
+            TSDBErrorNumbers.class.getDeclaredField("ERROR_LINE_BIND_MODE_UNSUPPORTED_IN_SERVER");
+            fail("ERROR_LINE_BIND_MODE_UNSUPPORTED_IN_SERVER should be removed with line-mode cleanup");
+        } catch (NoSuchFieldException expected) {
+            assertTrue(true);
+        }
+    }
+
+    @Test
+    public void removedLineModeErrorCode_fallsBackToUnknownMessage() {
+        assertEquals(TSDBError.getErrorMessage(TSDBErrorNumbers.ERROR_UNKNOWN),
+                TSDBError.getErrorMessage(0x2324));
+    }
+
     // ------------------------------ Test createIllegalStateException ------------------------------
     @Test
     public void testCreateIllegalStateException_ExistingErrorCode() {
@@ -148,4 +164,3 @@ public class TSDBErrorTest {
         assertEquals(expectedMsg, ex.getMessage());
     }
 }
-

@@ -112,12 +112,6 @@ public class ConnectionParamTest {
         connectionParam.setAsyncWrite("stmt");
         assertEquals("stmt", connectionParam.getAsyncWrite());
 
-        connectionParam.setPbsMode("line");
-        assertEquals("line", connectionParam.getPbsMode());
-
-        connectionParam.setStmt2BindMode("jdbc");
-        assertEquals("jdbc", connectionParam.getStmt2BindMode());
-
         connectionParam.setWsKeepAlive(300);
         assertEquals(300, connectionParam.getWsKeepAlive());
 
@@ -471,7 +465,6 @@ public class ConnectionParamTest {
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PBS_MODE, "INVALID");
         ConnectionParam.getParam(properties);
     }
 
@@ -482,8 +475,6 @@ public class ConnectionParamTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
 
         ConnectionParam param = ConnectionParam.getParam(properties);
-
-        assertEquals("fast", param.getStmt2BindMode());
     }
 
     @Test
@@ -491,11 +482,8 @@ public class ConnectionParamTest {
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_STMT2_BIND_MODE, "JdBc");
 
         ConnectionParam param = ConnectionParam.getParam(properties);
-
-        assertTrue("jdbc".equalsIgnoreCase(param.getStmt2BindMode()));
     }
 
     @Test(expected = SQLException.class)
@@ -503,7 +491,6 @@ public class ConnectionParamTest {
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_STMT2_BIND_MODE, "INVALID");
 
         ConnectionParam.getParam(properties);
     }
@@ -640,8 +627,6 @@ public class ConnectionParamTest {
         connectionParam.setStrictCheck(true);
         connectionParam.setRetryTimes(3);
         connectionParam.setAsyncWrite("stmt");
-        connectionParam.setPbsMode("line");
-        connectionParam.setStmt2BindMode("jdbc");
         connectionParam.setWsKeepAlive(300);
         connectionParam.setHealthCheckInitInterval(10);
         connectionParam.setHealthCheckMaxInterval(300);
@@ -690,8 +675,6 @@ public class ConnectionParamTest {
         assertEquals(connectionParam.isStrictCheck(), copiedParam.isStrictCheck());
         assertEquals(connectionParam.getRetryTimes(), copiedParam.getRetryTimes());
         assertEquals(connectionParam.getAsyncWrite(), copiedParam.getAsyncWrite());
-        assertEquals(connectionParam.getPbsMode(), copiedParam.getPbsMode());
-        assertEquals(connectionParam.getStmt2BindMode(), copiedParam.getStmt2BindMode());
         assertEquals(connectionParam.getWsKeepAlive(), copiedParam.getWsKeepAlive());
         assertEquals(connectionParam.getHealthCheckInitInterval(), copiedParam.getHealthCheckInitInterval());
         assertEquals(connectionParam.getHealthCheckMaxInterval(), copiedParam.getHealthCheckMaxInterval());
@@ -769,8 +752,6 @@ public class ConnectionParamTest {
         assertEquals(false, param.isStrictCheck());
         assertEquals(3, param.getRetryTimes());
         assertEquals("", param.getAsyncWrite());
-        assertEquals("", param.getPbsMode());
-        assertEquals("fast", param.getStmt2BindMode());
         assertEquals(300, param.getWsKeepAlive());
         assertEquals(10, param.getHealthCheckInitInterval());
         assertEquals(300, param.getHealthCheckMaxInterval());

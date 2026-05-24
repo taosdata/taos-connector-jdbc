@@ -1,19 +1,9 @@
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.ws.entity.Action;
-import com.taosdata.jdbc.ws.entity.Code;
-import com.taosdata.jdbc.ws.entity.Request;
-import com.taosdata.jdbc.ws.entity.Response;
-import com.taosdata.jdbc.ws.stmt2.entity.ResultResp;
-import com.taosdata.jdbc.ws.stmt2.entity.Stmt2ExecResp;
-import com.taosdata.jdbc.ws.stmt2.entity.Stmt2Resp;
-import io.netty.buffer.ByteBuf;
 import org.junit.Test;
 
 import java.lang.reflect.Field;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
 
 import static org.junit.Assert.*;
 
@@ -149,10 +139,10 @@ public class WSRetryableStmtCompatibilityTest {
                 boolean.class, method.getReturnType());
         
         // Verify the method works correctly
-        assertTrue("Version 3.1.4.10 should support bind-exec",
-                com.taosdata.jdbc.utils.VersionUtil.supportStmt2BindExec("3.1.4.10"));
-        assertFalse("Version 3.1.4.9 should not support bind-exec",
-                com.taosdata.jdbc.utils.VersionUtil.supportStmt2BindExec("3.1.4.9"));
+        assertTrue("Version 3.4.1.10 should support bind-exec",
+                com.taosdata.jdbc.utils.VersionUtil.supportStmt2BindExec("3.4.1.10"));
+        assertFalse("Version 3.4.1.9 should not support bind-exec",
+                com.taosdata.jdbc.utils.VersionUtil.supportStmt2BindExec("3.4.1.9"));
     }
 
     /**

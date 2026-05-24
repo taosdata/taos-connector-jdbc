@@ -10,6 +10,7 @@ import java.util.Properties;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class WSConnectionStmt2BindExecCacheTest {
 
@@ -76,5 +77,15 @@ public class WSConnectionStmt2BindExecCacheTest {
         assertFalse(VersionUtil.supportStmt2BindExec(unsupportedVersion));
         assertTrue(supported.supportsStmt2BindExec());
         assertFalse(unsupported.supportsStmt2BindExec());
+    }
+
+    @Test
+    public void abstractConnection_noLongerDeclaresSupportLineBindField() {
+        try {
+            com.taosdata.jdbc.AbstractConnection.class.getDeclaredField("supportLineBind");
+            fail("supportLineBind should be removed after line-mode write-path deletion");
+        } catch (NoSuchFieldException expected) {
+            assertTrue(true);
+        }
     }
 }

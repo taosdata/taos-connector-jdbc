@@ -187,31 +187,14 @@ public class WSRetryableStmt extends WSStatement {
                 }
 
                 modifyStmtIdAndReqId(rawBlock, stmtInfo.getStmtId(), reqId);
+                Stmt2ExecResp resp;
 
                 if (useBindExec) {
                     // New path: STMT2_BIND_EXEC combines bind and exec
-                    Stmt2ExecResp bindExecResp = (Stmt2ExecResp) transport.send(Action.STMT2_BIND_EXEC.getAction(),
+                    resp = (Stmt2ExecResp) transport.send(Action.STMT2_BIND_EXEC.getAction(),
                             reqId, rawBlock, false, this.getQueryTimeoutInMs());
-                    if (Code.SUCCESS.getCode() != bindExecResp.getCode()) {
-                        throw new SQLException("(0x" + Integer.toHexString(bindExecResp.getCode()) + "):" + bindExecResp.getMessage());
-                    }
-
-                    // Process result based on operation type
-                    if (operationType == OPERATION_TYPE_WRITE) {
-                        int affectedRows = bindExecResp.getAffected();
-                        batchInsertedRowsInner.addAndGet(affectedRows);
-                        return affectedRows;
-                    } else if (operationType == OPERATION_TYPE_QUERY) {
-                        // Get query result
-                        reqId = ReqId.getReqID();
-                        Request request = RequestFactory.generateUseResult(stmtInfo.getStmtId(), reqId);
-                        ResultResp useResultResp = (ResultResp) transport.send(request, false, this.getQueryTimeoutInMs());
-                        if (Code.SUCCESS.getCode() != useResultResp.getCode()) {
-                            throw new SQLException("(0x" + Integer.toHexString(useResultResp.getCode()) + "):" + useResultResp.getMessage());
-                        }
-                        return useResultResp;
-                    } else {
-                        throw new IllegalArgumentException("Unknown operation type: " + operationType);
+                    if (Code.SUCCESS.getCode() != resp.getCode()) {
+                        throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
                     }
                 } else {
                     // Legacy path: STMT2_BIND + STMT2_EXEC
@@ -225,28 +208,28 @@ public class WSRetryableStmt extends WSStatement {
                     // Execute operation
                     reqId = ReqId.getReqID();
                     Request request = RequestFactory.generateExec(stmtInfo.getStmtId(), reqId);
-                    Stmt2ExecResp resp = (Stmt2ExecResp) transport.send(request, false, this.getQueryTimeoutInMs());
+                    resp = (Stmt2ExecResp) transport.send(request, false, this.getQueryTimeoutInMs());
                     if (Code.SUCCESS.getCode() != resp.getCode()) {
                         throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
                     }
+                }
 
-                    // Process result based on operation type
-                    if (operationType == OPERATION_TYPE_WRITE) {
-                        int affectedRows = resp.getAffected();
-                        batchInsertedRowsInner.addAndGet(affectedRows);
-                        return affectedRows;
-                    } else if (operationType == OPERATION_TYPE_QUERY) {
-                        // Get query result
-                        reqId = ReqId.getReqID();
-                        request = RequestFactory.generateUseResult(stmtInfo.getStmtId(), reqId);
-                        ResultResp useResultResp = (ResultResp) transport.send(request, false, this.getQueryTimeoutInMs());
-                        if (Code.SUCCESS.getCode() != resp.getCode()) {
-                            throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
-                        }
-                        return useResultResp;
-                    } else {
-                        throw new IllegalArgumentException("Unknown operation type: " + operationType);
+                // Process result based on operation type
+                if (operationType == OPERATION_TYPE_WRITE) {
+                    int affectedRows = resp.getAffected();
+                    batchInsertedRowsInner.addAndGet(affectedRows);
+                    return affectedRows;
+                } else if (operationType == OPERATION_TYPE_QUERY) {
+                    // Get query result
+                    reqId = ReqId.getReqID();
+                    Request request = RequestFactory.generateUseResult(stmtInfo.getStmtId(), reqId);
+                    ResultResp useResultResp = (ResultResp) transport.send(request, false, this.getQueryTimeoutInMs());
+                    if (Code.SUCCESS.getCode() != resp.getCode()) {
+                        throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
                     }
+                    return useResultResp;
+                } else {
+                    throw new IllegalArgumentException("Unknown operation type: " + operationType);
                 }
             } catch (SQLException e) {
                 // Handle exception based on operation type
@@ -264,12 +247,6 @@ public class WSRetryableStmt extends WSStatement {
                 }
             } finally {
                 log.trace("buffer {}, refCnt: {}", Integer.toHexString(System.identityHashCode(rawBlock)), rawBlock.refCnt());
-                // Retry iterations (i > 0) use orgRawBlock.copy() which this method owns;
-                // release each copy after use.  i == 0 uses duplicate() which the caller
-                // manages via retainByteBuf / releaseByteBuf – do NOT release it here.
-                if (i > 0) {
-                    rawBlock.release();
-                }
             }
         }
 

@@ -5,7 +5,7 @@ import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.utils.Utils;
 import com.taosdata.jdbc.ws.TSWSPreparedStatement;
-import com.taosdata.jdbc.ws.WSColumnPreparedStatement;
+import com.taosdata.jdbc.ws.WSColumnFastPreparedStatement;
 import com.taosdata.jdbc.ws.WSConnection;
 import io.netty.util.ResourceLeakDetector;
 import org.junit.*;
@@ -226,8 +226,8 @@ public class WsPstmtStmt2Test {
         String sql = "INSERT INTO " + db_name + "." + tableName + "(tbname, groupId, location, ts, current, voltage, phase) VALUES (?,?,?,?,?,?,?)";
 
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-            Assert.assertTrue("Expected WSColumnPreparedStatement, got " + pstmt.getClass().getName(),
-                    pstmt instanceof WSColumnPreparedStatement);
+            Assert.assertTrue("Expected WSColumnFastPreparedStatement, got " + pstmt.getClass().getName(),
+                    pstmt instanceof WSColumnFastPreparedStatement);
 
             for (int i = 1; i <= 2; i++) {
                 long current = System.currentTimeMillis();

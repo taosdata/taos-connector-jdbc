@@ -10,7 +10,10 @@ import com.taosdata.jdbc.ws.stmt2.entity.Stmt2Resp;
 import com.taosdata.jdbc.ws.stmt2.entity.StmtInfo;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.util.ResourceLeakDetector;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.sql.SQLException;
@@ -41,6 +44,16 @@ import static org.mockito.Mockito.*;
  * - Assertions are on recorded actions AFTER invoking real WSRetryableStmt.writeBlockWithRetrySync()
  */
 public class WSRetryableStmtRealBehaviorTest {
+
+    @BeforeClass
+    public static void setUpClass() {
+        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+    }
+
+    @AfterClass
+    public static void tearDownClass() {
+        System.gc();
+    }
 
     /**
      * Fake Transport that records all actions sent through it.

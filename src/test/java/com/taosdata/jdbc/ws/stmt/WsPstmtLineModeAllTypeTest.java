@@ -1,7 +1,6 @@
 package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.TSDBConstants;
-import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.*;
 import io.netty.util.ResourceLeakDetector;
 import org.junit.*;
@@ -514,7 +513,6 @@ public class WsPstmtLineModeAllTypeTest {
             url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
         }
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PBS_MODE, "line");
         connection = DriverManager.getConnection(url, properties);
         try (Statement statement = connection.createStatement()) {
             statement.execute("drop database if exists " + dbName);

@@ -92,11 +92,11 @@ public class AbsWSPreparedStatementColumnDataTest {
     private TSWSPreparedStatement buildStmt(List<Field> fields, boolean bindExecServer) throws Exception {
         AbstractConnection connection;
         if (bindExecServer) {
-            // Use WSConnection with a version that supports bind-exec (>= 3.1.4.10)
+            // Use WSConnection with a version that supports bind-exec.
             java.util.Properties props = new java.util.Properties();
             WSConnection wsConn = new WSConnection(
                     "jdbc:TAOS-RS://localhost:6041/testdb",
-                    props, transport, param, "3.1.4.10");
+                    props, transport, param, MIN_STMT2_BIND_EXEC_VERSION);
             connection = wsConn;
         } else {
             // Use a plain AbstractConnection mock (non-WSConnection → no bind-exec)
@@ -535,7 +535,7 @@ public class AbsWSPreparedStatementColumnDataTest {
         // Build a SELECT (non-insert) statement against a bind-exec-capable server.
         Properties props = new Properties();
         WSConnection wsConn = new WSConnection(
-                "jdbc:TAOS-RS://localhost:6041/testdb", props, transport, param, "3.1.4.10");
+                "jdbc:TAOS-RS://localhost:6041/testdb", props, transport, param, MIN_STMT2_BIND_EXEC_VERSION);
 
         Stmt2PrepareResp selectResp = new Stmt2PrepareResp();
         selectResp.setInsert(false); // SELECT

@@ -95,10 +95,6 @@ public class WsPstmtReconnectInsertTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_RETRY_COUNT, "3");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, "5000");
 
-        if ("line".equalsIgnoreCase(this.mode)) {
-            properties.setProperty(TSDBDriver.PROPERTY_KEY_PBS_MODE, this.mode);
-        }
-
         stmt2Write(url, properties);
         mockB.stop();
     }
@@ -117,10 +113,6 @@ public class WsPstmtReconnectInsertTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_INTERVAL_MS, "2000");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_RETRY_COUNT, "3");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, "5000");
-
-        if ("line".equalsIgnoreCase(this.mode)) {
-            properties.setProperty(TSDBDriver.PROPERTY_KEY_PBS_MODE, this.mode);
-        }
 
         String sql = "INSERT INTO " + DB_NAME + "." + TABLE_NAME + "(tbname, groupId, location, ts, current, voltage, phase) VALUES (?,?,?,?,?,?,?)";
 
