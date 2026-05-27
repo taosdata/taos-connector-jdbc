@@ -1,173 +1,168 @@
-# WSEW 按满批投影的 buffer sizing 设计
+# WSEW 按批次写时统计的 buffer sizing 设计
 
 ## 1. 设计摘要
 
-这个设计要解决的是：WSEW 变长列的 `ReusableChunkedBuffer` 现在只会动态算
-`chunkSize`，但 `reusableChunkCount` 还是固定常量，导致大 batch 下复用覆盖不全。
+这版设计不再走“先 profile 一遍 batch，再建 buffer”的路线，而是改成：
 
-这次设计改成一套**确定性的、按当前 batch 本地计算的 sizing 规则**：
+1. 变长列 value buffer 先用一个小的 bootstrap `chunkSize` 起步；
+2. 写当前 batch 时，如果当前 chunk 不够，就继续追加 chunk；
+3. 写入过程中顺手记录统计信息，不额外重扫数据；
+4. 当前 batch 写完后，再根据这批真实写入情况，计算下一批要用的 `wantedSpec`；
+5. 下一批开始时，再决定是继续复用、grow，还是在长期 underuse 后 shrink。
 
-1. 先 profile 当前要序列化的 rows；
-2. 即使当前 rows 不满，也按 `batchSizeByRow` 投影到“满批”规模；
-3. 对每个变长列算出一个 `BufferSpec = { chunkBytes, reusableChunkCount }`；
-4. `wantedSpec` 变大时立即重建，`wantedSpec` 变小时先复用，再按 shrink 条件缩容；
-5. 不引入学习型历史状态，不引入 per-field hard cap，不改 payload 格式。
+本设计的核心目标是：
 
-核心目标是：**行为可预测、好测试、不因为“学习逻辑”引入隐蔽 bug。**
+- **不额外扫描 batch**
+- **尽量少引入状态**
+- **行为好测试**
+- **对大 batch 能迅速调整到更合适的 chunk 规格**
 
-## 2. 当前问题
+## 2. 为什么要改
 
-现在 WSEW 可复用路径的关键参数是：
+当前思路里，WSEW 的 reusable path 只有 `chunkSize` 是动态估出来的，而
+`reusableChunkCount` 仍然容易被固定上限卡住。
 
-- `standardChunkBytes`：由 `field.bytes` 和 `batchSizeHint` 推出来
-- `EW_MAX_REUSABLE_CHUNKS`：固定常量 `4`
+同时，如果为了 sizing 再额外扫一次当前 batch：
 
-这个组合在小一些的 batch 上还能工作，但在大一些的 batch 上会出现：
+- 会让主路径多一次列数据遍历
+- 逻辑侵入感更强
+- 也不符合“写的时候就已经知道数据大小”的直觉
 
-- chunk size 已经顶到 `64KB`
-- 但 cached reusable chunk 还是只有 `4`
-- 所以后面很多 chunk 还是每批现申请、现释放
-
-例如 `extension=400B`：
-
-- `500` 行大约是 `200KB`，接近 `4 * 64KB`
-- `2000` 行大约是 `800KB`，远大于 `4 * 64KB`
-
-所以 `500` 行场景复用收益明显，而 `2000` 行场景复用收益不稳定。
+因此，这版设计改成**写时顺手收集统计，批末再计算下一批规格**。
 
 ## 3. 设计目标
 
-1. sizing 必须按 `batchSizeByRow` 的目标规模算，而不是只看眼前这批数据有多少行；
-2. 同一类 workload 下，buffer 规格要很快稳定下来；
-3. 行为要能靠单元测试直接断言；
-4. payload 内容和现有序列化语义保持不变；
-5. 避免复杂“自学习状态”带来的解释成本和 bug 风险。
+1. 不新增 batch-local profiler，不额外扫描列数据；
+2. bootstrap `chunkSize` 足够小，避免一开始就过度分配；
+3. 大 batch 出现时，下一批能快速调大到合适规格；
+4. shrink 非常慢，避免抖动；
+5. payload 格式和编码语义保持不变；
+6. 复用 / grow / shrink 的判断可以直接单元测试。
 
 ## 4. 非目标
 
-这版设计**不做**下面这些事情：
-
 1. 不做机器学习；
 2. 不做滚动分位数学习；
-3. 不做带历史窗口的自适应 sizing 学习；
+3. 不做历史窗口学习；
 4. 不做 per-field hard cap；
-5. 不改 dedicated chunk 的语义；
-6. 不改 fixed-width 字段的存储方式。
+5. 不在同一批写到一半时切换 `chunkSize`；
+6. 不改 fixed-width 字段存储。
 
-## 5. 当前实现约束
+## 5. 初始规格
 
-这个设计依赖当前 WSEW 已有的执行模型：
-
-- WSEW 在真正建 column buffers 之前，已经把当前 batch 的 rows 取成了
-  `List<Map<Integer, Column>>`
-- `triggerSerializeProgressive(...)` 只有在 `writeQueue` 非空时才会提交任务
-- `batchSize = min(writeQueue.size(), batchSizeByRow)`，所以 progressive batch 至少有 `1` 行
-- `ColumnarWSEWSerializationTask.compute()` 会严格取满 `batchSize` 行，再进入 build path
-
-因此：
-
-- `observedRows == 0` 在这条路径里不是一个真实运行分支
-- 这次设计里不需要再保留 zero-row fallback
-
-## 6. 新的核心抽象：`BufferSpec`
-
-对每个变长列，引入一个明确的规格：
+对每个变长列，先定义：
 
 - `chunkBytes`
 - `reusableChunkCount`
-
-这两个值共同决定该列的 reusable value buffer 形态。
-
-除了 `BufferSpec` 之外，只额外保留一个很小的状态：
-
 - `underuseStreak`
 
-它不是 learner，只是 shrink 的防抖计数器。
+其中：
 
-## 7. Batch-local profiling
+- `chunkBytes`：当前 reusable chunk 的尺寸
+- `reusableChunkCount`：当前缓存多少个 reusable chunks
+- `underuseStreak`：连续多少批处于“当前规格明显偏大”的状态
 
-在建变长列 buffer 之前，先扫一遍当前 batch 的 rows。对每个变长列统计：
+新字段第一次进入 WSEW 时，bootstrap 规格定为：
 
-- `observedRows`
+```text
+chunkBytes = 8KB
+reusableChunkCount = 1
+underuseStreak = 0
+```
+
+之所以选 `8KB`：
+
+1. 比 `64KB` 明显更保守；
+2. 比 `4KB` 更接近 Netty 常见 page 粒度；
+3. 在大字段 workload 上，也能在一两批内快速放大。
+
+## 6. 不再新增 batch-local profiler，而是用写时统计 util
+
+引入一个 util，例如：
+
+`ChunkSizingUtil`
+
+它不预扫 rows，而是在当前 batch 写入过程中顺手记录：
+
+- `rowsWritten`
 - `observedValueBytes`
 - `maxSingleValueBytes`
-- `nonNullRows`
+- `activeChunksUsed`
+- `overflowCount`
 
-这里的 `observedValueBytes` 必须是**编码后真正会写进 value area 的字节数**，而不是
-Java 对象个数。
+这些信息都可以在“实际 append value”时拿到，不需要再读第二遍数据。
 
-这个 profiling 只看当前 batch，不保留历史状态。
+### 6.1 这个 util 做什么
 
-## 8. 按 `batchSizeByRow` 投影到满批规模
+它只负责两件事：
 
-即使当前只拿到了半批数据，也要按满批规模去估算。
+1. **写时统计**
+2. **批末算下一批规格**
 
-公式：
+它不负责：
+
+- payload 组装
+- 中途换规格
+- 历史学习
+
+## 7. 当前 batch 的写入规则
+
+当前 batch 进入写入时，直接拿当前规格写：
+
+- 先尝试往当前 chunk 写
+- 当前 chunk 不够时，继续追加 chunk
+- 当前批内不切换 `chunkSize`
+
+也就是说：
+
+- 当前批只负责把数据写完
+- 当前批产生的统计，只影响**下一批**
+
+这样主路径最简单，也最好验证。
+
+## 8. 批末如何算下一批的 `wantedSpec`
+
+当前批写完后，util 用刚才顺手记录的统计量计算下一批规格。
+
+### 8.1 先投影到 `batchSizeByRow`
+
+即使当前只写了半批，也按满批去估：
 
 ```text
 projectedValueBytes =
     max(
         observedValueBytes,
-        ceil(observedValueBytes * batchSizeByRow / observedRows)
+        ceil(observedValueBytes * batchSizeByRow / rowsWritten)
     )
 ```
 
-含义是：
+含义：
 
-- 如果当前就是满批，那就是实际值；
-- 如果当前是半批或更小，就按“当前每行平均 value bytes”放大到满批；
-- 这样 sizing 决策不会被短 batch 误导得过小。
+- 满批：直接用真实值
+- 半批：按当前每行平均 bytes 投影到满批
 
-## 9. `chunkSize` 到底怎么计算
+### 8.2 先算理想 `chunkSize`
 
-这是这次设计最重要的点。
+目标仍然是：
 
-### 9.1 先算“理想每 chunk 该承载多少字节”
+- 理想活跃 chunk 数：`targetActiveChunks = 4`
+- 最少不要少于：`minActiveChunks = 2`
 
-我们先固定两个目标：
-
-- 理想情况下，一列大致落在 `4` 个 active chunks 左右
-- 再放宽上限，但不要少到只剩 `1` 个超大 chunk
+先算：
 
 ```text
-targetActiveChunks = 4
-minActiveChunks = 2
 perChunkTarget = projectedValueBytes / targetActiveChunks
-```
-
-### 9.2 再保证 chunk 不能比最大单值还小
-
-如果某一行单值本身就很大，那么 chunk 至少要不小于这个单值下限：
-
-```text
 chunkCandidate = max(maxSingleValueBytes, perChunkTarget)
-```
-
-### 9.3 再引入“动态上限”
-
-`chunkSize` 可以大于 `64KB`，但它的上限不再是固定常量，而是由当前 batch 的
-`projectedValueBytes` 推出来：
-
-```text
 dynamicMaxChunkBytes =
     roundUpPow2(
         max(64KB, projectedValueBytes / minActiveChunks)
     )
 ```
 
-含义是：
-
-- 小 batch 时，动态上限至少还是 `64KB`
-- 大 batch 时，允许 chunk 继续变大
-- 但不会大到让整个 batch 少于 `2` 个 active chunks
-
-### 9.4 最后再做桶化
-
-为了匹配 Netty pool，同时避免每批都因为几个字节差异换规格，最终的 chunk size
-不是精确值，而是桶化后的档位：
+最后：
 
 ```text
-idealChunkBytes =
+wantedChunkBytes =
     clamp(
         roundUpPow2(chunkCandidate),
         8KB,
@@ -175,34 +170,16 @@ idealChunkBytes =
     )
 ```
 
-也就是：
+### 8.3 再算 `wantedReusableChunkCount`
 
-1. 先向上取到 2 的幂；
-2. 再夹在 `8KB ~ dynamicMaxChunkBytes` 之间。
+```text
+wantedReusableChunkCount =
+    ceil(projectedValueBytes / wantedChunkBytes)
+```
 
-### 9.5 为什么仍然保留桶化
+## 9. `chunkSize` 计算例子
 
-这里不是固定 `8 / 16 / 32 / 64KB` 这四个档位了，而是：
-
-- 下限固定 `8KB`
-- 上限按 profile 动态放开
-- 中间仍然按 2 的幂做分配档位
-
-真正动态变化的是：
-
-- 每批算出来的 `chunkCandidate`
-- 每批算出来的 `dynamicMaxChunkBytes`
-- 它最终落到哪个 2 的幂桶
-
-保留桶化而不是用精确字节值，有三个原因：
-
-1. **更匹配 pooled allocator**
-2. **避免微小波动导致频繁换规格**
-3. **测试容易写**，因为输出只会落在少数确定档位里
-
-### 9.6 两个例子
-
-#### 例子 1：`projectedValueBytes = 200KB`
+### 例子 1：`projectedValueBytes = 200KB`
 
 ```text
 targetActiveChunks = 4
@@ -213,11 +190,12 @@ chunkCandidate = max(400B, 50KB) = 50KB
 dynamicMaxChunkBytes = roundUpPow2(max(64KB, 200KB / 2))
                      = roundUpPow2(100KB)
                      = 128KB
-roundUpPow2(50KB) = 64KB
-idealChunkBytes = 64KB
+wantedChunkBytes = clamp(roundUpPow2(50KB), 8KB, 128KB)
+                 = 64KB
+wantedReusableChunkCount = ceil(200KB / 64KB) = 4
 ```
 
-#### 例子 2：`projectedValueBytes = 800KB`
+### 例子 2：`projectedValueBytes = 800KB`
 
 ```text
 targetActiveChunks = 4
@@ -228,37 +206,27 @@ chunkCandidate = max(400B, 200KB) = 200KB
 dynamicMaxChunkBytes = roundUpPow2(max(64KB, 800KB / 2))
                      = roundUpPow2(400KB)
                      = 512KB
-roundUpPow2(200KB) = 256KB
-clamp(256KB, 8KB, 512KB) = 256KB
-idealChunkBytes = 256KB
+wantedChunkBytes = clamp(roundUpPow2(200KB), 8KB, 512KB)
+                 = 256KB
+wantedReusableChunkCount = ceil(800KB / 256KB) = 4
 ```
 
-这里的 `chunkSize` 已经可以放大到 `256KB`，所以这批不会再被固定 `64KB` 上限卡住。
+所以：
 
-## 10. `reusableChunkCount` 如何计算
+- 小 batch 仍然可以落在 `64KB`
+- 大 batch 会自然放大到 `256KB` 甚至更大
+- 不再被固定 `64KB` 卡住
 
-在 `idealChunkBytes` 算出来之后，再算需要覆盖多少个 reusable chunks：
+## 10. 下一批开始时的复用 / grow / shrink 判定
 
-```text
-requiredReusableChunks =
-    ceil(projectedValueBytes / idealChunkBytes)
-```
+下一批开始时，已知：
 
-这一步是关键，因为它把现在固定常量 `4` 替换掉了。
+- 当前规格：`currentSpec`
+- 上一批统计出来的下一批目标：`wantedSpec`
 
-例如：
+### 10.1 先看当前规格是否有资格继续复用
 
-- `200KB / 64KB -> 4`
-- `800KB / 256KB -> 4`
-
-所以对于 `2000` 行的大 batch，系统不一定非要靠“更多 chunk”去覆盖；
-它也可以在 profile 允许时，先把 `chunkSize` 本身放大。
-
-## 11. 复用 / 重建 / shrink 规则
-
-### 11.1 先判断当前规格有没有资格继续复用
-
-先定义：
+定义：
 
 ```text
 currentReusableBytes  = current.chunkBytes * current.reusableChunkCount
@@ -271,143 +239,152 @@ effectiveActiveChunks = ceil(projectedValueBytes / current.chunkBytes)
 1. `currentReusableBytes >= wantedReusableBytes`
 2. `effectiveActiveChunks <= targetActiveChunks * 2`
 
-在当前设计里：
+当前设计里：
 
 ```text
 targetActiveChunks = 4
 targetActiveChunks * 2 = 8
 ```
 
-也就是：即使总容量够了，如果当前 `chunkSize` 会把这批数据切成超过 `8` 个 active
-chunks，也不能继续复用，必须 grow。
+也就是：
 
-### 11.2 grow：立即生效
+- 光“总容量够”还不够
+- 如果当前 `chunkSize` 太小，导致这批仍会碎成超过 `8` 个 active chunks
+- 那就必须 grow
 
-如果当前规格**不满足复用资格**，就立刻重建到 `wantedSpec`，并把 `underuseStreak`
-清零。
+### 10.2 grow：立即生效
 
-### 11.3 same：直接复用
+如果当前规格**不满足复用资格**，下一批一开始就重建到 `wantedSpec`，并清零
+`underuseStreak`。
+
+### 10.3 same：直接复用
 
 如果 `wantedSpec == currentSpec`：
 
 - 直接复用
 - `underuseStreak = 0`
 
-### 11.4 shrink：先复用，再延迟缩容
+### 10.4 shrink：非常慢
 
-如果当前规格满足复用资格，但 `wantedSpec < currentSpec`，那么这一批先继续复用当前
-buffer，不立即缩。
+如果当前规格满足复用资格，但 `wantedSpec < currentSpec`：
 
-同时：
+- 下一批先继续复用
+- `underuseStreak += 1`
 
-- 如果 `wantedSpec < currentSpec`，则 `underuseStreak += 1`
-- 如果 `wantedSpec == currentSpec`，则 `underuseStreak = 0`
-
-只有同时满足下面两个条件时，才触发 shrink 重建：
+只有同时满足下面两个条件时，才真正 shrink：
 
 1. `underuseStreak >= 100`
 2. `current.chunkBytes * current.reusableChunkCount >= 2 * wanted.chunkBytes * wanted.reusableChunkCount`
 
-也就是：
+也就是说：
 
-- grow 立即执行
-- shrink 很慢才执行
-- 而且只有“连续低于当前规格很长时间，并且当前容量至少大约 2 倍”才真正缩
+- grow 很快
+- shrink 很慢
+- 并且只有明显 oversized 很久，才会缩
 
-### 11.5 这样放宽的原因
+## 11. 为什么这版规则符合当前偏好
 
-1. 先按总容量放宽复用条件，减少不必要重建
-2. 再用 `effectiveActiveChunks` 防止永远卡在“很多小 chunk”
-3. 用 `underuseStreak = 100` 让 shrink 足够慢，避免你担心的快速缩容
-4. 额外状态仍然只有一个很小的计数器，仍然很好测
+### 11.1 不额外扫描
+
+统计都来自实际写入过程，不需要第二次遍历 rows。
+
+### 11.2 没有复杂学习状态
+
+只有一个 `underuseStreak`，它只是 shrink 防抖，不是 learner。
+
+### 11.3 可以快速调大
+
+新字段从 `8KB` 起步；如果第一批很大，第二批就能直接切到更大的 `wantedChunkBytes`。
+
+### 11.4 不会永远卡在很多小 chunk
+
+虽然放宽了复用条件，但还有 `effectiveActiveChunks <= 8` 这条约束，防止系统长期停留在
+“容量够、但 chunk 太碎”的状态。
 
 ## 12. Dedicated chunk 语义不变
 
-单个值特别大时，仍然沿用当前 dedicated chunk 语义。
+超大单值仍然继续走 dedicated chunk 语义。
 
-这次设计只改三件事：
+这版设计不改：
 
-1. 变长列 `chunkSize` 怎么算
-2. 变长列 `reusableChunkCount` 怎么算
-3. 当前 buffer 是 grow、reuse 还是 shrink
-
-不改 payload 格式，不改值编码，不改 dedicated chunk 的判断方向。
+- payload 格式
+- 值编码
+- dedicated chunk 基本语义
 
 ## 13. 组件改动建议
 
-### 13.1 `WSEWColumnPreparedStatement`
+### 13.1 新增 util
 
-新增一个 batch-local profiler，负责：
+新增一个 util，例如：
 
-1. 扫描当前 rows
-2. 对每个变长列算出 `projectedValueBytes`
-3. 对每个变长列生成 `wantedSpec`
-4. 决定每列是 grow、reuse 还是 shrink
-5. 再把真实 rows 填进选定的 buffers
+- `ChunkSizingUtil`
 
-### 13.2 `Stmt2ColumnFieldBuffer`
+它负责：
 
-需要暴露当前 reusable value buffer 的规格信息，至少包括：
+1. 在 append 时顺手统计
+2. 在批末计算下一批 `wantedSpec`
 
-- 当前 `chunkBytes`
-- 当前 `reusableChunkCount`
+### 13.2 `WSEWColumnPreparedStatement`
 
-这样上层才能做：
+改成：
 
-- “当前规格是否满足复用资格”
-- `wantedSpec == currentSpec`
-- `wantedSpec < currentSpec`
+1. 用当前规格写当前 batch
+2. 写时把统计量交给 util
+3. 当前 batch 结束后，算出下一批的 `wantedSpec`
+4. 下一批开始时，根据规则做 grow / reuse / shrink
 
-三种判断。
+### 13.3 `Stmt2ColumnFieldBuffer`
 
-### 13.3 `ReusableChunkedBuffer`
-
-构造时直接接收：
+需要暴露当前规格：
 
 - `chunkBytes`
 - `reusableChunkCount`
 
-不做在线 resize；grow 和 shrink 都通过“整列重建”完成。
+### 13.4 `ReusableChunkedBuffer`
+
+继续只做 chunk 管理，不负责学习和决策。
 
 ## 14. 错误处理和不变量
 
 1. 缺列仍然按当前逻辑抛 `SQLException`
-2. `observedRows == 0` 不是这条路径里的真实分支，不保留 fallback
-3. 如果某列本批没有非空值，也仍然按公式得到一个确定的 `wantedSpec`
-4. 如果 grow/shrink 重建后在填充过程中失败，要释放新建 buffer，并保持异常传播语义不变
+2. 当前批写入过程中，不因为 sizing 决策失败而中途换规格
+3. grow / shrink 重建失败时，要释放新建 buffer，并保持异常传播语义不变
+4. `rowsWritten == 0` 在真实 WSEW build path 里不是目标分支，不需要单独 fallback
 
 ## 15. 测试设计
 
 ### 15.1 单元测试
 
-1. **半批投影**
-   - 输入：`observedRows < batchSizeByRow`
-   - 断言：`projectedValueBytes` 按满批投影
+1. **写时统计**
+   - append 一组固定值
+   - 断言 util 记录的 `observedValueBytes / maxSingleValueBytes / activeChunksUsed` 正确
 
-2. **chunk size 桶化**
-   - 输入一组固定 `projectedValueBytes / maxSingleValueBytes`
-   - 断言最终 `chunkBytes` 桶位正确
+2. **半批投影**
+   - `rowsWritten < batchSizeByRow`
+   - 断言 `projectedValueBytes` 按满批投影
 
-3. **chunk count 推导**
-   - 断言 `requiredReusableChunks = ceil(projectedValueBytes / idealChunkBytes)`
+3. **chunk size 推导**
+   - 输入固定 `projectedValueBytes / maxSingleValueBytes`
+   - 断言 `wantedChunkBytes` 正确
 
-4. **稳定 workload 复用**
-   - 第一批建 buffer，后续同规格 batch 持续复用
+4. **chunk count 推导**
+   - 断言 `wantedReusableChunkCount = ceil(projectedValueBytes / wantedChunkBytes)`
 
 5. **grow 立即生效**
-   - 当前规格虽然有历史缓存，但不满足“总容量 + active chunk 上限”条件
-   - 断言本批立即 grow 到 `wantedSpec`
+   - bootstrap `8KB`
+   - 第一批写大字段，第二批应立即 grow
 
-6. **shrink 延迟触发**
-   - 连续喂入更小规格的 batch
-   - 断言前 `99` 批仍复用，第 `100` 批在 oversize 条件满足时 shrink
-
-7. **容量够但 chunk 太碎时仍 grow**
-   - 构造 `currentReusableBytes >= wantedReusableBytes`，但 `effectiveActiveChunks > 8`
+6. **容量够但 chunk 太碎时仍 grow**
+   - 构造 `currentReusableBytes >= wantedReusableBytes`
+   - 但 `effectiveActiveChunks > 8`
    - 断言不能继续复用，必须 grow
 
+7. **shrink 很慢**
+   - 连续喂入更小规格 batch
+   - 断言前 `99` 批仍复用，第 `100` 批在 oversize 条件满足时 shrink
+
 8. **payload 一致性**
-   - 复用路径、grow 路径、shrink 路径对同一批 rows 产出的 payload 完全一致
+   - 复用路径、grow 路径、shrink 路径产出的 payload 完全一致
 
 ### 15.2 回归测试
 
@@ -420,22 +397,25 @@ buffer，不立即缩。
 
 ## 16. 风险
 
-1. 当前 batch 如果代表性很差，按满批投影仍可能不完全精准  
-   这是可以接受的，因为本设计优先追求确定性而不是历史学习。
+1. 当前批统计只影响下一批，所以第一批超大 workload 仍可能走很多小 chunk  
+   这是为了换取“不额外扫描”和“主路径简单”。
 
-2. 不设 per-field hard cap，意味着超大字段可能会缓存更多 reusable chunks  
-   这是这版设计的明确取舍。
+2. 不设 hard cap，极大字段仍可能缓存较多 chunk  
+   这是当前设计的明确取舍。
 
-3. 延迟 shrink 会让 oversized buffer 多存活很多批  
-   这是为了换取更少抖动，且只增加一个很小的计数器状态。
+3. `underuseStreak = 100` 会让 shrink 非常慢  
+   这是按你的要求故意做的。
 
 ## 17. 推荐落地顺序
 
-第一步先实现这版**确定性、最小状态**的设计。
+第一步先实现这版 util 方案：
 
-如果后续真实 benchmark 证明只靠 `underuseStreak` 还不够，再考虑下一阶段：
+1. `8KB` bootstrap
+2. 写时统计
+3. 批末算下一批规格
+4. 下一批按规则 grow / reuse / shrink
 
-- 调整 shrink 阈值
-- 或再引入更细的最小状态
+如果后续 benchmark 证明第一批大 batch 的“冷启动小 chunk 成本”仍太高，再考虑第二阶段：
 
-在那之前，不建议先上真正的 learner。
+- 给第一批 bootstrap 加一个更聪明的初始猜测
+- 但仍然不引入额外扫描
