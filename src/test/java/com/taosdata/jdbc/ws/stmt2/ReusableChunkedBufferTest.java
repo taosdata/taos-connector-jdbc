@@ -77,19 +77,23 @@ public class ReusableChunkedBufferTest {
         ctor.setAccessible(true);
         Object buffer = ctor.newInstance(8 * 1024, 4 * 1024, 1);
 
-        Method writeBytes = clazz.getDeclaredMethod("writeBytes", byte[].class, int.class, int.class);
-        Method overflowCount = clazz.getDeclaredMethod("overflowCount");
-        Method reset = clazz.getDeclaredMethod("reset");
-        writeBytes.setAccessible(true);
-        overflowCount.setAccessible(true);
-        reset.setAccessible(true);
+        try {
+            Method writeBytes = clazz.getDeclaredMethod("writeBytes", byte[].class, int.class, int.class);
+            Method overflowCount = clazz.getDeclaredMethod("overflowCount");
+            Method reset = clazz.getDeclaredMethod("reset");
+            writeBytes.setAccessible(true);
+            overflowCount.setAccessible(true);
+            reset.setAccessible(true);
 
-        writeBytes.invoke(buffer, new byte[20 * 1024], 0, 20 * 1024);
+            writeBytes.invoke(buffer, new byte[20 * 1024], 0, 20 * 1024);
 
-        assertEquals(2, overflowCount.invoke(buffer));
+            assertEquals(2, overflowCount.invoke(buffer));
 
-        reset.invoke(buffer);
-        assertEquals(0, overflowCount.invoke(buffer));
+            reset.invoke(buffer);
+            assertEquals(0, overflowCount.invoke(buffer));
+        } finally {
+            release(buffer);
+        }
     }
 
     @Test
