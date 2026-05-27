@@ -163,6 +163,36 @@ public class WSColumnFastPreparedStatementTest {
     }
 
     @Test
+    public void executeBatch_varWidthOverflowUpdatesNextSpecForFollowingBatch() throws Exception {
+        stubBindExecTransportConsumesRequestBuffer(1);
+        WSColumnFastPreparedStatement stmt = buildStmt(Collections.singletonList(field(
+                (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_VARCHAR)));
+        String largeValue = String.join("", Collections.nCopies(50_000, "x"));
+
+        stmt.setString(1, largeValue);
+        stmt.addBatch();
+        stmt.executeBatch();
+
+        WSEWChunkSizingUtil.BufferSpec nextSpec = getNextBufferSpecs(stmt)[0];
+        assertTrue(nextSpec.getChunkBytes() > 8 * 1024);
+    }
+
+    @Test
+    public void clearBatch_resetsVarWidthBatchStats() throws Exception {
+        WSColumnFastPreparedStatement stmt = buildStmt(Collections.singletonList(field(
+                (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_VARCHAR)));
+
+        stmt.setString(1, "first-value");
+        stmt.addBatch();
+        assertTrue(getBatchStats(stmt)[0].getObservedValueBytes() > 0);
+
+        stmt.clearBatch();
+
+        assertEquals(0, getBatchStats(stmt)[0].getObservedValueBytes());
+        assertEquals(0, getBatchStats(stmt)[0].getRowsWritten());
+    }
+
+    @Test
     public void setString_tbnameRejectsNull() throws Exception {
         WSColumnFastPreparedStatement stmt = buildStmt(tbNameAndColFields());
 
@@ -331,6 +361,14 @@ public class WSColumnFastPreparedStatementTest {
         WSEWChunkSizingUtil.BufferSpec[] nextSpecs =
                 (WSEWChunkSizingUtil.BufferSpec[]) nextSpecsField.get(stmt);
         nextSpecs[index] = spec;
+    }
+
+    private static WSEWChunkSizingUtil.BufferSpec[] getNextBufferSpecs(WSColumnFastPreparedStatement stmt)
+            throws Exception {
+        java.lang.reflect.Field nextSpecsField =
+                WSColumnFastPreparedStatement.class.getDeclaredField("nextBufferSpecs");
+        nextSpecsField.setAccessible(true);
+        return (WSEWChunkSizingUtil.BufferSpec[]) nextSpecsField.get(stmt);
     }
 
     private static SQLException assertSqlException(ThrowingRunnable runnable) throws Exception {

@@ -65,6 +65,37 @@ public class Stmt2VariableWidthReuseHelperTest {
         assertFalse(Stmt2VariableWidthReuseHelper.bufferSpecsEqual(spec, null));
     }
 
+    @Test
+    public void reactiveSizing_growsWhenOverflowOrTooManyChunks() {
+        WSEWChunkSizingUtil.BufferSpec current = new WSEWChunkSizingUtil.BufferSpec(8 * 1024, 1);
+        WSEWChunkSizingUtil.FieldBatchStats stats = new WSEWChunkSizingUtil.FieldBatchStats();
+        stats.recordValueBytes(80L * 1024, 1024, 100);
+        stats.setActiveChunksUsed(9);
+        stats.setOverflowCount(1);
+
+        Stmt2VariableWidthReuseHelper.SizingDecision decision =
+                Stmt2VariableWidthReuseHelper.reactiveDecision(current, stats, 0);
+
+        assertTrue(decision.getNextSpec().getChunkBytes() > current.getChunkBytes());
+        assertEquals(0, decision.getNextUnderuseStreak());
+    }
+
+    @Test
+    public void reactiveSizing_shrinksOnlyAfterHundredHalfUtilizedBatches() {
+        WSEWChunkSizingUtil.BufferSpec current = new WSEWChunkSizingUtil.BufferSpec(16 * 1024, 4);
+        WSEWChunkSizingUtil.FieldBatchStats stats = new WSEWChunkSizingUtil.FieldBatchStats();
+        stats.recordValueBytes(20L * 1024, 128, 100);
+        stats.setActiveChunksUsed(2);
+
+        Stmt2VariableWidthReuseHelper.SizingDecision before =
+                Stmt2VariableWidthReuseHelper.reactiveDecision(current, stats, 99);
+        Stmt2VariableWidthReuseHelper.SizingDecision atThreshold =
+                Stmt2VariableWidthReuseHelper.reactiveDecision(current, stats, 100);
+
+        assertEquals(current.getReusableChunkCount(), before.getNextSpec().getReusableChunkCount());
+        assertEquals(current.getReusableChunkCount() - 1, atThreshold.getNextSpec().getReusableChunkCount());
+    }
+
     private static void assertBootstrapSpec(WSEWChunkSizingUtil.BufferSpec expected,
             WSEWChunkSizingUtil.BufferSpec actual) {
         assertEquals(expected.getChunkBytes(), actual.getChunkBytes());

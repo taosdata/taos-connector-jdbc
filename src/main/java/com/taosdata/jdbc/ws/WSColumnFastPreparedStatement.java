@@ -59,7 +59,7 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Pr
                                          Long instanceId,
                                          Stmt2PrepareResp prepareResp) {
         super(connection, param, database, transport, instanceId, new StmtInfo(prepareResp, sql),
-                new AtomicInteger(), true);
+                new AtomicInteger());
 
         List<Field> fields = stmtInfo.getFields();
         int n = fields != null ? fields.size() : 0;
@@ -113,6 +113,7 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Pr
             throw tableNameRequiredException();
         }
         columnBuffer(paramIdx).appendEncodedVar(bytes, length);
+        observeVarWidthWrite(paramIdx, bytes == null ? 0 : length);
     }
 
     private void stageString(int paramIdx, String value) throws SQLException {
@@ -121,9 +122,13 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Pr
         }
         if (paramIdx == tbNameFieldIdx) {
             columnBuffer(paramIdx).appendTbName(value);
+            observeVarWidthWrite(paramIdx, value.getBytes(java.nio.charset.StandardCharsets.UTF_8).length);
             return;
         }
         columnBuffer(paramIdx).appendString(value);
+        observeVarWidthWrite(
+                paramIdx,
+                value == null ? 0 : value.getBytes(java.nio.charset.StandardCharsets.UTF_8).length);
     }
 
     private void stageNull(int paramIdx) throws SQLException {
@@ -131,6 +136,14 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Pr
             throw tableNameRequiredException();
         }
         columnBuffer(paramIdx).appendNull();
+        observeVarWidthWrite(paramIdx, 0);
+    }
+
+    private void observeVarWidthWrite(int paramIdx, int valueBytes) {
+        if (!fieldMetas[paramIdx].isVariableWidth()) {
+            return;
+        }
+        batchStats[paramIdx].recordValueBytes(valueBytes, valueBytes, 1);
     }
 
     private void stageTimestamp(int parameterIndex, long epochValue) throws SQLException {
@@ -742,10 +755,33 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Pr
             this.affectedRows = 0;
             writeBlockWithRetrySync(rawBuf);
             this.affectedRows = batchInsertedRowsInner.getAndSet(0);
+            updateNextBufferSpecsAfterSuccessfulBatch();
         } finally {
             resetFastState();
         }
         return this.affectedRows;
+    }
+
+    private void updateNextBufferSpecsAfterSuccessfulBatch() {
+        for (int i = 0; i < columnBuffers.length; i++) {
+            if (!fieldMetas[i].isVariableWidth()) {
+                nextBufferSpecs[i] = null;
+                underuseStreaks[i] = 0;
+                continue;
+            }
+
+            WSEWChunkSizingUtil.FieldBatchStats stats = batchStats[i];
+            stats.setActiveChunksUsed(columnBuffers[i].activeReusableChunkCount());
+            stats.setOverflowCount(columnBuffers[i].reusableOverflowCount());
+            WSEWChunkSizingUtil.BufferSpec current = columnBuffers[i].currentReusableSpec();
+            if (current == null) {
+                current = Stmt2VariableWidthReuseHelper.resolveBufferSpec(nextBufferSpecs, i);
+            }
+            Stmt2VariableWidthReuseHelper.SizingDecision decision =
+                    Stmt2VariableWidthReuseHelper.reactiveDecision(current, stats, underuseStreaks[i]);
+            nextBufferSpecs[i] = decision.getNextSpec();
+            underuseStreaks[i] = decision.getNextUnderuseStreak();
+        }
     }
 
     private Stmt2ColumnFieldBuffer[] allocateColumnBuffers() {
@@ -766,6 +802,7 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Pr
 
     private void resetFastState() {
         expectedRowCount = 0;
+        resetBatchStats();
         if (columnBuffers == null) {
             columnBuffers = allocateColumnBuffers();
             return;
@@ -784,6 +821,14 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Pr
                 columnBuffers[i].release();
                 columnBuffers[i] = Stmt2VariableWidthReuseHelper.createReusableVariableWidthBuffer(
                         fieldMetas[i], wanted);
+            }
+        }
+    }
+
+    private void resetBatchStats() {
+        for (WSEWChunkSizingUtil.FieldBatchStats stat : batchStats) {
+            if (stat != null) {
+                stat.reset();
             }
         }
     }
