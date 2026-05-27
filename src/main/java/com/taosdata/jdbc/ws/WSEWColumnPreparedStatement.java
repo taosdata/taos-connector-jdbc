@@ -113,6 +113,13 @@ public class WSEWColumnPreparedStatement extends AbstractWSEWPreparedStatement {
             StmtInfo stmtInfo,
             Stmt2ColumnFieldBuffer[] reusableBuffers,
             WSEWChunkSizingUtil.FieldBatchStats[] stats) throws SQLException {
+        int fieldCount = stmtInfo.getFields().size();
+        if (stats != null && stats.length < fieldCount) {
+            throw new IllegalArgumentException(
+                    "stats array length " + stats.length
+                            + " is less than field count " + fieldCount
+                            + "; caller must provide stats.length >= fieldCount");
+        }
         Stmt2ColumnFieldBuffer[] buffers = reusableBuffers;
         boolean createdNew = false;
         if (buffers == null) {
@@ -169,6 +176,12 @@ public class WSEWColumnPreparedStatement extends AbstractWSEWPreparedStatement {
                     throw new SQLException("Missing bound column at index " + (i + 1));
                 }
                 if (i == tbNameFieldIdx) {
+                    if (stats != null && stats[i] == null) {
+                        stats[i] = new WSEWChunkSizingUtil.FieldBatchStats();
+                    }
+                    if (stats != null && stats[i] != null) {
+                        observeWrite(stats[i], column, stmtInfo.getPrecision());
+                    }
                     appendTbName(buffers[i], column);
                     continue;
                 }

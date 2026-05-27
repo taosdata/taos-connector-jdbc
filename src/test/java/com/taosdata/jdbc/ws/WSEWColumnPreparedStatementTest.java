@@ -185,14 +185,43 @@ public class WSEWColumnPreparedStatementTest {
         WSEWChunkSizingUtil.FieldBatchStats[] stats =
                 new WSEWChunkSizingUtil.FieldBatchStats[] {null, null, null, null};
 
-        Stmt2ColumnFieldBuffer[] buffers =
-                (Stmt2ColumnFieldBuffer[]) method.invoke(null, rows, wideStmtInfo(), null, stats);
+        Stmt2ColumnFieldBuffer[] buffers = null;
+        try {
+            buffers = (Stmt2ColumnFieldBuffer[]) method.invoke(null, rows, wideStmtInfo(), null, stats);
 
-        assertNotNull(buffers);
-        assertNotNull(stats[2]);
-        assertEquals(2, stats[2].getRowsWritten());
-        assertTrue(stats[2].getObservedValueBytes() >= 8);
-        releaseBuffers(buffers);
+            assertNotNull(buffers);
+            assertNotNull("tbname stats must be collected (slot 0)", stats[0]);
+            assertEquals(2, stats[0].getRowsWritten());
+            assertTrue(stats[0].getObservedValueBytes() >= 2);
+            assertNotNull(stats[2]);
+            assertEquals(2, stats[2].getRowsWritten());
+            assertTrue(stats[2].getObservedValueBytes() >= 8);
+        } finally {
+            releaseBuffers(buffers);
+        }
+    }
+
+    @Test
+    public void buildColumnBuffersFromQueuedRows_rejectsUndersizedStatsArray() throws Exception {
+        Method method = WSEWColumnPreparedStatement.class.getDeclaredMethod(
+                "buildColumnBuffersFromQueuedRows",
+                List.class,
+                StmtInfo.class,
+                Stmt2ColumnFieldBuffer[].class,
+                WSEWChunkSizingUtil.FieldBatchStats[].class);
+        method.setAccessible(true);
+
+        List<Map<Integer, Column>> rows = Collections.singletonList(wideRow("d0", 1000L, "a", "b"));
+        // wideStmtInfo has 4 fields; pass only 2 slots — must be rejected
+        WSEWChunkSizingUtil.FieldBatchStats[] tooShort =
+                new WSEWChunkSizingUtil.FieldBatchStats[2];
+        try {
+            method.invoke(null, rows, wideStmtInfo(), null, tooShort);
+            throw new AssertionError("Expected IllegalArgumentException for undersized stats array");
+        } catch (java.lang.reflect.InvocationTargetException e) {
+            assertTrue("Expected IllegalArgumentException",
+                    e.getCause() instanceof IllegalArgumentException);
+        }
     }
 
     private static Map<Integer, Column> wideRow(String tbname, long ts, String v1, String v2) {
