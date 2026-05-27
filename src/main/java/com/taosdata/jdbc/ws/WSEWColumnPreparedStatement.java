@@ -10,13 +10,16 @@ import com.taosdata.jdbc.ws.stmt2.Stmt2BindExecRequestBuilder;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnBindSerializer;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnFieldBuffer;
 import com.taosdata.jdbc.ws.stmt2.Stmt2FieldMeta;
+import com.taosdata.jdbc.ws.stmt2.WSEWChunkSizingUtil;
 import com.taosdata.jdbc.ws.stmt2.entity.EWBackendThreadInfo;
 import com.taosdata.jdbc.ws.stmt2.entity.EWRawBlock;
+import com.taosdata.jdbc.ws.stmt2.entity.Field;
 import com.taosdata.jdbc.ws.stmt2.entity.Stmt2PrepareResp;
 import com.taosdata.jdbc.ws.stmt2.entity.StmtInfo;
 import io.netty.buffer.ByteBuf;
 
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.sql.Blob;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -50,6 +53,10 @@ import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_UTINYINT;
 import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_VARBINARY;
 
 public class WSEWColumnPreparedStatement extends AbstractWSEWPreparedStatement {
+    private static final int EW_MIN_STANDARD_CHUNK_BYTES = 8 * 1024;
+    private static final int EW_MAX_STANDARD_CHUNK_BYTES = 64 * 1024;
+    private static final int EW_PER_ROW_ESTIMATE_CAP_BYTES = 256;
+    private static final int EW_MAX_REUSABLE_CHUNKS = 4;
 
     public WSEWColumnPreparedStatement(Transport transport,
                                        ConnectionParam param,
@@ -58,7 +65,7 @@ public class WSEWColumnPreparedStatement extends AbstractWSEWPreparedStatement {
                                        String sql,
                                        Long instanceId,
                                        Stmt2PrepareResp prepareResp) throws SQLException {
-        super(transport, param, database, connection, sql, instanceId, prepareResp, true);
+        super(transport, param, database, connection, sql, instanceId, prepareResp);
     }
 
     @Override
@@ -70,34 +77,162 @@ public class WSEWColumnPreparedStatement extends AbstractWSEWPreparedStatement {
 
     static Stmt2ColumnFieldBuffer[] buildColumnBuffersFromQueuedRows(List<Map<Integer, Column>> rows,
                                                                      StmtInfo stmtInfo) throws SQLException {
-        Stmt2ColumnFieldBuffer[] buffers = new Stmt2ColumnFieldBuffer[stmtInfo.getFields().size()];
+        return buildColumnBuffersFromQueuedRows(rows, stmtInfo, null);
+    }
+
+    static Stmt2ColumnFieldBuffer[] buildColumnBuffersFromQueuedRows(List<Map<Integer, Column>> rows,
+                                                                     StmtInfo stmtInfo,
+                                                                     Stmt2ColumnFieldBuffer[] reusableBuffers) throws SQLException {
+        Stmt2ColumnFieldBuffer[] buffers = reusableBuffers;
+        boolean createdNew = false;
+        if (buffers == null) {
+            buffers = newReusableColumnBuffers(stmtInfo, Math.max(1, rows.size()));
+            createdNew = true;
+        } else {
+            resetColumnBuffers(buffers);
+        }
+
         boolean success = false;
         try {
-            for (int i = 0; i < stmtInfo.getFields().size(); i++) {
-                buffers[i] = new Stmt2ColumnFieldBuffer(Stmt2FieldMeta.fromField(stmtInfo.getFields().get(i)));
-            }
-
-            int tbNameFieldIdx = stmtInfo.getToBeBindTableNameIndex();
-            for (Map<Integer, Column> row : rows) {
-                for (int i = 0; i < buffers.length; i++) {
-                    Column column = row.get(i + 1);
-                    if (column == null) {
-                        throw new SQLException("Missing bound column at index " + (i + 1));
-                    }
-                    if (i == tbNameFieldIdx) {
-                        appendTbName(buffers[i], column);
-                    } else {
-                        appendColumnValue(buffers[i], column, stmtInfo.getPrecision());
-                    }
-                }
-            }
+            fillColumnBuffersFromQueuedRows(rows, stmtInfo, buffers);
             success = true;
             return buffers;
         } finally {
             if (!success) {
-                releaseColumnBuffers(buffers);
+                if (createdNew) {
+                    releaseColumnBuffers(buffers);
+                } else {
+                    resetColumnBuffers(buffers);
+                }
             }
         }
+    }
+
+    static Stmt2ColumnFieldBuffer[] buildColumnBuffersFromQueuedRows(
+            List<Map<Integer, Column>> rows,
+            StmtInfo stmtInfo,
+            Stmt2ColumnFieldBuffer[] reusableBuffers,
+            WSEWChunkSizingUtil.FieldBatchStats[] stats) throws SQLException {
+        Stmt2ColumnFieldBuffer[] buffers = reusableBuffers == null
+                ? newReusableColumnBuffers(stmtInfo, null)
+                : reusableBuffers;
+        resetColumnBuffers(buffers);
+        fillColumnBuffersFromQueuedRows(rows, stmtInfo, buffers, stats);
+        return buffers;
+    }
+
+    private static void fillColumnBuffersFromQueuedRows(List<Map<Integer, Column>> rows,
+                                                        StmtInfo stmtInfo,
+                                                        Stmt2ColumnFieldBuffer[] buffers) throws SQLException {
+        int tbNameFieldIdx = stmtInfo.getToBeBindTableNameIndex();
+        for (Map<Integer, Column> row : rows) {
+            for (int i = 0; i < buffers.length; i++) {
+                Column column = row.get(i + 1);
+                if (column == null) {
+                    throw new SQLException("Missing bound column at index " + (i + 1));
+                }
+                if (i == tbNameFieldIdx) {
+                    appendTbName(buffers[i], column);
+                } else {
+                    appendColumnValue(buffers[i], column, stmtInfo.getPrecision());
+                }
+            }
+        }
+    }
+
+    private static void fillColumnBuffersFromQueuedRows(List<Map<Integer, Column>> rows,
+                                                        StmtInfo stmtInfo,
+                                                        Stmt2ColumnFieldBuffer[] buffers,
+                                                        WSEWChunkSizingUtil.FieldBatchStats[] stats) throws SQLException {
+        int tbNameFieldIdx = stmtInfo.getToBeBindTableNameIndex();
+        for (Map<Integer, Column> row : rows) {
+            for (int i = 0; i < buffers.length; i++) {
+                Column column = row.get(i + 1);
+                if (i == tbNameFieldIdx) {
+                    appendTbName(buffers[i], column);
+                    continue;
+                }
+                if (stats != null && stats[i] == null && buffers[i].getMeta().isVariableWidth()) {
+                    stats[i] = new WSEWChunkSizingUtil.FieldBatchStats();
+                }
+                if (stats != null && stats[i] != null) {
+                    observeWrite(stats[i], column, stmtInfo.getPrecision());
+                }
+                appendColumnValue(buffers[i], column, stmtInfo.getPrecision());
+            }
+        }
+    }
+
+    private static void observeWrite(WSEWChunkSizingUtil.FieldBatchStats stats,
+                                     Column column,
+                                     int precision) {
+        Object value = column.getData();
+        int valueBytes;
+        if (value instanceof String) {
+            valueBytes = ((String) value).getBytes(StandardCharsets.UTF_8).length;
+        } else if (value instanceof byte[]) {
+            valueBytes = ((byte[]) value).length;
+        } else if (value instanceof Blob) {
+            try {
+                valueBytes = (int) ((Blob) value).length();
+            } catch (java.sql.SQLException e) {
+                valueBytes = 0;
+            }
+        } else {
+            valueBytes = 0;
+        }
+        stats.recordValueBytes(valueBytes, valueBytes, 1);
+    }
+
+    private static Stmt2ColumnFieldBuffer[] newReusableColumnBuffers(StmtInfo stmtInfo, Integer batchSizeHint) {
+        int sizeHint = batchSizeHint != null ? batchSizeHint : 0;
+        Stmt2ColumnFieldBuffer[] buffers = new Stmt2ColumnFieldBuffer[stmtInfo.getFields().size()];
+        for (int i = 0; i < stmtInfo.getFields().size(); i++) {
+            Field field = stmtInfo.getFields().get(i);
+            Stmt2FieldMeta meta = Stmt2FieldMeta.fromField(field);
+            if (meta.isVariableWidth()) {
+                int standardChunkBytes = estimateStandardChunkBytes(field, sizeHint);
+                buffers[i] = Stmt2ColumnFieldBuffer.forReusableValueBuffer(
+                        meta,
+                        null,
+                        standardChunkBytes,
+                        standardChunkBytes / 2,
+                        EW_MAX_REUSABLE_CHUNKS);
+            } else {
+                buffers[i] = new Stmt2ColumnFieldBuffer(meta);
+            }
+        }
+        return buffers;
+    }
+
+    private static void resetColumnBuffers(Stmt2ColumnFieldBuffer[] buffers) {
+        if (buffers == null) {
+            return;
+        }
+        for (Stmt2ColumnFieldBuffer buffer : buffers) {
+            if (buffer != null) {
+                buffer.reset();
+            }
+        }
+    }
+
+    private static int estimateStandardChunkBytes(Field field, int batchSizeHint) {
+        int perRowBytes = field.getBytes() > 0 ? field.getBytes() : 32;
+        perRowBytes = Math.max(16, Math.min(perRowBytes, EW_PER_ROW_ESTIMATE_CAP_BYTES));
+        long predicted = (long) Math.max(1, batchSizeHint) * perRowBytes;
+        int bounded = (int) Math.min(predicted, EW_MAX_STANDARD_CHUNK_BYTES);
+        return clamp(roundUpToPowerOfTwo(Math.max(EW_MIN_STANDARD_CHUNK_BYTES, bounded)),
+                EW_MIN_STANDARD_CHUNK_BYTES,
+                EW_MAX_STANDARD_CHUNK_BYTES);
+    }
+
+    private static int roundUpToPowerOfTwo(int value) {
+        int highestOneBit = Integer.highestOneBit(value);
+        return highestOneBit == value ? value : highestOneBit << 1;
+    }
+
+    private static int clamp(int value, int min, int max) {
+        return Math.max(min, Math.min(max, value));
     }
 
     private static void appendTbName(Stmt2ColumnFieldBuffer buffer, Column column) throws SQLException {
@@ -260,6 +395,7 @@ public class WSEWColumnPreparedStatement extends AbstractWSEWPreparedStatement {
         private final ArrayBlockingQueue<Map<Integer, Column>> writeQueue;
         private final ArrayBlockingQueue<EWRawBlock> serialQueue;
         private final AtomicBoolean running;
+        private final EWBackendThreadInfo backendThreadInfo;
         private final int batchSize;
         private final StmtInfo stmtInfo;
         private final boolean progressive;
@@ -268,6 +404,7 @@ public class WSEWColumnPreparedStatement extends AbstractWSEWPreparedStatement {
                                       int batchSize,
                                       StmtInfo stmtInfo,
                                       boolean progressive) {
+            this.backendThreadInfo = backendThreadInfo;
             this.writeQueue = backendThreadInfo.getWriteQueue();
             this.serialQueue = backendThreadInfo.getSerialQueue();
             this.running = backendThreadInfo.getSerializeRunning();
@@ -293,7 +430,11 @@ public class WSEWColumnPreparedStatement extends AbstractWSEWPreparedStatement {
                     Stmt2ColumnFieldBuffer[] columnBuffers = null;
                     ByteBuf rawBlock = null;
                     try {
-                        columnBuffers = buildColumnBuffersFromQueuedRows(rows, stmtInfo);
+                        columnBuffers = buildColumnBuffersFromQueuedRows(
+                                rows,
+                                stmtInfo,
+                                backendThreadInfo.getReusableColumnBuffers());
+                        backendThreadInfo.setReusableColumnBuffers(columnBuffers);
                         byte[] payload = Stmt2ColumnBindSerializer.serialize(columnBuffers);
                         rawBlock = Stmt2BindExecRequestBuilder.build(payload);
                         serialQueue.put(new EWRawBlock(rawBlock, rows.size(), null));
@@ -309,7 +450,7 @@ public class WSEWColumnPreparedStatement extends AbstractWSEWPreparedStatement {
                         Thread.currentThread().interrupt();
                         break;
                     } finally {
-                        releaseColumnBuffers(columnBuffers);
+                        resetColumnBuffers(columnBuffers);
                         if (rawBlock != null) {
                             Utils.releaseByteBuf(rawBlock);
                         }
