@@ -1,292 +1,350 @@
-# WSEW batch-projected buffer sizing design
+# WSEW 按满批投影的 buffer sizing 设计
 
-## Summary
+## 1. 设计摘要
 
-This design replaces the current fixed `EW_MAX_REUSABLE_CHUNKS` heuristic in the
-WSEW columnar serialization path with a deterministic, batch-local sizing
-strategy.
+这个设计要解决的是：WSEW 变长列的 `ReusableChunkedBuffer` 现在只会动态算
+`chunkSize`，但 `reusableChunkCount` 还是固定常量，导致大 batch 下复用覆盖不全。
 
-For each variable-width field, the serializer will:
+这次设计改成一套**确定性的、按当前 batch 本地计算的 sizing 规则**：
 
-1. profile the rows currently dequeued for serialization,
-2. project the observed value bytes to the configured `batchSizeByRow`,
-3. derive a `BufferSpec = { chunkBytes, reusableChunkCount }`,
-4. reuse the existing field buffer only when its spec exactly matches the new
-   one, otherwise rebuild that field buffer for the next batch.
+1. 先 profile 当前要序列化的 rows；
+2. 即使当前 rows 不满，也按 `batchSizeByRow` 投影到“满批”规模；
+3. 对每个变长列算出一个 `BufferSpec = { chunkBytes, reusableChunkCount }`；
+4. `currentSpec == wantedSpec` 才复用，否则整列重建；
+5. 不引入历史学习状态，不引入 per-field hard cap，不改 payload 格式。
 
-The design intentionally avoids long-lived learning state, per-field hard caps,
-and incremental in-place resizing logic. The goal is to make the behavior easy
-to reason about, easy to test, and safe to evolve without changing payload
-correctness.
+核心目标是：**行为可预测、好测试、不因为“学习逻辑”引入隐蔽 bug。**
 
-## Problem
+## 2. 当前问题
 
-The current WSEW reusable path computes:
+现在 WSEW 可复用路径的关键参数是：
 
-- `standardChunkBytes` from `field.bytes` and `batchSizeHint`
-- `EW_MAX_REUSABLE_CHUNKS` from a fixed constant (`4`)
+- `standardChunkBytes`：由 `field.bytes` 和 `batchSizeHint` 推出来
+- `EW_MAX_REUSABLE_CHUNKS`：固定常量 `4`
 
-That works when the projected value area for a field fits within the cached
-chunk budget, but it under-covers larger batches. In the `extension=400B`
-example:
+这个组合在小一些的 batch 上还能工作，但在大一些的 batch 上会出现：
 
-- `500` rows are close to `4 * 64KB`, so reuse helps
-- `2000` rows need roughly `800KB`, which is much larger than `4 * 64KB`
+- chunk size 已经顶到 `64KB`
+- 但 cached reusable chunk 还是只有 `4`
+- 所以后面很多 chunk 还是每批现申请、现释放
 
-As a result, the current reusable path may still allocate and release a large
-fraction of the chunks for bigger batches, reducing the benefit of cross-batch
-reuse.
+例如 `extension=400B`：
 
-## Goals
+- `500` 行大约是 `200KB`，接近 `4 * 64KB`
+- `2000` 行大约是 `800KB`，远大于 `4 * 64KB`
 
-1. Size variable-width reusable buffers according to the configured
-   `batchSizeByRow`, not just the rows currently observed in a partial batch.
-2. Keep the sizing logic deterministic and easy to test.
-3. Preserve the current payload format and correctness guarantees.
-4. Avoid hidden learning state that could make behavior hard to explain or debug.
-5. Let stable workloads converge quickly to a stable reusable buffer shape.
+所以 `500` 行场景复用收益明显，而 `2000` 行场景复用收益不稳定。
 
-## Non-goals
+## 3. 设计目标
 
-1. No adaptive machine-learning model.
-2. No percentile learner or rolling history in the initial design.
-3. No per-field hard memory cap in the initial design.
-4. No change to dedicated-chunk semantics for very large single values.
-5. No change to fixed-width field storage.
+1. sizing 必须按 `batchSizeByRow` 的目标规模算，而不是只看眼前这批数据有多少行；
+2. 同一类 workload 下，buffer 规格要很快稳定下来；
+3. 行为要能靠单元测试直接断言；
+4. payload 内容和现有序列化语义保持不变；
+5. 避免“自学习状态”带来的解释成本和 bug 风险。
 
-## Existing constraints
+## 4. 非目标
 
-The design works with the current WSEW flow:
+这版设计**不做**下面这些事情：
 
-- rows are already materialized into a `List<Map<Integer, Column>>` before
-  column buffers are built,
-- `triggerSerializeProgressive(...)` only submits work when the write queue is
-  non-empty,
-- `ColumnarWSEWSerializationTask.compute()` dequeues exactly `batchSize` rows
-  before building buffers,
-- therefore the build path never needs a zero-row fallback.
+1. 不做机器学习；
+2. 不做滚动分位数学习；
+3. 不做带历史窗口的自适应控制；
+4. 不做 per-field hard cap；
+5. 不改 dedicated chunk 的语义；
+6. 不改 fixed-width 字段的存储方式。
 
-This means we can safely profile the rows for the current serialization task
-before allocating or rebuilding the variable-width field buffers.
+## 5. 当前实现约束
 
-## Proposed design
+这个设计依赖当前 WSEW 已有的执行模型：
 
-### 1. Introduce a deterministic `BufferSpec`
+- WSEW 在真正建 column buffers 之前，已经把当前 batch 的 rows 取成了
+  `List<Map<Integer, Column>>`
+- `triggerSerializeProgressive(...)` 只有在 `writeQueue` 非空时才会提交任务
+- `batchSize = min(writeQueue.size(), batchSizeByRow)`，所以 progressive batch 至少有 `1` 行
+- `ColumnarWSEWSerializationTask.compute()` 会严格取满 `batchSize` 行，再进入 build path
 
-For every variable-width field, define:
+因此：
+
+- `observedRows == 0` 在这条路径里不是一个真实运行分支
+- 这次设计里不需要再保留 zero-row fallback
+
+## 6. 新的核心抽象：`BufferSpec`
+
+对每个变长列，引入一个明确的规格：
 
 - `chunkBytes`
 - `reusableChunkCount`
 
-This pair is the full reusable-buffer shape for that field. If two batches
-derive the same spec, the reusable buffer is safe to keep. If the derived spec
-changes, the buffer should be rebuilt instead of mutated in place.
+这两个值共同决定该列的 reusable value buffer 形态。
 
-### 2. Add a batch-local profiling pass
+设计原则很简单：
 
-Before creating or reusing the field buffers for a WSEW batch, scan the dequeued
-rows and compute, for each variable-width field:
+- **规格相同**：复用
+- **规格不同**：整列重建
+
+不做“在线扩容一点、缩容一点”的中间态逻辑。
+
+## 7. Batch-local profiling
+
+在建变长列 buffer 之前，先扫一遍当前 batch 的 rows。对每个变长列统计：
 
 - `observedRows`
 - `observedValueBytes`
 - `maxSingleValueBytes`
 - `nonNullRows`
 
-`observedValueBytes` must be the encoded value-byte count that the serializer
-would append for that field, not the Java object count.
+这里的 `observedValueBytes` 必须是**编码后真正会写进 value area 的字节数**，而不是
+Java 对象个数。
 
-This pass is local to the current batch only. No historical profile state is
-kept.
+这个 profiling 只看当前 batch，不保留历史状态。
 
-### 3. Project to the configured full-batch target
+## 8. 按 `batchSizeByRow` 投影到满批规模
 
-The sizing target must always be the configured `batchSizeByRow`, even when the
-currently dequeued batch is smaller.
+即使当前只拿到了半批数据，也要按满批规模去估算。
 
-For each variable-width field:
+公式：
 
 ```text
 projectedValueBytes =
-    max(observedValueBytes,
-        ceil(observedValueBytes * batchSizeByRow / observedRows))
+    max(
+        observedValueBytes,
+        ceil(observedValueBytes * batchSizeByRow / observedRows)
+    )
 ```
 
-This means:
+含义是：
 
-- full batches use their actual observed size,
-- partial batches are scaled up to the equivalent full-batch estimate,
-- the sizing decision is not biased downward by a short progressive batch.
+- 如果当前就是满批，那就是实际值；
+- 如果当前是半批或更小，就按“当前每行平均 value bytes”放大到满批；
+- 这样 sizing 决策不会被短 batch 误导得过小。
 
-### 4. Derive `chunkBytes` from the projected batch
+## 9. `chunkSize` 到底怎么计算
 
-The implementation will keep bucketed chunk sizes, but the bucket choice is
-dynamic per batch.
+这是这次设计最重要的点。
 
-Use:
+### 9.1 先算“理想每 chunk 该承载多少字节”
+
+我们先固定一个目标：希望一列在正常情况下，大致落在 `4` 个 active chunks 左右。
+
+```text
+targetActiveChunks = 4
+perChunkTarget = projectedValueBytes / targetActiveChunks
+```
+
+### 9.2 再保证 chunk 不能比最大单值还小
+
+如果某一行单值本身就很大，那么 chunk 至少要不小于这个单值下限：
+
+```text
+chunkCandidate = max(maxSingleValueBytes, perChunkTarget)
+```
+
+### 9.3 最后再做桶化
+
+为了匹配 Netty pool，同时避免每批都因为几个字节差异换规格，最终的 chunk size
+不是精确值，而是桶化后的档位：
 
 ```text
 idealChunkBytes =
     clamp(
-        roundUpPow2(
-            max(maxSingleValueBytes,
-                projectedValueBytes / targetActiveChunks)
-        ),
+        roundUpPow2(chunkCandidate),
         8KB,
         64KB
     )
 ```
 
-with:
+也就是：
 
-- `targetActiveChunks = 4`
-- `roundUpPow2` producing the next power-of-two bucket
-- the existing `8KB .. 64KB` bounds retained
+1. 先向上取到 2 的幂；
+2. 再夹在 `8KB ~ 64KB` 之间。
 
-The bucket set is fixed because that makes pooled allocation predictable and
-test-friendly, but the selected bucket is still computed from the current batch
-profile.
+### 9.4 为什么是这几个桶
 
-### 5. Derive `reusableChunkCount` from the projected batch
+这里的 `8 / 16 / 32 / 64KB` 不是“写死不变的工作负载值”，而是**固定的分配档位**。
 
-After `idealChunkBytes` is chosen:
+真正动态变化的是：
+
+- 每批算出来的 `chunkCandidate`
+- 它最终落到哪个桶
+
+保留桶化而不是用精确字节值，有三个原因：
+
+1. **更匹配 pooled allocator**
+2. **避免微小波动导致频繁换规格**
+3. **测试容易写**，因为输出只会落在少数确定档位里
+
+### 9.5 两个例子
+
+#### 例子 1：`projectedValueBytes = 200KB`
+
+```text
+targetActiveChunks = 4
+perChunkTarget = 200KB / 4 = 50KB
+maxSingleValueBytes = 400B
+chunkCandidate = max(400B, 50KB) = 50KB
+roundUpPow2(50KB) = 64KB
+idealChunkBytes = 64KB
+```
+
+#### 例子 2：`projectedValueBytes = 800KB`
+
+```text
+targetActiveChunks = 4
+perChunkTarget = 800KB / 4 = 200KB
+maxSingleValueBytes = 400B
+chunkCandidate = max(400B, 200KB) = 200KB
+roundUpPow2(200KB) = 256KB
+clamp(256KB, 8KB, 64KB) = 64KB
+idealChunkBytes = 64KB
+```
+
+这里虽然目标算出来更大，但因为上限是 `64KB`，所以最终 `chunkSize` 还是 `64KB`。
+这时候剩下的容量需求不再靠变大 `chunkSize` 解决，而是靠**增加 reusable chunk 数**解决。
+
+## 10. `reusableChunkCount` 如何计算
+
+在 `idealChunkBytes` 算出来之后，再算需要覆盖多少个 reusable chunks：
 
 ```text
 requiredReusableChunks =
     ceil(projectedValueBytes / idealChunkBytes)
 ```
 
-This removes the fixed `EW_MAX_REUSABLE_CHUNKS = 4` limit from the sizing
-decision. The reusable chunk count now scales with the projected full-batch
-value size for that field.
+这一步是关键，因为它把现在固定常量 `4` 替换掉了。
 
-### 6. Reuse vs rebuild rule
+例如：
 
-For each variable-width field:
+- `200KB / 64KB -> 4`
+- `800KB / 64KB -> 13`
 
-- if `currentSpec == wantedSpec`, reuse the existing field buffer,
-- if `currentSpec != wantedSpec`, release the old field buffer and create a new
-  one with `wantedSpec`.
+所以对于 `2000` 行的大 batch，系统会自然从 “4 个 chunk” 提升到 “约 13 个 chunk”，
+而不是被固定常量卡住。
 
-This is intentionally stricter than “resize in place”:
+## 11. 复用 / 重建规则
 
-- behavior is deterministic,
-- tests can assert exact reuse/rebuild outcomes,
-- old oversized caches do not survive indefinitely after the workload changes,
-- there is no hidden migration logic to debug.
+这版规则故意保持得非常硬：
 
-### 7. Dedicated-chunk behavior stays unchanged
+- `currentSpec == wantedSpec`：复用
+- `currentSpec != wantedSpec`：整列重建
 
-Single values that are large enough to trigger the dedicated-chunk path will
-continue to do so. The new sizing logic only changes:
+也就是说，不做：
 
-- reusable chunk size selection,
-- reusable chunk count selection,
-- the decision to reuse vs rebuild.
+- 原地增减 chunk 数
+- 原地替换 chunk size
+- 缓慢扩容 / 缓慢缩容
 
-The payload format and value encoding remain unchanged.
+这样做的原因：
 
-## Why bucketed chunk sizes remain the right choice
+1. 行为完全确定
+2. 容易断言“这批该复用还是该重建”
+3. 不会因为历史大 batch 把 oversized cache 一直留下来
+4. 出问题时容易定位
 
-The design keeps bucketed chunk sizes because exact byte-for-byte chunk sizing
-would work against the goals:
+在前面的“按满批投影”规则下，稳定 workload 的 `wantedSpec` 会很快稳定，所以不会造成
+频繁重建。
 
-1. tiny per-batch changes would cause frequent spec churn,
-2. pooled allocation reuse would be worse,
-3. expected behavior would be harder to test because every input delta could
-   produce a new exact size.
+## 12. Dedicated chunk 语义不变
 
-Power-of-two buckets within the existing min/max range keep the behavior stable,
-while still allowing the selected bucket to change dynamically with the batch
-profile.
+单个值特别大时，仍然沿用当前 dedicated chunk 语义。
 
-## Component changes
+这次设计只改三件事：
 
-### `WSEWColumnPreparedStatement`
+1. 变长列 `chunkSize` 怎么算
+2. 变长列 `reusableChunkCount` 怎么算
+3. 当前 buffer 是复用还是重建
 
-Add a helper that profiles the current dequeued rows for variable-width fields
-and computes `BufferSpec[]` for the current task.
+不改 payload 格式，不改值编码，不改 dedicated chunk 的判断方向。
 
-Change the reusable build path so that:
+## 13. 组件改动建议
 
-1. it profiles the current rows,
-2. derives `wantedSpec[]`,
-3. reuses or rebuilds each variable-width field buffer by exact-spec match,
-4. fills the chosen buffers with the actual batch rows.
+### 13.1 `WSEWColumnPreparedStatement`
 
-### `Stmt2ColumnFieldBuffer`
+新增一个 batch-local profiler，负责：
 
-Expose enough metadata to compare the current reusable configuration against
-`wantedSpec`, for example:
+1. 扫描当前 rows
+2. 对每个变长列算出 `projectedValueBytes`
+3. 对每个变长列生成 `wantedSpec`
+4. 决定每列是复用还是重建
+5. 再把真实 rows 填进选定的 buffers
 
-- current `chunkBytes`
-- current `reusableChunkCount`
+### 13.2 `Stmt2ColumnFieldBuffer`
 
-No payload-layout change is required.
+需要暴露当前 reusable value buffer 的规格信息，至少包括：
 
-### `ReusableChunkedBuffer`
+- 当前 `chunkBytes`
+- 当前 `reusableChunkCount`
 
-Construct it from the new per-field spec:
+这样上层才能做 `currentSpec == wantedSpec` 判断。
+
+### 13.3 `ReusableChunkedBuffer`
+
+构造时直接接收：
 
 - `chunkBytes`
 - `reusableChunkCount`
 
-No online resizing is needed. Reconfiguration happens by replacing the field
-buffer when the spec changes.
+不做在线 resize；重配置通过“整列重建”完成。
 
-## Error handling and invariants
+## 14. 错误处理和不变量
 
-1. If a row is missing a bound column, keep throwing `SQLException` as today.
-2. If profiling detects no variable-width data for a field, the field still gets
-   a deterministic spec derived from the projected full-batch formula.
-3. `observedRows == 0` is not an implementation path and should not get a
-   dedicated fallback branch in WSEW.
-4. If a rebuild is required and later filling fails, release the newly built
-   buffers and propagate the failure exactly as today.
+1. 缺列仍然按当前逻辑抛 `SQLException`
+2. `observedRows == 0` 不是这条路径里的真实分支，不保留 fallback
+3. 如果某列本批没有非空值，也仍然按公式得到一个确定的 `wantedSpec`
+4. 如果重建后在填充过程中失败，要释放新建 buffer，并保持异常传播语义不变
 
-## Testing plan
+## 15. 测试设计
 
-### Unit tests
+### 15.1 单元测试
 
-1. **Half-batch projection**
-   - input: `observedRows < batchSizeByRow`
-   - assert that the derived `wantedSpec` matches the projected full-batch size
-2. **Stable workload reuse**
-   - same batch shape repeated
-   - assert first batch builds, later batches reuse
-3. **Spec-switch rebuild**
-   - small-batch shape then large-batch shape
-   - assert the buffer is rebuilt when `wantedSpec` changes
-4. **Payload equality**
-   - same rows through rebuilt and reused paths
-   - assert identical serialized payload bytes
-5. **Large single-value floor**
-   - assert `maxSingleValueBytes` can force a larger bucket when needed
+1. **半批投影**
+   - 输入：`observedRows < batchSizeByRow`
+   - 断言：`projectedValueBytes` 按满批投影
 
-### Regression tests
+2. **chunk size 桶化**
+   - 输入一组固定 `projectedValueBytes / maxSingleValueBytes`
+   - 断言最终 `chunkBytes` 桶位正确
 
-Keep the current WSEW / stmt2 serializer regression set green, especially:
+3. **chunk count 推导**
+   - 断言 `requiredReusableChunks = ceil(projectedValueBytes / idealChunkBytes)`
+
+4. **稳定 workload 复用**
+   - 第一批建 buffer，后续同规格 batch 持续复用
+
+5. **规格切换重建**
+   - 小 workload 后接大 workload
+   - 断言 `wantedSpec` 变化时整列重建
+
+6. **payload 一致性**
+   - 复用路径和重建路径对同一批 rows 产出的 payload 完全一致
+
+### 15.2 回归测试
+
+至少保证下面几组不退：
 
 - `WSEWColumnPreparedStatementTest`
 - `ReusableChunkedBufferTest`
 - `Stmt2ColumnBindSerializerTest`
 - `WsEfficientWritingTest`
 
-## Risks
+## 16. 风险
 
-1. If the current batch is not representative, the projected full-batch size may
-   still be imperfect. This is acceptable because the design optimizes for
-   deterministic behavior rather than hidden learning state.
-2. Removing the fixed reusable-chunk cap can increase retained memory for very
-   large fields. This is an intentional trade-off in the first design version
-   because the user explicitly chose not to keep a hard cap.
-3. Exact-spec rebuilds may rebuild more often than a softer hysteresis design,
-   but they are much easier to test and reason about.
+1. 当前 batch 如果代表性很差，按满批投影仍可能不完全精准  
+   这是可以接受的，因为本设计优先追求确定性而不是历史学习。
 
-## Rollout recommendation
+2. 不设 per-field hard cap，意味着超大字段可能会缓存更多 reusable chunks  
+   这是这版设计的明确取舍。
 
-Implement this design first without any learner or historical state.
+3. 精确规格匹配才复用，可能比“带迟滞的自适应”重建更频繁  
+   但它显著更容易测试和解释。
 
-If later measurements show that exact-spec rebuilds are still too expensive for
-mixed workloads, the next incremental step should be a minimal-state
-`lastProjectedSpec` reuse policy. That can be evaluated separately without
-changing the core deterministic profiler introduced here.
+## 17. 推荐落地顺序
+
+第一步只实现这版**确定性、无学习状态**的设计。
+
+如果后续真实 benchmark 证明“规格切换重建”仍然太重，再考虑第二阶段：
+
+- 引入最小状态的 `lastProjectedSpec`
+- 只在极少数情况下放宽“精确匹配才复用”的规则
+
+在那之前，不建议先上真正的 learner。
