@@ -11,6 +11,12 @@ public final class WSEWChunkSizingUtil {
         private final int reusableChunkCount;
 
         public BufferSpec(int chunkBytes, int reusableChunkCount) {
+            if (chunkBytes <= 0) {
+                throw new IllegalArgumentException("chunkBytes must be > 0; got " + chunkBytes);
+            }
+            if (reusableChunkCount <= 0) {
+                throw new IllegalArgumentException("reusableChunkCount must be > 0; got " + reusableChunkCount);
+            }
             this.chunkBytes = chunkBytes;
             this.reusableChunkCount = reusableChunkCount;
         }
@@ -31,10 +37,32 @@ public final class WSEWChunkSizingUtil {
         private int activeChunksUsed;
         private int overflowCount;
 
+        /**
+         * Accumulates stats from one or more rows written to a field buffer. Safe to call
+         * repeatedly; each invocation adds to the running totals so write-time instrumentation
+         * can record each append without re-scanning.
+         *
+         * <p>To start a fresh batch, create a new instance or call {@link #reset()}.
+         *
+         * @param valueBytes        bytes contributed by this group of rows
+         * @param maxSingleValueBytes largest single-value size observed in this group
+         * @param rowsWritten       number of rows in this group (must be &ge; 0)
+         */
         public void recordValueBytes(long valueBytes, int maxSingleValueBytes, int rowsWritten) {
-            this.observedValueBytes = valueBytes;
-            this.maxSingleValueBytes = maxSingleValueBytes;
-            this.rowsWritten = rowsWritten;
+            this.observedValueBytes += valueBytes;
+            if (maxSingleValueBytes > this.maxSingleValueBytes) {
+                this.maxSingleValueBytes = maxSingleValueBytes;
+            }
+            this.rowsWritten += rowsWritten;
+        }
+
+        /** Resets all accumulated state so this instance can be reused for the next batch. */
+        public void reset() {
+            this.observedValueBytes = 0;
+            this.maxSingleValueBytes = 0;
+            this.rowsWritten = 0;
+            this.activeChunksUsed = 0;
+            this.overflowCount = 0;
         }
 
         public long getObservedValueBytes() {

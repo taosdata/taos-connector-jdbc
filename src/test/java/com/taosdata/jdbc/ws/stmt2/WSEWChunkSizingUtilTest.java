@@ -79,7 +79,83 @@ public class WSEWChunkSizingUtilTest {
         assertEquals(512 * 1024, spec.getChunkBytes());
     }
 
-    // ── projectedValueBytes ──────────────────────────────────────────────────
+    // ── BufferSpec constructor validation ────────────────────────────────────
+
+    @Test(expected = IllegalArgumentException.class)
+    public void bufferSpec_throwsWhenChunkBytesIsZero() {
+        new WSEWChunkSizingUtil.BufferSpec(0, 1);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void bufferSpec_throwsWhenChunkBytesIsNegative() {
+        new WSEWChunkSizingUtil.BufferSpec(-1, 1);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void bufferSpec_throwsWhenReusableCountIsZero() {
+        new WSEWChunkSizingUtil.BufferSpec(8 * 1024, 0);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void bufferSpec_throwsWhenReusableCountIsNegative() {
+        new WSEWChunkSizingUtil.BufferSpec(8 * 1024, -5);
+    }
+
+    // ── FieldBatchStats accumulation ─────────────────────────────────────────
+
+    @Test
+    public void fieldBatchStats_accumulatesValueBytesAcrossMultipleCalls() {
+        WSEWChunkSizingUtil.FieldBatchStats stats = new WSEWChunkSizingUtil.FieldBatchStats();
+        stats.recordValueBytes(100 * 1024L, 200, 250);
+        stats.recordValueBytes(100 * 1024L, 200, 250);
+
+        assertEquals(200 * 1024L, stats.getObservedValueBytes());
+        assertEquals(500, stats.getRowsWritten());
+    }
+
+    @Test
+    public void fieldBatchStats_tracksMaxSingleValueAcrossMultipleCalls() {
+        WSEWChunkSizingUtil.FieldBatchStats stats = new WSEWChunkSizingUtil.FieldBatchStats();
+        stats.recordValueBytes(50 * 1024L, 300, 100);
+        stats.recordValueBytes(50 * 1024L, 700, 100);
+        stats.recordValueBytes(50 * 1024L, 500, 100);
+
+        assertEquals(700, stats.getMaxSingleValueBytes());
+    }
+
+    @Test
+    public void fieldBatchStats_resetClearsAllAccumulatedState() {
+        WSEWChunkSizingUtil.FieldBatchStats stats = new WSEWChunkSizingUtil.FieldBatchStats();
+        stats.recordValueBytes(200 * 1024L, 400, 500);
+        stats.setActiveChunksUsed(3);
+        stats.setOverflowCount(2);
+
+        stats.reset();
+
+        assertEquals(0L, stats.getObservedValueBytes());
+        assertEquals(0, stats.getMaxSingleValueBytes());
+        assertEquals(0, stats.getRowsWritten());
+        assertEquals(0, stats.getActiveChunksUsed());
+        assertEquals(0, stats.getOverflowCount());
+    }
+
+    @Test
+    public void fieldBatchStats_splitRecordingMatchesSingleCallForProjection() {
+        // Two calls of (100KB, maxVal=400, 250 rows) must project identically to
+        // a single call of (200KB, maxVal=400, 500 rows).
+        WSEWChunkSizingUtil.FieldBatchStats split = new WSEWChunkSizingUtil.FieldBatchStats();
+        split.recordValueBytes(100 * 1024L, 400, 250);
+        split.recordValueBytes(100 * 1024L, 400, 250);
+
+        WSEWChunkSizingUtil.FieldBatchStats single = new WSEWChunkSizingUtil.FieldBatchStats();
+        single.recordValueBytes(200 * 1024L, 400, 500);
+
+        assertEquals(
+                WSEWChunkSizingUtil.projectedValueBytes(single, 2000),
+                WSEWChunkSizingUtil.projectedValueBytes(split, 2000));
+    }
+
+
 
     @Test
     public void projectedValueBytes_scalesObservedBytesToFullBatch() {
