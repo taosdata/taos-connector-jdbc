@@ -124,10 +124,14 @@ projectedValueBytes =
 
 ### 9.1 先算“理想每 chunk 该承载多少字节”
 
-我们先固定一个目标：希望一列在正常情况下，大致落在 `4` 个 active chunks 左右。
+我们先固定两个目标：
+
+- 理想情况下，一列大致落在 `4` 个 active chunks 左右
+- 再放宽上限，但不要少到只剩 `1` 个超大 chunk
 
 ```text
 targetActiveChunks = 4
+minActiveChunks = 2
 perChunkTarget = projectedValueBytes / targetActiveChunks
 ```
 
@@ -139,7 +143,25 @@ perChunkTarget = projectedValueBytes / targetActiveChunks
 chunkCandidate = max(maxSingleValueBytes, perChunkTarget)
 ```
 
-### 9.3 最后再做桶化
+### 9.3 再引入“动态上限”
+
+`chunkSize` 可以大于 `64KB`，但它的上限不再是固定常量，而是由当前 batch 的
+`projectedValueBytes` 推出来：
+
+```text
+dynamicMaxChunkBytes =
+    roundUpPow2(
+        max(64KB, projectedValueBytes / minActiveChunks)
+    )
+```
+
+含义是：
+
+- 小 batch 时，动态上限至少还是 `64KB`
+- 大 batch 时，允许 chunk 继续变大
+- 但不会大到让整个 batch 少于 `2` 个 active chunks
+
+### 9.4 最后再做桶化
 
 为了匹配 Netty pool，同时避免每批都因为几个字节差异换规格，最终的 chunk size
 不是精确值，而是桶化后的档位：
@@ -149,23 +171,28 @@ idealChunkBytes =
     clamp(
         roundUpPow2(chunkCandidate),
         8KB,
-        64KB
+        dynamicMaxChunkBytes
     )
 ```
 
 也就是：
 
 1. 先向上取到 2 的幂；
-2. 再夹在 `8KB ~ 64KB` 之间。
+2. 再夹在 `8KB ~ dynamicMaxChunkBytes` 之间。
 
-### 9.4 为什么是这几个桶
+### 9.5 为什么仍然保留桶化
 
-这里的 `8 / 16 / 32 / 64KB` 不是“写死不变的工作负载值”，而是**固定的分配档位**。
+这里不是固定 `8 / 16 / 32 / 64KB` 这四个档位了，而是：
+
+- 下限固定 `8KB`
+- 上限按 profile 动态放开
+- 中间仍然按 2 的幂做分配档位
 
 真正动态变化的是：
 
 - 每批算出来的 `chunkCandidate`
-- 它最终落到哪个桶
+- 每批算出来的 `dynamicMaxChunkBytes`
+- 它最终落到哪个 2 的幂桶
 
 保留桶化而不是用精确字节值，有三个原因：
 
@@ -173,15 +200,19 @@ idealChunkBytes =
 2. **避免微小波动导致频繁换规格**
 3. **测试容易写**，因为输出只会落在少数确定档位里
 
-### 9.5 两个例子
+### 9.6 两个例子
 
 #### 例子 1：`projectedValueBytes = 200KB`
 
 ```text
 targetActiveChunks = 4
+minActiveChunks = 2
 perChunkTarget = 200KB / 4 = 50KB
 maxSingleValueBytes = 400B
 chunkCandidate = max(400B, 50KB) = 50KB
+dynamicMaxChunkBytes = roundUpPow2(max(64KB, 200KB / 2))
+                     = roundUpPow2(100KB)
+                     = 128KB
 roundUpPow2(50KB) = 64KB
 idealChunkBytes = 64KB
 ```
@@ -190,16 +221,19 @@ idealChunkBytes = 64KB
 
 ```text
 targetActiveChunks = 4
+minActiveChunks = 2
 perChunkTarget = 800KB / 4 = 200KB
 maxSingleValueBytes = 400B
 chunkCandidate = max(400B, 200KB) = 200KB
+dynamicMaxChunkBytes = roundUpPow2(max(64KB, 800KB / 2))
+                     = roundUpPow2(400KB)
+                     = 512KB
 roundUpPow2(200KB) = 256KB
-clamp(256KB, 8KB, 64KB) = 64KB
-idealChunkBytes = 64KB
+clamp(256KB, 8KB, 512KB) = 256KB
+idealChunkBytes = 256KB
 ```
 
-这里虽然目标算出来更大，但因为上限是 `64KB`，所以最终 `chunkSize` 还是 `64KB`。
-这时候剩下的容量需求不再靠变大 `chunkSize` 解决，而是靠**增加 reusable chunk 数**解决。
+这里的 `chunkSize` 已经可以放大到 `256KB`，所以这批不会再被固定 `64KB` 上限卡住。
 
 ## 10. `reusableChunkCount` 如何计算
 
@@ -215,10 +249,10 @@ requiredReusableChunks =
 例如：
 
 - `200KB / 64KB -> 4`
-- `800KB / 64KB -> 13`
+- `800KB / 256KB -> 4`
 
-所以对于 `2000` 行的大 batch，系统会自然从 “4 个 chunk” 提升到 “约 13 个 chunk”，
-而不是被固定常量卡住。
+所以对于 `2000` 行的大 batch，系统不一定非要靠“更多 chunk”去覆盖；
+它也可以在 profile 允许时，先把 `chunkSize` 本身放大。
 
 ## 11. 复用 / 重建 / shrink 规则
 
@@ -256,7 +290,7 @@ requiredReusableChunks =
 
 只有同时满足下面两个条件时，才触发 shrink 重建：
 
-1. `underuseStreak >= 8`
+1. `underuseStreak >= 100`
 2. `current.chunkBytes * current.reusableChunkCount >= 2 * wanted.chunkBytes * wanted.reusableChunkCount`
 
 也就是：
