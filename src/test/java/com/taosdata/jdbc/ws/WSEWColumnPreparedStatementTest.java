@@ -8,6 +8,8 @@ import com.taosdata.jdbc.ws.stmt2.WSEWChunkSizingUtil;
 import com.taosdata.jdbc.ws.stmt2.entity.Field;
 import com.taosdata.jdbc.ws.stmt2.entity.Stmt2PrepareResp;
 import com.taosdata.jdbc.ws.stmt2.entity.StmtInfo;
+import com.taosdata.jdbc.ws.stmt2.entity.EWBackendThreadInfo;
+import com.taosdata.jdbc.ws.stmt2.entity.EWRawBlock;
 import io.netty.util.ResourceLeakDetector;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -239,6 +241,39 @@ public class WSEWColumnPreparedStatementTest {
         prepareResp.setStmtId(2L);
         prepareResp.setFields(Arrays.asList(tbnameField(), tsField(), binaryField(), binaryField()));
         return new StmtInfo(prepareResp, "INSERT INTO ? VALUES (?, ?, ?)");
+    }
+
+    @Test
+    public void serializationTask_collectsStatsDuringRealAppend() throws Exception {
+        EWBackendThreadInfo info = new EWBackendThreadInfo(16, 16);
+        StmtInfo stmt = wideStmtInfo();
+        List<Map<Integer, Column>> rows = Arrays.asList(
+                wideRow("d0", 1000L, "hello", "world"),
+                wideRow("d1", 2000L, "foo",   "bar"));
+        for (Map<Integer, Column> row : rows) {
+            info.getWriteQueue().put(row);
+        }
+
+        WSEWColumnPreparedStatement.ColumnarWSEWSerializationTask task =
+                new WSEWColumnPreparedStatement.ColumnarWSEWSerializationTask(info, 2, stmt, false);
+        task.invoke();
+
+        EWRawBlock block = info.getSerialQueue().poll();
+        assertNotNull("task should have produced a serialized block", block);
+        assertTrue("no serialization error expected", block.getLastError() == null);
+
+        // Verify the real append path routes through the stats-aware overload
+        assertNotNull("tbname stats must be populated by runtime path (slot 0)", task.batchStats[0]);
+        assertEquals(2, task.batchStats[0].getRowsWritten());
+        assertNotNull("binary col stats must be populated by runtime path (slot 2)", task.batchStats[2]);
+        assertEquals(2, task.batchStats[2].getRowsWritten());
+        assertNotNull("binary col stats must be populated by runtime path (slot 3)", task.batchStats[3]);
+        assertEquals(2, task.batchStats[3].getRowsWritten());
+
+        if (block.getByteBuf() != null) {
+            block.getByteBuf().release();
+        }
+        info.releaseReusableColumnBuffers();
     }
 
     private static Field binaryField() {

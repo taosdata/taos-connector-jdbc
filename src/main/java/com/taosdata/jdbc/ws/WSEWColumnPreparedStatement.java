@@ -432,6 +432,8 @@ public class WSEWColumnPreparedStatement extends AbstractWSEWPreparedStatement {
         private final int batchSize;
         private final StmtInfo stmtInfo;
         private final boolean progressive;
+        // Accumulated per-field stats across all batches; Task 4 will use these for sizing.
+        final WSEWChunkSizingUtil.FieldBatchStats[] batchStats;
 
         ColumnarWSEWSerializationTask(EWBackendThreadInfo backendThreadInfo,
                                       int batchSize,
@@ -444,6 +446,7 @@ public class WSEWColumnPreparedStatement extends AbstractWSEWPreparedStatement {
             this.batchSize = batchSize;
             this.stmtInfo = stmtInfo;
             this.progressive = progressive;
+            this.batchStats = new WSEWChunkSizingUtil.FieldBatchStats[stmtInfo.getFields().size()];
         }
 
         @Override
@@ -466,7 +469,8 @@ public class WSEWColumnPreparedStatement extends AbstractWSEWPreparedStatement {
                         columnBuffers = buildColumnBuffersFromQueuedRows(
                                 rows,
                                 stmtInfo,
-                                backendThreadInfo.getReusableColumnBuffers());
+                                backendThreadInfo.getReusableColumnBuffers(),
+                                batchStats);
                         backendThreadInfo.setReusableColumnBuffers(columnBuffers);
                         byte[] payload = Stmt2ColumnBindSerializer.serialize(columnBuffers);
                         rawBlock = Stmt2BindExecRequestBuilder.build(payload);
