@@ -277,6 +277,21 @@ public class WSEWColumnPreparedStatementTest {
     }
 
     @Test
+    public void firstBatch_bootstrapsReusableBuffersWithDefaultSpec() throws Exception {
+        EWBackendThreadInfo info = new EWBackendThreadInfo(16, 16);
+        StmtInfo stmt = wideStmtInfo();
+        enqueueRows(info, wideRow("d0", 1000L, "hello", "world"));
+
+        new WSEWColumnPreparedStatement.ColumnarWSEWSerializationTask(info, 1, stmt, true).invoke();
+        releaseRawBlock(info.getSerialQueue().poll());
+
+        WSEWChunkSizingUtil.BufferSpec bootstrap = WSEWChunkSizingUtil.bootstrapSpec();
+        assertBufferSpecEquals(bootstrap, info.getReusableColumnBuffers()[2].currentReusableSpec());
+        assertBufferSpecEquals(bootstrap, info.getReusableColumnBuffers()[3].currentReusableSpec());
+        info.releaseReusableColumnBuffers();
+    }
+
+    @Test
     public void nextBatch_growsImmediatelyAfterLargeObservedBatch() throws Exception {
         EWBackendThreadInfo info = new EWBackendThreadInfo(16, 16);
         StmtInfo stmt = wideStmtInfo();

@@ -10,6 +10,7 @@ import com.taosdata.jdbc.ws.stmt2.Stmt2BindExecRequestBuilder;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnBindSerializer;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnFieldBuffer;
 import com.taosdata.jdbc.ws.stmt2.Stmt2FieldMeta;
+import com.taosdata.jdbc.ws.stmt2.Stmt2VariableWidthReuseHelper;
 import com.taosdata.jdbc.ws.stmt2.WSEWChunkSizingUtil;
 import com.taosdata.jdbc.ws.stmt2.entity.EWBackendThreadInfo;
 import com.taosdata.jdbc.ws.stmt2.entity.EWRawBlock;
@@ -222,14 +223,9 @@ public class WSEWColumnPreparedStatement extends AbstractWSEWPreparedStatement {
             Field field = stmtInfo.getFields().get(i);
             Stmt2FieldMeta meta = Stmt2FieldMeta.fromField(field);
             if (meta.isVariableWidth()) {
-                WSEWChunkSizingUtil.BufferSpec spec = resolveBufferSpec(bufferSpecs, i);
-                buffers[i] = Stmt2ColumnFieldBuffer.forReusableValueBuffer(
-                        meta,
-                        null,
-                        spec.getChunkBytes(),
-                        spec.getChunkBytes() / 2,
-                        spec.getReusableChunkCount());
-                primeReusableBuffer(buffers[i], spec);
+                WSEWChunkSizingUtil.BufferSpec spec =
+                        Stmt2VariableWidthReuseHelper.resolveBufferSpec(bufferSpecs, i);
+                buffers[i] = Stmt2VariableWidthReuseHelper.createReusableVariableWidthBuffer(meta, spec);
             } else {
                 buffers[i] = new Stmt2ColumnFieldBuffer(meta);
             }
@@ -245,31 +241,6 @@ public class WSEWColumnPreparedStatement extends AbstractWSEWPreparedStatement {
             if (buffer != null) {
                 buffer.reset();
             }
-        }
-    }
-
-    private static WSEWChunkSizingUtil.BufferSpec resolveBufferSpec(
-            WSEWChunkSizingUtil.BufferSpec[] bufferSpecs,
-            int index) {
-        if (bufferSpecs != null
-                && index < bufferSpecs.length
-                && bufferSpecs[index] != null) {
-            return bufferSpecs[index];
-        }
-        return WSEWChunkSizingUtil.bootstrapSpec();
-    }
-
-    private static void primeReusableBuffer(
-            Stmt2ColumnFieldBuffer buffer,
-            WSEWChunkSizingUtil.BufferSpec spec) {
-        byte[] chunk = new byte[spec.getChunkBytes()];
-        try {
-            for (int i = 0; i < spec.getReusableChunkCount(); i++) {
-                buffer.appendBytes(chunk);
-            }
-            buffer.reset();
-        } catch (SQLException e) {
-            throw new IllegalStateException("failed to prime reusable WSEW buffer", e);
         }
     }
 
@@ -580,7 +551,9 @@ public class WSEWColumnPreparedStatement extends AbstractWSEWPreparedStatement {
                 if (!buffers[i].getMeta().isVariableWidth()) {
                     continue;
                 }
-                if (!bufferSpecsEqual(buffers[i].currentReusableSpec(), resolveBufferSpec(nextSpecs, i))) {
+                if (!Stmt2VariableWidthReuseHelper.bufferSpecsEqual(
+                        buffers[i].currentReusableSpec(),
+                        Stmt2VariableWidthReuseHelper.resolveBufferSpec(nextSpecs, i))) {
                     return false;
                 }
             }
@@ -606,7 +579,7 @@ public class WSEWColumnPreparedStatement extends AbstractWSEWPreparedStatement {
                 WSEWChunkSizingUtil.FieldBatchStats stats = batchStats[i];
                 WSEWChunkSizingUtil.BufferSpec current = columnBuffers[i].currentReusableSpec();
                 if (current == null) {
-                    current = resolveBufferSpec(nextSpecs, i);
+                    current = Stmt2VariableWidthReuseHelper.resolveBufferSpec(nextSpecs, i);
                 }
                 if (stats == null || current == null) {
                     nextSpecs[i] = current;
@@ -617,7 +590,7 @@ public class WSEWColumnPreparedStatement extends AbstractWSEWPreparedStatement {
                 stats.setActiveChunksUsed(columnBuffers[i].activeReusableChunkCount());
                 WSEWChunkSizingUtil.BufferSpec wanted =
                         WSEWChunkSizingUtil.deriveWantedSpec(stats, batchSize);
-                if (bufferSpecsEqual(current, wanted)) {
+                if (Stmt2VariableWidthReuseHelper.bufferSpecsEqual(current, wanted)) {
                     nextSpecs[i] = current;
                     underuseStreaks[i] = 0;
                 } else if (!WSEWChunkSizingUtil.canReuse(
@@ -638,19 +611,6 @@ public class WSEWColumnPreparedStatement extends AbstractWSEWPreparedStatement {
                     underuseStreaks[i] = 0;
                 }
             }
-        }
-
-        private static boolean bufferSpecsEqual(
-                WSEWChunkSizingUtil.BufferSpec left,
-                WSEWChunkSizingUtil.BufferSpec right) {
-            if (left == right) {
-                return true;
-            }
-            if (left == null || right == null) {
-                return false;
-            }
-            return left.getChunkBytes() == right.getChunkBytes()
-                    && left.getReusableChunkCount() == right.getReusableChunkCount();
         }
 
         private static boolean isSmallerSpec(
