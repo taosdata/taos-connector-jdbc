@@ -469,7 +469,7 @@ public final class Stmt2ColumnFieldBuffer {
     }
 
     public int activeReusableChunkCount() {
-        return reusableValueBuffer == null ? 0 : reusableValueBuffer.activeChunkCount();
+        return reusableValueBuffer == null ? 0 : reusableValueBuffer.activeReusableChunkCount();
     }
 
     public void release() {

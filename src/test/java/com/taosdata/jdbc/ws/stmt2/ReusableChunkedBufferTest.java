@@ -128,18 +128,36 @@ public class ReusableChunkedBufferTest {
 
     @Test
     public void writeString_fitsInStandardChunk_usesReusablePath() throws Exception {
-        // Verify strings that fit within standardChunkBytes still use the reusable-chunk path
+        // Verify strings that fit within standardChunkBytes take the reusable standard-chunk path
         // standardChunkBytes=16, dedicatedThreshold=12, maxReusable=2
         Object buffer = newBuffer(16, 12, 2);
         try {
-            // 8-byte string: fits in standard chunk (8 < 16)
+            // 8-byte string: fits in standard chunk (8 < 16) → uses reusable path
             invokeWriteString(buffer, "abcdefgh");
+
+            // Write landed in the standard (reusable) chunk cache
             assertEquals(1, cachedStandardChunks(buffer).size());
             assertEquals(1, activeChunks(buffer).size());
 
-            // Exactly standardChunkBytes in UTF-8 (16 chars of ASCII = 16 bytes) – still fits
+            // The active chunk IS the cached standard chunk — identity check proves reusable path
+            Object cachedChunk = cachedStandardChunks(buffer).get(0);
+            assertSame("active chunk must be the cached standard chunk (reusable path)",
+                    cachedChunk, activeChunkBuffer(buffer, 0));
+
+            // 16-byte string (= standardChunkBytes): still reusable path (not > standardChunkBytes)
             invokeWriteString(buffer, "0123456789abcdef");
             assertEquals("abcdefgh0123456789abcdef", dumpUtf8(buffer));
+            // Standard chunk cache must remain unpolluted
+            assertEquals(1, cachedStandardChunks(buffer).size());
+
+            // Reset: standard chunks must be KEPT (not released), ready for reuse
+            invoke(buffer, "reset", new Class<?>[0]);
+            assertEquals("standard chunk must survive reset", 1, cachedStandardChunks(buffer).size());
+
+            // Re-write after reset must reuse the SAME chunk instance (not allocate a new one)
+            invokeWriteString(buffer, "abcdefgh");
+            assertSame("standard chunk must be reused after reset (identity check)",
+                    cachedChunk, activeChunkBuffer(buffer, 0));
         } finally {
             release(buffer);
         }

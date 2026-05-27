@@ -93,6 +93,16 @@ final class ReusableChunkedBuffer {
         return activeChunks.size();
     }
 
+    int activeReusableChunkCount() {
+        int count = 0;
+        for (ChunkRef ref : activeChunks) {
+            if (ref.reusable) {
+                count++;
+            }
+        }
+        return count;
+    }
+
     int readableBytes() {
         return totalBytes;
     }
