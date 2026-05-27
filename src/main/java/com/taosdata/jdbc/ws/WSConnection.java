@@ -161,20 +161,35 @@ public class WSConnection extends AbstractConnection {
 
     @Override
     public void write(String[] lines, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, Integer ttl, Long reqId) throws SQLException {
-        for (String line : lines) {
-            InsertReq insertReq = new InsertReq();
-            insertReq.setReqId(insertId.getAndIncrement());
-            insertReq.setProtocol(protocolType.ordinal());
-            insertReq.setPrecision(timestampType.getType());
-            insertReq.setData(line);
-            if (ttl != null)
-                insertReq.setTtl(ttl);
-            if (reqId != null)
-                insertReq.setReqId(reqId);
-            CommonResp response = (CommonResp) transport.send(new Request(SchemalessAction.INSERT.getAction(), insertReq), param.getRequestTimeout());
-            if (Code.SUCCESS.getCode() != response.getCode()) {
-                throw new SQLException("0x" + Integer.toHexString(response.getCode()) + ":" + response.getMessage());
+        if (lines == null || lines.length == 0) {
+            return;
+        }
+        // JSON: each element is an independent document; cannot be merged with '\n'.
+        // LINE/TELNET: server accepts newline-separated batches, so coalesce into a single
+        // WS frame to avoid one synchronous round-trip per line (issue #35361).
+        if (protocolType == SchemalessProtocolType.JSON && lines.length > 1) {
+            for (String line : lines) {
+                sendInsert(line, protocolType, timestampType, ttl, reqId);
             }
+            return;
+        }
+        String payload = lines.length == 1 ? lines[0] : String.join("\n", lines);
+        sendInsert(payload, protocolType, timestampType, ttl, reqId);
+    }
+
+    private void sendInsert(String data, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, Integer ttl, Long reqId) throws SQLException {
+        InsertReq insertReq = new InsertReq();
+        insertReq.setReqId(insertId.getAndIncrement());
+        insertReq.setProtocol(protocolType.ordinal());
+        insertReq.setPrecision(timestampType.getType());
+        insertReq.setData(data);
+        if (ttl != null)
+            insertReq.setTtl(ttl);
+        if (reqId != null)
+            insertReq.setReqId(reqId);
+        CommonResp response = (CommonResp) transport.send(new Request(SchemalessAction.INSERT.getAction(), insertReq), param.getRequestTimeout());
+        if (Code.SUCCESS.getCode() != response.getCode()) {
+            throw new SQLException("0x" + Integer.toHexString(response.getCode()) + ":" + response.getMessage());
         }
     }
 

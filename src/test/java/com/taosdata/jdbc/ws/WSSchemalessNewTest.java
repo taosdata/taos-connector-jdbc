@@ -269,6 +269,37 @@ public class WSSchemalessNewTest {
         statement.close();
     }
 
+    // Regression guard for issue #35361: a multi-line LINE batch must be coalesced into a
+    // single WS frame on the client. If the WS path ever reverts to one frame per line,
+    // either the row count breaks or the wall-clock balloons by orders of magnitude.
+    @Test
+    public void testLargeLineBatchCoalesced() throws SQLException {
+        int n = 1000;
+        String[] lines = new String[n];
+        long baseTs = 1700000000000L;
+        for (int i = 0; i < n; i++) {
+            lines[i] = "stb_batch,host=h" + (i % 16)
+                    + " v=" + (i * 1.5) + "f64,k=" + i + "i64"
+                    + " " + (baseTs + i);
+        }
+
+        long t0 = System.nanoTime();
+        ((AbstractConnection) connection).write(lines, SchemalessProtocolType.LINE, SchemalessTimestampType.MILLI_SECONDS);
+        long elapsedMs = (System.nanoTime() - t0) / 1_000_000L;
+
+        try (Statement s = connection.createStatement()) {
+            s.executeUpdate("use " + DB_NAME);
+            try (ResultSet rs = s.executeQuery("select count(*) from stb_batch")) {
+                Assert.assertTrue(rs.next());
+                Assert.assertEquals(n, rs.getLong(1));
+            }
+        }
+        // The pre-fix per-line loop did >1000 round-trips; that was multi-second even on
+        // localhost. 5s is a generous ceiling that still catches a regression.
+        Assert.assertTrue("batch took " + elapsedMs + " ms; suspect per-line round-trip regression",
+                elapsedMs < 5000);
+    }
+
     @Test
     public void telnetListInsert() throws SQLException {
         // given
