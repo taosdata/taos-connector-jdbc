@@ -13,6 +13,8 @@ import com.taosdata.jdbc.ws.stmt2.Stmt2BindExecRequestBuilder;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnBindSerializer;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnFieldBuffer;
 import com.taosdata.jdbc.ws.stmt2.Stmt2FieldMeta;
+import com.taosdata.jdbc.ws.stmt2.Stmt2VariableWidthReuseHelper;
+import com.taosdata.jdbc.ws.stmt2.WSEWChunkSizingUtil;
 import com.taosdata.jdbc.ws.stmt2.entity.Field;
 import com.taosdata.jdbc.ws.stmt2.entity.RequestFactory;
 import com.taosdata.jdbc.ws.stmt2.entity.StmtInfo;
@@ -44,6 +46,9 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Pr
     private final int tbNameFieldIdx;
     private Stmt2ColumnFieldBuffer[] columnBuffers;
     private Stmt2ColumnFieldBuffer.BufferSizeHints[] bufferSizeHints;
+    private WSEWChunkSizingUtil.BufferSpec[] nextBufferSpecs;
+    private int[] underuseStreaks;
+    private WSEWChunkSizingUtil.FieldBatchStats[] batchStats;
     private int expectedRowCount;
 
     public WSColumnFastPreparedStatement(Transport transport,
@@ -65,6 +70,9 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Pr
             fixedWidths[i] = (byte) fieldMetas[i].fixedWidth();
         }
         this.tbNameFieldIdx = resolveTbNameFieldIdx(fieldMetas);
+        this.nextBufferSpecs = new WSEWChunkSizingUtil.BufferSpec[n];
+        this.underuseStreaks = new int[n];
+        this.batchStats = new WSEWChunkSizingUtil.FieldBatchStats[n];
         this.columnBuffers = allocateColumnBuffers();
     }
 
@@ -735,9 +743,15 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Pr
     private Stmt2ColumnFieldBuffer[] allocateColumnBuffers() {
         Stmt2ColumnFieldBuffer[] buffers = new Stmt2ColumnFieldBuffer[fieldMetas.length];
         for (int i = 0; i < fieldMetas.length; i++) {
-            buffers[i] = new Stmt2ColumnFieldBuffer(
-                    fieldMetas[i],
-                    bufferSizeHints == null ? null : bufferSizeHints[i]);
+            if (fieldMetas[i].isVariableWidth()) {
+                WSEWChunkSizingUtil.BufferSpec spec =
+                        Stmt2VariableWidthReuseHelper.resolveBufferSpec(nextBufferSpecs, i);
+                buffers[i] = Stmt2VariableWidthReuseHelper.createReusableVariableWidthBuffer(fieldMetas[i], spec);
+            } else {
+                buffers[i] = new Stmt2ColumnFieldBuffer(
+                        fieldMetas[i],
+                        bufferSizeHints == null ? null : bufferSizeHints[i]);
+            }
         }
         return buffers;
     }
@@ -749,12 +763,19 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Pr
             return;
         }
         for (int i = 0; i < columnBuffers.length; i++) {
-            if (fieldMetas[i].isVariableWidth()) {
-                Stmt2ColumnFieldBuffer.BufferSizeHints hints = columnBuffers[i].snapshotUsage();
-                columnBuffers[i].release();
-                columnBuffers[i] = new Stmt2ColumnFieldBuffer(fieldMetas[i], hints);
-            } else {
+            if (!fieldMetas[i].isVariableWidth()) {
                 columnBuffers[i].reset();
+                continue;
+            }
+            WSEWChunkSizingUtil.BufferSpec wanted =
+                    Stmt2VariableWidthReuseHelper.resolveBufferSpec(nextBufferSpecs, i);
+            if (Stmt2VariableWidthReuseHelper.bufferSpecsEqual(
+                    columnBuffers[i].currentReusableSpec(), wanted)) {
+                columnBuffers[i].reset();
+            } else {
+                columnBuffers[i].release();
+                columnBuffers[i] = Stmt2VariableWidthReuseHelper.createReusableVariableWidthBuffer(
+                        fieldMetas[i], wanted);
             }
         }
     }

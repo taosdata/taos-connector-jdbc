@@ -24,7 +24,6 @@ import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_INT;
 import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_UTINYINT;
 import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_VARCHAR;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -113,24 +112,22 @@ public class WSColumnFastPreparedStatementTest {
     }
 
     @Test
-    public void clearBatch_recreatesVarWidthBuffersWithLearnedCapacity() throws Exception {
+    public void clearBatch_keepsVarWidthReusableBufferInstance() throws Exception {
         WSColumnFastPreparedStatement stmt = buildStmt(Collections.singletonList(field(
                 (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_VARCHAR)));
-        String largeValue = String.join("", Collections.nCopies(20_000, "a"));
 
-        stmt.setString(1, largeValue);
+        stmt.setString(1, "first-value");
         stmt.addBatch();
 
         Stmt2ColumnFieldBuffer[] beforeClear = getColumnBuffers(stmt);
         Stmt2ColumnFieldBuffer beforeBuffer = beforeClear[0];
-        int usedValueBytes = getAutoExpandingBufferReadableBytes(beforeClear[0], "valueBuffer");
 
         stmt.clearBatch();
 
         Stmt2ColumnFieldBuffer[] afterClear = getColumnBuffers(stmt);
-        assertNotSame(beforeBuffer, afterClear[0]);
-        int nextInitialSize = getAutoExpandingBufferBufferSize(afterClear[0], "valueBuffer");
-        assertTrue(nextInitialSize >= usedValueBytes);
+        assertEquals(beforeBuffer, afterClear[0]);
+        assertEquals(0, afterClear[0].getRowCount());
+        assertTrue(afterClear[0].currentReusableSpec() != null);
     }
 
     @Test
@@ -255,28 +252,6 @@ public class WSColumnFastPreparedStatementTest {
         field.setFieldType((byte) fieldType);
         field.setPrecision((byte) 0);
         return field;
-    }
-
-    private static int getAutoExpandingBufferReadableBytes(
-            Stmt2ColumnFieldBuffer buffer,
-            String fieldName) throws Exception {
-        Object autoBuffer = getDeclaredField(buffer, fieldName);
-        return (Integer) autoBuffer.getClass().getDeclaredMethod("readableBytes").invoke(autoBuffer);
-    }
-
-    private static int getAutoExpandingBufferBufferSize(
-            Stmt2ColumnFieldBuffer buffer,
-            String fieldName) throws Exception {
-        Object autoBuffer = getDeclaredField(buffer, fieldName);
-        java.lang.reflect.Field bufferSize = autoBuffer.getClass().getDeclaredField("bufferSize");
-        bufferSize.setAccessible(true);
-        return bufferSize.getInt(autoBuffer);
-    }
-
-    private static Object getDeclaredField(Object target, String fieldName) throws Exception {
-        java.lang.reflect.Field field = target.getClass().getDeclaredField(fieldName);
-        field.setAccessible(true);
-        return field.get(target);
     }
 
     private static Stmt2ColumnFieldBuffer[] getColumnBuffers(WSColumnFastPreparedStatement stmt) {
