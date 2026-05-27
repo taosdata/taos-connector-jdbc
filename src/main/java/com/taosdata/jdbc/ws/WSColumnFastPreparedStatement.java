@@ -72,8 +72,16 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Pr
         this.tbNameFieldIdx = resolveTbNameFieldIdx(fieldMetas);
         this.nextBufferSpecs = new WSEWChunkSizingUtil.BufferSpec[n];
         this.underuseStreaks = new int[n];
-        this.batchStats = new WSEWChunkSizingUtil.FieldBatchStats[n];
+        this.batchStats = initBatchStats(n);
         this.columnBuffers = allocateColumnBuffers();
+    }
+
+    private static WSEWChunkSizingUtil.FieldBatchStats[] initBatchStats(int count) {
+        WSEWChunkSizingUtil.FieldBatchStats[] stats = new WSEWChunkSizingUtil.FieldBatchStats[count];
+        for (int i = 0; i < count; i++) {
+            stats[i] = new WSEWChunkSizingUtil.FieldBatchStats();
+        }
+        return stats;
     }
 
     private void stageFixed(int paramIdx, long value) throws SQLException {
