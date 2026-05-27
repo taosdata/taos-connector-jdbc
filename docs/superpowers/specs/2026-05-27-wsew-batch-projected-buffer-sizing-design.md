@@ -256,32 +256,47 @@ requiredReusableChunks =
 
 ## 11. 复用 / 重建 / shrink 规则
 
-### 11.1 grow：立即生效
+### 11.1 先判断当前规格有没有资格继续复用
 
-如果 `wantedSpec` 比 `currentSpec` 大，就立刻重建。
+先定义：
 
-这里的“大”按两个维度判断：
+```text
+currentReusableBytes  = current.chunkBytes * current.reusableChunkCount
+wantedReusableBytes   = wanted.chunkBytes  * wanted.reusableChunkCount
+effectiveActiveChunks = ceil(projectedValueBytes / current.chunkBytes)
+```
 
-- `wanted.chunkBytes > current.chunkBytes`
-- 或 `wanted.reusableChunkCount > current.reusableChunkCount`
+当前规格只有同时满足下面两个条件，才有资格继续复用：
 
-只要任一维度需要放大，就直接重建到 `wantedSpec`，并把 `underuseStreak` 清零。
+1. `currentReusableBytes >= wantedReusableBytes`
+2. `effectiveActiveChunks <= targetActiveChunks * 2`
 
-### 11.2 same：直接复用
+在当前设计里：
+
+```text
+targetActiveChunks = 4
+targetActiveChunks * 2 = 8
+```
+
+也就是：即使总容量够了，如果当前 `chunkSize` 会把这批数据切成超过 `8` 个 active
+chunks，也不能继续复用，必须 grow。
+
+### 11.2 grow：立即生效
+
+如果当前规格**不满足复用资格**，就立刻重建到 `wantedSpec`，并把 `underuseStreak`
+清零。
+
+### 11.3 same：直接复用
 
 如果 `wantedSpec == currentSpec`：
 
 - 直接复用
 - `underuseStreak = 0`
 
-### 11.3 shrink：先复用，再延迟缩容
+### 11.4 shrink：先复用，再延迟缩容
 
-如果 `wantedSpec <= currentSpec`，即：
-
-- `wanted.chunkBytes <= current.chunkBytes`
-- 且 `wanted.reusableChunkCount <= current.reusableChunkCount`
-
-那么这一批先继续复用当前 buffer，不立即缩。
+如果当前规格满足复用资格，但 `wantedSpec < currentSpec`，那么这一批先继续复用当前
+buffer，不立即缩。
 
 同时：
 
@@ -296,15 +311,15 @@ requiredReusableChunks =
 也就是：
 
 - grow 立即执行
-- shrink 延迟执行
-- 而且只有“连续低于当前规格一段时间，并且当前容量至少大约 2 倍”才真正缩
+- shrink 很慢才执行
+- 而且只有“连续低于当前规格很长时间，并且当前容量至少大约 2 倍”才真正缩
 
-### 11.4 这样放宽的原因
+### 11.5 这样放宽的原因
 
-1. 避免 batch 轻微波动就来回重建
-2. 允许“当前规格略大于 wanted”时继续吃掉抖动
-3. 只增加一个很小的状态 `underuseStreak`，仍然很好测
-4. 对稳定 workload，规格仍会稳定
+1. 先按总容量放宽复用条件，减少不必要重建
+2. 再用 `effectiveActiveChunks` 防止永远卡在“很多小 chunk”
+3. 用 `underuseStreak = 100` 让 shrink 足够慢，避免你担心的快速缩容
+4. 额外状态仍然只有一个很小的计数器，仍然很好测
 
 ## 12. Dedicated chunk 语义不变
 
@@ -339,7 +354,7 @@ requiredReusableChunks =
 
 这样上层才能做：
 
-- `wantedSpec > currentSpec`
+- “当前规格是否满足复用资格”
 - `wantedSpec == currentSpec`
 - `wantedSpec < currentSpec`
 
@@ -380,14 +395,18 @@ requiredReusableChunks =
    - 第一批建 buffer，后续同规格 batch 持续复用
 
 5. **grow 立即生效**
-   - 小 workload 后接大 workload
-   - 断言 `wantedSpec` 变大时本批立即重建
+   - 当前规格虽然有历史缓存，但不满足“总容量 + active chunk 上限”条件
+   - 断言本批立即 grow 到 `wantedSpec`
 
 6. **shrink 延迟触发**
    - 连续喂入更小规格的 batch
-   - 断言前 `7` 批仍复用，第 `8` 批在 oversize 条件满足时 shrink
+   - 断言前 `99` 批仍复用，第 `100` 批在 oversize 条件满足时 shrink
 
-7. **payload 一致性**
+7. **容量够但 chunk 太碎时仍 grow**
+   - 构造 `currentReusableBytes >= wantedReusableBytes`，但 `effectiveActiveChunks > 8`
+   - 断言不能继续复用，必须 grow
+
+8. **payload 一致性**
    - 复用路径、grow 路径、shrink 路径对同一批 rows 产出的 payload 完全一致
 
 ### 15.2 回归测试
@@ -407,7 +426,7 @@ requiredReusableChunks =
 2. 不设 per-field hard cap，意味着超大字段可能会缓存更多 reusable chunks  
    这是这版设计的明确取舍。
 
-3. 延迟 shrink 会让 oversized buffer 多存活几批  
+3. 延迟 shrink 会让 oversized buffer 多存活很多批  
    这是为了换取更少抖动，且只增加一个很小的计数器状态。
 
 ## 17. 推荐落地顺序
