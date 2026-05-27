@@ -264,6 +264,13 @@ public class SchemalessWriter implements AutoCloseable {
         if (lines == null || lines.length == 0) {
             return;
         }
+        // Reject null elements up-front: String.join("\n", lines) would otherwise inline the
+        // literal "null" into the coalesced payload and the server would fail to parse it.
+        for (int i = 0; i < lines.length; i++) {
+            if (lines[i] == null) {
+                throw new SQLException("schemaless line at index " + i + " must not be null");
+            }
+        }
         if (protocolType == SchemalessProtocolType.JSON && lines.length > 1) {
             for (String line : lines) {
                 wsSendInsert(line, protocolType, timestampType, ttl, reqId);
