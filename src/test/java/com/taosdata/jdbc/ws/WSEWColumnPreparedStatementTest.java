@@ -276,10 +276,107 @@ public class WSEWColumnPreparedStatementTest {
         info.releaseReusableColumnBuffers();
     }
 
+    @Test
+    public void nextBatch_growsImmediatelyAfterLargeObservedBatch() throws Exception {
+        EWBackendThreadInfo info = new EWBackendThreadInfo(16, 16);
+        StmtInfo stmt = wideStmtInfo();
+        enqueueRows(info,
+                wideRow("d0", 1000L, repeated('a', 20_000), "tiny"),
+                wideRow("d1", 2000L, repeated('b', 20_000), "tiny"));
+
+        new WSEWColumnPreparedStatement.ColumnarWSEWSerializationTask(info, 2, stmt, true).invoke();
+        releaseRawBlock(info.getSerialQueue().poll());
+
+        WSEWChunkSizingUtil.BufferSpec bootstrap = WSEWChunkSizingUtil.bootstrapSpec();
+        WSEWChunkSizingUtil.BufferSpec grown = info.getNextBufferSpecs()[2];
+        assertNotNull(grown);
+        assertTrue(grown.getChunkBytes() > bootstrap.getChunkBytes());
+        assertTrue(grown.getReusableChunkCount() > bootstrap.getReusableChunkCount());
+        assertBufferSpecEquals(bootstrap, info.getReusableColumnBuffers()[2].currentReusableSpec());
+
+        enqueueRows(info, wideRow("d2", 3000L, "small", "tiny"), wideRow("d3", 4000L, "tiny", "tiny"));
+        new WSEWColumnPreparedStatement.ColumnarWSEWSerializationTask(info, 2, stmt, true).invoke();
+        releaseRawBlock(info.getSerialQueue().poll());
+
+        assertBufferSpecEquals(grown, info.getReusableColumnBuffers()[2].currentReusableSpec());
+        info.releaseReusableColumnBuffers();
+    }
+
+    @Test
+    public void nextBatch_reusesWhenCapacityIsEnoughAndChunksAreNotTooFragmented() throws Exception {
+        EWBackendThreadInfo info = new EWBackendThreadInfo(16, 16);
+        StmtInfo stmt = wideStmtInfo();
+        WSEWChunkSizingUtil.BufferSpec largeSpec = new WSEWChunkSizingUtil.BufferSpec(64 * 1024, 4);
+        info.setNextBufferSpecs(new WSEWChunkSizingUtil.BufferSpec[] {null, null, largeSpec, largeSpec});
+        info.setUnderuseStreaks(new int[stmt.getFields().size()]);
+
+        enqueueRows(info, wideRow("d0", 1000L, "a", "b"));
+        new WSEWColumnPreparedStatement.ColumnarWSEWSerializationTask(info, 1, stmt, true).invoke();
+        releaseRawBlock(info.getSerialQueue().poll());
+
+        assertBufferSpecEquals(largeSpec, info.getReusableColumnBuffers()[2].currentReusableSpec());
+        assertBufferSpecEquals(largeSpec, info.getNextBufferSpecs()[2]);
+        assertEquals(1, info.getUnderuseStreaks()[2]);
+        info.releaseReusableColumnBuffers();
+    }
+
+    @Test
+    public void nextBatch_shrinksOnlyAfterHundredUnderusedBatches() throws Exception {
+        EWBackendThreadInfo info = new EWBackendThreadInfo(16, 16);
+        StmtInfo stmt = wideStmtInfo();
+        WSEWChunkSizingUtil.BufferSpec largeSpec = new WSEWChunkSizingUtil.BufferSpec(64 * 1024, 4);
+        WSEWChunkSizingUtil.BufferSpec smallSpec = WSEWChunkSizingUtil.bootstrapSpec();
+        info.setNextBufferSpecs(new WSEWChunkSizingUtil.BufferSpec[] {null, null, largeSpec, largeSpec});
+        info.setUnderuseStreaks(new int[stmt.getFields().size()]);
+
+        for (int i = 0; i < 99; i++) {
+            enqueueRows(info, wideRow("d" + i, 1000L + i, "a", "b"));
+            new WSEWColumnPreparedStatement.ColumnarWSEWSerializationTask(info, 1, stmt, true).invoke();
+            releaseRawBlock(info.getSerialQueue().poll());
+        }
+
+        assertBufferSpecEquals(largeSpec, info.getNextBufferSpecs()[2]);
+        assertEquals(99, info.getUnderuseStreaks()[2]);
+
+        enqueueRows(info, wideRow("d99", 1099L, "a", "b"));
+        new WSEWColumnPreparedStatement.ColumnarWSEWSerializationTask(info, 1, stmt, true).invoke();
+        releaseRawBlock(info.getSerialQueue().poll());
+
+        assertBufferSpecEquals(smallSpec, info.getNextBufferSpecs()[2]);
+        assertEquals(0, info.getUnderuseStreaks()[2]);
+        assertBufferSpecEquals(largeSpec, info.getReusableColumnBuffers()[2].currentReusableSpec());
+        info.releaseReusableColumnBuffers();
+    }
+
     private static Field binaryField() {
         Field field = new Field();
         field.setBindType((byte) FieldBindType.TAOS_FIELD_COL.getValue());
         field.setFieldType((byte) TSDB_DATA_TYPE_BINARY);
         return field;
+    }
+
+    private static void enqueueRows(EWBackendThreadInfo info, Map<Integer, Column>... rows) throws Exception {
+        for (Map<Integer, Column> row : rows) {
+            info.getWriteQueue().put(row);
+        }
+    }
+
+    private static void releaseRawBlock(EWRawBlock block) {
+        if (block != null && block.getByteBuf() != null) {
+            block.getByteBuf().release();
+        }
+    }
+
+    private static void assertBufferSpecEquals(WSEWChunkSizingUtil.BufferSpec expected,
+                                               WSEWChunkSizingUtil.BufferSpec actual) {
+        assertNotNull(actual);
+        assertEquals(expected.getChunkBytes(), actual.getChunkBytes());
+        assertEquals(expected.getReusableChunkCount(), actual.getReusableChunkCount());
+    }
+
+    private static String repeated(char c, int count) {
+        char[] chars = new char[count];
+        Arrays.fill(chars, c);
+        return new String(chars);
     }
 }
