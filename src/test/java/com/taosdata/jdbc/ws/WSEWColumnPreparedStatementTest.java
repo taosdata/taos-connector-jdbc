@@ -414,6 +414,48 @@ public class WSEWColumnPreparedStatementTest {
         assertEquals("rows must still be accounted for", 1, block.getRowCount());
     }
 
+    /**
+     * Regression: {@code IllegalStateException} thrown inside the inner try-block of
+     * {@code ColumnarWSEWSerializationTask.compute()} (e.g. from {@code primeReusableBuffer}
+     * or {@code ensureReusableColumnBuffers}) must enqueue an error block rather than
+     * escaping unchecked and leaving {@code waitWriteCompleted()} hanging.
+     *
+     * We inject the exception by overriding {@code releaseReusableColumnBuffers()} in an
+     * anonymous {@code EWBackendThreadInfo} subclass.  When {@code reusableColumnBuffers} is
+     * null the buffer-spec match check fails, causing {@code ensureReusableColumnBuffers} to
+     * call {@code releaseReusableColumnBuffers()} — which is where our injected
+     * {@code IllegalStateException} fires.
+     *
+     * <p>Note: triggering the real {@code primeReusableBuffer} ISE path (which wraps a
+     * {@code SQLException} from {@code appendBytes}) requires making a Netty buffer
+     * allocation fail mid-write — not practical without mocking.  The anonymous-subclass
+     * approach exercises the same catch-block in {@code compute()}, giving equivalent
+     * regression coverage.
+     */
+    @Test
+    public void serializationTask_illegalStateExceptionProducesErrorBlockNotHang() throws Exception {
+        EWBackendThreadInfo info = new EWBackendThreadInfo(16, 16) {
+            @Override
+            public void releaseReusableColumnBuffers() {
+                throw new IllegalStateException("injected buffer-init failure (simulates primeReusableBuffer ISE)");
+            }
+        };
+        StmtInfo stmt = wideStmtInfo();
+        enqueueRows(info, wideRow("d0", 1000L, "hello", "world"));
+
+        WSEWColumnPreparedStatement.ColumnarWSEWSerializationTask task =
+                new WSEWColumnPreparedStatement.ColumnarWSEWSerializationTask(info, 1, stmt, false);
+        task.invoke();
+
+        EWRawBlock block = info.getSerialQueue().poll();
+        assertNotNull("task must enqueue a block (not hang) when ISE escapes buffer init", block);
+        assertNotNull("error block must carry the exception", block.getLastError());
+        assertTrue("error message must mention buffer initialization",
+                block.getLastError().getMessage() != null
+                        && block.getLastError().getMessage().length() > 0);
+        assertEquals("rows must still be accounted for", 1, block.getRowCount());
+    }
+
     private static String repeated(char c, int count) {
         char[] chars = new char[count];
         Arrays.fill(chars, c);

@@ -17,9 +17,9 @@ import com.taosdata.jdbc.ws.stmt2.entity.Field;
 import com.taosdata.jdbc.ws.stmt2.entity.Stmt2PrepareResp;
 import com.taosdata.jdbc.ws.stmt2.entity.StmtInfo;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 
 import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
 import java.sql.Blob;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -199,7 +199,7 @@ public class WSEWColumnPreparedStatement extends AbstractWSEWPreparedStatement {
         Object value = column.getData();
         int valueBytes;
         if (value instanceof String) {
-            valueBytes = ((String) value).getBytes(StandardCharsets.UTF_8).length;
+            valueBytes = ByteBufUtil.utf8Bytes((String) value);
         } else if (value instanceof byte[]) {
             valueBytes = ((byte[]) value).length;
         } else if (value instanceof Blob) {
@@ -494,6 +494,14 @@ public class WSEWColumnPreparedStatement extends AbstractWSEWPreparedStatement {
                         try {
                             serialQueue.put(new EWRawBlock(null, rows.size(),
                                     new SQLException("Buffer sizing calculation failed: " + e.getMessage(), e)));
+                        } catch (InterruptedException interruptedException) {
+                            Thread.currentThread().interrupt();
+                        }
+                        break;
+                    } catch (IllegalStateException e) {
+                        try {
+                            serialQueue.put(new EWRawBlock(null, rows.size(),
+                                    new SQLException("Buffer initialization failed: " + e.getMessage(), e)));
                         } catch (InterruptedException interruptedException) {
                             Thread.currentThread().interrupt();
                         }
