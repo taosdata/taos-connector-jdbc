@@ -225,21 +225,7 @@ public class SchemalessWriter implements AutoCloseable {
                 break;
             }
             case WS: {
-                for (String line : lines) {
-                    InsertReq insertReq = new InsertReq();
-                    insertReq.setReqId(insertId.getAndIncrement());
-                    insertReq.setProtocol(protocolType.ordinal());
-                    insertReq.setPrecision(timestampType.getType());
-                    insertReq.setData(line);
-                    if (ttl != null)
-                        insertReq.setTtl(ttl);
-                    if (reqId != null)
-                        insertReq.setReqId(reqId);
-                    CommonResp response = (CommonResp) transport.send(new Request(SchemalessAction.INSERT.getAction(), insertReq));
-                    if (Code.SUCCESS.getCode() != response.getCode()) {
-                        throw new SQLException("(0x" + Integer.toHexString(response.getCode()) + "):" + response.getMessage());
-                    }
-                }
+                wsBatchInsert(lines, protocolType, timestampType, ttl, reqId);
                 break;
             }
             default:
@@ -262,25 +248,45 @@ public class SchemalessWriter implements AutoCloseable {
                 break;
             }
             case WS: {
-                for (String line : lines) {
-                    InsertReq insertReq = new InsertReq();
-                    insertReq.setReqId(insertId.getAndIncrement());
-                    insertReq.setProtocol(protocolType.ordinal());
-                    insertReq.setPrecision(timestampType.getType());
-                    insertReq.setData(line);
-                    if (ttl != null)
-                        insertReq.setTtl(ttl);
-                    if (reqId != null)
-                        insertReq.setReqId(reqId);
-                    CommonResp response = (CommonResp) transport.send(new Request(SchemalessAction.INSERT.getAction(), insertReq));
-                    if (Code.SUCCESS.getCode() != response.getCode()) {
-                        throw new SQLException("0x" + Integer.toHexString(response.getCode()) + ":" + response.getMessage());
-                    }
-                }
+                wsBatchInsert(lines, protocolType, timestampType, ttl, reqId);
                 break;
             }
             default:
                 // nothing
+        }
+    }
+
+    // Coalesces a batch into a single WS schemaless INSERT frame when the protocol allows it
+    // (LINE/TELNET are newline-separated; JSON elements are independent documents and must
+    // stay one-per-frame). This removes the N synchronous round-trips that made WS schemaless
+    // an order of magnitude slower than native (issue #35361).
+    private void wsBatchInsert(String[] lines, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, Integer ttl, Long reqId) throws SQLException {
+        if (lines == null || lines.length == 0) {
+            return;
+        }
+        if (protocolType == SchemalessProtocolType.JSON && lines.length > 1) {
+            for (String line : lines) {
+                wsSendInsert(line, protocolType, timestampType, ttl, reqId);
+            }
+            return;
+        }
+        String payload = lines.length == 1 ? lines[0] : String.join("\n", lines);
+        wsSendInsert(payload, protocolType, timestampType, ttl, reqId);
+    }
+
+    private void wsSendInsert(String data, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, Integer ttl, Long reqId) throws SQLException {
+        InsertReq insertReq = new InsertReq();
+        insertReq.setReqId(insertId.getAndIncrement());
+        insertReq.setProtocol(protocolType.ordinal());
+        insertReq.setPrecision(timestampType.getType());
+        insertReq.setData(data);
+        if (ttl != null)
+            insertReq.setTtl(ttl);
+        if (reqId != null)
+            insertReq.setReqId(reqId);
+        CommonResp response = (CommonResp) transport.send(new Request(SchemalessAction.INSERT.getAction(), insertReq));
+        if (Code.SUCCESS.getCode() != response.getCode()) {
+            throw new SQLException("(0x" + Integer.toHexString(response.getCode()) + "):" + response.getMessage());
         }
     }
 
