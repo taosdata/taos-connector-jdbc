@@ -65,6 +65,16 @@ final class ReusableChunkedBuffer {
         if (utf8Length <= 0) {
             return 0;
         }
+        if (utf8Length > standardChunkBytes) {
+            // Oversized string: bypass the standard-chunk pool to avoid auto-expanding
+            // (and permanently inflating) a cached reusable chunk.
+            ByteBuf dedicated = allocator.buffer(utf8Length);
+            ByteBufUtil.writeUtf8(dedicated, value);
+            activeChunks.add(new ChunkRef(dedicated, false));
+            currentChunk = dedicated;
+            totalBytes += utf8Length;
+            return utf8Length;
+        }
         ByteBuf target = acquireChunk(utf8Length);
         ByteBufUtil.writeUtf8(target, value);
         totalBytes += utf8Length;

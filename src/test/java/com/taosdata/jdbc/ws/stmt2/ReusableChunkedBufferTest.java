@@ -87,6 +87,68 @@ public class ReusableChunkedBufferTest {
         }
     }
 
+    @Test
+    public void writeString_oversized_routesToDedicatedChunk_noCacheInflation() throws Exception {
+        // standardChunkBytes=8, dedicatedThreshold=4, maxReusable=2
+        // Use writeBytes (not writeString) for the initial data so the first standard
+        // chunk is actually cached (writeBytes always uses the standard-chunk path).
+        Object buffer = newBuffer(8, 4, 2);
+        try {
+            // Write 2 bytes → goes to a new standard chunk (cached)
+            writeBytes(buffer, "ab");
+            assertEquals(1, cachedStandardChunks(buffer).size());
+            ByteBuf cachedChunk = (ByteBuf) cachedStandardChunks(buffer).get(0);
+            int originalCapacity = cachedChunk.capacity();
+
+            // Write an oversized string: 10 bytes > standardChunkBytes=8
+            invokeWriteString(buffer, "1234567890");
+
+            // Oversized write must not have added a second entry to the standard cache
+            assertEquals(1, cachedStandardChunks(buffer).size());
+
+            // The cached standard chunk must NOT have been expanded
+            assertEquals("cached chunk must not be inflated", originalCapacity, cachedChunk.capacity());
+
+            // There should be 2 active chunks: the standard one and the oversized dedicated one
+            assertEquals(2, activeChunks(buffer).size());
+
+            // Content is intact
+            assertEquals("ab1234567890", dumpUtf8(buffer));
+
+            // After reset, cached chunk count and capacity are unchanged
+            invoke(buffer, "reset", new Class<?>[0]);
+            assertEquals(1, cachedStandardChunks(buffer).size());
+            ByteBuf cachedAfterReset = (ByteBuf) cachedStandardChunks(buffer).get(0);
+            assertEquals("cached chunk must not be inflated after reset",
+                    originalCapacity, cachedAfterReset.capacity());
+        } finally {
+            release(buffer);
+        }
+    }
+
+    @Test
+    public void writeString_fitsInStandardChunk_usesReusablePath() throws Exception {
+        // Verify strings that fit within standardChunkBytes still use the reusable-chunk path
+        // standardChunkBytes=16, dedicatedThreshold=12, maxReusable=2
+        Object buffer = newBuffer(16, 12, 2);
+        try {
+            // 8-byte string: fits in standard chunk (8 < 16)
+            invokeWriteString(buffer, "abcdefgh");
+            assertEquals(1, cachedStandardChunks(buffer).size());
+            assertEquals(1, activeChunks(buffer).size());
+
+            // Exactly standardChunkBytes in UTF-8 (16 chars of ASCII = 16 bytes) – still fits
+            invokeWriteString(buffer, "0123456789abcdef");
+            assertEquals("abcdefgh0123456789abcdef", dumpUtf8(buffer));
+        } finally {
+            release(buffer);
+        }
+    }
+
+    private static int invokeWriteString(Object buffer, String value) throws Exception {
+        return (int) invoke(buffer, "writeString", new Class<?>[]{String.class}, value);
+    }
+
     private static Object newBuffer(int standardChunkBytes, int dedicatedThresholdBytes, int maxReusableChunks) throws Exception {
         Class<?> clazz = Class.forName("com.taosdata.jdbc.ws.stmt2.ReusableChunkedBuffer");
         Constructor<?> ctor = clazz.getDeclaredConstructor(int.class, int.class, int.class);
