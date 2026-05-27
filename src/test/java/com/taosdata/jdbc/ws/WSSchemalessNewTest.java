@@ -300,6 +300,25 @@ public class WSSchemalessNewTest {
                 elapsedMs < 5000);
     }
 
+    // Defensive: a null element in the batch must be rejected up-front. Without this guard
+    // String.join("\n", lines) would inline the literal "null" into the coalesced payload
+    // and the server would fail to parse it (potentially polluting the rest of the batch).
+    @Test
+    public void testRejectsNullLineInBatch() {
+        String[] lines = new String[]{
+                "stb_null_check,host=h1 v=1i64 1700000001000",
+                null,
+                "stb_null_check,host=h2 v=2i64 1700000002000"
+        };
+        try {
+            ((AbstractConnection) connection).write(lines, SchemalessProtocolType.LINE, SchemalessTimestampType.MILLI_SECONDS);
+            Assert.fail("expected SQLException for null element at index 1");
+        } catch (SQLException e) {
+            Assert.assertTrue("error message should mention the offending index, got: " + e.getMessage(),
+                    e.getMessage() != null && e.getMessage().contains("index 1"));
+        }
+    }
+
     @Test
     public void telnetListInsert() throws SQLException {
         // given
