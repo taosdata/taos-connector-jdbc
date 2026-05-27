@@ -113,12 +113,29 @@ public class WSEWColumnPreparedStatement extends AbstractWSEWPreparedStatement {
             StmtInfo stmtInfo,
             Stmt2ColumnFieldBuffer[] reusableBuffers,
             WSEWChunkSizingUtil.FieldBatchStats[] stats) throws SQLException {
-        Stmt2ColumnFieldBuffer[] buffers = reusableBuffers == null
-                ? newReusableColumnBuffers(stmtInfo, null)
-                : reusableBuffers;
-        resetColumnBuffers(buffers);
-        fillColumnBuffersFromQueuedRows(rows, stmtInfo, buffers, stats);
-        return buffers;
+        Stmt2ColumnFieldBuffer[] buffers = reusableBuffers;
+        boolean createdNew = false;
+        if (buffers == null) {
+            buffers = newReusableColumnBuffers(stmtInfo, Math.max(1, rows.size()));
+            createdNew = true;
+        } else {
+            resetColumnBuffers(buffers);
+        }
+
+        boolean success = false;
+        try {
+            fillColumnBuffersFromQueuedRows(rows, stmtInfo, buffers, stats);
+            success = true;
+            return buffers;
+        } finally {
+            if (!success) {
+                if (createdNew) {
+                    releaseColumnBuffers(buffers);
+                } else {
+                    resetColumnBuffers(buffers);
+                }
+            }
+        }
     }
 
     private static void fillColumnBuffersFromQueuedRows(List<Map<Integer, Column>> rows,
@@ -148,6 +165,9 @@ public class WSEWColumnPreparedStatement extends AbstractWSEWPreparedStatement {
         for (Map<Integer, Column> row : rows) {
             for (int i = 0; i < buffers.length; i++) {
                 Column column = row.get(i + 1);
+                if (column == null) {
+                    throw new SQLException("Missing bound column at index " + (i + 1));
+                }
                 if (i == tbNameFieldIdx) {
                     appendTbName(buffers[i], column);
                     continue;
