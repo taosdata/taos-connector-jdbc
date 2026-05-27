@@ -60,7 +60,7 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Pr
                                          Long instanceId,
                                          Stmt2PrepareResp prepareResp) {
         super(connection, param, database, transport, instanceId, new StmtInfo(prepareResp, sql),
-                new AtomicInteger());
+                new AtomicInteger(), true);
 
         List<Field> fields = stmtInfo.getFields();
         int n = fields != null ? fields.size() : 0;
@@ -763,10 +763,12 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Pr
     }
 
     private void updateNextBufferSpecsAfterSuccessfulBatch() {
+        WSEWChunkSizingUtil.BufferSpec[] resolvedSpecs = new WSEWChunkSizingUtil.BufferSpec[columnBuffers.length];
+        int[] resolvedUnderuseStreaks = new int[underuseStreaks.length];
         for (int i = 0; i < columnBuffers.length; i++) {
             if (!fieldMetas[i].isVariableWidth()) {
-                nextBufferSpecs[i] = null;
-                underuseStreaks[i] = 0;
+                resolvedSpecs[i] = null;
+                resolvedUnderuseStreaks[i] = 0;
                 continue;
             }
 
@@ -777,11 +779,17 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Pr
             if (current == null) {
                 current = Stmt2VariableWidthReuseHelper.resolveBufferSpec(nextBufferSpecs, i);
             }
-            Stmt2VariableWidthReuseHelper.SizingDecision decision =
-                    Stmt2VariableWidthReuseHelper.reactiveDecision(current, stats, underuseStreaks[i]);
-            nextBufferSpecs[i] = decision.getNextSpec();
-            underuseStreaks[i] = decision.getNextUnderuseStreak();
+            try {
+                Stmt2VariableWidthReuseHelper.SizingDecision decision =
+                        Stmt2VariableWidthReuseHelper.reactiveDecision(current, stats, underuseStreaks[i]);
+                resolvedSpecs[i] = decision.getNextSpec();
+                resolvedUnderuseStreaks[i] = decision.getNextUnderuseStreak();
+            } catch (IllegalArgumentException ignored) {
+                return;
+            }
         }
+        nextBufferSpecs = resolvedSpecs;
+        underuseStreaks = resolvedUnderuseStreaks;
     }
 
     private Stmt2ColumnFieldBuffer[] allocateColumnBuffers() {

@@ -5,6 +5,7 @@ import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnFieldBuffer;
+import com.taosdata.jdbc.ws.stmt2.Stmt2FieldMeta;
 import com.taosdata.jdbc.ws.stmt2.WSEWChunkSizingUtil;
 import com.taosdata.jdbc.ws.stmt2.entity.Stmt2ExecResp;
 import com.taosdata.jdbc.ws.stmt2.entity.Field;
@@ -25,6 +26,7 @@ import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_INT;
 import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_UTINYINT;
 import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_VARCHAR;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -94,6 +96,14 @@ public class WSColumnFastPreparedStatementTest {
         assertEquals(java.sql.Statement.SUCCESS_NO_INFO, result[0]);
         assertEquals(0, getBatchStats(stmt)[0].getObservedValueBytes());
         assertEquals(0, getBatchStats(stmt)[0].getRowsWritten());
+    }
+
+    @Test
+    public void constructor_enablesBindExecWritePathForCapableConnection() {
+        WSColumnFastPreparedStatement stmt = buildStmt(Collections.singletonList(field(
+                (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_INT)));
+
+        assertTrue(stmt.isUsingBindExec());
     }
 
     @Test
@@ -178,6 +188,29 @@ public class WSColumnFastPreparedStatementTest {
 
         WSEWChunkSizingUtil.BufferSpec nextSpec = getNextBufferSpecs(stmt)[0];
         assertTrue(nextSpec.getChunkBytes() > 8 * 1024);
+    }
+
+    @Test
+    public void updateNextBufferSpecsAfterSuccessfulBatch_ignoresSizingOverflowWithoutPartialStateUpdate()
+            throws Exception {
+        WSColumnFastPreparedStatement stmt = buildStmt(twoFields(TSDB_DATA_TYPE_VARCHAR, TSDB_DATA_TYPE_VARCHAR));
+        WSEWChunkSizingUtil.FieldBatchStats[] stats = getBatchStats(stmt);
+
+        stats[0].recordValueBytes(50L * 1024, 1024, 1);
+        stats[0].setActiveChunksUsed(9);
+        stats[1].recordValueBytes(1L, 1, 1);
+        setColumnBuffer(stmt, 1, newBufferWithoutReusableSpecButOverflowing());
+        setNextBufferSpec(stmt, 1, new WSEWChunkSizingUtil.BufferSpec(Integer.MAX_VALUE, 1));
+        setUnderuseStreak(stmt, 0, 11);
+        setUnderuseStreak(stmt, 1, 13);
+
+        invokeUpdateNextBufferSpecsAfterSuccessfulBatch(stmt);
+
+        WSEWChunkSizingUtil.BufferSpec[] nextSpecs = getNextBufferSpecs(stmt);
+        assertNull(nextSpecs[0]);
+        assertEquals(Integer.MAX_VALUE, nextSpecs[1].getChunkBytes());
+        assertEquals(11, getUnderuseStreak(stmt, 0));
+        assertEquals(13, getUnderuseStreak(stmt, 1));
     }
 
     @Test
@@ -372,6 +405,59 @@ public class WSColumnFastPreparedStatementTest {
                 WSColumnFastPreparedStatement.class.getDeclaredField("nextBufferSpecs");
         nextSpecsField.setAccessible(true);
         return (WSEWChunkSizingUtil.BufferSpec[]) nextSpecsField.get(stmt);
+    }
+
+    private static void setColumnBuffer(
+            WSColumnFastPreparedStatement stmt,
+            int index,
+            Stmt2ColumnFieldBuffer buffer) throws Exception {
+        Stmt2ColumnFieldBuffer[] buffers = getColumnBuffers(stmt);
+        Stmt2ColumnFieldBuffer previous = buffers[index];
+        if (previous != null) {
+            previous.release();
+        }
+        buffers[index] = buffer;
+    }
+
+    private static void setUnderuseStreak(
+            WSColumnFastPreparedStatement stmt,
+            int index,
+            int streak) throws Exception {
+        java.lang.reflect.Field field = WSColumnFastPreparedStatement.class.getDeclaredField("underuseStreaks");
+        field.setAccessible(true);
+        int[] streaks = (int[]) field.get(stmt);
+        streaks[index] = streak;
+    }
+
+    private static int getUnderuseStreak(WSColumnFastPreparedStatement stmt, int index) throws Exception {
+        java.lang.reflect.Field field = WSColumnFastPreparedStatement.class.getDeclaredField("underuseStreaks");
+        field.setAccessible(true);
+        return ((int[]) field.get(stmt))[index];
+    }
+
+    private static void invokeUpdateNextBufferSpecsAfterSuccessfulBatch(WSColumnFastPreparedStatement stmt)
+            throws Exception {
+        java.lang.reflect.Method method = WSColumnFastPreparedStatement.class
+                .getDeclaredMethod("updateNextBufferSpecsAfterSuccessfulBatch");
+        method.setAccessible(true);
+        method.invoke(stmt);
+    }
+
+    private static Stmt2ColumnFieldBuffer newBufferWithoutReusableSpecButOverflowing() throws Exception {
+        Stmt2ColumnFieldBuffer buffer = new Stmt2ColumnFieldBuffer(Stmt2FieldMeta.fromField(field(
+                (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_VARCHAR)));
+        java.lang.reflect.Field reusableField =
+                Stmt2ColumnFieldBuffer.class.getDeclaredField("reusableValueBuffer");
+        reusableField.setAccessible(true);
+        Class<?> reusableClass = Class.forName("com.taosdata.jdbc.ws.stmt2.ReusableChunkedBuffer");
+        java.lang.reflect.Constructor<?> ctor = reusableClass.getDeclaredConstructor(int.class, int.class, int.class);
+        ctor.setAccessible(true);
+        Object reusable = ctor.newInstance(8 * 1024, 4 * 1024, 1);
+        java.lang.reflect.Field overflowField = reusableClass.getDeclaredField("overflowCount");
+        overflowField.setAccessible(true);
+        overflowField.setInt(reusable, 1);
+        reusableField.set(buffer, reusable);
+        return buffer;
     }
 
     private static SQLException assertSqlException(ThrowingRunnable runnable) throws Exception {

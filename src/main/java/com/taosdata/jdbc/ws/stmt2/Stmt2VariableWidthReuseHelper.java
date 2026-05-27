@@ -3,8 +3,6 @@ package com.taosdata.jdbc.ws.stmt2;
 import java.sql.SQLException;
 
 public final class Stmt2VariableWidthReuseHelper {
-    private static final int MIN_CHUNK_BYTES = 8 * 1024;
-
     public static final class SizingDecision {
         private final WSEWChunkSizingUtil.BufferSpec nextSpec;
         private final int nextUnderuseStreak;
@@ -89,7 +87,7 @@ public final class Stmt2VariableWidthReuseHelper {
                                     current.getReusableChunkCount() - 1),
                             0);
                 }
-                int smallerChunk = Math.max(MIN_CHUNK_BYTES, current.getChunkBytes() >> 1);
+                int smallerChunk = Math.max(minChunkBytes(), current.getChunkBytes() >> 1);
                 return new SizingDecision(new WSEWChunkSizingUtil.BufferSpec(smallerChunk, 1), 0);
             }
             return new SizingDecision(current, underuseStreak + 1);
@@ -119,6 +117,10 @@ public final class Stmt2VariableWidthReuseHelper {
         if (result <= 0 || result > Integer.MAX_VALUE) {
             throw new IllegalArgumentException("chunk size overflow: " + value);
         }
-        return (int) Math.max(MIN_CHUNK_BYTES, result);
+        return (int) Math.max(minChunkBytes(), result);
+    }
+
+    private static int minChunkBytes() {
+        return WSEWChunkSizingUtil.bootstrapSpec().getChunkBytes();
     }
 }
