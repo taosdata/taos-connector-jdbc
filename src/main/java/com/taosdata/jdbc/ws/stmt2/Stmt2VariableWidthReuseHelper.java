@@ -70,6 +70,9 @@ public final class Stmt2VariableWidthReuseHelper {
                     roundUpPow2(Math.max(
                             stats.getMaxSingleValueBytes(),
                             stats.getObservedValueBytes() / 4)));
+            if (wantedChunkBytes > Integer.MAX_VALUE) {
+                throw new IllegalArgumentException("chunk size overflow: " + wantedChunkBytes);
+            }
             int chunkBytes = (int) Math.max(current.getChunkBytes(), wantedChunkBytes);
             int chunkCount = (int) Math.max(
                     1L,

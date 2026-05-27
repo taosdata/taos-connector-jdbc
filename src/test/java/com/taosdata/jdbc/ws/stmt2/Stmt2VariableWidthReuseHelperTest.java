@@ -7,6 +7,7 @@ import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_VARCHAR;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class Stmt2VariableWidthReuseHelperTest {
 
@@ -78,6 +79,21 @@ public class Stmt2VariableWidthReuseHelperTest {
 
         assertTrue(decision.getNextSpec().getChunkBytes() > current.getChunkBytes());
         assertEquals(0, decision.getNextUnderuseStreak());
+    }
+
+    @Test
+    public void reactiveSizing_throwsClearOverflowErrorWhenGrowthExceedsIntMax() {
+        WSEWChunkSizingUtil.BufferSpec current = new WSEWChunkSizingUtil.BufferSpec(Integer.MAX_VALUE, 1);
+        WSEWChunkSizingUtil.FieldBatchStats stats = new WSEWChunkSizingUtil.FieldBatchStats();
+        stats.recordValueBytes(1L, 1, 1);
+        stats.setOverflowCount(1);
+
+        try {
+            Stmt2VariableWidthReuseHelper.reactiveDecision(current, stats, 0);
+            fail("expected IllegalArgumentException");
+        } catch (IllegalArgumentException e) {
+            assertTrue(e.getMessage().contains("chunk size overflow"));
+        }
     }
 
     @Test
