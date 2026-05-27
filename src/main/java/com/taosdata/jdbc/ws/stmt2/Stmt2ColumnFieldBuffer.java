@@ -46,6 +46,7 @@ public final class Stmt2ColumnFieldBuffer {
     private final AutoExpandingBuffer nullBuffer;
     private final AutoExpandingBuffer lengthBuffer;
     private final AutoExpandingBuffer valueBuffer;
+    private final ReusableChunkedBuffer reusableValueBuffer;
     private int rowCount = 0;
     private int nullCount = 0;
     private int tableCount = 0;
@@ -56,18 +57,49 @@ public final class Stmt2ColumnFieldBuffer {
     }
 
     public Stmt2ColumnFieldBuffer(Stmt2FieldMeta meta, BufferSizeHints hints) {
+        this(meta, hints, 0, 0, 0);
+    }
+
+    private Stmt2ColumnFieldBuffer(Stmt2FieldMeta meta,
+                                   BufferSizeHints hints,
+                                   int reusableChunkBytes,
+                                   int dedicatedThresholdBytes,
+                                   int maxReusableChunks) {
         this.meta = meta;
         if (meta.isVariableWidth()) {
             this.fixedWidthSlab = null;
             this.nullBuffer = new AutoExpandingBuffer(resolveNullBufferInitSize(hints), MAX_COMPONENT_COUNT);
             this.lengthBuffer = new AutoExpandingBuffer(resolveLengthBufferInitSize(hints), MAX_COMPONENT_COUNT);
-            this.valueBuffer = new AutoExpandingBuffer(resolveValueBufferInitSize(meta, hints), MAX_COMPONENT_COUNT);
+            if (reusableChunkBytes > 0) {
+                this.reusableValueBuffer = new ReusableChunkedBuffer(
+                        Math.max(reusableChunkBytes, resolveValueBufferInitSize(meta, hints)),
+                        dedicatedThresholdBytes,
+                        Math.max(1, maxReusableChunks));
+                this.valueBuffer = null;
+            } else {
+                this.reusableValueBuffer = null;
+                this.valueBuffer = new AutoExpandingBuffer(resolveValueBufferInitSize(meta, hints), MAX_COMPONENT_COUNT);
+            }
         } else {
             this.fixedWidthSlab = new FixedWidthRawSlab(meta.fixedWidth(), resolveFixedWidthInitialRows(meta, hints));
             this.nullBuffer = null;
             this.lengthBuffer = null;
             this.valueBuffer = null;
+            this.reusableValueBuffer = null;
         }
+    }
+
+    public static Stmt2ColumnFieldBuffer forReusableValueBuffer(Stmt2FieldMeta meta,
+                                                                BufferSizeHints hints,
+                                                                int reusableChunkBytes,
+                                                                int dedicatedThresholdBytes,
+                                                                int maxReusableChunks) {
+        return new Stmt2ColumnFieldBuffer(
+                meta,
+                hints,
+                reusableChunkBytes,
+                dedicatedThresholdBytes,
+                maxReusableChunks);
     }
 
     // -----------------------------------------------------------------------
@@ -196,7 +228,11 @@ public final class Stmt2ColumnFieldBuffer {
         }
         appendNonNullPrefix();
         lengthBuffer.writeIntLE(len);
-        valueBuffer.writeBytes(data, 0, len);
+        if (reusableValueBuffer != null) {
+            reusableValueBuffer.writeBytes(data, 0, len);
+        } else {
+            valueBuffer.writeBytes(data, 0, len);
+        }
         rowCount++;
     }
 
@@ -226,7 +262,9 @@ public final class Stmt2ColumnFieldBuffer {
             return;
         }
         appendNonNullPrefix();
-        int utf8Length = valueBuffer.writeString(value);
+        int utf8Length = reusableValueBuffer != null
+                ? reusableValueBuffer.writeString(value)
+                : valueBuffer.writeString(value);
         lengthBuffer.writeIntLE(utf8Length);
         rowCount++;
     }
@@ -236,7 +274,9 @@ public final class Stmt2ColumnFieldBuffer {
             throw new IllegalArgumentException("Table name must not be null or empty");
         }
         appendNonNullPrefix();
-        int utf8Length = valueBuffer.writeString(name);
+        int utf8Length = reusableValueBuffer != null
+                ? reusableValueBuffer.writeString(name)
+                : valueBuffer.writeString(name);
         lengthBuffer.writeIntLE(utf8Length);
         rowCount++;
         if (!name.equals(lastTableName)) {
@@ -310,7 +350,13 @@ public final class Stmt2ColumnFieldBuffer {
     }
 
     int blockComponentCount() {
-        return effectiveValueLength() > 0 ? 2 : 1;
+        if (effectiveValueLength() <= 0) {
+            return 1;
+        }
+        if (reusableValueBuffer != null) {
+            return 1 + reusableValueBuffer.componentCount();
+        }
+        return 2;
     }
 
     void appendColumnBlockTo(CompositeByteBuf target) {
@@ -340,9 +386,13 @@ public final class Stmt2ColumnFieldBuffer {
             target.addComponent(true, header);
             header = null;
             if (bufferLength > 0) {
-                valueSlice = currentValueSlice();
-                target.addComponent(true, valueSlice);
-                valueSlice = null;
+                if (reusableValueBuffer != null) {
+                    reusableValueBuffer.appendReadableComponents(target);
+                } else {
+                    valueSlice = currentValueSlice();
+                    target.addComponent(true, valueSlice);
+                    valueSlice = null;
+                }
             }
             success = true;
         } finally {
@@ -398,7 +448,28 @@ public final class Stmt2ColumnFieldBuffer {
                 lengthBuffer == null ? 0 : Math.max(LENGTH_BUFFER_INIT_SIZE, lengthBuffer.readableBytes()),
                 fixedWidthSlab != null
                         ? Math.max(resolveValueBufferInitSize(meta, null), fixedWidthSlab.valueCapacityBytes())
-                        : Math.max(resolveValueBufferInitSize(meta, null), valueBuffer.readableBytes()));
+                        : Math.max(
+                                resolveValueBufferInitSize(meta, null),
+                                reusableValueBuffer != null
+                                        ? Math.max(reusableValueBuffer.cachedCapacityBytes(), reusableValueBuffer.readableBytes())
+                                        : valueBuffer.readableBytes()));
+    }
+
+    public WSEWChunkSizingUtil.BufferSpec currentReusableSpec() {
+        if (reusableValueBuffer == null) {
+            return null;
+        }
+        int count = reusableValueBuffer.cachedReusableChunkCount();
+        if (count <= 0) {
+            return null;
+        }
+        return new WSEWChunkSizingUtil.BufferSpec(
+                reusableValueBuffer.chunkBytes(),
+                count);
+    }
+
+    public int activeReusableChunkCount() {
+        return reusableValueBuffer == null ? 0 : reusableValueBuffer.activeChunkCount();
     }
 
     public void release() {
@@ -410,6 +481,9 @@ public final class Stmt2ColumnFieldBuffer {
         }
         if (valueBuffer != null) {
             valueBuffer.release();
+        }
+        if (reusableValueBuffer != null) {
+            reusableValueBuffer.release();
         }
     }
 
@@ -426,7 +500,11 @@ public final class Stmt2ColumnFieldBuffer {
         if (lengthBuffer != null) {
             lengthBuffer.reset();
         }
-        valueBuffer.reset();
+        if (reusableValueBuffer != null) {
+            reusableValueBuffer.reset();
+        } else {
+            valueBuffer.reset();
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -487,6 +565,9 @@ public final class Stmt2ColumnFieldBuffer {
         if (nullCount == rowCount) {
             return 0;
         }
-        return fixedWidthSlab != null ? rowCount * meta.fixedWidth() : valueBuffer.readableBytes();
+        if (fixedWidthSlab != null) {
+            return rowCount * meta.fixedWidth();
+        }
+        return reusableValueBuffer != null ? reusableValueBuffer.readableBytes() : valueBuffer.readableBytes();
     }
 }
