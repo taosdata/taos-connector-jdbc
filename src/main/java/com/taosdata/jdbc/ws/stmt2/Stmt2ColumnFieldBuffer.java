@@ -196,11 +196,15 @@ public final class Stmt2ColumnFieldBuffer {
     }
 
     public void appendString(String value) throws SQLException {
+        appendString(value, value == null ? 0 : ByteBufUtil.utf8Bytes(value));
+    }
+
+    public void appendString(String value, int utf8Length) throws SQLException {
         if (isTbNameColumn()) {
-            appendTbNameValue(value);
+            appendTbNameValue(value, utf8Length);
             return;
         }
-        appendUtf8Value(value);
+        appendUtf8Value(value, utf8Length);
     }
 
     /**
@@ -214,7 +218,14 @@ public final class Stmt2ColumnFieldBuffer {
         if (!isTbNameColumn()) {
             throw new IllegalStateException("appendTbName called on non-tbname column");
         }
-        appendTbNameValue(name);
+        appendTbName(name, name == null ? 0 : ByteBufUtil.utf8Bytes(name));
+    }
+
+    public void appendTbName(String name, int utf8Length) throws SQLException {
+        if (!isTbNameColumn()) {
+            throw new IllegalStateException("appendTbName called on non-tbname column");
+        }
+        appendTbNameValue(name, utf8Length);
     }
 
     public void appendEncodedVar(byte[] data, int len) throws SQLException {
@@ -256,28 +267,32 @@ public final class Stmt2ColumnFieldBuffer {
         rowCount++;
     }
 
-    private void appendUtf8Value(String value) throws SQLException {
+    private void appendUtf8Value(String value, int utf8Length) throws SQLException {
         if (value == null) {
             appendNull();
             return;
         }
         appendNonNullPrefix();
-        int utf8Length = reusableValueBuffer != null
-                ? reusableValueBuffer.writeString(value)
+        int writtenUtf8Length = reusableValueBuffer != null
+                ? reusableValueBuffer.writeString(value, utf8Length)
                 : valueBuffer.writeString(value);
-        lengthBuffer.writeIntLE(utf8Length);
+        lengthBuffer.writeIntLE(writtenUtf8Length);
         rowCount++;
     }
 
     private void appendTbNameValue(String name) throws SQLException {
+        appendTbNameValue(name, name == null ? 0 : ByteBufUtil.utf8Bytes(name));
+    }
+
+    private void appendTbNameValue(String name, int utf8Length) throws SQLException {
         if (name == null || name.isEmpty()) {
             throw new IllegalArgumentException("Table name must not be null or empty");
         }
         appendNonNullPrefix();
-        int utf8Length = reusableValueBuffer != null
-                ? reusableValueBuffer.writeString(name)
+        int writtenUtf8Length = reusableValueBuffer != null
+                ? reusableValueBuffer.writeString(name, utf8Length)
                 : valueBuffer.writeString(name);
-        lengthBuffer.writeIntLE(utf8Length);
+        lengthBuffer.writeIntLE(writtenUtf8Length);
         rowCount++;
         if (!name.equals(lastTableName)) {
             tableCount++;

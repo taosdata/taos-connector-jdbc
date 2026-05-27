@@ -191,7 +191,7 @@ public class WSColumnFastPreparedStatementTest {
     }
 
     @Test
-    public void updateNextBufferSpecsAfterSuccessfulBatch_ignoresSizingOverflowWithoutPartialStateUpdate()
+    public void updateNextBufferSpecsAfterSuccessfulBatch_keepsOtherSizingUpdatesWhenOneFieldOverflows()
             throws Exception {
         WSColumnFastPreparedStatement stmt = buildStmt(twoFields(TSDB_DATA_TYPE_VARCHAR, TSDB_DATA_TYPE_VARCHAR));
         WSEWChunkSizingUtil.FieldBatchStats[] stats = getBatchStats(stmt);
@@ -207,10 +207,11 @@ public class WSColumnFastPreparedStatementTest {
         invokeUpdateNextBufferSpecsAfterSuccessfulBatch(stmt);
 
         WSEWChunkSizingUtil.BufferSpec[] nextSpecs = getNextBufferSpecs(stmt);
-        assertNull(nextSpecs[0]);
+        assertTrue(nextSpecs[0].getChunkBytes() > 8 * 1024);
+        assertEquals(0, getUnderuseStreak(stmt, 0));
         assertEquals(Integer.MAX_VALUE, nextSpecs[1].getChunkBytes());
-        assertEquals(11, getUnderuseStreak(stmt, 0));
-        assertEquals(13, getUnderuseStreak(stmt, 1));
+        assertEquals(1, nextSpecs[1].getReusableChunkCount());
+        assertEquals(0, getUnderuseStreak(stmt, 1));
     }
 
     @Test

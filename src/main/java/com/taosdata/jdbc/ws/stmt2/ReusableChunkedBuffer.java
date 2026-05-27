@@ -62,7 +62,10 @@ final class ReusableChunkedBuffer {
     }
 
     int writeString(String value) {
-        int utf8Length = ByteBufUtil.utf8Bytes(value);
+        return writeString(value, ByteBufUtil.utf8Bytes(value));
+    }
+
+    int writeString(String value, int utf8Length) {
         if (utf8Length <= 0) {
             return 0;
         }

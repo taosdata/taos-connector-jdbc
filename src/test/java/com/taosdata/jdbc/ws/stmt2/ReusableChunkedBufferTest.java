@@ -219,8 +219,25 @@ public class ReusableChunkedBufferTest {
         }
     }
 
+    @Test
+    public void writeString_withPrecomputedUtf8Length_preservesReusableStringBehavior() throws Exception {
+        Object buffer = newBuffer(16, 12, 2);
+        try {
+            assertEquals(6, invokeWriteString(buffer, "ééé", 6));
+            assertEquals("ééé", dumpUtf8(buffer));
+            assertEquals(1, cachedStandardChunks(buffer).size());
+            assertEquals(0, overflowCount(buffer));
+        } finally {
+            release(buffer);
+        }
+    }
+
     private static int invokeWriteString(Object buffer, String value) throws Exception {
         return (int) invoke(buffer, "writeString", new Class<?>[]{String.class}, value);
+    }
+
+    private static int invokeWriteString(Object buffer, String value, int utf8Length) throws Exception {
+        return (int) invoke(buffer, "writeString", new Class<?>[]{String.class, int.class}, value, utf8Length);
     }
 
     private static Object newBuffer(int standardChunkBytes, int dedicatedThresholdBytes, int maxReusableChunks) throws Exception {

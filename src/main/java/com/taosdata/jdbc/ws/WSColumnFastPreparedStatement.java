@@ -123,11 +123,11 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Pr
         }
         int valueBytes = value == null ? 0 : ByteBufUtil.utf8Bytes(value);
         if (paramIdx == tbNameFieldIdx) {
-            columnBuffer(paramIdx).appendTbName(value);
+            columnBuffer(paramIdx).appendTbName(value, valueBytes);
             observeVarWidthWrite(paramIdx, valueBytes);
             return;
         }
-        columnBuffer(paramIdx).appendString(value);
+        columnBuffer(paramIdx).appendString(value, valueBytes);
         observeVarWidthWrite(paramIdx, valueBytes);
     }
 
@@ -785,7 +785,8 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Pr
                 resolvedSpecs[i] = decision.getNextSpec();
                 resolvedUnderuseStreaks[i] = decision.getNextUnderuseStreak();
             } catch (IllegalArgumentException ignored) {
-                return;
+                resolvedSpecs[i] = current;
+                resolvedUnderuseStreaks[i] = 0;
             }
         }
         nextBufferSpecs = resolvedSpecs;
