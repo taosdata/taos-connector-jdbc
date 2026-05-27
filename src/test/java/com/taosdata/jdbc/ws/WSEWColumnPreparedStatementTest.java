@@ -374,6 +374,46 @@ public class WSEWColumnPreparedStatementTest {
         assertEquals(expected.getReusableChunkCount(), actual.getReusableChunkCount());
     }
 
+    /**
+     * Regression: {@code IllegalArgumentException} thrown inside the inner try-block of
+     * {@code ColumnarWSEWSerializationTask.compute()} (e.g. from {@code updateNextBufferSpecs}
+     * sizing overflow) must enqueue an error block rather than silently consuming rows and
+     * leaving {@code waitWriteCompleted()} hanging.
+     *
+     * We inject the exception by replacing the task's {@code batchStats} field with an
+     * undersized array via reflection, which causes {@code buildColumnBuffersFromQueuedRows}
+     * to throw {@code IllegalArgumentException} from its precondition guard — the same
+     * unchecked-exception path that a sizing overflow would follow.
+     */
+    @Test
+    public void serializationTask_illegalArgumentExceptionProducesErrorBlockNotHang() throws Exception {
+        EWBackendThreadInfo info = new EWBackendThreadInfo(16, 16);
+        StmtInfo stmt = wideStmtInfo(); // 4 fields
+        enqueueRows(info, wideRow("d0", 1000L, "hello", "world"));
+
+        WSEWColumnPreparedStatement.ColumnarWSEWSerializationTask task =
+                new WSEWColumnPreparedStatement.ColumnarWSEWSerializationTask(info, 1, stmt, false);
+
+        // Replace batchStats with a 2-element array (wideStmtInfo has 4 fields).
+        // buildColumnBuffersFromQueuedRows rejects it with IllegalArgumentException, which
+        // must be caught and routed to the error-block path, not escape the inner try.
+        java.lang.reflect.Field batchStatsField =
+                WSEWColumnPreparedStatement.ColumnarWSEWSerializationTask.class
+                        .getDeclaredField("batchStats");
+        batchStatsField.setAccessible(true);
+        batchStatsField.set(task, new WSEWChunkSizingUtil.FieldBatchStats[2]);
+
+        task.invoke();
+
+        EWRawBlock block = info.getSerialQueue().poll();
+        assertNotNull("task must enqueue a block (not hang) when IllegalArgumentException is thrown", block);
+        assertNotNull("error block must carry the exception", block.getLastError());
+        assertTrue("error message must reference sizing or IllegalArgumentException",
+                block.getLastError().getMessage() != null
+                        && block.getLastError().getMessage().length() > 0);
+        assertEquals("rows must still be accounted for", 1, block.getRowCount());
+    }
+
     private static String repeated(char c, int count) {
         char[] chars = new char[count];
         Arrays.fill(chars, c);

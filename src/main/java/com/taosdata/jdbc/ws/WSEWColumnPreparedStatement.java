@@ -490,6 +490,14 @@ public class WSEWColumnPreparedStatement extends AbstractWSEWPreparedStatement {
                             Thread.currentThread().interrupt();
                         }
                         break;
+                    } catch (IllegalArgumentException e) {
+                        try {
+                            serialQueue.put(new EWRawBlock(null, rows.size(),
+                                    new SQLException("Buffer sizing calculation failed: " + e.getMessage(), e)));
+                        } catch (InterruptedException interruptedException) {
+                            Thread.currentThread().interrupt();
+                        }
+                        break;
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                         break;
