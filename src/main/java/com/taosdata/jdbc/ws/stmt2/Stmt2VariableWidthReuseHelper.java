@@ -4,7 +4,6 @@ import java.sql.SQLException;
 
 public final class Stmt2VariableWidthReuseHelper {
     private static final int MIN_CHUNK_BYTES = 8 * 1024;
-    private static final int SHRINK_STREAK_THRESHOLD = 100;
 
     public static final class SizingDecision {
         private final WSEWChunkSizingUtil.BufferSpec nextSpec;
@@ -79,7 +78,7 @@ public final class Stmt2VariableWidthReuseHelper {
         }
 
         if (stats.getObservedValueBytes() < currentReusableBytes / 2) {
-            if (underuseStreak >= SHRINK_STREAK_THRESHOLD) {
+            if (underuseStreak >= WSEWChunkSizingUtil.SHRINK_STREAK_THRESHOLD) {
                 if (current.getReusableChunkCount() > 1) {
                     return new SizingDecision(
                             new WSEWChunkSizingUtil.BufferSpec(

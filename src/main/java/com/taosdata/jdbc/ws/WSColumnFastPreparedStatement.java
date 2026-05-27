@@ -20,6 +20,7 @@ import com.taosdata.jdbc.ws.stmt2.entity.RequestFactory;
 import com.taosdata.jdbc.ws.stmt2.entity.StmtInfo;
 import com.taosdata.jdbc.ws.stmt2.entity.Stmt2PrepareResp;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 
 import java.io.InputStream;
 import java.io.Reader;
@@ -120,15 +121,14 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Pr
         if (paramIdx == tbNameFieldIdx && (value == null || value.isEmpty())) {
             throw tableNameRequiredException();
         }
+        int valueBytes = value == null ? 0 : ByteBufUtil.utf8Bytes(value);
         if (paramIdx == tbNameFieldIdx) {
             columnBuffer(paramIdx).appendTbName(value);
-            observeVarWidthWrite(paramIdx, value.getBytes(java.nio.charset.StandardCharsets.UTF_8).length);
+            observeVarWidthWrite(paramIdx, valueBytes);
             return;
         }
         columnBuffer(paramIdx).appendString(value);
-        observeVarWidthWrite(
-                paramIdx,
-                value == null ? 0 : value.getBytes(java.nio.charset.StandardCharsets.UTF_8).length);
+        observeVarWidthWrite(paramIdx, valueBytes);
     }
 
     private void stageNull(int paramIdx) throws SQLException {

@@ -86,11 +86,12 @@ public class Stmt2VariableWidthReuseHelperTest {
         WSEWChunkSizingUtil.FieldBatchStats stats = new WSEWChunkSizingUtil.FieldBatchStats();
         stats.recordValueBytes(20L * 1024, 128, 100);
         stats.setActiveChunksUsed(2);
+        int threshold = WSEWChunkSizingUtil.SHRINK_STREAK_THRESHOLD;
 
         Stmt2VariableWidthReuseHelper.SizingDecision before =
-                Stmt2VariableWidthReuseHelper.reactiveDecision(current, stats, 99);
+                Stmt2VariableWidthReuseHelper.reactiveDecision(current, stats, threshold - 1);
         Stmt2VariableWidthReuseHelper.SizingDecision atThreshold =
-                Stmt2VariableWidthReuseHelper.reactiveDecision(current, stats, 100);
+                Stmt2VariableWidthReuseHelper.reactiveDecision(current, stats, threshold);
 
         assertEquals(current.getReusableChunkCount(), before.getNextSpec().getReusableChunkCount());
         assertEquals(current.getReusableChunkCount() - 1, atThreshold.getNextSpec().getReusableChunkCount());

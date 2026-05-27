@@ -4,7 +4,7 @@ public final class WSEWChunkSizingUtil {
     private static final int BOOTSTRAP_CHUNK_BYTES = 8 * 1024;
     private static final int TARGET_ACTIVE_CHUNKS = 4;
     private static final int MIN_ACTIVE_CHUNKS = 2;
-    private static final int SHRINK_STREAK_THRESHOLD = 100;
+    static final int SHRINK_STREAK_THRESHOLD = 100;
 
     public static final class BufferSpec {
         private final int chunkBytes;

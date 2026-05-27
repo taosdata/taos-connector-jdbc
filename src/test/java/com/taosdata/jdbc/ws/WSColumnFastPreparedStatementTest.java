@@ -81,16 +81,19 @@ public class WSColumnFastPreparedStatementTest {
     @Test
     public void executeBatch_bindExecTransportConsumesRequestBuffer_withoutDoubleRelease() throws Exception {
         stubBindExecTransportConsumesRequestBuffer(1);
-        WSColumnFastPreparedStatement stmt = buildStmt(tbNameAndColFields());
+        WSColumnFastPreparedStatement stmt = buildStmt(twoFields(TSDB_DATA_TYPE_VARCHAR, TSDB_DATA_TYPE_INT));
 
-        stmt.setString(1, "d000000001");
+        stmt.setString(1, "value");
         stmt.setInt(2, 7);
         stmt.addBatch();
+        assertTrue(getBatchStats(stmt)[0].getObservedValueBytes() > 0);
 
         int[] result = stmt.executeBatch();
 
         assertEquals(1, result.length);
         assertEquals(java.sql.Statement.SUCCESS_NO_INFO, result[0]);
+        assertEquals(0, getBatchStats(stmt)[0].getObservedValueBytes());
+        assertEquals(0, getBatchStats(stmt)[0].getRowsWritten());
     }
 
     @Test
