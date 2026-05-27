@@ -70,32 +70,59 @@ public final class WSEWChunkSizingUtil {
         return new BufferSpec(BOOTSTRAP_CHUNK_BYTES, 1);
     }
 
-    public static BufferSpec deriveWantedSpec(FieldBatchStats stats, int batchSizeByRow) {
+    /**
+     * Returns the projected total value bytes for a full batch of {@code batchSizeByRow} rows,
+     * scaled from the observed bytes in {@code stats}. The result is at least the already-observed
+     * bytes so it never shrinks below what was actually written.
+     *
+     * <p>This is the single authoritative formula used by both {@link #deriveWantedSpec} and the
+     * stats-aware {@link #canReuse} overload; callers should prefer these entry points rather than
+     * replicating the scaling arithmetic.
+     */
+    public static long projectedValueBytes(FieldBatchStats stats, int batchSizeByRow) {
         if (stats.getRowsWritten() == 0) {
             throw new IllegalArgumentException(
                     "stats.rowsWritten must be > 0; got 0, which would cause division by zero");
         }
-        long projectedValueBytes = Math.max(
+        return Math.max(
                 stats.getObservedValueBytes(),
                 (long) Math.ceil((double) stats.getObservedValueBytes() * batchSizeByRow / stats.getRowsWritten()));
-        long perChunkTarget = Math.max(1L, projectedValueBytes / TARGET_ACTIVE_CHUNKS);
+    }
+
+    public static BufferSpec deriveWantedSpec(FieldBatchStats stats, int batchSizeByRow) {
+        long projected = projectedValueBytes(stats, batchSizeByRow);
+        long perChunkTarget = Math.max(1L, projected / TARGET_ACTIVE_CHUNKS);
         long chunkCandidate = Math.max(stats.getMaxSingleValueBytes(), perChunkTarget);
         // dynamicMaxChunkBytes is the cap; it is a valid int power-of-two or throws.
-        long dynamicMaxChunkBytes = roundUpToPowerOfTwo(Math.max(64L * 1024, projectedValueBytes / MIN_ACTIVE_CHUNKS));
+        long dynamicMaxChunkBytes = roundUpToPowerOfTwo(Math.max(64L * 1024, projected / MIN_ACTIVE_CHUNKS));
         // Cap chunkCandidate before rounding so roundUpToPowerOfTwo cannot exceed the already-validated cap.
         long chunkCandidateCapped = Math.min(chunkCandidate, dynamicMaxChunkBytes);
         int wantedChunkBytes = (int) Math.max(BOOTSTRAP_CHUNK_BYTES,
                 Math.min(dynamicMaxChunkBytes, roundUpToPowerOfTwo(chunkCandidateCapped)));
         int wantedChunkCount = (int) Math.max(1L,
-                (projectedValueBytes + wantedChunkBytes - 1) / wantedChunkBytes);
+                (projected + wantedChunkBytes - 1) / wantedChunkBytes);
         return new BufferSpec(wantedChunkBytes, wantedChunkCount);
     }
 
+    /**
+     * Returns whether {@code current} is reusable given a raw pre-computed {@code projectedValueBytes}.
+     * Prefer the stats-aware overload when the projection has not already been computed.
+     */
     public static boolean canReuse(BufferSpec current, BufferSpec wanted, long projectedValueBytes, int targetActiveChunks) {
         long currentReusableBytes = (long) current.getChunkBytes() * current.getReusableChunkCount();
         long wantedReusableBytes = (long) wanted.getChunkBytes() * wanted.getReusableChunkCount();
         long effectiveActiveChunks = (projectedValueBytes + current.getChunkBytes() - 1) / current.getChunkBytes();
         return currentReusableBytes >= wantedReusableBytes && effectiveActiveChunks <= targetActiveChunks * 2L;
+    }
+
+    /**
+     * Stats-aware overload: computes the projection internally so callers do not need to replicate
+     * the scaling formula. Equivalent to {@code canReuse(current, wanted, projectedValueBytes(stats,
+     * batchSizeByRow), targetActiveChunks)}.
+     */
+    public static boolean canReuse(BufferSpec current, BufferSpec wanted,
+            FieldBatchStats stats, int batchSizeByRow, int targetActiveChunks) {
+        return canReuse(current, wanted, projectedValueBytes(stats, batchSizeByRow), targetActiveChunks);
     }
 
     public static boolean shouldShrink(BufferSpec current, BufferSpec wanted, int underuseStreak) {
