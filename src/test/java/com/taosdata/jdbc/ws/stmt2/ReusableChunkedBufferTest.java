@@ -86,7 +86,7 @@ public class ReusableChunkedBufferTest {
 
         writeBytes.invoke(buffer, new byte[20 * 1024], 0, 20 * 1024);
 
-        assertTrue(((Integer) overflowCount.invoke(buffer)) > 0);
+        assertEquals(2, overflowCount.invoke(buffer));
 
         reset.invoke(buffer);
         assertEquals(0, overflowCount.invoke(buffer));
@@ -102,9 +102,20 @@ public class ReusableChunkedBufferTest {
                 meta, null, 8 * 1024, 4 * 1024, 1);
         try {
             buffer.appendString(String.join("", Collections.nCopies(20_000, "a")));
-            assertTrue(buffer.reusableOverflowCount() > 0);
+            assertEquals(1, buffer.reusableOverflowCount());
         } finally {
             buffer.release();
+        }
+    }
+
+    @Test
+    public void writeString_oversized_incrementsOverflowCount() throws Exception {
+        Object buffer = newBuffer(8, 4, 2);
+        try {
+            assertEquals(10, invokeWriteString(buffer, "1234567890"));
+            assertEquals(1, overflowCount(buffer));
+        } finally {
+            release(buffer);
         }
     }
 
@@ -236,6 +247,10 @@ public class ReusableChunkedBufferTest {
 
     private static List<?> activeChunks(Object buffer) throws Exception {
         return (List<?>) getDeclaredField(buffer, "activeChunks");
+    }
+
+    private static int overflowCount(Object buffer) throws Exception {
+        return (int) invoke(buffer, "overflowCount", new Class<?>[0]);
     }
 
     private static Object activeChunkBuffer(Object buffer, int index) throws Exception {
