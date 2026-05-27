@@ -10,8 +10,8 @@
 1. 先 profile 当前要序列化的 rows；
 2. 即使当前 rows 不满，也按 `batchSizeByRow` 投影到“满批”规模；
 3. 对每个变长列算出一个 `BufferSpec = { chunkBytes, reusableChunkCount }`；
-4. `currentSpec == wantedSpec` 才复用，否则整列重建；
-5. 不引入历史学习状态，不引入 per-field hard cap，不改 payload 格式。
+4. `wantedSpec` 变大时立即重建，`wantedSpec` 变小时先复用，再按 shrink 条件缩容；
+5. 不引入学习型历史状态，不引入 per-field hard cap，不改 payload 格式。
 
 核心目标是：**行为可预测、好测试、不因为“学习逻辑”引入隐蔽 bug。**
 
@@ -41,7 +41,7 @@
 2. 同一类 workload 下，buffer 规格要很快稳定下来；
 3. 行为要能靠单元测试直接断言；
 4. payload 内容和现有序列化语义保持不变；
-5. 避免“自学习状态”带来的解释成本和 bug 风险。
+5. 避免复杂“自学习状态”带来的解释成本和 bug 风险。
 
 ## 4. 非目标
 
@@ -49,7 +49,7 @@
 
 1. 不做机器学习；
 2. 不做滚动分位数学习；
-3. 不做带历史窗口的自适应控制；
+3. 不做带历史窗口的自适应 sizing 学习；
 4. 不做 per-field hard cap；
 5. 不改 dedicated chunk 的语义；
 6. 不改 fixed-width 字段的存储方式。
@@ -78,12 +78,11 @@
 
 这两个值共同决定该列的 reusable value buffer 形态。
 
-设计原则很简单：
+除了 `BufferSpec` 之外，只额外保留一个很小的状态：
 
-- **规格相同**：复用
-- **规格不同**：整列重建
+- `underuseStreak`
 
-不做“在线扩容一点、缩容一点”的中间态逻辑。
+它不是 learner，只是 shrink 的防抖计数器。
 
 ## 7. Batch-local profiling
 
@@ -221,28 +220,57 @@ requiredReusableChunks =
 所以对于 `2000` 行的大 batch，系统会自然从 “4 个 chunk” 提升到 “约 13 个 chunk”，
 而不是被固定常量卡住。
 
-## 11. 复用 / 重建规则
+## 11. 复用 / 重建 / shrink 规则
 
-这版规则故意保持得非常硬：
+### 11.1 grow：立即生效
 
-- `currentSpec == wantedSpec`：复用
-- `currentSpec != wantedSpec`：整列重建
+如果 `wantedSpec` 比 `currentSpec` 大，就立刻重建。
 
-也就是说，不做：
+这里的“大”按两个维度判断：
 
-- 原地增减 chunk 数
-- 原地替换 chunk size
-- 缓慢扩容 / 缓慢缩容
+- `wanted.chunkBytes > current.chunkBytes`
+- 或 `wanted.reusableChunkCount > current.reusableChunkCount`
 
-这样做的原因：
+只要任一维度需要放大，就直接重建到 `wantedSpec`，并把 `underuseStreak` 清零。
 
-1. 行为完全确定
-2. 容易断言“这批该复用还是该重建”
-3. 不会因为历史大 batch 把 oversized cache 一直留下来
-4. 出问题时容易定位
+### 11.2 same：直接复用
 
-在前面的“按满批投影”规则下，稳定 workload 的 `wantedSpec` 会很快稳定，所以不会造成
-频繁重建。
+如果 `wantedSpec == currentSpec`：
+
+- 直接复用
+- `underuseStreak = 0`
+
+### 11.3 shrink：先复用，再延迟缩容
+
+如果 `wantedSpec <= currentSpec`，即：
+
+- `wanted.chunkBytes <= current.chunkBytes`
+- 且 `wanted.reusableChunkCount <= current.reusableChunkCount`
+
+那么这一批先继续复用当前 buffer，不立即缩。
+
+同时：
+
+- 如果 `wantedSpec < currentSpec`，则 `underuseStreak += 1`
+- 如果 `wantedSpec == currentSpec`，则 `underuseStreak = 0`
+
+只有同时满足下面两个条件时，才触发 shrink 重建：
+
+1. `underuseStreak >= 8`
+2. `current.chunkBytes * current.reusableChunkCount >= 2 * wanted.chunkBytes * wanted.reusableChunkCount`
+
+也就是：
+
+- grow 立即执行
+- shrink 延迟执行
+- 而且只有“连续低于当前规格一段时间，并且当前容量至少大约 2 倍”才真正缩
+
+### 11.4 这样放宽的原因
+
+1. 避免 batch 轻微波动就来回重建
+2. 允许“当前规格略大于 wanted”时继续吃掉抖动
+3. 只增加一个很小的状态 `underuseStreak`，仍然很好测
+4. 对稳定 workload，规格仍会稳定
 
 ## 12. Dedicated chunk 语义不变
 
@@ -252,7 +280,7 @@ requiredReusableChunks =
 
 1. 变长列 `chunkSize` 怎么算
 2. 变长列 `reusableChunkCount` 怎么算
-3. 当前 buffer 是复用还是重建
+3. 当前 buffer 是 grow、reuse 还是 shrink
 
 不改 payload 格式，不改值编码，不改 dedicated chunk 的判断方向。
 
@@ -265,7 +293,7 @@ requiredReusableChunks =
 1. 扫描当前 rows
 2. 对每个变长列算出 `projectedValueBytes`
 3. 对每个变长列生成 `wantedSpec`
-4. 决定每列是复用还是重建
+4. 决定每列是 grow、reuse 还是 shrink
 5. 再把真实 rows 填进选定的 buffers
 
 ### 13.2 `Stmt2ColumnFieldBuffer`
@@ -275,7 +303,13 @@ requiredReusableChunks =
 - 当前 `chunkBytes`
 - 当前 `reusableChunkCount`
 
-这样上层才能做 `currentSpec == wantedSpec` 判断。
+这样上层才能做：
+
+- `wantedSpec > currentSpec`
+- `wantedSpec == currentSpec`
+- `wantedSpec < currentSpec`
+
+三种判断。
 
 ### 13.3 `ReusableChunkedBuffer`
 
@@ -284,14 +318,14 @@ requiredReusableChunks =
 - `chunkBytes`
 - `reusableChunkCount`
 
-不做在线 resize；重配置通过“整列重建”完成。
+不做在线 resize；grow 和 shrink 都通过“整列重建”完成。
 
 ## 14. 错误处理和不变量
 
 1. 缺列仍然按当前逻辑抛 `SQLException`
 2. `observedRows == 0` 不是这条路径里的真实分支，不保留 fallback
 3. 如果某列本批没有非空值，也仍然按公式得到一个确定的 `wantedSpec`
-4. 如果重建后在填充过程中失败，要释放新建 buffer，并保持异常传播语义不变
+4. 如果 grow/shrink 重建后在填充过程中失败，要释放新建 buffer，并保持异常传播语义不变
 
 ## 15. 测试设计
 
@@ -311,12 +345,16 @@ requiredReusableChunks =
 4. **稳定 workload 复用**
    - 第一批建 buffer，后续同规格 batch 持续复用
 
-5. **规格切换重建**
+5. **grow 立即生效**
    - 小 workload 后接大 workload
-   - 断言 `wantedSpec` 变化时整列重建
+   - 断言 `wantedSpec` 变大时本批立即重建
 
-6. **payload 一致性**
-   - 复用路径和重建路径对同一批 rows 产出的 payload 完全一致
+6. **shrink 延迟触发**
+   - 连续喂入更小规格的 batch
+   - 断言前 `7` 批仍复用，第 `8` 批在 oversize 条件满足时 shrink
+
+7. **payload 一致性**
+   - 复用路径、grow 路径、shrink 路径对同一批 rows 产出的 payload 完全一致
 
 ### 15.2 回归测试
 
@@ -335,16 +373,16 @@ requiredReusableChunks =
 2. 不设 per-field hard cap，意味着超大字段可能会缓存更多 reusable chunks  
    这是这版设计的明确取舍。
 
-3. 精确规格匹配才复用，可能比“带迟滞的自适应”重建更频繁  
-   但它显著更容易测试和解释。
+3. 延迟 shrink 会让 oversized buffer 多存活几批  
+   这是为了换取更少抖动，且只增加一个很小的计数器状态。
 
 ## 17. 推荐落地顺序
 
-第一步只实现这版**确定性、无学习状态**的设计。
+第一步先实现这版**确定性、最小状态**的设计。
 
-如果后续真实 benchmark 证明“规格切换重建”仍然太重，再考虑第二阶段：
+如果后续真实 benchmark 证明只靠 `underuseStreak` 还不够，再考虑下一阶段：
 
-- 引入最小状态的 `lastProjectedSpec`
-- 只在极少数情况下放宽“精确匹配才复用”的规则
+- 调整 shrink 阈值
+- 或再引入更细的最小状态
 
 在那之前，不建议先上真正的 learner。
