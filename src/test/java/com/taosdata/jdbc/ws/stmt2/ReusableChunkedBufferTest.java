@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.ws.stmt2;
 
+import com.taosdata.jdbc.enums.FieldBindType;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.CompositeByteBuf;
@@ -10,8 +11,10 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.List;
 
+import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_VARCHAR;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
@@ -65,6 +68,44 @@ public class ReusableChunkedBufferTest {
         assertEquals(8 * 1024, chunkBytes.invoke(buffer));
         assertEquals(2, activeChunkCount.invoke(buffer));
         assertEquals(2, cachedChunkCount.invoke(buffer));
+    }
+
+    @Test
+    public void reusableChunkedBuffer_tracksOverflowWhenBatchNeedsNonReusableChunk() throws Exception {
+        Class<?> clazz = Class.forName("com.taosdata.jdbc.ws.stmt2.ReusableChunkedBuffer");
+        Constructor<?> ctor = clazz.getDeclaredConstructor(int.class, int.class, int.class);
+        ctor.setAccessible(true);
+        Object buffer = ctor.newInstance(8 * 1024, 4 * 1024, 1);
+
+        Method writeBytes = clazz.getDeclaredMethod("writeBytes", byte[].class, int.class, int.class);
+        Method overflowCount = clazz.getDeclaredMethod("overflowCount");
+        Method reset = clazz.getDeclaredMethod("reset");
+        writeBytes.setAccessible(true);
+        overflowCount.setAccessible(true);
+        reset.setAccessible(true);
+
+        writeBytes.invoke(buffer, new byte[20 * 1024], 0, 20 * 1024);
+
+        assertTrue(((Integer) overflowCount.invoke(buffer)) > 0);
+
+        reset.invoke(buffer);
+        assertEquals(0, overflowCount.invoke(buffer));
+    }
+
+    @Test
+    public void columnFieldBuffer_exposesReusableOverflowCount() throws Exception {
+        Stmt2FieldMeta meta = Stmt2FieldMeta.of(
+                (byte) FieldBindType.TAOS_FIELD_COL.getValue(),
+                (byte) TSDB_DATA_TYPE_VARCHAR,
+                (byte) 0);
+        Stmt2ColumnFieldBuffer buffer = Stmt2ColumnFieldBuffer.forReusableValueBuffer(
+                meta, null, 8 * 1024, 4 * 1024, 1);
+        try {
+            buffer.appendString(String.join("", Collections.nCopies(20_000, "a")));
+            assertTrue(buffer.reusableOverflowCount() > 0);
+        } finally {
+            buffer.release();
+        }
     }
 
     @Test

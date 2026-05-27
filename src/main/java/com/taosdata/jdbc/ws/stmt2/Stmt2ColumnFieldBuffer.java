@@ -472,6 +472,10 @@ public final class Stmt2ColumnFieldBuffer {
         return reusableValueBuffer == null ? 0 : reusableValueBuffer.activeReusableChunkCount();
     }
 
+    public int reusableOverflowCount() {
+        return reusableValueBuffer == null ? 0 : reusableValueBuffer.overflowCount();
+    }
+
     public void release() {
         if (nullBuffer != null) {
             nullBuffer.release();

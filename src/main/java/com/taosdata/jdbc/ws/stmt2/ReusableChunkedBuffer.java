@@ -29,6 +29,7 @@ final class ReusableChunkedBuffer {
     private int nextReusableIndex = 0;
     private ByteBuf currentChunk;
     private int totalBytes = 0;
+    private int overflowCount = 0;
 
     ReusableChunkedBuffer(int standardChunkBytes, int dedicatedThresholdBytes, int maxReusableChunks) {
         if (standardChunkBytes <= 0) {
@@ -68,6 +69,7 @@ final class ReusableChunkedBuffer {
         if (utf8Length > standardChunkBytes) {
             // Oversized string: bypass the standard-chunk pool to avoid auto-expanding
             // (and permanently inflating) a cached reusable chunk.
+            overflowCount++;
             ByteBuf dedicated = allocator.buffer(utf8Length);
             ByteBufUtil.writeUtf8(dedicated, value);
             activeChunks.add(new ChunkRef(dedicated, false));
@@ -101,6 +103,10 @@ final class ReusableChunkedBuffer {
             }
         }
         return count;
+    }
+
+    int overflowCount() {
+        return overflowCount;
     }
 
     int readableBytes() {
@@ -155,6 +161,7 @@ final class ReusableChunkedBuffer {
         nextReusableIndex = 0;
         currentChunk = null;
         totalBytes = 0;
+        overflowCount = 0;
     }
 
     void release() {
@@ -182,6 +189,7 @@ final class ReusableChunkedBuffer {
         }
 
         if (minWritableBytes >= dedicatedThresholdBytes && minWritableBytes < standardChunkBytes) {
+            overflowCount++;
             ByteBuf chunk = allocator.buffer(minWritableBytes);
             activeChunks.add(new ChunkRef(chunk, false));
             currentChunk = chunk;
@@ -201,6 +209,8 @@ final class ReusableChunkedBuffer {
         if (reusable) {
             cachedStandardChunks.add(chunk);
             nextReusableIndex++;
+        } else {
+            overflowCount++;
         }
         activeChunks.add(new ChunkRef(chunk, reusable));
         currentChunk = chunk;
