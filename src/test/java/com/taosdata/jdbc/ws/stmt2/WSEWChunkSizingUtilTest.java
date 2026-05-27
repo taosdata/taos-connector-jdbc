@@ -41,6 +41,22 @@ public class WSEWChunkSizingUtilTest {
         assertFalse(reusable);
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void deriveWantedSpec_throwsWhenRowsWrittenIsZero() {
+        WSEWChunkSizingUtil.FieldBatchStats stats = new WSEWChunkSizingUtil.FieldBatchStats();
+        stats.recordValueBytes(1024, 100, 0);
+        WSEWChunkSizingUtil.deriveWantedSpec(stats, 1000);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void deriveWantedSpec_throwsWhenProjectedBytesRequireChunkSizeOverflowingInt() {
+        // projectedValueBytes = 3 GB; dynamicMaxChunkBytes needs roundUpToPowerOfTwo(1.5 GB)
+        // = 2^31, which exceeds Integer.MAX_VALUE and must not silently truncate to a negative int.
+        WSEWChunkSizingUtil.FieldBatchStats stats = new WSEWChunkSizingUtil.FieldBatchStats();
+        stats.recordValueBytes(3L * 1024 * 1024 * 1024, 100, 1);
+        WSEWChunkSizingUtil.deriveWantedSpec(stats, 1);
+    }
+
     @Test
     public void shouldShrink_requiresLongUnderuseAndLargeOversize() {
         WSEWChunkSizingUtil.BufferSpec current =

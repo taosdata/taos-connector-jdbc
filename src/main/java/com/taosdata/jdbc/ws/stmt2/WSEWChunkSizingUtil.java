@@ -71,14 +71,21 @@ public final class WSEWChunkSizingUtil {
     }
 
     public static BufferSpec deriveWantedSpec(FieldBatchStats stats, int batchSizeByRow) {
+        if (stats.getRowsWritten() == 0) {
+            throw new IllegalArgumentException(
+                    "stats.rowsWritten must be > 0; got 0, which would cause division by zero");
+        }
         long projectedValueBytes = Math.max(
                 stats.getObservedValueBytes(),
                 (long) Math.ceil((double) stats.getObservedValueBytes() * batchSizeByRow / stats.getRowsWritten()));
         long perChunkTarget = Math.max(1L, projectedValueBytes / TARGET_ACTIVE_CHUNKS);
         long chunkCandidate = Math.max(stats.getMaxSingleValueBytes(), perChunkTarget);
+        // dynamicMaxChunkBytes is the cap; it is a valid int power-of-two or throws.
         long dynamicMaxChunkBytes = roundUpToPowerOfTwo(Math.max(64L * 1024, projectedValueBytes / MIN_ACTIVE_CHUNKS));
+        // Cap chunkCandidate before rounding so roundUpToPowerOfTwo cannot exceed the already-validated cap.
+        long chunkCandidateCapped = Math.min(chunkCandidate, dynamicMaxChunkBytes);
         int wantedChunkBytes = (int) Math.max(BOOTSTRAP_CHUNK_BYTES,
-                Math.min(dynamicMaxChunkBytes, roundUpToPowerOfTwo(chunkCandidate)));
+                Math.min(dynamicMaxChunkBytes, roundUpToPowerOfTwo(chunkCandidateCapped)));
         int wantedChunkCount = (int) Math.max(1L,
                 (projectedValueBytes + wantedChunkBytes - 1) / wantedChunkBytes);
         return new BufferSpec(wantedChunkBytes, wantedChunkCount);
@@ -100,7 +107,13 @@ public final class WSEWChunkSizingUtil {
     private static int roundUpToPowerOfTwo(long value) {
         long adjusted = Math.max(1L, value);
         long highest = Long.highestOneBit(adjusted);
-        return (int) (highest == adjusted ? highest : highest << 1);
+        long result = (highest == adjusted) ? highest : (highest << 1);
+        if (result <= 0 || result > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException(
+                    "Chunk size candidate " + value + " rounds up to a value that overflows int ("
+                    + result + "); reduce batchSizeByRow or observed bytes");
+        }
+        return (int) result;
     }
 
     private WSEWChunkSizingUtil() {
