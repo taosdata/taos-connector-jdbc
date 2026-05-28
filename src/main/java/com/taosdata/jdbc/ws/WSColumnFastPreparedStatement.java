@@ -825,25 +825,36 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Pr
             columnBuffers = allocateColumnBuffers();
             return;
         }
-        for (int i = 0; i < columnBuffers.length; i++) {
-            if (!fieldMetas[i].isVariableWidth()) {
-                columnBuffers[i].reset();
-                continue;
-            }
-            WSEWChunkSizingUtil.BufferSpec wanted =
-                    Stmt2VariableWidthReuseHelper.resolveBufferSpec(nextBufferSpecs, i);
-            if (Stmt2VariableWidthReuseHelper.bufferSpecsEqual(
-                    columnBuffers[i].currentReusableSpec(), wanted)) {
-                columnBuffers[i].reset();
-            } else {
-                Stmt2ColumnFieldBuffer previous = columnBuffers[i];
-                columnBuffers[i] = null;
-                if (previous != null) {
-                    previous.release();
+        try {
+            for (int i = 0; i < columnBuffers.length; i++) {
+                if (!fieldMetas[i].isVariableWidth()) {
+                    columnBuffers[i].reset();
+                    continue;
                 }
-                columnBuffers[i] = Stmt2VariableWidthReuseHelper.createReusableVariableWidthBuffer(
-                        fieldMetas[i], wanted);
+                WSEWChunkSizingUtil.BufferSpec wanted =
+                        Stmt2VariableWidthReuseHelper.resolveBufferSpec(nextBufferSpecs, i);
+                if (Stmt2VariableWidthReuseHelper.bufferSpecsEqual(
+                        columnBuffers[i].currentReusableSpec(), wanted)) {
+                    columnBuffers[i].reset();
+                } else {
+                    Stmt2ColumnFieldBuffer previous = columnBuffers[i];
+                    columnBuffers[i] = null;
+                    if (previous != null) {
+                        previous.release();
+                    }
+                    columnBuffers[i] = Stmt2VariableWidthReuseHelper.createReusableVariableWidthBuffer(
+                            fieldMetas[i], wanted);
+                }
             }
+        } catch (Throwable t) {
+            try {
+                releaseColumnBuffers();
+            } catch (Throwable releaseFailure) {
+                t.addSuppressed(releaseFailure);
+            } finally {
+                columnBuffers = null;
+            }
+            throw t;
         }
     }
 

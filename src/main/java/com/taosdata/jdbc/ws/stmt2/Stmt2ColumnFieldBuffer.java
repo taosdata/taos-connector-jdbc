@@ -199,6 +199,11 @@ public final class Stmt2ColumnFieldBuffer {
         appendString(value, value == null ? 0 : ByteBufUtil.utf8Bytes(value));
     }
 
+    /**
+     * Append a UTF-8 string using a precomputed byte length.
+     *
+     * <p>The {@code utf8Length} must be the exact UTF-8 byte count for {@code value}.
+     */
     public void appendString(String value, int utf8Length) throws SQLException {
         if (isTbNameColumn()) {
             appendTbNameValue(value, utf8Length);
@@ -221,6 +226,11 @@ public final class Stmt2ColumnFieldBuffer {
         appendTbName(name, name == null ? 0 : ByteBufUtil.utf8Bytes(name));
     }
 
+    /**
+     * Append a tbname using a precomputed UTF-8 byte length.
+     *
+     * <p>The {@code utf8Length} must be the exact UTF-8 byte count for {@code name}.
+     */
     public void appendTbName(String name, int utf8Length) throws SQLException {
         if (!isTbNameColumn()) {
             throw new IllegalStateException("appendTbName called on non-tbname column");

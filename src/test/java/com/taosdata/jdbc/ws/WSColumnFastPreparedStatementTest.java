@@ -224,6 +224,9 @@ public class WSColumnFastPreparedStatementTest {
                 (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_VARCHAR)));
         Stmt2ColumnFieldBuffer original = getColumnBuffers(stmt)[0];
         setNextBufferSpec(stmt, 0, new WSEWChunkSizingUtil.BufferSpec(16 * 1024, 2));
+        java.lang.reflect.Method resetFastStateMethod = WSColumnFastPreparedStatement.class
+                .getDeclaredMethod("resetFastState");
+        resetFastStateMethod.setAccessible(true);
 
         try (MockedStatic<Stmt2VariableWidthReuseHelper> mocked = Mockito.mockStatic(
                 Stmt2VariableWidthReuseHelper.class, Mockito.CALLS_REAL_METHODS)) {
@@ -231,18 +234,23 @@ public class WSColumnFastPreparedStatementTest {
                     Mockito.any(), Mockito.any()))
                     .thenThrow(new OutOfMemoryError("boom"));
 
-            java.lang.reflect.Method method = WSColumnFastPreparedStatement.class
-                    .getDeclaredMethod("resetFastState");
-            method.setAccessible(true);
             try {
-                method.invoke(stmt);
+                resetFastStateMethod.invoke(stmt);
                 fail("expected OutOfMemoryError");
             } catch (java.lang.reflect.InvocationTargetException expected) {
                 assertTrue(expected.getCause() instanceof OutOfMemoryError);
             }
         }
 
-        assertNull(getColumnBuffers(stmt)[0]);
+        java.lang.reflect.Field columnBuffersField = WSColumnFastPreparedStatement.class
+                .getDeclaredField("columnBuffers");
+        columnBuffersField.setAccessible(true);
+        assertNull(columnBuffersField.get(stmt));
+
+        resetFastStateMethod.invoke(stmt);
+        Stmt2ColumnFieldBuffer[] rebuilt = (Stmt2ColumnFieldBuffer[]) columnBuffersField.get(stmt);
+        assertTrue(rebuilt != null);
+        assertEquals(1, rebuilt.length);
         assertEquals(0, cachedChunkCount(original));
     }
 
