@@ -249,7 +249,7 @@ public class ReusableChunkedBufferTest {
     }
 
     @Test
-    public void columnFieldBuffer_recordsActualUtf8Length_whenHintIsWrong() throws Exception {
+    public void columnFieldBuffer_usesExactPrecomputedUtf8Length() throws Exception {
         Stmt2FieldMeta stringMeta = Stmt2FieldMeta.of(
                 (byte) FieldBindType.TAOS_FIELD_COL.getValue(),
                 (byte) TSDB_DATA_TYPE_VARCHAR,
@@ -257,7 +257,8 @@ public class ReusableChunkedBufferTest {
         Stmt2ColumnFieldBuffer stringBuffer = Stmt2ColumnFieldBuffer.forReusableValueBuffer(
                 stringMeta, null, 8 * 1024, 4 * 1024, 1);
         try {
-            stringBuffer.appendString("éé", 1);
+            int utf8Length = ByteBufUtil.utf8Bytes("éé");
+            stringBuffer.appendString("éé", utf8Length);
             ByteBuffer block = ByteBuffer.wrap(stringBuffer.buildColumnBlock()).order(ByteOrder.LITTLE_ENDIAN);
             assertEquals(4, block.getInt(14));
             assertEquals(4, block.getInt(18));
@@ -272,7 +273,8 @@ public class ReusableChunkedBufferTest {
         Stmt2ColumnFieldBuffer tbNameBuffer = Stmt2ColumnFieldBuffer.forReusableValueBuffer(
                 tbNameMeta, null, 8 * 1024, 4 * 1024, 1);
         try {
-            tbNameBuffer.appendTbName("éé", 1);
+            int utf8Length = ByteBufUtil.utf8Bytes("éé");
+            tbNameBuffer.appendTbName("éé", utf8Length);
             ByteBuffer block = ByteBuffer.wrap(tbNameBuffer.buildColumnBlock()).order(ByteOrder.LITTLE_ENDIAN);
             assertEquals(4, block.getInt(14));
             assertEquals(1, tbNameBuffer.computeTableCount());

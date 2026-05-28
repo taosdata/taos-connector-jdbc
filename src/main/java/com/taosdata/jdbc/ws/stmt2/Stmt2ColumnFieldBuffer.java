@@ -202,9 +202,10 @@ public final class Stmt2ColumnFieldBuffer {
     /**
      * Append a UTF-8 string using a precomputed byte length.
      *
-     * <p>The {@code utf8Length} must be the exact UTF-8 byte count for {@code value}.
+     * <p>The {@code utf8Length} must be the exact result of {@code ByteBufUtil.utf8Bytes(value)}.
      */
     public void appendString(String value, int utf8Length) throws SQLException {
+        assert value == null || utf8Length == ByteBufUtil.utf8Bytes(value);
         if (isTbNameColumn()) {
             appendTbNameValue(value, utf8Length);
             return;
@@ -229,9 +230,10 @@ public final class Stmt2ColumnFieldBuffer {
     /**
      * Append a tbname using a precomputed UTF-8 byte length.
      *
-     * <p>The {@code utf8Length} must be the exact UTF-8 byte count for {@code name}.
+     * <p>The {@code utf8Length} must be the exact result of {@code ByteBufUtil.utf8Bytes(name)}.
      */
     public void appendTbName(String name, int utf8Length) throws SQLException {
+        assert name == null || utf8Length == ByteBufUtil.utf8Bytes(name);
         if (!isTbNameColumn()) {
             throw new IllegalStateException("appendTbName called on non-tbname column");
         }
@@ -298,6 +300,7 @@ public final class Stmt2ColumnFieldBuffer {
         if (name == null || name.isEmpty()) {
             throw new IllegalArgumentException("Table name must not be null or empty");
         }
+        assert utf8Length == ByteBufUtil.utf8Bytes(name);
         appendNonNullPrefix();
         int writtenUtf8Length = reusableValueBuffer != null
                 ? reusableValueBuffer.writeString(name, utf8Length)
