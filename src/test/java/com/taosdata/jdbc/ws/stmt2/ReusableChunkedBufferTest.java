@@ -10,6 +10,8 @@ import org.junit.Test;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
@@ -229,6 +231,39 @@ public class ReusableChunkedBufferTest {
             assertEquals(0, overflowCount(buffer));
         } finally {
             release(buffer);
+        }
+    }
+
+    @Test
+    public void columnFieldBuffer_recordsActualUtf8Length_whenHintIsWrong() throws Exception {
+        Stmt2FieldMeta stringMeta = Stmt2FieldMeta.of(
+                (byte) FieldBindType.TAOS_FIELD_COL.getValue(),
+                (byte) TSDB_DATA_TYPE_VARCHAR,
+                (byte) 0);
+        Stmt2ColumnFieldBuffer stringBuffer = Stmt2ColumnFieldBuffer.forReusableValueBuffer(
+                stringMeta, null, 8 * 1024, 4 * 1024, 1);
+        try {
+            stringBuffer.appendString("éé", 1);
+            ByteBuffer block = ByteBuffer.wrap(stringBuffer.buildColumnBlock()).order(ByteOrder.LITTLE_ENDIAN);
+            assertEquals(4, block.getInt(14));
+            assertEquals(4, block.getInt(18));
+        } finally {
+            stringBuffer.release();
+        }
+
+        Stmt2FieldMeta tbNameMeta = Stmt2FieldMeta.of(
+                (byte) FieldBindType.TAOS_FIELD_TBNAME.getValue(),
+                (byte) TSDB_DATA_TYPE_VARCHAR,
+                (byte) 0);
+        Stmt2ColumnFieldBuffer tbNameBuffer = Stmt2ColumnFieldBuffer.forReusableValueBuffer(
+                tbNameMeta, null, 8 * 1024, 4 * 1024, 1);
+        try {
+            tbNameBuffer.appendTbName("éé", 1);
+            ByteBuffer block = ByteBuffer.wrap(tbNameBuffer.buildColumnBlock()).order(ByteOrder.LITTLE_ENDIAN);
+            assertEquals(4, block.getInt(14));
+            assertEquals(1, tbNameBuffer.computeTableCount());
+        } finally {
+            tbNameBuffer.release();
         }
     }
 

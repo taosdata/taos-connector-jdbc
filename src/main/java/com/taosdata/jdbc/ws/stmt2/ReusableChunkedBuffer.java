@@ -74,16 +74,16 @@ final class ReusableChunkedBuffer {
             // (and permanently inflating) a cached reusable chunk.
             overflowCount++;
             ByteBuf dedicated = allocator.buffer(utf8Length);
-            ByteBufUtil.writeUtf8(dedicated, value);
+            int writtenUtf8Length = ByteBufUtil.writeUtf8(dedicated, value);
             activeChunks.add(new ChunkRef(dedicated, false));
             currentChunk = dedicated;
-            totalBytes += utf8Length;
-            return utf8Length;
+            totalBytes += writtenUtf8Length;
+            return writtenUtf8Length;
         }
         ByteBuf target = acquireChunk(utf8Length);
-        ByteBufUtil.writeUtf8(target, value);
-        totalBytes += utf8Length;
-        return utf8Length;
+        int writtenUtf8Length = ByteBufUtil.writeUtf8(target, value);
+        totalBytes += writtenUtf8Length;
+        return writtenUtf8Length;
     }
 
     int chunkBytes() {
