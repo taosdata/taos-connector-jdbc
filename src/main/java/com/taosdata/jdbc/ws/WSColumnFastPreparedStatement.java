@@ -836,7 +836,11 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Pr
                     columnBuffers[i].currentReusableSpec(), wanted)) {
                 columnBuffers[i].reset();
             } else {
-                columnBuffers[i].release();
+                Stmt2ColumnFieldBuffer previous = columnBuffers[i];
+                columnBuffers[i] = null;
+                if (previous != null) {
+                    previous.release();
+                }
                 columnBuffers[i] = Stmt2VariableWidthReuseHelper.createReusableVariableWidthBuffer(
                         fieldMetas[i], wanted);
             }

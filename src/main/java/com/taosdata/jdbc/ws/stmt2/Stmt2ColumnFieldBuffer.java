@@ -234,7 +234,7 @@ public final class Stmt2ColumnFieldBuffer {
             return;
         }
         if (isTbNameColumn()) {
-            appendTbNameValue(decodeTbNameBytes(data, len));
+            appendTbNameValue(decodeTbNameBytes(data, len), len);
             return;
         }
         appendNonNullPrefix();
