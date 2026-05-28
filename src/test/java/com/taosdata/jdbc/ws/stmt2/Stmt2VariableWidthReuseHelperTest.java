@@ -8,6 +8,7 @@ import org.mockito.Mockito;
 import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_VARCHAR;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -28,6 +29,26 @@ public class Stmt2VariableWidthReuseHelperTest {
             buffer.reset();
             assertEquals(spec.getChunkBytes(), buffer.currentReusableSpec().getChunkBytes());
             assertEquals(spec.getReusableChunkCount(), buffer.currentReusableSpec().getReusableChunkCount());
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void createReusableBuffer_keepsValuesThatFitChunkOnReusablePath() throws Exception {
+        Stmt2FieldMeta meta = Stmt2FieldMeta.of(
+                (byte) FieldBindType.TAOS_FIELD_COL.getValue(),
+                (byte) TSDB_DATA_TYPE_VARCHAR,
+                (byte) 0);
+        WSEWChunkSizingUtil.BufferSpec spec = new WSEWChunkSizingUtil.BufferSpec(16 * 1024, 3);
+        Stmt2ColumnFieldBuffer buffer = Stmt2VariableWidthReuseHelper.createReusableVariableWidthBuffer(meta, spec);
+        try {
+            String value = asciiString(12 * 1024);
+            buffer.appendString(value);
+
+            assertEquals(0, buffer.reusableOverflowCount());
+            assertEquals(1, activeChunkCount(buffer));
+            assertSame(cachedChunk(buffer, 0), activeChunkBuffer(buffer, 0));
         } finally {
             buffer.release();
         }
@@ -76,13 +97,13 @@ public class Stmt2VariableWidthReuseHelperTest {
                 (byte) 0);
         WSEWChunkSizingUtil.BufferSpec spec = new WSEWChunkSizingUtil.BufferSpec(16 * 1024, 3);
         Stmt2ColumnFieldBuffer realBuffer = Stmt2ColumnFieldBuffer.forReusableValueBuffer(
-                meta, null, spec.getChunkBytes(), spec.getChunkBytes() / 2, spec.getReusableChunkCount());
+                meta, null, spec.getChunkBytes(), spec.getChunkBytes(), spec.getReusableChunkCount());
         Stmt2ColumnFieldBuffer spyBuffer = Mockito.spy(realBuffer);
 
         try (MockedStatic<Stmt2ColumnFieldBuffer> mocked = Mockito.mockStatic(
                 Stmt2ColumnFieldBuffer.class, Mockito.CALLS_REAL_METHODS)) {
             mocked.when(() -> Stmt2ColumnFieldBuffer.forReusableValueBuffer(
-                    meta, null, spec.getChunkBytes(), spec.getChunkBytes() / 2, spec.getReusableChunkCount()))
+                    meta, null, spec.getChunkBytes(), spec.getChunkBytes(), spec.getReusableChunkCount()))
                     .thenReturn(spyBuffer);
             Mockito.doAnswer(invocation -> {
                 invocation.callRealMethod();
@@ -175,5 +196,41 @@ public class Stmt2VariableWidthReuseHelperTest {
         java.lang.reflect.Field cachedField = reusable.getClass().getDeclaredField("cachedStandardChunks");
         cachedField.setAccessible(true);
         return ((java.util.List<?>) cachedField.get(reusable)).size();
+    }
+
+    private static int activeChunkCount(Stmt2ColumnFieldBuffer buffer) throws Exception {
+        java.lang.reflect.Field reusableField = Stmt2ColumnFieldBuffer.class.getDeclaredField("reusableValueBuffer");
+        reusableField.setAccessible(true);
+        Object reusable = reusableField.get(buffer);
+        java.lang.reflect.Field activeField = reusable.getClass().getDeclaredField("activeChunks");
+        activeField.setAccessible(true);
+        return ((java.util.List<?>) activeField.get(reusable)).size();
+    }
+
+    private static Object cachedChunk(Stmt2ColumnFieldBuffer buffer, int index) throws Exception {
+        java.lang.reflect.Field reusableField = Stmt2ColumnFieldBuffer.class.getDeclaredField("reusableValueBuffer");
+        reusableField.setAccessible(true);
+        Object reusable = reusableField.get(buffer);
+        java.lang.reflect.Field cachedField = reusable.getClass().getDeclaredField("cachedStandardChunks");
+        cachedField.setAccessible(true);
+        return ((java.util.List<?>) cachedField.get(reusable)).get(index);
+    }
+
+    private static Object activeChunkBuffer(Stmt2ColumnFieldBuffer buffer, int index) throws Exception {
+        java.lang.reflect.Field reusableField = Stmt2ColumnFieldBuffer.class.getDeclaredField("reusableValueBuffer");
+        reusableField.setAccessible(true);
+        Object reusable = reusableField.get(buffer);
+        java.lang.reflect.Field activeField = reusable.getClass().getDeclaredField("activeChunks");
+        activeField.setAccessible(true);
+        Object chunkRef = ((java.util.List<?>) activeField.get(reusable)).get(index);
+        java.lang.reflect.Field bufField = chunkRef.getClass().getDeclaredField("buf");
+        bufField.setAccessible(true);
+        return bufField.get(chunkRef);
+    }
+
+    private static String asciiString(int length) {
+        char[] chars = new char[length];
+        java.util.Arrays.fill(chars, 'a');
+        return new String(chars);
     }
 }

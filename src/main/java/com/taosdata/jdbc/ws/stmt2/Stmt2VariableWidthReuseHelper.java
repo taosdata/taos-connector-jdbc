@@ -34,7 +34,7 @@ public final class Stmt2VariableWidthReuseHelper {
             Stmt2FieldMeta meta,
             WSEWChunkSizingUtil.BufferSpec spec) {
         Stmt2ColumnFieldBuffer buffer = Stmt2ColumnFieldBuffer.forReusableValueBuffer(
-                meta, null, spec.getChunkBytes(), spec.getChunkBytes() / 2, spec.getReusableChunkCount());
+                meta, null, spec.getChunkBytes(), spec.getChunkBytes(), spec.getReusableChunkCount());
         try {
             primeReusableBuffer(buffer, spec);
             return buffer;
