@@ -2,6 +2,8 @@ package com.taosdata.jdbc.ws.stmt2;
 
 import com.taosdata.jdbc.enums.FieldBindType;
 import org.junit.Test;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 
 import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_VARCHAR;
 import static org.junit.Assert.assertEquals;
@@ -61,9 +63,41 @@ public class Stmt2VariableWidthReuseHelperTest {
     public void bufferSpecsEqual_handlesNullArguments() {
         WSEWChunkSizingUtil.BufferSpec spec = new WSEWChunkSizingUtil.BufferSpec(8 * 1024, 1);
 
-        assertTrue(Stmt2VariableWidthReuseHelper.bufferSpecsEqual(null, null));
+        assertFalse(Stmt2VariableWidthReuseHelper.bufferSpecsEqual(null, null));
         assertFalse(Stmt2VariableWidthReuseHelper.bufferSpecsEqual(null, spec));
         assertFalse(Stmt2VariableWidthReuseHelper.bufferSpecsEqual(spec, null));
+    }
+
+    @Test
+    public void createReusableBuffer_releasesOnPrimingFailure() throws Exception {
+        Stmt2FieldMeta meta = Stmt2FieldMeta.of(
+                (byte) FieldBindType.TAOS_FIELD_COL.getValue(),
+                (byte) TSDB_DATA_TYPE_VARCHAR,
+                (byte) 0);
+        WSEWChunkSizingUtil.BufferSpec spec = new WSEWChunkSizingUtil.BufferSpec(16 * 1024, 3);
+        Stmt2ColumnFieldBuffer realBuffer = Stmt2ColumnFieldBuffer.forReusableValueBuffer(
+                meta, null, spec.getChunkBytes(), spec.getChunkBytes() / 2, spec.getReusableChunkCount());
+        Stmt2ColumnFieldBuffer spyBuffer = Mockito.spy(realBuffer);
+
+        try (MockedStatic<Stmt2ColumnFieldBuffer> mocked = Mockito.mockStatic(
+                Stmt2ColumnFieldBuffer.class, Mockito.CALLS_REAL_METHODS)) {
+            mocked.when(() -> Stmt2ColumnFieldBuffer.forReusableValueBuffer(
+                    meta, null, spec.getChunkBytes(), spec.getChunkBytes() / 2, spec.getReusableChunkCount()))
+                    .thenReturn(spyBuffer);
+            Mockito.doAnswer(invocation -> {
+                invocation.callRealMethod();
+                throw new OutOfMemoryError("boom");
+            }).when(spyBuffer).primeReusableValueChunks(Mockito.anyInt());
+
+            try {
+                Stmt2VariableWidthReuseHelper.createReusableVariableWidthBuffer(meta, spec);
+                fail("expected OutOfMemoryError");
+            } catch (OutOfMemoryError expected) {
+                // expected
+            }
+        }
+
+        assertEquals(0, cachedChunkCount(spyBuffer));
     }
 
     @Test
@@ -132,5 +166,14 @@ public class Stmt2VariableWidthReuseHelperTest {
             WSEWChunkSizingUtil.BufferSpec actual) {
         assertEquals(expected.getChunkBytes(), actual.getChunkBytes());
         assertEquals(expected.getReusableChunkCount(), actual.getReusableChunkCount());
+    }
+
+    private static int cachedChunkCount(Stmt2ColumnFieldBuffer buffer) throws Exception {
+        java.lang.reflect.Field reusableField = Stmt2ColumnFieldBuffer.class.getDeclaredField("reusableValueBuffer");
+        reusableField.setAccessible(true);
+        Object reusable = reusableField.get(buffer);
+        java.lang.reflect.Field cachedField = reusable.getClass().getDeclaredField("cachedStandardChunks");
+        cachedField.setAccessible(true);
+        return ((java.util.List<?>) cachedField.get(reusable)).size();
     }
 }

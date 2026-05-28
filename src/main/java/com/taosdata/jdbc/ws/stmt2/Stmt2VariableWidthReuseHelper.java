@@ -38,20 +38,20 @@ public final class Stmt2VariableWidthReuseHelper {
         try {
             primeReusableBuffer(buffer, spec);
             return buffer;
-        } catch (RuntimeException e) {
+        } catch (Throwable t) {
             buffer.release();
-            throw e;
+            throw t;
         }
     }
 
     public static boolean bufferSpecsEqual(
             WSEWChunkSizingUtil.BufferSpec left,
             WSEWChunkSizingUtil.BufferSpec right) {
-        if (left == right) {
-            return true;
-        }
         if (left == null || right == null) {
             return false;
+        }
+        if (left == right) {
+            return true;
         }
         return left.getChunkBytes() == right.getChunkBytes()
                 && left.getReusableChunkCount() == right.getReusableChunkCount();

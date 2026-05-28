@@ -795,18 +795,27 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Pr
 
     private Stmt2ColumnFieldBuffer[] allocateColumnBuffers() {
         Stmt2ColumnFieldBuffer[] buffers = new Stmt2ColumnFieldBuffer[fieldMetas.length];
-        for (int i = 0; i < fieldMetas.length; i++) {
-            if (fieldMetas[i].isVariableWidth()) {
-                WSEWChunkSizingUtil.BufferSpec spec =
-                        Stmt2VariableWidthReuseHelper.resolveBufferSpec(nextBufferSpecs, i);
-                buffers[i] = Stmt2VariableWidthReuseHelper.createReusableVariableWidthBuffer(fieldMetas[i], spec);
-            } else {
-                buffers[i] = new Stmt2ColumnFieldBuffer(
-                        fieldMetas[i],
-                        bufferSizeHints == null ? null : bufferSizeHints[i]);
+        try {
+            for (int i = 0; i < fieldMetas.length; i++) {
+                if (fieldMetas[i].isVariableWidth()) {
+                    WSEWChunkSizingUtil.BufferSpec spec =
+                            Stmt2VariableWidthReuseHelper.resolveBufferSpec(nextBufferSpecs, i);
+                    buffers[i] = Stmt2VariableWidthReuseHelper.createReusableVariableWidthBuffer(fieldMetas[i], spec);
+                } else {
+                    buffers[i] = new Stmt2ColumnFieldBuffer(
+                            fieldMetas[i],
+                            bufferSizeHints == null ? null : bufferSizeHints[i]);
+                }
             }
+            return buffers;
+        } catch (Throwable t) {
+            for (Stmt2ColumnFieldBuffer buffer : buffers) {
+                if (buffer != null) {
+                    buffer.release();
+                }
+            }
+            throw t;
         }
-        return buffers;
     }
 
     private void resetFastState() {

@@ -6,6 +6,7 @@ import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnFieldBuffer;
 import com.taosdata.jdbc.ws.stmt2.Stmt2FieldMeta;
+import com.taosdata.jdbc.ws.stmt2.Stmt2VariableWidthReuseHelper;
 import com.taosdata.jdbc.ws.stmt2.WSEWChunkSizingUtil;
 import com.taosdata.jdbc.ws.stmt2.entity.Stmt2ExecResp;
 import com.taosdata.jdbc.ws.stmt2.entity.Field;
@@ -13,6 +14,7 @@ import com.taosdata.jdbc.ws.stmt2.entity.Stmt2PrepareResp;
 import io.netty.buffer.ByteBuf;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
 import java.sql.SQLException;
@@ -173,6 +175,47 @@ public class WSColumnFastPreparedStatementTest {
         assertEquals(2, stats.length);
         assertTrue(stats[0] != null);
         assertTrue(stats[1] != null);
+    }
+
+    @Test
+    public void constructor_releasesPreviouslyAllocatedBuffersWhenALaterAllocationFails() throws Exception {
+        Stmt2PrepareResp resp = new Stmt2PrepareResp();
+        resp.setInsert(true);
+        resp.setStmtId(1L);
+        resp.setFields(twoFields(TSDB_DATA_TYPE_VARCHAR, TSDB_DATA_TYPE_VARCHAR));
+
+        Stmt2ColumnFieldBuffer firstBuffer = Stmt2ColumnFieldBuffer.forReusableValueBuffer(
+                Stmt2FieldMeta.fromField(field((byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_VARCHAR)),
+                null,
+                8 * 1024,
+                4 * 1024,
+                1);
+        Stmt2ColumnFieldBuffer spyBuffer = Mockito.spy(firstBuffer);
+        java.util.concurrent.atomic.AtomicInteger calls = new java.util.concurrent.atomic.AtomicInteger();
+
+        try (MockedStatic<Stmt2VariableWidthReuseHelper> mocked = Mockito.mockStatic(
+                Stmt2VariableWidthReuseHelper.class, Mockito.CALLS_REAL_METHODS)) {
+            mocked.when(() -> Stmt2VariableWidthReuseHelper.resolveBufferSpec(Mockito.any(), Mockito.anyInt()))
+                    .thenReturn(new WSEWChunkSizingUtil.BufferSpec(8 * 1024, 1));
+            mocked.when(() -> Stmt2VariableWidthReuseHelper.createReusableVariableWidthBuffer(
+                    Mockito.any(), Mockito.any()))
+                    .thenAnswer(invocation -> {
+                        if (calls.getAndIncrement() == 0) {
+                            return spyBuffer;
+                        }
+                        throw new OutOfMemoryError("boom");
+                    });
+
+            try {
+                new WSColumnFastPreparedStatement(transport, param, "test_db", connection,
+                        "INSERT INTO t VALUES (?, ?)", 1L, resp);
+                fail("expected OutOfMemoryError");
+            } catch (OutOfMemoryError expected) {
+                // expected
+            }
+        }
+
+        assertEquals(0, cachedChunkCount(spyBuffer));
     }
 
     @Test
@@ -469,6 +512,15 @@ public class WSColumnFastPreparedStatementTest {
         } catch (SQLException ex) {
             return ex;
         }
+    }
+
+    private static int cachedChunkCount(Stmt2ColumnFieldBuffer buffer) throws Exception {
+        java.lang.reflect.Field reusableField = Stmt2ColumnFieldBuffer.class.getDeclaredField("reusableValueBuffer");
+        reusableField.setAccessible(true);
+        Object reusable = reusableField.get(buffer);
+        java.lang.reflect.Field cachedField = reusable.getClass().getDeclaredField("cachedStandardChunks");
+        cachedField.setAccessible(true);
+        return ((java.util.List<?>) cachedField.get(reusable)).size();
     }
 
     @FunctionalInterface
