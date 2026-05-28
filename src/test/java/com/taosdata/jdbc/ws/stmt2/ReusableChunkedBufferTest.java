@@ -50,6 +50,20 @@ public class ReusableChunkedBufferTest {
     }
 
     @Test
+    public void primeReusableChunks_populatesCacheWithoutLeavingActiveChunks() throws Exception {
+        Object buffer = newBuffer(8, 6, 4);
+        try {
+            invoke(buffer, "primeReusableChunks", new Class<?>[]{int.class}, 3);
+
+            assertEquals(3, cachedStandardChunks(buffer).size());
+            assertEquals(0, activeChunks(buffer).size());
+            assertEquals(0, overflowCount(buffer));
+        } finally {
+            release(buffer);
+        }
+    }
+
+    @Test
     public void reusableChunkedBuffer_exposesChunkSizingState() throws Exception {
         Class<?> clazz = Class.forName("com.taosdata.jdbc.ws.stmt2.ReusableChunkedBuffer");
         Constructor<?> ctor = clazz.getDeclaredConstructor(int.class, int.class, int.class);

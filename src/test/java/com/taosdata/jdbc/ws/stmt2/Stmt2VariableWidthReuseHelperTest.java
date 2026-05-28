@@ -113,6 +113,21 @@ public class Stmt2VariableWidthReuseHelperTest {
         assertEquals(current.getReusableChunkCount() - 1, atThreshold.getNextSpec().getReusableChunkCount());
     }
 
+    @Test
+    public void reactiveSizing_atBootstrapFloor_keepsUnderuseStreak() {
+        WSEWChunkSizingUtil.BufferSpec current = WSEWChunkSizingUtil.bootstrapSpec();
+        WSEWChunkSizingUtil.FieldBatchStats stats = new WSEWChunkSizingUtil.FieldBatchStats();
+        stats.recordValueBytes(128, 128, 1);
+
+        Stmt2VariableWidthReuseHelper.SizingDecision decision =
+                Stmt2VariableWidthReuseHelper.reactiveDecision(
+                        current, stats, WSEWChunkSizingUtil.SHRINK_STREAK_THRESHOLD);
+
+        assertEquals(current.getChunkBytes(), decision.getNextSpec().getChunkBytes());
+        assertEquals(current.getReusableChunkCount(), decision.getNextSpec().getReusableChunkCount());
+        assertEquals(WSEWChunkSizingUtil.SHRINK_STREAK_THRESHOLD, decision.getNextUnderuseStreak());
+    }
+
     private static void assertBootstrapSpec(WSEWChunkSizingUtil.BufferSpec expected,
             WSEWChunkSizingUtil.BufferSpec actual) {
         assertEquals(expected.getChunkBytes(), actual.getChunkBytes());

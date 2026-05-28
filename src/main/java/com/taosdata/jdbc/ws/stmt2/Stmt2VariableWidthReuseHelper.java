@@ -1,7 +1,5 @@
 package com.taosdata.jdbc.ws.stmt2;
 
-import java.sql.SQLException;
-
 public final class Stmt2VariableWidthReuseHelper {
     public static final class SizingDecision {
         private final WSEWChunkSizingUtil.BufferSpec nextSpec;
@@ -37,8 +35,13 @@ public final class Stmt2VariableWidthReuseHelper {
             WSEWChunkSizingUtil.BufferSpec spec) {
         Stmt2ColumnFieldBuffer buffer = Stmt2ColumnFieldBuffer.forReusableValueBuffer(
                 meta, null, spec.getChunkBytes(), spec.getChunkBytes() / 2, spec.getReusableChunkCount());
-        primeReusableBuffer(buffer, spec);
-        return buffer;
+        try {
+            primeReusableBuffer(buffer, spec);
+            return buffer;
+        } catch (RuntimeException e) {
+            buffer.release();
+            throw e;
+        }
     }
 
     public static boolean bufferSpecsEqual(
@@ -88,7 +91,10 @@ public final class Stmt2VariableWidthReuseHelper {
                             0);
                 }
                 int smallerChunk = Math.max(minChunkBytes(), current.getChunkBytes() >> 1);
-                return new SizingDecision(new WSEWChunkSizingUtil.BufferSpec(smallerChunk, 1), 0);
+                if (smallerChunk < current.getChunkBytes()) {
+                    return new SizingDecision(new WSEWChunkSizingUtil.BufferSpec(smallerChunk, 1), 0);
+                }
+                return new SizingDecision(current, underuseStreak);
             }
             return new SizingDecision(current, underuseStreak + 1);
         }
@@ -99,15 +105,7 @@ public final class Stmt2VariableWidthReuseHelper {
     private static void primeReusableBuffer(
             Stmt2ColumnFieldBuffer buffer,
             WSEWChunkSizingUtil.BufferSpec spec) {
-        byte[] chunk = new byte[spec.getChunkBytes()];
-        try {
-            for (int i = 0; i < spec.getReusableChunkCount(); i++) {
-                buffer.appendBytes(chunk);
-            }
-            buffer.reset();
-        } catch (SQLException e) {
-            throw new IllegalStateException("failed to prime reusable stmt2 buffer", e);
-        }
+        buffer.primeReusableValueChunks(spec.getReusableChunkCount());
     }
 
     private static int roundUpPow2(long value) {

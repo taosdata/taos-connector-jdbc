@@ -491,6 +491,13 @@ public final class Stmt2ColumnFieldBuffer {
         return reusableValueBuffer == null ? 0 : reusableValueBuffer.overflowCount();
     }
 
+    void primeReusableValueChunks(int reusableChunkCount) {
+        if (reusableValueBuffer == null) {
+            throw new IllegalStateException("Reusable value buffer is not enabled for this field");
+        }
+        reusableValueBuffer.primeReusableChunks(reusableChunkCount);
+    }
+
     public void release() {
         if (nullBuffer != null) {
             nullBuffer.release();
