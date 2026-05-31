@@ -1104,7 +1104,7 @@ public class TSWSPreparedStatementTest {
             }
         }
 
-        assert(haveResult);
+        Assert.assertTrue(haveResult);
 
     }
 
@@ -1181,4 +1181,3 @@ public class TSWSPreparedStatementTest {
         }
     }
 }
-

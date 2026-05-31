@@ -5,6 +5,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 
 import static org.junit.Assert.*;
@@ -86,6 +87,17 @@ public class AutoExpandingBufferNewHelpersTest {
         byte[] out = extract(buf);
         assertEquals(5, out.length);
         assertEquals(5, out[4] & 0xFF);
+    }
+
+    @Test
+    public void writeStringWithKnownUtf8Length_spansBufBoundary() throws SQLException {
+        String value = "\u6d4b\u8bd5abc";
+        int utf8Length = value.getBytes(StandardCharsets.UTF_8).length;
+
+        buf.writeString(value, utf8Length);
+        buf.stopWrite();
+
+        assertArrayEquals(value.getBytes(StandardCharsets.UTF_8), extract(buf));
     }
 
     // -----------------------------------------------------------------------

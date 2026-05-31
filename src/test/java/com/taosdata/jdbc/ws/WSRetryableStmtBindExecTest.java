@@ -5,9 +5,10 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 /**
- * Test class for WSRetryableStmt bind execution mode routing.
- * These tests verify the internal plumbing exists for future bind-exec support
- * while ensuring it remains dormant (not publicly activatable) in Task 1.
+ * Reflection-level tests for WSRetryableStmt bind-exec eligibility plumbing.
+ *
+ * <p>The current design derives write-side bind-exec eligibility from the owning
+ * {@link WSConnection} and no longer keeps a separate per-call bind-mode constructor.
  */
 public class WSRetryableStmtBindExecTest {
 
@@ -29,13 +30,12 @@ public class WSRetryableStmtBindExecTest {
     }
 
     /**
-     * Test that WSRetryableStmt has a package-private constructor accepting useBindExec parameter.
-     * This preserves plumbing for future use while preventing public activation.
+     * Test that the legacy per-call bind-exec constructor has been removed.
      */
     @Test
-    public void testInternalConstructorWithBindExecParameter() {
+    public void testLegacyPerCallBindExecConstructorRemoved() {
         try {
-            java.lang.reflect.Constructor<?> constructor = WSRetryableStmt.class.getDeclaredConstructor(
+            WSRetryableStmt.class.getDeclaredConstructor(
                     com.taosdata.jdbc.AbstractConnection.class,
                     com.taosdata.jdbc.common.ConnectionParam.class,
                     String.class,
@@ -45,11 +45,9 @@ public class WSRetryableStmtBindExecTest {
                     java.util.concurrent.atomic.AtomicInteger.class,
                     boolean.class
             );
-            assertNotNull("Constructor with useBindExec parameter should exist", constructor);
-            assertFalse("Constructor with useBindExec should NOT be public (dormant feature)", 
-                    java.lang.reflect.Modifier.isPublic(constructor.getModifiers()));
+            fail("Legacy constructor with explicit useBindExec parameter should have been removed");
         } catch (NoSuchMethodException e) {
-            fail("Constructor with useBindExec parameter should exist: " + e.getMessage());
+            // Expected
         }
     }
 
@@ -94,29 +92,22 @@ public class WSRetryableStmtBindExecTest {
     }
 
     /**
-     * Test that both BIND_MODE constants exist
+     * Test that the legacy per-call bind mode constants have been removed.
      */
     @Test
-    public void testBindModeConstantsExist() {
+    public void testLegacyBindModeConstantsRemoved() {
         try {
-            java.lang.reflect.Field legacyMode = WSRetryableStmt.class.getDeclaredField("BIND_MODE_LEGACY");
-            java.lang.reflect.Field bindExecMode = WSRetryableStmt.class.getDeclaredField("BIND_MODE_BIND_EXEC");
-            
-            assertNotNull("BIND_MODE_LEGACY should exist", legacyMode);
-            assertNotNull("BIND_MODE_BIND_EXEC should exist", bindExecMode);
-            
-            // Verify they are static final int
-            assertTrue("BIND_MODE_LEGACY should be static", 
-                    java.lang.reflect.Modifier.isStatic(legacyMode.getModifiers()));
-            assertTrue("BIND_MODE_LEGACY should be final", 
-                    java.lang.reflect.Modifier.isFinal(legacyMode.getModifiers()));
-            
-            assertTrue("BIND_MODE_BIND_EXEC should be static", 
-                    java.lang.reflect.Modifier.isStatic(bindExecMode.getModifiers()));
-            assertTrue("BIND_MODE_BIND_EXEC should be final", 
-                    java.lang.reflect.Modifier.isFinal(bindExecMode.getModifiers()));
+            WSRetryableStmt.class.getDeclaredField("BIND_MODE_LEGACY");
+            fail("BIND_MODE_LEGACY should have been removed");
         } catch (NoSuchFieldException e) {
-            fail("Bind mode constants should exist: " + e.getMessage());
+            // Expected
+        }
+
+        try {
+            WSRetryableStmt.class.getDeclaredField("BIND_MODE_BIND_EXEC");
+            fail("BIND_MODE_BIND_EXEC should have been removed");
+        } catch (NoSuchFieldException e) {
+            // Expected
         }
     }
 }

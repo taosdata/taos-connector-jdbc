@@ -5,11 +5,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 /**
- * Compatibility enforcement tests for WSRetryableStmt.
- * 
- * These tests verify the core compatibility logic through code inspection:
- * 1. Default constructor always uses legacy STMT2_BIND + STMT2_EXEC
- * 2. The internal bind-exec path is properly gated by server compatibility
+ * Source-level enforcement tests for the simplified WSRetryableStmt compatibility rules.
  */
 public class WSRetryableStmtCompatibilityEnforcementTest {
 
@@ -33,30 +29,32 @@ public class WSRetryableStmtCompatibilityEnforcementTest {
     }
 
     /**
-     * Test that internal constructor with bind-exec parameter is NOT public.
+     * The simplified implementation should no longer expose the legacy boolean constructor.
      */
     @Test
-    public void testBindExecConstructorIsPackagePrivate() throws Exception {
-        java.lang.reflect.Constructor<?> bindExecCtor = WSRetryableStmt.class.getDeclaredConstructor(
-                com.taosdata.jdbc.AbstractConnection.class,
-                com.taosdata.jdbc.common.ConnectionParam.class,
-                String.class,
-                Transport.class,
-                Long.class,
-                com.taosdata.jdbc.ws.stmt2.entity.StmtInfo.class,
-                java.util.concurrent.atomic.AtomicInteger.class,
-                boolean.class
-        );
-        assertNotNull("Bind-exec constructor should exist for internal use", bindExecCtor);
-        assertFalse("Bind-exec constructor should NOT be public", 
-                java.lang.reflect.Modifier.isPublic(bindExecCtor.getModifiers()));
+    public void testLegacyBindExecConstructorRemoved() throws Exception {
+        try {
+            WSRetryableStmt.class.getDeclaredConstructor(
+                    com.taosdata.jdbc.AbstractConnection.class,
+                    com.taosdata.jdbc.common.ConnectionParam.class,
+                    String.class,
+                    Transport.class,
+                    Long.class,
+                    com.taosdata.jdbc.ws.stmt2.entity.StmtInfo.class,
+                    java.util.concurrent.atomic.AtomicInteger.class,
+                    boolean.class
+            );
+            fail("Legacy constructor with explicit useBindExec parameter should have been removed");
+        } catch (NoSuchMethodException expected) {
+            // Expected
+        }
     }
 
     /**
-     * Code review test: Verify the constructor implementation includes server compatibility check.
+     * Code review test: verify the constructor derives write eligibility from websocket capability.
      */
     @Test
-    public void testConstructorEnforcesServerCompatibility() throws Exception {
+    public void testConstructorDerivesWriteEligibilityFromWSConnectionCapability() throws Exception {
         String sourceFile = "src/main/java/com/taosdata/jdbc/ws/WSRetryableStmt.java";
         java.nio.file.Path sourcePath = java.nio.file.Paths.get(sourceFile);
         
@@ -66,23 +64,15 @@ public class WSRetryableStmtCompatibilityEnforcementTest {
         
         String sourceCode = new String(java.nio.file.Files.readAllBytes(sourcePath));
         
-        // Verify the constructor contains the compatibility check
-        assertTrue("Constructor should check for WSConnection instance",
-                sourceCode.contains("connection instanceof WSConnection"));
-        assertTrue("Constructor should call supportsStmt2BindExec()",
-                sourceCode.contains("supportsStmt2BindExec()"));
-        
-        // Verify the compatibility check is in the right constructor
-        assertTrue("Compatibility check should be in 8-parameter constructor",
-                sourceCode.contains("boolean useBindExec)") &&
-                sourceCode.contains("wsConn.supportsStmt2BindExec()"));
+        assertTrue("Constructor should derive write eligibility from WSConnection.supportsStmt2BindExec()",
+                sourceCode.contains("this.useBindExec = ((WSConnection) connection).supportsStmt2BindExec();"));
     }
 
     /**
-     * Test that the default constructor delegates with useBindExec=false.
+     * Query operations must stay on the legacy path even when write eligibility is enabled.
      */
     @Test
-    public void testDefaultConstructorDelegatesToInternalWithFalse() throws Exception {
+    public void testQueryPathIsSeparatedFromWriteBindExecGate() throws Exception {
         String sourceFile = "src/main/java/com/taosdata/jdbc/ws/WSRetryableStmt.java";
         java.nio.file.Path sourcePath = java.nio.file.Paths.get(sourceFile);
         
@@ -92,9 +82,10 @@ public class WSRetryableStmtCompatibilityEnforcementTest {
         
         String sourceCode = new String(java.nio.file.Files.readAllBytes(sourcePath));
         
-        // Verify the default constructor calls the internal constructor with false
-        assertTrue("Default constructor should delegate with useBindExec=false",
-                sourceCode.contains("this(connection, param, database, transport, instanceId, stmtInfo, batchInsertedRows, false)"));
+        assertTrue("Bind-exec gate should apply only to write operations",
+                sourceCode.contains("useBindExec && operationType == OPERATION_TYPE_WRITE"));
+        assertTrue("queryWithRetry should execute with OPERATION_TYPE_QUERY",
+                sourceCode.contains("executeWithRetry(rawBlock, OPERATION_TYPE_QUERY"));
     }
 
     /**

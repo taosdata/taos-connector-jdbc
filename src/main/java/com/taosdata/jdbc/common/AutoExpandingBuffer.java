@@ -107,11 +107,15 @@ public class AutoExpandingBuffer {
         writeLongLE(Double.doubleToRawLongBits(v));
     }
     public int writeString(String src) throws SQLException {
+        return writeString(src, ByteBufUtil.utf8Bytes(src));
+    }
+
+    public int writeString(String src, int utf8Length) throws SQLException {
         if (stopWrite){
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "Cannot write string after stopWrite has been called");
         }
 
-        int totalLen = ByteBufUtil.utf8Bytes(src);
+        int totalLen = utf8Length;
         int writableBytes = currentBuffer.writableBytes();
 
 

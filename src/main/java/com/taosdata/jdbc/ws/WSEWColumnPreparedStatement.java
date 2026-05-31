@@ -252,7 +252,7 @@ public class WSEWColumnPreparedStatement extends AbstractWSEWPreparedStatement {
         }
         if (value instanceof byte[]) {
             byte[] bytes = (byte[]) value;
-            buffer.appendEncodedVar(bytes, bytes.length);
+            buffer.appendTbNameBytes(bytes, bytes.length);
             return;
         }
         throw new SQLException("table name must be string or binary");
@@ -450,8 +450,15 @@ public class WSEWColumnPreparedStatement extends AbstractWSEWPreparedStatement {
                                 batchStats);
                         backendThreadInfo.setReusableColumnBuffers(columnBuffers);
                         updateNextBufferSpecs(backendThreadInfo, stmtInfo, columnBuffers, batchStats, batchSize);
-                        byte[] payload = Stmt2ColumnBindSerializer.serialize(columnBuffers);
-                        rawBlock = Stmt2BindExecRequestBuilder.build(payload);
+                        ByteBuf payload = Stmt2ColumnBindSerializer.serializeDetachedBuffer(columnBuffers);
+                        try {
+                            rawBlock = Stmt2BindExecRequestBuilder.build(payload);
+                            payload = null;
+                        } finally {
+                            if (payload != null) {
+                                Utils.releaseByteBuf(payload);
+                            }
+                        }
                         serialQueue.put(new EWRawBlock(rawBlock, rows.size(), null));
                         rawBlock = null;
                     } catch (SQLException e) {

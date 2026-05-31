@@ -79,6 +79,24 @@ public final class Stmt2ColumnBindSerializer {
         }
     }
 
+    public static ByteBuf serializeDetachedBuffer(Stmt2ColumnFieldBuffer[] columns) throws SQLException {
+        ByteBuf payload = serializeBuffer(columns);
+        ByteBuf detached = null;
+        boolean success = false;
+        try {
+            int readableBytes = payload.readableBytes();
+            detached = PooledByteBufAllocator.DEFAULT.directBuffer(readableBytes);
+            detached.writeBytes(payload, payload.readerIndex(), readableBytes);
+            success = true;
+            return detached;
+        } finally {
+            Utils.releaseByteBuf(payload);
+            if (!success && detached != null) {
+                Utils.releaseByteBuf(detached);
+            }
+        }
+    }
+
     public static ByteBuf serializeBuffer(Stmt2ColumnFieldBuffer[] columns) throws SQLException {
         if (columns == null || columns.length == 0) {
             throw new SQLException("columns must not be null or empty");

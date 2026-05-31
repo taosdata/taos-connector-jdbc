@@ -50,6 +50,9 @@ public class VersionUtil {
      * @return true if stmt2_bind_exec is supported
      */
     public static boolean supportStmt2BindExec(String version) {
+        if (Boolean.getBoolean("ws.forceStmt2BindExec")) {
+            return true;
+        }
         if (version != null) {
             try {
                 return compareVersions(version, MIN_STMT2_BIND_EXEC_VERSION) >= 0;

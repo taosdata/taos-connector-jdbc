@@ -17,6 +17,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import static org.junit.Assert.assertTrue;
+
 public class WSConsumerAutoCommitTest {
 
         static final String HOST = TestEnvUtil.getHost();
@@ -86,7 +88,7 @@ public class WSConsumerAutoCommitTest {
             for (ConsumerRecord<Bean> r : consumerRecords) {
                 Bean bean = r.value();
                 //new msg value will bigger than last received
-                assert (bean.getC1() > last);
+                assertTrue(bean.getC1() > last);
                 break; //NOSONAR
             }
             consumer.unsubscribe();
@@ -160,4 +162,3 @@ public class WSConsumerAutoCommitTest {
         }
     }
 }
-

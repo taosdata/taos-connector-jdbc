@@ -8,27 +8,19 @@ import java.lang.reflect.Field;
 import static org.junit.Assert.*;
 
 /**
- * Compatibility tests for WSRetryableStmt to ensure Task 1 remains dormant.
- * These tests verify that:
- * 1. Default/current behavior uses legacy STMT2_BIND + STMT2_EXEC
- * 2. STMT2_BIND_EXEC is NOT sent in default/current flow
- * 3. The bind-exec path remains dormant until later tasks activate it
- * 
- * These tests use reflection to verify internal state since we're testing
- * that the feature is dormant, not fully functional.
+ * Compatibility tests for the simplified WSRetryableStmt bind-exec model.
+ *
+ * <p>These tests stay at the reflection/source-inspection level and lock in the
+ * current internal contract: write eligibility comes from websocket capability,
+ * while actual bind-exec activation is still gated by operation type.
  */
 public class WSRetryableStmtCompatibilityTest {
 
     /**
-     * Test that default constructor sets useBindExec to false.
-     * This ensures the default behavior does not activate the new bind-exec path.
+     * Test that the public constructor still exists and the eligibility field remains final.
      */
     @Test
-    public void testDefaultConstructorDisablesBindExec() throws Exception {
-        // We can't easily instantiate WSRetryableStmt in a unit test without full dependencies,
-        // so we'll verify the default parameter behavior through reflection
-        
-        // Verify the 7-argument constructor exists and delegates to 8-argument with false
+    public void testDefaultConstructorExistsAndEligibilityFieldIsFinal() throws Exception {
         java.lang.reflect.Constructor<?> defaultCtor = WSRetryableStmt.class.getConstructor(
                 com.taosdata.jdbc.AbstractConnection.class,
                 com.taosdata.jdbc.common.ConnectionParam.class,
@@ -47,27 +39,25 @@ public class WSRetryableStmtCompatibilityTest {
     }
 
     /**
-     * Critical test: Verify that the 8-parameter constructor with useBindExec
-     * is NOT public, preventing external code from activating the dormant feature.
-     * It should be package-private or private for internal use only.
+     * The old per-call bind-exec constructor should no longer exist.
      */
     @Test
-    public void testBindExecConstructorIsNotPublic() throws Exception {
-        java.lang.reflect.Constructor<?> bindExecCtor = WSRetryableStmt.class.getDeclaredConstructor(
-                com.taosdata.jdbc.AbstractConnection.class,
-                com.taosdata.jdbc.common.ConnectionParam.class,
-                String.class,
-                Transport.class,
-                Long.class,
-                com.taosdata.jdbc.ws.stmt2.entity.StmtInfo.class,
-                java.util.concurrent.atomic.AtomicInteger.class,
-                boolean.class
-        );
-        assertNotNull("Constructor with useBindExec parameter should exist for future use", bindExecCtor);
-        
-        // Verify it's NOT public - should be package-private or private
-        assertFalse("Constructor with useBindExec should NOT be public to prevent premature activation",
-                java.lang.reflect.Modifier.isPublic(bindExecCtor.getModifiers()));
+    public void testLegacyBindExecConstructorRemoved() throws Exception {
+        try {
+            WSRetryableStmt.class.getDeclaredConstructor(
+                    com.taosdata.jdbc.AbstractConnection.class,
+                    com.taosdata.jdbc.common.ConnectionParam.class,
+                    String.class,
+                    Transport.class,
+                    Long.class,
+                    com.taosdata.jdbc.ws.stmt2.entity.StmtInfo.class,
+                    java.util.concurrent.atomic.AtomicInteger.class,
+                    boolean.class
+            );
+            fail("Legacy constructor with explicit useBindExec parameter should have been removed");
+        } catch (NoSuchMethodException expected) {
+            // Expected
+        }
     }
 
     /**
@@ -86,32 +76,27 @@ public class WSRetryableStmtCompatibilityTest {
     }
 
     /**
-     * Test that the implementation has both code paths (legacy and bind-exec)
-     * by verifying the relevant constants exist.
+     * Test that the implementation still keeps both protocol paths and gates bind-exec
+     * to write operations only.
      */
     @Test
     public void testBothCodePathsExist() throws Exception {
-        // Verify OPERATION_TYPE constants exist
         Field operationWrite = WSRetryableStmt.class.getDeclaredField("OPERATION_TYPE_WRITE");
         Field operationQuery = WSRetryableStmt.class.getDeclaredField("OPERATION_TYPE_QUERY");
         assertNotNull("OPERATION_TYPE_WRITE should exist", operationWrite);
         assertNotNull("OPERATION_TYPE_QUERY should exist", operationQuery);
 
-        // Verify BIND_MODE constants exist (plumbing for both paths)
-        Field bindModeLegacy = WSRetryableStmt.class.getDeclaredField("BIND_MODE_LEGACY");
-        Field bindModeBindExec = WSRetryableStmt.class.getDeclaredField("BIND_MODE_BIND_EXEC");
-        assertNotNull("BIND_MODE_LEGACY should exist", bindModeLegacy);
-        assertNotNull("BIND_MODE_BIND_EXEC should exist", bindModeBindExec);
+        String sourceFile = "src/main/java/com/taosdata/jdbc/ws/WSRetryableStmt.java";
+        String sourceCode = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(sourceFile)));
+        assertTrue("Write path should gate bind-exec by operation type",
+                sourceCode.contains("useBindExec && operationType == OPERATION_TYPE_WRITE"));
     }
 
     /**
-     * Critical test: Verify that Action.STMT2_BIND_EXEC exists in the protocol enum
-     * but is NOT used in the default execution path.
-     * The action enum entry proves the plumbing exists, but should remain dormant.
+     * Verify that Action.STMT2_BIND_EXEC exists in the protocol enum for capable write paths.
      */
     @Test
-    public void testStmt2BindExecProtocolExistsButDormant() {
-        // Verify the protocol action exists
+    public void testStmt2BindExecProtocolExists() {
         Action bindExecAction = Action.STMT2_BIND_EXEC;
         assertNotNull("STMT2_BIND_EXEC action should exist in protocol", bindExecAction);
         assertEquals("Action name should be stmt2_bind_exec",
@@ -122,8 +107,6 @@ public class WSRetryableStmtCompatibilityTest {
                 Action.STMT2_EXEC.getResponseClazz(),
                 bindExecAction.getResponseClazz());
         
-        // This test documents that the protocol plumbing exists
-        // but doesn't verify execution path - that would require integration tests
     }
 
     /**

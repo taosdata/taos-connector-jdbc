@@ -3,6 +3,7 @@ package com.taosdata.jdbc.ws;
 import com.taosdata.jdbc.AbstractConnection;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
+import com.taosdata.jdbc.TaosPrepareStatement;
 import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.utils.BlobUtil;
@@ -39,18 +40,24 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
 
-public class WSColumnFastPreparedStatement extends WSRetryableStmt implements PreparedStatement {
+public class WSColumnFastPreparedStatement extends WSRetryableStmt implements TaosPrepareStatement {
     private static final BigInteger MAX_UNSIGNED_LONG_VALUE = new BigInteger(MAX_UNSIGNED_LONG);
 
     private final Stmt2FieldMeta[] fieldMetas;
     private final byte[] fixedWidths;
     private final int tbNameFieldIdx;
+    private final int[] tagFieldIdxByOrdinal;
+    private final int[] colFieldIdxByOrdinal;
     private Stmt2ColumnFieldBuffer[] columnBuffers;
     private Stmt2ColumnFieldBuffer.BufferSizeHints[] bufferSizeHints;
     private WSEWChunkSizingUtil.BufferSpec[] nextBufferSpecs;
     private int[] underuseStreaks;
-    private WSEWChunkSizingUtil.FieldBatchStats[] batchStats;
+    private final WSEWChunkSizingUtil.FieldBatchStats[] batchStats;
     private int expectedRowCount;
+    private String pendingTableName;
+    private boolean pendingTableNameSet;
+    private final Object[] pendingTagValues;
+    private final boolean[] pendingTagSet;
 
     public WSColumnFastPreparedStatement(Transport transport,
                                          ConnectionParam param,
@@ -60,7 +67,7 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Pr
                                          Long instanceId,
                                          Stmt2PrepareResp prepareResp) {
         super(connection, param, database, transport, instanceId, new StmtInfo(prepareResp, sql),
-                new AtomicInteger(), true);
+                new AtomicInteger());
 
         List<Field> fields = stmtInfo.getFields();
         int n = fields != null ? fields.size() : 0;
@@ -71,10 +78,106 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Pr
             fixedWidths[i] = (byte) fieldMetas[i].fixedWidth();
         }
         this.tbNameFieldIdx = resolveTbNameFieldIdx(fieldMetas);
+        this.tagFieldIdxByOrdinal = resolveFieldIndexesByBindType(
+                fieldMetas, (byte) FieldBindType.TAOS_FIELD_TAG.getValue());
+        this.colFieldIdxByOrdinal = resolveFieldIndexesByBindType(
+                fieldMetas, (byte) FieldBindType.TAOS_FIELD_COL.getValue());
         this.nextBufferSpecs = new WSEWChunkSizingUtil.BufferSpec[n];
         this.underuseStreaks = new int[n];
         this.batchStats = initBatchStats(n);
+        this.pendingTagValues = new Object[tagFieldIdxByOrdinal.length];
+        this.pendingTagSet = new boolean[tagFieldIdxByOrdinal.length];
         this.columnBuffers = allocateColumnBuffers();
+    }
+
+    @Override
+    public void setTableName(String name) throws SQLException {
+        if (name == null || name.isEmpty()) {
+            throw tableNameRequiredException();
+        }
+        tableNameParameterIndex();
+        pendingTableName = name;
+        pendingTableNameSet = true;
+    }
+
+    @Override
+    public void setTagNull(int index, int type) throws SQLException {
+        setPendingTag(index, null);
+    }
+
+    @Override
+    public void setTagBoolean(int index, boolean value) {
+        setTagUnchecked(index, value);
+    }
+
+    @Override
+    public void setTagByte(int index, byte value) {
+        setTagUnchecked(index, value);
+    }
+
+    @Override
+    public void setTagShort(int index, short value) {
+        setTagUnchecked(index, value);
+    }
+
+    @Override
+    public void setTagInt(int index, int value) {
+        setTagUnchecked(index, value);
+    }
+
+    @Override
+    public void setTagLong(int index, long value) {
+        setTagUnchecked(index, value);
+    }
+
+    @Override
+    public void setTagBigInteger(int index, BigInteger value) throws SQLException {
+        setPendingTag(index, value);
+    }
+
+    @Override
+    public void setTagFloat(int index, float value) {
+        setTagUnchecked(index, value);
+    }
+
+    @Override
+    public void setTagDouble(int index, double value) {
+        setTagUnchecked(index, value);
+    }
+
+    @Override
+    public void setTagTimestamp(int index, long value) {
+        setTagUnchecked(index, value);
+    }
+
+    @Override
+    public void setTagTimestamp(int index, Timestamp value) {
+        setTagUnchecked(index, value);
+    }
+
+    @Override
+    public void setTagString(int index, String value) {
+        setTagUnchecked(index, value);
+    }
+
+    @Override
+    public void setTagVarbinary(int index, byte[] value) {
+        setTagUnchecked(index, value);
+    }
+
+    @Override
+    public void setTagGeometry(int index, byte[] value) {
+        setTagUnchecked(index, value);
+    }
+
+    @Override
+    public void setTagNString(int index, String value) {
+        setTagUnchecked(index, value);
+    }
+
+    @Override
+    public void setTagJson(int index, String value) {
+        setTagUnchecked(index, value);
     }
 
     private static WSEWChunkSizingUtil.FieldBatchStats[] initBatchStats(int count) {
@@ -106,15 +209,16 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Pr
     }
 
     private void stageVar(int paramIdx, byte[] bytes) throws SQLException {
-        stageVar(paramIdx, bytes, bytes == null ? 0 : bytes.length);
-    }
-
-    private void stageVar(int paramIdx, byte[] bytes, int length) throws SQLException {
-        if (paramIdx == tbNameFieldIdx && (bytes == null || length <= 0)) {
+        if (paramIdx == tbNameFieldIdx && (bytes == null || bytes.length == 0)) {
             throw tableNameRequiredException();
         }
-        columnBuffer(paramIdx).appendEncodedVar(bytes, length);
-        observeVarWidthWrite(paramIdx, bytes == null ? 0 : length);
+        Stmt2ColumnFieldBuffer buffer = columnBuffer(paramIdx);
+        if (paramIdx == tbNameFieldIdx) {
+            buffer.appendTbNameBytes(bytes, bytes.length);
+        } else {
+            buffer.appendEncodedVar(bytes);
+        }
+        observeVarWidthWrite(paramIdx, bytes == null ? 0 : bytes.length);
     }
 
     private void stageString(int paramIdx, String value) throws SQLException {
@@ -729,6 +833,115 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Pr
     }
 
     @Override
+    public void setInt(int columnIndex, List<Integer> list) throws SQLException {
+        bindColumnList(columnIndex, list, this::setInt);
+    }
+
+    @Override
+    public void setFloat(int columnIndex, List<Float> list) throws SQLException {
+        bindColumnList(columnIndex, list, this::setFloat);
+    }
+
+    @Override
+    public void setTimestamp(int columnIndex, List<Long> list) throws SQLException {
+        bindColumnList(columnIndex, list, this::stageTimestamp);
+    }
+
+    @Override
+    public void setLong(int columnIndex, List<Long> list) throws SQLException {
+        bindColumnList(columnIndex, list, this::setLong);
+    }
+
+    @Override
+    public void setBigInteger(int columnIndex, List<BigInteger> list) throws SQLException {
+        bindColumnList(columnIndex, list, this::setObject);
+    }
+
+    @Override
+    public void setBigDecimal(int columnIndex, List<BigDecimal> list) throws SQLException {
+        bindColumnList(columnIndex, list, this::setBigDecimal);
+    }
+
+    @Override
+    public void setDouble(int columnIndex, List<Double> list) throws SQLException {
+        bindColumnList(columnIndex, list, this::setDouble);
+    }
+
+    @Override
+    public void setBoolean(int columnIndex, List<Boolean> list) throws SQLException {
+        bindColumnList(columnIndex, list, this::setBoolean);
+    }
+
+    @Override
+    public void setByte(int columnIndex, List<Byte> list) throws SQLException {
+        bindColumnList(columnIndex, list, this::setByte);
+    }
+
+    @Override
+    public void setShort(int columnIndex, List<Short> list) throws SQLException {
+        bindColumnList(columnIndex, list, this::setShort);
+    }
+
+    @Override
+    public void setString(int columnIndex, List<String> list, int size) throws SQLException {
+        bindColumnList(columnIndex, list, this::setString);
+    }
+
+    @Override
+    public void setVarbinary(int columnIndex, List<byte[]> list, int size) throws SQLException {
+        bindColumnList(columnIndex, list, this::setBytes);
+    }
+
+    @Override
+    public void setGeometry(int columnIndex, List<byte[]> list, int size) throws SQLException {
+        bindColumnList(columnIndex, list, this::setBytes);
+    }
+
+    @Override
+    public void setBlob(int columnIndex, List<Blob> list, int size) throws SQLException {
+        bindColumnList(columnIndex, list, this::setBlob);
+    }
+
+    @Override
+    public void setNString(int columnIndex, List<String> list, int size) throws SQLException {
+        bindColumnList(columnIndex, list, this::setNString);
+    }
+
+    @Override
+    public void columnDataAddBatch() throws SQLException {
+        if (isClosed()) {
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED);
+        }
+        int rows = pendingColumnDataRows();
+        if (rows <= 0) {
+            throw new SQLException("No column data bound; call a column-data setter before columnDataAddBatch");
+        }
+        if (tbNameFieldIdx >= 0 && !pendingTableNameSet) {
+            throw tableNameRequiredException();
+        }
+        for (int tagOrdinal = 0; tagOrdinal < tagFieldIdxByOrdinal.length; tagOrdinal++) {
+            if (!pendingTagSet[tagOrdinal]) {
+                throw new SQLException("Tag value not set at index " + tagOrdinal);
+            }
+        }
+        for (int row = 0; row < rows; row++) {
+            if (tbNameFieldIdx >= 0) {
+                setString(tableNameParameterIndex(), pendingTableName);
+            }
+            for (int tagOrdinal = 0; tagOrdinal < tagFieldIdxByOrdinal.length; tagOrdinal++) {
+                setObject(tagParameterIndex(tagOrdinal), pendingTagValues[tagOrdinal]);
+            }
+            addBatch();
+        }
+        clearPendingExtensionState();
+    }
+
+    @Override
+    public void columnDataExecuteBatch() throws SQLException {
+        executeBatch();
+    }
+
+    @Override
     public void close() throws SQLException {
         if (isClosed()) {
             return;
@@ -820,6 +1033,7 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Pr
 
     private void resetFastState() {
         expectedRowCount = 0;
+        clearPendingExtensionState();
         resetBatchStats();
         if (columnBuffers == null) {
             columnBuffers = allocateColumnBuffers();
@@ -941,6 +1155,88 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Pr
         return new SQLException("Table name not set for row; call setString on the tbname parameter");
     }
 
+    private int tableNameParameterIndex() throws SQLException {
+        if (tbNameFieldIdx < 0) {
+            throw TSDBError.createSQLException(
+                    TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "No table name field in prepared statement");
+        }
+        return tbNameFieldIdx + 1;
+    }
+
+    private int tagParameterIndex(int tagIndex) throws SQLException {
+        if (tagIndex < 0 || tagIndex >= tagFieldIdxByOrdinal.length) {
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_PARAMETER_INDEX_OUT_RANGE);
+        }
+        return tagFieldIdxByOrdinal[tagIndex] + 1;
+    }
+
+    private int columnDataParameterIndex(int columnIndex) throws SQLException {
+        if (columnIndex < 0 || columnIndex >= colFieldIdxByOrdinal.length) {
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_PARAMETER_INDEX_OUT_RANGE);
+        }
+        return colFieldIdxByOrdinal[columnIndex] + 1;
+    }
+
+    private void setPendingTag(int tagIndex, Object value) throws SQLException {
+        tagParameterIndex(tagIndex);
+        pendingTagValues[tagIndex] = value;
+        pendingTagSet[tagIndex] = true;
+    }
+
+    private void setTagUnchecked(int tagIndex, Object value) {
+        try {
+            setPendingTag(tagIndex, value);
+        } catch (SQLException e) {
+            throw new IllegalArgumentException("Failed to bind tag at index " + tagIndex, e);
+        }
+    }
+
+    private <T> void bindColumnList(int columnIndex, List<T> list, ColumnValueBinder<T> binder) throws SQLException {
+        if (list == null) {
+            throw new SQLException("Column data list must not be null");
+        }
+        int parameterIndex = columnDataParameterIndex(columnIndex);
+        for (T value : list) {
+            if (value == null) {
+                stageNull(parameterIndex - 1);
+            } else {
+                binder.bind(parameterIndex, value);
+            }
+        }
+    }
+
+    private int pendingColumnDataRows() throws SQLException {
+        if (colFieldIdxByOrdinal.length == 0) {
+            throw new SQLException("No data columns in prepared statement");
+        }
+        int rows = -1;
+        for (int fieldIndex : colFieldIdxByOrdinal) {
+            int appendedRows = columnBuffers[fieldIndex].getRowCount() - expectedRowCount;
+            if (appendedRows < 0) {
+                throw new SQLException("Column data row count is behind current batch at field " + fieldIndex);
+            }
+            if (rows < 0) {
+                rows = appendedRows;
+            } else if (rows != appendedRows) {
+                throw new SQLException("column data row count mismatch at field " + fieldIndex
+                        + ": expected " + rows + ", got " + appendedRows);
+            }
+        }
+        return rows;
+    }
+
+    private void clearPendingExtensionState() {
+        pendingTableName = null;
+        pendingTableNameSet = false;
+        Arrays.fill(pendingTagValues, null);
+        Arrays.fill(pendingTagSet, false);
+    }
+
+    @FunctionalInterface
+    private interface ColumnValueBinder<T> {
+        void bind(int parameterIndex, T value) throws SQLException;
+    }
+
     private static int resolveTbNameFieldIdx(Stmt2FieldMeta[] metas) {
         int tbIdx = -1;
         for (int i = 0; i < metas.length; i++) {
@@ -949,6 +1245,23 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Pr
             }
         }
         return tbIdx;
+    }
+
+    private static int[] resolveFieldIndexesByBindType(Stmt2FieldMeta[] metas, byte bindType) {
+        int count = 0;
+        for (Stmt2FieldMeta meta : metas) {
+            if (meta.getBindType() == bindType) {
+                count++;
+            }
+        }
+        int[] indexes = new int[count];
+        int ordinal = 0;
+        for (int i = 0; i < metas.length; i++) {
+            if (metas[i].getBindType() == bindType) {
+                indexes[ordinal++] = i;
+            }
+        }
+        return indexes;
     }
 
     int getExpectedRowCount() {

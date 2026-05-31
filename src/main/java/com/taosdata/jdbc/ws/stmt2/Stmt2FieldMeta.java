@@ -55,7 +55,7 @@ public final class Stmt2FieldMeta {
      * Returns 0 for variable-width types.
      */
     public int fixedWidth() {
-        switch (fieldType & 0xFF) {
+        switch (fieldType) {
             case TSDB_DATA_TYPE_BOOL:
             case TSDB_DATA_TYPE_TINYINT:
             case TSDB_DATA_TYPE_UTINYINT:

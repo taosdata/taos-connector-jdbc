@@ -2,6 +2,7 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.AbstractConnection;
 import com.taosdata.jdbc.TSDBErrorNumbers;
+import com.taosdata.jdbc.TaosPrepareStatement;
 import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnFieldBuffer;
@@ -54,6 +55,11 @@ public class WSColumnFastPreparedStatementTest {
     @Test
     public void standaloneFastStatement_extendsWSRetryableStmtDirectly() {
         assertEquals(WSRetryableStmt.class, WSColumnFastPreparedStatement.class.getSuperclass());
+    }
+
+    @Test
+    public void standaloneFastStatement_implementsTaosPrepareStatement() {
+        assertTrue(TaosPrepareStatement.class.isAssignableFrom(WSColumnFastPreparedStatement.class));
     }
 
     @Test
@@ -356,6 +362,150 @@ public class WSColumnFastPreparedStatementTest {
     }
 
     @Test
+    public void setBytes_tbnameUsesRawTbNameAppend() throws Exception {
+        WSColumnFastPreparedStatement stmt = buildStmt(tbNameAndColFields());
+        Stmt2ColumnFieldBuffer spyBuffer = Mockito.spy(new Stmt2ColumnFieldBuffer(
+                Stmt2FieldMeta.fromField(field((byte) FieldBindType.TAOS_FIELD_TBNAME.getValue(), TSDB_DATA_TYPE_VARCHAR))));
+        setColumnBuffer(stmt, 0, spyBuffer);
+        byte[] tbname = "d000000001".getBytes(StandardCharsets.UTF_8);
+
+        stmt.setBytes(1, tbname);
+
+        Mockito.verify(spyBuffer).appendTbNameBytes(tbname, tbname.length);
+        Mockito.verify(spyBuffer, Mockito.never()).appendEncodedVar(Mockito.any(byte[].class));
+    }
+
+    @Test
+    public void setString_tbnameAcceptsValidUtf8() throws Exception {
+        WSColumnFastPreparedStatement stmt = buildStmt(tbNameAndColFields());
+
+        stmt.setString(1, "涛思_01");
+
+        assertEquals(1, stmt.getColumnBuffer(0).getRowCount());
+        assertEquals(1, stmt.getColumnBuffer(0).computeTableCount());
+    }
+
+    @Test
+    public void setTableName_usesTbNameField() throws Exception {
+        WSColumnFastPreparedStatement stmt = buildStmt(tbNameAndColFields());
+
+        stmt.setTableName("t_01");
+        stmt.setInt(0, Collections.singletonList(7));
+        stmt.columnDataAddBatch();
+
+        assertEquals(1, stmt.getColumnBuffer(0).getRowCount());
+        assertEquals(1, stmt.getColumnBuffer(0).computeTableCount());
+        assertEquals(1, stmt.getExpectedRowCount());
+    }
+
+    @Test
+    public void setTagInt_usesTagOrdinal() throws Exception {
+        WSColumnFastPreparedStatement stmt = buildStmt(tbNameTagTagAndColFields());
+        Stmt2ColumnFieldBuffer tag0Buffer = Mockito.spy(new Stmt2ColumnFieldBuffer(
+                Stmt2FieldMeta.fromField(field((byte) FieldBindType.TAOS_FIELD_TAG.getValue(), TSDB_DATA_TYPE_INT))));
+        Stmt2ColumnFieldBuffer tag1Buffer = Mockito.spy(new Stmt2ColumnFieldBuffer(
+                Stmt2FieldMeta.fromField(field((byte) FieldBindType.TAOS_FIELD_TAG.getValue(), TSDB_DATA_TYPE_VARCHAR))));
+        setColumnBuffer(stmt, 1, tag0Buffer);
+        setColumnBuffer(stmt, 2, tag1Buffer);
+
+        stmt.setTableName("t_01");
+        stmt.setTagInt(0, 42);
+        stmt.setTagString(1, "loc");
+        stmt.setInt(0, Collections.singletonList(7));
+        stmt.columnDataAddBatch();
+
+        assertEquals(1, stmt.getColumnBuffer(1).getRowCount());
+        assertEquals(1, stmt.getColumnBuffer(2).getRowCount());
+        Mockito.verify(tag0Buffer).appendFixed4Raw(42);
+        Mockito.verify(tag1Buffer).appendString("loc", 3);
+        assertEquals(1, stmt.getExpectedRowCount());
+    }
+
+    @Test
+    public void setTagString_usesTagOrdinal() throws Exception {
+        WSColumnFastPreparedStatement stmt = buildStmt(tbNameTagTagAndColFields());
+        Stmt2ColumnFieldBuffer tag0Buffer = Mockito.spy(new Stmt2ColumnFieldBuffer(
+                Stmt2FieldMeta.fromField(field((byte) FieldBindType.TAOS_FIELD_TAG.getValue(), TSDB_DATA_TYPE_INT))));
+        Stmt2ColumnFieldBuffer tag1Buffer = Mockito.spy(new Stmt2ColumnFieldBuffer(
+                Stmt2FieldMeta.fromField(field((byte) FieldBindType.TAOS_FIELD_TAG.getValue(), TSDB_DATA_TYPE_VARCHAR))));
+        setColumnBuffer(stmt, 1, tag0Buffer);
+        setColumnBuffer(stmt, 2, tag1Buffer);
+
+        stmt.setTableName("t_01");
+        stmt.setTagInt(0, 42);
+        stmt.setTagString(1, "loc");
+        stmt.setInt(0, Collections.singletonList(7));
+        stmt.columnDataAddBatch();
+
+        assertEquals(1, stmt.getColumnBuffer(1).getRowCount());
+        assertEquals(1, stmt.getColumnBuffer(2).getRowCount());
+        Mockito.verify(tag0Buffer).appendFixed4Raw(42);
+        Mockito.verify(tag1Buffer).appendString("loc", 3);
+        assertEquals(1, stmt.getExpectedRowCount());
+    }
+
+    @Test
+    public void columnDataAddBatch_repeatsTableNameAndTagsForColumnRows() throws Exception {
+        WSColumnFastPreparedStatement stmt = buildStmt(tbNameTagTagAndColFields());
+
+        stmt.setTableName("t_01");
+        stmt.setTagInt(0, 42);
+        stmt.setTagString(1, "loc");
+        stmt.setInt(0, java.util.Arrays.asList(7, 8, 9));
+        stmt.columnDataAddBatch();
+
+        assertEquals(3, stmt.getExpectedRowCount());
+        assertEquals(3, stmt.getColumnBuffer(0).getRowCount());
+        assertEquals(1, stmt.getColumnBuffer(0).computeTableCount());
+        assertEquals(3, stmt.getColumnBuffer(1).getRowCount());
+        assertEquals(3, stmt.getColumnBuffer(2).getRowCount());
+        assertEquals(3, stmt.getColumnBuffer(3).getRowCount());
+    }
+
+    @Test
+    public void columnDataExecuteBatch_usesBindExecAndResetsState() throws Exception {
+        stubBindExecTransportConsumesRequestBuffer(2);
+        WSColumnFastPreparedStatement stmt = buildStmt(tbNameAndColFields());
+
+        stmt.setTableName("t_01");
+        stmt.setInt(0, java.util.Arrays.asList(7, 8));
+        stmt.columnDataAddBatch();
+
+        stmt.columnDataExecuteBatch();
+
+        assertEquals(0, stmt.getExpectedRowCount());
+        assertEquals(0, stmt.getColumnBuffer(0).getRowCount());
+        assertEquals(0, stmt.getColumnBuffer(1).getRowCount());
+    }
+
+    @Test
+    public void setString_usesDirectStringAppendForVarWidthColumn() throws Exception {
+        WSColumnFastPreparedStatement stmt = buildStmt(Collections.singletonList(field(
+                (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_VARCHAR)));
+        Stmt2ColumnFieldBuffer spyBuffer = Mockito.spy(new Stmt2ColumnFieldBuffer(
+                Stmt2FieldMeta.fromField(field((byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_VARCHAR))));
+        setColumnBuffer(stmt, 0, spyBuffer);
+
+        stmt.setString(1, "alpha");
+
+        Mockito.verify(spyBuffer).appendString("alpha", 5);
+        Mockito.verify(spyBuffer, Mockito.never()).appendEncodedVar(Mockito.any(byte[].class));
+    }
+
+    @Test
+    public void setString_tbnameUsesDirectTbNameAppend() throws Exception {
+        WSColumnFastPreparedStatement stmt = buildStmt(tbNameAndColFields());
+        Stmt2ColumnFieldBuffer spyBuffer = Mockito.spy(new Stmt2ColumnFieldBuffer(
+                Stmt2FieldMeta.fromField(field((byte) FieldBindType.TAOS_FIELD_TBNAME.getValue(), TSDB_DATA_TYPE_VARCHAR))));
+        setColumnBuffer(stmt, 0, spyBuffer);
+
+        stmt.setString(1, "t_01");
+
+        Mockito.verify(spyBuffer).appendTbName("t_01", 4);
+        Mockito.verify(spyBuffer, Mockito.never()).appendEncodedVar(Mockito.any(byte[].class));
+    }
+
+    @Test
     public void setBytes_tbnameRejectsInvalidUtf8() throws Exception {
         WSColumnFastPreparedStatement stmt = buildStmt(tbNameAndColFields());
 
@@ -420,6 +570,15 @@ public class WSColumnFastPreparedStatementTest {
     private static List<Field> tbNameAndColFields() {
         List<Field> fields = new ArrayList<>();
         fields.add(field((byte) FieldBindType.TAOS_FIELD_TBNAME.getValue(), TSDB_DATA_TYPE_VARCHAR));
+        fields.add(field((byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_INT));
+        return fields;
+    }
+
+    private static List<Field> tbNameTagTagAndColFields() {
+        List<Field> fields = new ArrayList<>();
+        fields.add(field((byte) FieldBindType.TAOS_FIELD_TBNAME.getValue(), TSDB_DATA_TYPE_VARCHAR));
+        fields.add(field((byte) FieldBindType.TAOS_FIELD_TAG.getValue(), TSDB_DATA_TYPE_INT));
+        fields.add(field((byte) FieldBindType.TAOS_FIELD_TAG.getValue(), TSDB_DATA_TYPE_VARCHAR));
         fields.add(field((byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_INT));
         return fields;
     }

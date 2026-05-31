@@ -37,6 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public abstract class AbstractWSEWPreparedStatement extends AbsWSPreparedStatement {
     private static final Logger log = LoggerFactory.getLogger(AbstractWSEWPreparedStatement.class);
+    private static final ForkJoinPool SERIALIZE_EXECUTOR = Utils.getForkJoinPool();
 
     private final boolean copyData;
     private final int writeThreadNum;
@@ -47,7 +48,6 @@ public abstract class AbstractWSEWPreparedStatement extends AbsWSPreparedStateme
     private final AtomicInteger flushIn = new AtomicInteger(0);
     private final List<WorkerThread> workerThreadList;
     private final SyncObj syncObj = new SyncObj();
-    private static final ForkJoinPool serializeExecutor = Utils.getForkJoinPool();
     private int addBatchCounts = 0;
 
     protected AbstractWSEWPreparedStatement(Transport transport,
@@ -56,8 +56,7 @@ public abstract class AbstractWSEWPreparedStatement extends AbsWSPreparedStateme
                                             AbstractConnection connection,
                                             String sql,
                                             Long instanceId,
-                                            Stmt2PrepareResp prepareResp,
-                                            boolean useBindExecForWorkers) throws SQLException {
+                                            Stmt2PrepareResp prepareResp) throws SQLException {
         super(transport, param, database, connection, sql, instanceId, prepareResp);
         this.copyData = param.isCopyData();
         this.writeThreadNum = param.getBackendWriteThreadNum();
@@ -79,8 +78,7 @@ public abstract class AbstractWSEWPreparedStatement extends AbsWSPreparedStateme
                     remainingUnprocessedRows,
                     batchInsertedRows,
                     flushIn,
-                    syncObj,
-                    useBindExecForWorkers));
+                    syncObj));
         }
 
         try {
@@ -223,6 +221,9 @@ public abstract class AbstractWSEWPreparedStatement extends AbsWSPreparedStateme
         for (WorkerThread workerThread : workerThreadList) {
             workerThread.releaseStmt();
         }
+        for (EWBackendThreadInfo backendThreadInfo : backendThreadInfoList) {
+            backendThreadInfo.releaseReusableColumnBuffers();
+        }
     }
 
     @Override
@@ -251,11 +252,15 @@ public abstract class AbstractWSEWPreparedStatement extends AbsWSPreparedStateme
                                                             int batchSize,
                                                             boolean isProgressive);
 
+    protected void dispatchSerializationTask(RecursiveAction task) {
+        SERIALIZE_EXECUTOR.submit(task);
+    }
+
     protected final void triggerSerializeProgressive(EWBackendThreadInfo backendThreadInfo) {
         if (!backendThreadInfo.getWriteQueue().isEmpty()
                 && backendThreadInfo.getSerialQueue().remainingCapacity() > 0
                 && backendThreadInfo.getSerializeRunning().compareAndSet(false, true)) {
-            serializeExecutor.submit(newSerializationTask(
+            dispatchSerializationTask(newSerializationTask(
                     backendThreadInfo,
                     Math.min(backendThreadInfo.getWriteQueue().size(), param.getBatchSizeByRow()),
                     true));
@@ -266,7 +271,7 @@ public abstract class AbstractWSEWPreparedStatement extends AbsWSPreparedStateme
         if (backendThreadInfo.getWriteQueue().size() >= param.getBatchSizeByRow()
                 && backendThreadInfo.getSerialQueue().remainingCapacity() > 0
                 && backendThreadInfo.getSerializeRunning().compareAndSet(false, true)) {
-            serializeExecutor.submit(newSerializationTask(
+            dispatchSerializationTask(newSerializationTask(
                     backendThreadInfo,
                     param.getBatchSizeByRow(),
                     false));
@@ -341,16 +346,14 @@ public abstract class AbstractWSEWPreparedStatement extends AbsWSPreparedStateme
                      AtomicInteger remainingUnprocessedRows,
                      AtomicInteger batchInsertedRows,
                      AtomicInteger flushIn,
-                     SyncObj syncObj,
-                     boolean useBindExec) {
+                     SyncObj syncObj) {
             super(conInfo.getConnection(),
                     conInfo.getParam(),
                     conInfo.getDatabase(),
                     conInfo.getTransport(),
                     conInfo.getInstanceId(),
                     stmtInfo,
-                    batchInsertedRows,
-                    useBindExec);
+                    batchInsertedRows);
             this.backendThreadInfo = backendThreadInfo;
             this.stmtInfo = stmtInfo;
             this.isClosed = isClosed;

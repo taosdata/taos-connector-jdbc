@@ -19,6 +19,7 @@ import com.taosdata.jdbc.ws.stmt2.entity.Stmt2ExecResp;
 import com.taosdata.jdbc.ws.stmt2.entity.Stmt2PrepareResp;
 import com.taosdata.jdbc.ws.stmt2.entity.Stmt2Resp;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import org.junit.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -157,6 +158,28 @@ public class WsStmt2BindExecFallbackTest {
         } finally {
             buf.release();
         }
+    }
+
+    @Test
+    public void testBindExecEnvelope_acceptsByteBufPayloadWithoutExtraCopy() {
+        ByteBuf payload = Unpooled.wrappedBuffer(new byte[]{0x11, 0x22, 0x33});
+        ByteBuf buf = Stmt2BindExecRequestBuilder.build(payload);
+        try {
+            assertEquals("header + payload length",
+                    Stmt2BindExecRequestBuilder.HEADER_SIZE + payload.readableBytes(), buf.readableBytes());
+            assertEquals("reqId placeholder", 0L, buf.getLongLE(0));
+            assertEquals("stmtId placeholder", 0L, buf.getLongLE(8));
+            assertEquals("bind-exec action id", Stmt2BindExecRequestBuilder.ACTION_ID, buf.getLongLE(16));
+            assertEquals("protocol version",
+                    Stmt2BindExecRequestBuilder.PROTOCOL_VERSION, buf.getShortLE(24));
+            assertEquals(0x11, buf.getUnsignedByte(26));
+            assertEquals(0x22, buf.getUnsignedByte(27));
+            assertEquals(0x33, buf.getUnsignedByte(28));
+            assertEquals("payload ownership stays with request until release", 1, payload.refCnt());
+        } finally {
+            buf.release();
+        }
+        assertEquals("releasing request must release transferred payload ownership", 0, payload.refCnt());
     }
 
     @Test

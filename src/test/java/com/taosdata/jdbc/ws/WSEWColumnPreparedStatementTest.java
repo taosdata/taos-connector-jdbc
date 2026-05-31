@@ -10,6 +10,8 @@ import com.taosdata.jdbc.ws.stmt2.entity.Stmt2PrepareResp;
 import com.taosdata.jdbc.ws.stmt2.entity.StmtInfo;
 import com.taosdata.jdbc.ws.stmt2.entity.EWBackendThreadInfo;
 import com.taosdata.jdbc.ws.stmt2.entity.EWRawBlock;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.util.ResourceLeakDetector;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -274,6 +276,31 @@ public class WSEWColumnPreparedStatementTest {
             block.getByteBuf().release();
         }
         info.releaseReusableColumnBuffers();
+    }
+
+    @Test
+    public void serializationTask_enqueuesDetachedDirectPayload() throws Exception {
+        EWBackendThreadInfo info = new EWBackendThreadInfo(16, 16);
+        StmtInfo stmt = wideStmtInfo();
+        enqueueRows(info,
+                wideRow("d0", 1000L, "hello", "world"),
+                wideRow("d1", 2000L, "foo", "bar"));
+
+        new WSEWColumnPreparedStatement.ColumnarWSEWSerializationTask(info, 2, stmt, false).invoke();
+
+        EWRawBlock block = info.getSerialQueue().poll();
+        assertNotNull("task should have produced a serialized block", block);
+        assertTrue("no serialization error expected", block.getLastError() == null);
+        ByteBuf rawBlock = block.getByteBuf();
+        try {
+            assertTrue("bind-exec request should be header + detached payload composite",
+                    rawBlock instanceof CompositeByteBuf);
+            ByteBuf payloadComponent = ((CompositeByteBuf) rawBlock).component(1);
+            assertTrue("WSEW queued payload should not wrap a heap byte[]", payloadComponent.isDirect());
+        } finally {
+            releaseRawBlock(block);
+            info.releaseReusableColumnBuffers();
+        }
     }
 
     @Test

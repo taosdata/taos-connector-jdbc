@@ -6,6 +6,7 @@ import com.taosdata.jdbc.ws.entity.Code;
 import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.entity.Response;
 import com.taosdata.jdbc.ws.stmt2.entity.Stmt2ExecResp;
+import com.taosdata.jdbc.ws.stmt2.entity.ResultResp;
 import com.taosdata.jdbc.ws.stmt2.entity.Stmt2Resp;
 import com.taosdata.jdbc.ws.stmt2.entity.StmtInfo;
 import io.netty.buffer.ByteBuf;
@@ -31,10 +32,9 @@ import static org.mockito.Mockito.*;
  * and verify which transport actions were sent, proving the routing behavior without reflection-based introspection.
  * 
  * Test guarantees verified:
- * 1. Default/public constructor → sends STMT2_BIND + STMT2_EXEC (never STMT2_BIND_EXEC)
- * 2. Internal bind-exec requested but server unsupported → sends STMT2_BIND + STMT2_EXEC (compatibility gate enforced)
- * 3. Internal bind-exec requested and server supported → sends STMT2_BIND_EXEC only
- * 4. Non-WSConnection → sends STMT2_BIND + STMT2_EXEC (never STMT2_BIND_EXEC)
+ * 1. Unsupported websocket server → write path sends STMT2_BIND + STMT2_EXEC
+ * 2. Supported websocket server → write path sends STMT2_BIND_EXEC only
+ * 3. Supported websocket server → query path still sends STMT2_BIND + STMT2_EXEC + STMT2_USE_RESULT
  * 
  * Implementation approach:
  * - FakeTransport extends Transport (using protected no-arg constructor from same package)
@@ -115,6 +115,12 @@ public class WSRetryableStmtRealBehaviorTest {
                 resp.setStmtId(12345L);
                 resp.setAffected(10);
                 return resp;
+            } else if (com.taosdata.jdbc.ws.entity.Action.STMT2_USE_RESULT.getAction().equals(request.getAction())) {
+                ResultResp resp = new ResultResp();
+                resp.setCode(Code.SUCCESS.getCode());
+                resp.setStmtId(12345L);
+                resp.setFieldsCount(0);
+                return resp;
             }
             
             throw new SQLException("Unexpected action: " + request.getAction());
@@ -140,7 +146,7 @@ public class WSRetryableStmtRealBehaviorTest {
     }
 
     private ConnectionParam mockConnectionParam;
-    private AbstractConnection mockConnection;
+    private WSConnection mockConnection;
     private StmtInfo stmtInfo;
     private AtomicInteger batchInsertedRows;
 
@@ -153,8 +159,9 @@ public class WSRetryableStmtRealBehaviorTest {
         when(mockConnectionParam.getRequestTimeout()).thenReturn(5000);
         when(mockConnectionParam.getZoneId()).thenReturn(java.time.ZoneId.systemDefault());
 
-        // Create mock connection
-        mockConnection = mock(AbstractConnection.class);
+        // Create websocket connection mock; individual tests override capability as needed.
+        mockConnection = mock(WSConnection.class);
+        when(mockConnection.supportsStmt2BindExec()).thenReturn(false);
 
         // Create stmt info (requires SQL in constructor)
         stmtInfo = new StmtInfo("INSERT INTO test VALUES(?, ?)");
@@ -208,70 +215,57 @@ public class WSRetryableStmtRealBehaviorTest {
     }
 
     /**
-     * Test 2: Internal bind-exec requested but server unsupported
-     * still sends legacy STMT2_BIND then STMT2_EXEC
+     * Test 2: Capable websocket connections still use the legacy query flow.
      */
     @Test
-    public void testBindExecRequestedButServerUnsupportedUsesLegacyPath() throws Exception {
-        // Arrange
+    public void testCapableServerQueryUsesLegacyPath() throws Exception {
         FakeTransport transport = new FakeTransport(mockConnectionParam);
-        
-        // Mock WSConnection that does NOT support stmt2_bind_exec
-        WSConnection mockWsConnection = mock(WSConnection.class);
-        when(mockWsConnection.supportsStmt2BindExec()).thenReturn(false);
+        WSConnection capableConnection = mock(WSConnection.class);
+        when(capableConnection.supportsStmt2BindExec()).thenReturn(true);
 
-        // Use package-private constructor with useBindExec=true
-        // but server doesn't support it
+        StmtInfo queryStmtInfo = new StmtInfo("SELECT * FROM test WHERE c1=?");
+        queryStmtInfo.setStmtId(12345L);
         WSRetryableStmt stmt = new WSRetryableStmt(
-                mockWsConnection,
+                capableConnection,
                 mockConnectionParam,
                 "test_db",
                 transport,
                 1L,
-                stmtInfo,
-                batchInsertedRows,
-                true  // Request bind-exec mode
+                queryStmtInfo,
+                batchInsertedRows
         );
 
-        // Verify the stmt is NOT using bind-exec (compatibility gate enforced)
-        assertFalse("Should fall back to legacy mode when server doesn't support bind-exec",
+        assertTrue("Capable websocket connection should enable bind-exec for writes",
                 stmt.isUsingBindExec());
 
-        // Create a dummy buffer
         ByteBuf rawBlock = Unpooled.buffer(32);
-        rawBlock.writeLongLE(0L); // reqId placeholder
-        rawBlock.writeLongLE(12345L); // stmtId placeholder
-        rawBlock.writeIntLE(1); // dummy data
+        rawBlock.writeLongLE(0L);
+        rawBlock.writeLongLE(12345L);
+        rawBlock.writeIntLE(1);
 
-        // Act
-        transport.clearRecordedActions();
-        stmt.writeBlockWithRetrySync(rawBlock);
+        ResultResp result = stmt.queryWithRetry(rawBlock);
 
-        // Assert
+        assertNotNull("Query should return a use-result response", result);
         List<String> actions = transport.getRecordedActions();
-        assertEquals("Should send exactly 2 actions", 2, actions.size());
+        assertEquals("Should send exactly 3 actions", 3, actions.size());
         assertEquals("First action should be stmt2_bind", "stmt2_bind", actions.get(0));
         assertEquals("Second action should be stmt2_exec", "stmt2_exec", actions.get(1));
+        assertEquals("Third action should be stmt2_result",
+                com.taosdata.jdbc.ws.entity.Action.STMT2_USE_RESULT.getAction(), actions.get(2));
         assertFalse("Should NOT send stmt2_bind_exec", actions.contains("stmt2_bind_exec"));
-        
-        // Clean up
+
         rawBlock.release();
     }
 
     /**
-     * Test 3: Internal bind-exec requested and server supported
-     * sends STMT2_BIND_EXEC (single action)
+     * Test 3: Supported websocket server sends STMT2_BIND_EXEC (single action).
      */
     @Test
-    public void testBindExecRequestedAndServerSupportedUsesBindExecPath() throws Exception {
-        // Arrange
+    public void testSupportedServerUsesBindExecPath() throws Exception {
         FakeTransport transport = new FakeTransport(mockConnectionParam);
-        
-        // Mock WSConnection that DOES support stmt2_bind_exec
         WSConnection mockWsConnection = mock(WSConnection.class);
         when(mockWsConnection.supportsStmt2BindExec()).thenReturn(true);
 
-        // Use package-private constructor with useBindExec=true
         WSRetryableStmt stmt = new WSRetryableStmt(
                 mockWsConnection,
                 mockConnectionParam,
@@ -279,8 +273,7 @@ public class WSRetryableStmtRealBehaviorTest {
                 transport,
                 1L,
                 stmtInfo,
-                batchInsertedRows,
-                true  // Request bind-exec mode
+                batchInsertedRows
         );
 
         // Verify the stmt IS using bind-exec
@@ -306,54 +299,6 @@ public class WSRetryableStmtRealBehaviorTest {
         
         // Verify batch counter was updated
         assertEquals("Batch inserted rows should be updated", 10, batchInsertedRows.get());
-        
-        // Clean up
-        rawBlock.release();
-    }
-
-    /**
-     * Test 4: Verify non-WSConnection still defaults to legacy path
-     */
-    @Test
-    public void testNonWSConnectionAlwaysUsesLegacyPath() throws Exception {
-        // Arrange
-        FakeTransport transport = new FakeTransport(mockConnectionParam);
-        
-        // Use non-WSConnection (just AbstractConnection)
-        AbstractConnection mockAbstractConnection = mock(AbstractConnection.class);
-
-        // Use package-private constructor with useBindExec=true
-        // but connection is not WSConnection
-        WSRetryableStmt stmt = new WSRetryableStmt(
-                mockAbstractConnection,
-                mockConnectionParam,
-                "test_db",
-                transport,
-                1L,
-                stmtInfo,
-                batchInsertedRows,
-                true  // Request bind-exec mode
-        );
-
-        // Verify the stmt is NOT using bind-exec
-        assertFalse("Should fall back to legacy mode for non-WSConnection",
-                stmt.isUsingBindExec());
-
-        // Create a dummy buffer
-        ByteBuf rawBlock = Unpooled.buffer(32);
-        rawBlock.writeLongLE(0L); // reqId placeholder
-        rawBlock.writeLongLE(12345L); // stmtId placeholder
-        rawBlock.writeIntLE(1); // dummy data
-
-        // Act
-        transport.clearRecordedActions();
-        stmt.writeBlockWithRetrySync(rawBlock);
-
-        // Assert
-        List<String> actions = transport.getRecordedActions();
-        assertEquals("Should send exactly 2 actions", 2, actions.size());
-        assertEquals("First action should be stmt2_bind", "stmt2_bind", actions.get(0));
-        assertEquals("Second action should be stmt2_exec", "stmt2_exec", actions.get(1));
         
         // Clean up
         rawBlock.release();

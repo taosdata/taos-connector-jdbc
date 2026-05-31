@@ -1,6 +1,7 @@
 package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.enums.FieldBindType;
+import com.taosdata.jdbc.common.AutoExpandingBuffer;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnBindSerializer;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnFieldBuffer;
 import com.taosdata.jdbc.ws.stmt2.Stmt2FieldMeta;
@@ -8,6 +9,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import org.junit.Test;
 
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 
@@ -46,6 +48,19 @@ public class Stmt2ColumnBindSerializerTest {
 
     private static Stmt2FieldMeta metaWithPrecision(int bindType, int fieldType, int precision) {
         return Stmt2FieldMeta.of((byte) bindType, (byte) fieldType, (byte) precision);
+    }
+
+    private static ByteBuf internalBuffer(Stmt2ColumnFieldBuffer column, String fieldName) {
+        try {
+            Field field = Stmt2ColumnFieldBuffer.class.getDeclaredField(fieldName);
+            field.setAccessible(true);
+            AutoExpandingBuffer buffer = (AutoExpandingBuffer) field.get(column);
+            Field currentBufferField = AutoExpandingBuffer.class.getDeclaredField("currentBuffer");
+            currentBufferField.setAccessible(true);
+            return (ByteBuf) currentBufferField.get(buffer);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("failed to access field " + fieldName, e);
+        }
     }
 
     // ------------------------------------------------------------------
@@ -256,6 +271,33 @@ public class Stmt2ColumnBindSerializerTest {
     }
 
     @Test
+    public void testSerialize_doesNotConsumeSourceColumnBuffers() throws SQLException {
+        Stmt2ColumnFieldBuffer col = new Stmt2ColumnFieldBuffer(
+                meta(FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_VARCHAR));
+        col.appendString("alpha");
+
+        ByteBuf nullBuffer = internalBuffer(col, "nullBuffer");
+        ByteBuf lengthBuffer = internalBuffer(col, "lengthBuffer");
+        ByteBuf valueBuffer = internalBuffer(col, "valueBuffer");
+
+        assertEquals(1, nullBuffer.refCnt());
+        assertEquals(1, lengthBuffer.refCnt());
+        assertEquals(1, valueBuffer.refCnt());
+
+        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{col});
+        assertTrue(payload.length > HEADER_SIZE);
+
+        assertEquals(1, nullBuffer.refCnt());
+        assertEquals(1, lengthBuffer.refCnt());
+        assertEquals(1, valueBuffer.refCnt());
+
+        col.release();
+        assertEquals(0, nullBuffer.refCnt());
+        assertEquals(0, lengthBuffer.refCnt());
+        assertEquals(0, valueBuffer.refCnt());
+    }
+
+    @Test
     public void testVarWidthBlock_usesHeaderAndValueComponents() throws SQLException {
         Stmt2ColumnFieldBuffer col = new Stmt2ColumnFieldBuffer(
                 meta(FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_VARCHAR));
@@ -431,6 +473,27 @@ public class Stmt2ColumnBindSerializerTest {
         // 3 rows for table1, then 2 rows for table2
         for (int i = 0; i < 3; i++) { tbName.appendTbName("t1"); col.appendInt(i); }
         for (int i = 0; i < 2; i++) { tbName.appendTbName("t2"); col.appendInt(i); }
+
+        byte[] payload = Stmt2ColumnBindSerializer.serialize(
+                new Stmt2ColumnFieldBuffer[]{tbName, col});
+        assertEquals("table_count", 2, readLE32(payload, HEADER_TABLE_COUNT_OFFSET));
+    }
+
+    @Test
+    public void testTableCount_rawTbNameBytesTracksRuns() throws SQLException {
+        Stmt2ColumnFieldBuffer tbName = new Stmt2ColumnFieldBuffer(
+                meta(FieldBindType.TAOS_FIELD_TBNAME.getValue(), TSDB_DATA_TYPE_VARCHAR));
+        Stmt2ColumnFieldBuffer col = new Stmt2ColumnFieldBuffer(
+                meta(FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_INT));
+        byte[] table1 = "t1".getBytes(StandardCharsets.UTF_8);
+        byte[] table2 = "t2".getBytes(StandardCharsets.UTF_8);
+
+        tbName.appendTbNameBytes(table1, table1.length);
+        tbName.appendTbNameBytes(table1, table1.length);
+        tbName.appendTbNameBytes(table2, table2.length);
+        col.appendInt(1);
+        col.appendInt(2);
+        col.appendInt(3);
 
         byte[] payload = Stmt2ColumnBindSerializer.serialize(
                 new Stmt2ColumnFieldBuffer[]{tbName, col});

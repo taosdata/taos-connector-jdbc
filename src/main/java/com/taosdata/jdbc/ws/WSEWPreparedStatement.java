@@ -36,7 +36,7 @@ public class WSEWPreparedStatement extends AbstractWSEWPreparedStatement {
                                  String sql,
                                  Long instanceId,
                                  Stmt2PrepareResp prepareResp) throws SQLException {
-        super(transport, param, database, connection, sql, instanceId, prepareResp, false);
+        super(transport, param, database, connection, sql, instanceId, prepareResp);
     }
 
     @Override

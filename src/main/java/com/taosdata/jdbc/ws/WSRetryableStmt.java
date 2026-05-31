@@ -25,16 +25,14 @@ public class WSRetryableStmt extends WSStatement {
     private static final int OPERATION_TYPE_WRITE = 1;
     private static final int OPERATION_TYPE_QUERY = 2;
 
-    // Bind execution mode constants
-    private static final int BIND_MODE_LEGACY = 0;  // STMT2_BIND + STMT2_EXEC
-    private static final int BIND_MODE_BIND_EXEC = 1;  // STMT2_BIND_EXEC
-
     protected final ConnectionParam param;
     protected StmtInfo stmtInfo;
     protected final AtomicReference<SQLException> lastError = new AtomicReference<>(null);
     protected final AtomicInteger batchInsertedRowsInner;
     private long reconnectCount;
-    private final boolean useBindExec;  // Whether to use new STMT2_BIND_EXEC path
+    // Whether write operations on this statement may use STMT2_BIND_EXEC.
+    // Query operations always stay on the legacy bind + exec flow.
+    private final boolean useBindExec;
 
     public WSRetryableStmt(AbstractConnection connection,
                            ConnectionParam param,
@@ -43,48 +41,12 @@ public class WSRetryableStmt extends WSStatement {
                            Long instanceId,
                            StmtInfo stmtInfo,
                            AtomicInteger batchInsertedRows) {
-        this(connection, param, database, transport, instanceId, stmtInfo, batchInsertedRows, false);
-    }
-
-    /**
-     * Package-private constructor with explicit bind execution mode control.
-     * This constructor is NOT public to prevent premature activation of the STMT2_BIND_EXEC path.
-     * It exists to preserve internal plumbing for future tasks that will activate this feature.
-     *
-     * @param connection AbstractConnection instance
-     * @param param ConnectionParam instance
-     * @param database database name
-     * @param transport Transport instance
-     * @param instanceId instance ID
-     * @param stmtInfo StmtInfo instance
-     * @param batchInsertedRows batch inserted rows counter
-     * @param useBindExec whether to use STMT2_BIND_EXEC (true) or legacy STMT2_BIND+STMT2_EXEC (false)
-     */
-    WSRetryableStmt(AbstractConnection connection,
-                    ConnectionParam param,
-                    String database,
-                    Transport transport,
-                    Long instanceId,
-                    StmtInfo stmtInfo,
-                    AtomicInteger batchInsertedRows,
-                    boolean useBindExec) {
         super(transport, database, connection, instanceId, param.getZoneId());
         this.param = param;
         this.stmtInfo = stmtInfo;
         this.batchInsertedRowsInner = batchInsertedRows;
         this.reconnectCount = transport.getReconnectCount();
-        
-        // Enforce server compatibility: even if useBindExec is requested,
-        // only honor it if the server actually supports STMT2_BIND_EXEC
-        if (useBindExec && connection instanceof WSConnection) {
-            WSConnection wsConn = (WSConnection) connection;
-            this.useBindExec = wsConn.supportsStmt2BindExec();
-            if (!this.useBindExec) {
-                log.debug("STMT2_BIND_EXEC requested but server does not support it; falling back to legacy STMT2_BIND + STMT2_EXEC");
-            }
-        } else {
-            this.useBindExec = false;
-        }
+        this.useBindExec = connection instanceof WSConnection && ((WSConnection) connection).supportsStmt2BindExec();
     }
 
     public void initStmt(int retryTimes) throws SQLException {
@@ -106,34 +68,30 @@ public class WSRetryableStmt extends WSStatement {
     public void writeBlockWithRetry(ByteBuf rawBlock) throws SQLException {
         Utils.retainByteBuf(rawBlock);
         try {
-            executeWithRetry(rawBlock, OPERATION_TYPE_WRITE, param.isEnableAutoConnect(), this.useBindExec);
+            executeWithRetry(rawBlock, OPERATION_TYPE_WRITE, param.isEnableAutoConnect());
         } finally {
             Utils.releaseByteBuf(rawBlock);
         }
     }
 
-    public void writeBlockWithRetrySync(ByteBuf rawBlock) throws SQLException {
-        writeBlockWithRetrySync(rawBlock, this.useBindExec);
-    }
-
     /**
-     * Sync write with an explicit per-call bind mode, bypassing the constructor-wide
-     * {@code useBindExec} flag.  Callers that need bind-exec for only one execution
-     * path (e.g. the column-data insert path in {@link AbsWSPreparedStatement}) can
-     * pass {@code true} here without activating bind-exec globally for the statement.
+     * Sends one stmt2 write request through the retry/reconnect loop.
      *
      * <p>The caller is responsible for allocating {@code rawBlock} with the header
      * layout expected by {@link #modifyStmtIdAndReqId}: reqId (8 bytes LE) at offset 0
      * followed by stmtId (8 bytes LE) at offset 8, then the payload.
      *
-     * @param rawBlock   the raw binary payload to send
-     * @param useBindExec {@code true} to send via {@code STMT2_BIND_EXEC};
-     *                   {@code false} to use the legacy {@code STMT2_BIND} + {@code STMT2_EXEC}
+     * <p>Protocol selection is internal to {@link #executeWithRetry(ByteBuf, int, boolean)}:
+     * write operations use {@code STMT2_BIND_EXEC} when the owning {@link WSConnection}
+     * reports bind-exec capability, while queries always stay on the legacy
+     * {@code STMT2_BIND} + {@code STMT2_EXEC} flow.
+     *
+     * @param rawBlock the raw binary payload to send
      */
-    protected void writeBlockWithRetrySync(ByteBuf rawBlock, boolean useBindExec) throws SQLException {
+    protected void writeBlockWithRetrySync(ByteBuf rawBlock) throws SQLException {
         Utils.retainByteBuf(rawBlock);
         try {
-            executeWithRetry(rawBlock, OPERATION_TYPE_WRITE, param.isEnableAutoConnect(), useBindExec);
+            executeWithRetry(rawBlock, OPERATION_TYPE_WRITE, param.isEnableAutoConnect());
             if (lastError.get() != null) {
                 SQLException e = lastError.get();
                 lastError.set(null);
@@ -147,7 +105,7 @@ public class WSRetryableStmt extends WSStatement {
     public ResultResp queryWithRetry(ByteBuf rawBlock) throws SQLException {
         Utils.retainByteBuf(rawBlock);
         try {
-            ResultResp resultResp = (ResultResp) executeWithRetry(rawBlock, OPERATION_TYPE_QUERY, param.isEnableAutoConnect(), this.useBindExec);
+            ResultResp resultResp = (ResultResp) executeWithRetry(rawBlock, OPERATION_TYPE_QUERY, param.isEnableAutoConnect());
             if (lastError.get() != null) {
                 SQLException e = lastError.get();
                 lastError.set(null);
@@ -160,10 +118,6 @@ public class WSRetryableStmt extends WSStatement {
     }
 
     private Object executeWithRetry(ByteBuf orgRawBlock, int operationType, boolean isRetry) throws SQLException {
-        return executeWithRetry(orgRawBlock, operationType, isRetry, this.useBindExec);
-    }
-
-    private Object executeWithRetry(ByteBuf orgRawBlock, int operationType, boolean isRetry, boolean useBindExec) throws SQLException {
         ByteBuf rawBlock = orgRawBlock.duplicate();
         int originalReaderIndex = orgRawBlock.readerIndex();
         int originalWriterIndex = orgRawBlock.writerIndex();
@@ -189,7 +143,7 @@ public class WSRetryableStmt extends WSStatement {
                 modifyStmtIdAndReqId(rawBlock, stmtInfo.getStmtId(), reqId);
                 Stmt2ExecResp resp;
 
-                if (useBindExec) {
+                if (useBindExec && operationType == OPERATION_TYPE_WRITE) {
                     // New path: STMT2_BIND_EXEC combines bind and exec
                     resp = (Stmt2ExecResp) transport.send(Action.STMT2_BIND_EXEC.getAction(),
                             reqId, rawBlock, false, this.getQueryTimeoutInMs());
@@ -224,8 +178,8 @@ public class WSRetryableStmt extends WSStatement {
                     reqId = ReqId.getReqID();
                     Request request = RequestFactory.generateUseResult(stmtInfo.getStmtId(), reqId);
                     ResultResp useResultResp = (ResultResp) transport.send(request, false, this.getQueryTimeoutInMs());
-                    if (Code.SUCCESS.getCode() != resp.getCode()) {
-                        throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
+                    if (Code.SUCCESS.getCode() != useResultResp.getCode()) {
+                        throw new SQLException("(0x" + Integer.toHexString(useResultResp.getCode()) + "):" + useResultResp.getMessage());
                     }
                     return useResultResp;
                 } else {
@@ -298,11 +252,14 @@ public class WSRetryableStmt extends WSStatement {
     }
 
     /**
-     * Package-private method to check if this statement is using the new STMT2_BIND_EXEC path.
-     * This is NOT public to hide the dormant implementation from external code.
-     * It exists for internal testing to verify the plumbing is correct.
+     * Package-private, test-only hook that exposes whether this statement is eligible to
+     * use {@code STMT2_BIND_EXEC} for write operations.
      *
-     * @return true if using STMT2_BIND_EXEC, false if using legacy STMT2_BIND + STMT2_EXEC
+     * <p>This does not mean every operation uses bind-exec: query operations still run
+     * through the legacy bind + exec flow.
+     *
+     * @return true if writes may use {@code STMT2_BIND_EXEC}; false if all operations
+     * use the legacy {@code STMT2_BIND} + {@code STMT2_EXEC} flow
      */
     boolean isUsingBindExec() {
         return useBindExec;

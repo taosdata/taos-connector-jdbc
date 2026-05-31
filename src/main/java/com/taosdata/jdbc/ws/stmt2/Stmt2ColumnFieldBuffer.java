@@ -14,6 +14,7 @@ import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
+import java.util.Arrays;
 
 /**
  * Append-only accumulator for a single stmt2 column field.
@@ -51,6 +52,8 @@ public final class Stmt2ColumnFieldBuffer {
     private int nullCount = 0;
     private int tableCount = 0;
     private String lastTableName;
+    private byte[] lastTableNameBytes;
+    private int lastTableNameBytesLength;
 
     public Stmt2ColumnFieldBuffer(Stmt2FieldMeta meta) {
         this(meta, null);
@@ -192,7 +195,7 @@ public final class Stmt2ColumnFieldBuffer {
      * Pass {@code null} to record a null entry.
      */
     public void appendBytes(byte[] data) throws SQLException {
-        appendEncodedVar(data, data == null ? 0 : data.length);
+        appendEncodedVar(data);
     }
 
     public void appendString(String value) throws SQLException {
@@ -205,7 +208,6 @@ public final class Stmt2ColumnFieldBuffer {
      * <p>The {@code utf8Length} must be the exact result of {@code ByteBufUtil.utf8Bytes(value)}.
      */
     public void appendString(String value, int utf8Length) throws SQLException {
-        assert value == null || utf8Length == ByteBufUtil.utf8Bytes(value);
         if (isTbNameColumn()) {
             appendTbNameValue(value, utf8Length);
             return;
@@ -233,11 +235,25 @@ public final class Stmt2ColumnFieldBuffer {
      * <p>The {@code utf8Length} must be the exact result of {@code ByteBufUtil.utf8Bytes(name)}.
      */
     public void appendTbName(String name, int utf8Length) throws SQLException {
-        assert name == null || utf8Length == ByteBufUtil.utf8Bytes(name);
         if (!isTbNameColumn()) {
             throw new IllegalStateException("appendTbName called on non-tbname column");
         }
         appendTbNameValue(name, utf8Length);
+    }
+
+    public void appendTbNameBytes(byte[] data, int len) throws SQLException {
+        if (!isTbNameColumn()) {
+            throw new IllegalStateException("appendTbNameBytes called on non-tbname column");
+        }
+        appendTbNameBytesValue(data, len);
+    }
+
+    public void appendEncodedVar(byte[] data) throws SQLException {
+        if (data == null) {
+            appendNull();
+            return;
+        }
+        appendEncodedVar(data, data.length);
     }
 
     public void appendEncodedVar(byte[] data, int len) throws SQLException {
@@ -246,7 +262,7 @@ public final class Stmt2ColumnFieldBuffer {
             return;
         }
         if (isTbNameColumn()) {
-            appendTbNameValue(decodeTbNameBytes(data, len), len);
+            appendTbNameBytesValue(data, len);
             return;
         }
         appendNonNullPrefix();
@@ -279,6 +295,36 @@ public final class Stmt2ColumnFieldBuffer {
         rowCount++;
     }
 
+    private void appendTbNameBytesValue(byte[] data, int len) throws SQLException {
+        if (data == null || len <= 0) {
+            throw new IllegalArgumentException("Table name must not be null or empty");
+        }
+        if (len > data.length) {
+            throw new IllegalArgumentException("Table name length exceeds byte array length");
+        }
+        boolean sameRawBytes = matchesLastTableNameRawBytes(data, len);
+        if (!sameRawBytes && !isValidUtf8(data, 0, len)) {
+            throw new SQLException("tbname bytes must be valid UTF-8");
+        }
+        appendNonNullPrefix();
+        lengthBuffer.writeIntLE(len);
+        if (reusableValueBuffer != null) {
+            reusableValueBuffer.writeBytes(data, 0, len);
+        } else {
+            valueBuffer.writeBytes(data, 0, len);
+        }
+        rowCount++;
+        boolean sameTable = sameRawBytes || matchesLastTableNameBytes(data, len);
+        if (!sameTable) {
+            tableCount++;
+        }
+        if (!sameTable || lastTableNameBytes == null) {
+            lastTableName = null;
+            lastTableNameBytes = Arrays.copyOf(data, len);
+            lastTableNameBytesLength = len;
+        }
+    }
+
     private void appendUtf8Value(String value, int utf8Length) throws SQLException {
         if (value == null) {
             appendNull();
@@ -287,30 +333,27 @@ public final class Stmt2ColumnFieldBuffer {
         appendNonNullPrefix();
         int writtenUtf8Length = reusableValueBuffer != null
                 ? reusableValueBuffer.writeString(value, utf8Length)
-                : valueBuffer.writeString(value);
+                : valueBuffer.writeString(value, utf8Length);
         lengthBuffer.writeIntLE(writtenUtf8Length);
         rowCount++;
-    }
-
-    private void appendTbNameValue(String name) throws SQLException {
-        appendTbNameValue(name, name == null ? 0 : ByteBufUtil.utf8Bytes(name));
     }
 
     private void appendTbNameValue(String name, int utf8Length) throws SQLException {
         if (name == null || name.isEmpty()) {
             throw new IllegalArgumentException("Table name must not be null or empty");
         }
-        assert utf8Length == ByteBufUtil.utf8Bytes(name);
         appendNonNullPrefix();
         int writtenUtf8Length = reusableValueBuffer != null
                 ? reusableValueBuffer.writeString(name, utf8Length)
-                : valueBuffer.writeString(name);
+                : valueBuffer.writeString(name, utf8Length);
         lengthBuffer.writeIntLE(writtenUtf8Length);
         rowCount++;
-        if (!name.equals(lastTableName)) {
+        if (!matchesLastTableName(name)) {
             tableCount++;
-            lastTableName = name;
         }
+        lastTableName = name;
+        lastTableNameBytes = null;
+        lastTableNameBytesLength = 0;
     }
 
     private String decodeTbNameBytes(byte[] data, int len) throws SQLException {
@@ -325,6 +368,144 @@ public final class Stmt2ColumnFieldBuffer {
         } catch (CharacterCodingException e) {
             throw new SQLException("tbname bytes must be valid UTF-8", e);
         }
+    }
+
+    private boolean matchesLastTableName(String name) throws SQLException {
+        if (name.equals(lastTableName)) {
+            return true;
+        }
+        if (lastTableNameBytes == null) {
+            return false;
+        }
+        return name.equals(decodeTbNameBytes(lastTableNameBytes, lastTableNameBytesLength));
+    }
+
+    private boolean matchesLastTableNameBytes(byte[] data, int len) throws SQLException {
+        if (matchesLastTableNameRawBytes(data, len)) {
+            return true;
+        }
+        if (lastTableNameBytes != null) {
+            return false;
+        }
+        if (lastTableName == null) {
+            return false;
+        }
+        return lastTableName.equals(decodeTbNameBytes(data, len));
+    }
+
+    private boolean matchesLastTableNameRawBytes(byte[] data, int len) {
+        if (lastTableNameBytes == null || lastTableNameBytesLength != len) {
+            return false;
+        }
+        for (int i = 0; i < len; i++) {
+            if (lastTableNameBytes[i] != data[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean isValidUtf8(byte[] data, int offset, int len) {
+        int i = offset;
+        int end = offset + len;
+        while (i < end) {
+            int b1 = data[i++] & 0xFF;
+            if (b1 <= 0x7F) {
+                continue;
+            }
+            if (b1 >= 0xC2 && b1 <= 0xDF) {
+                if (i >= end || !isContinuation(data[i++] & 0xFF)) {
+                    return false;
+                }
+                continue;
+            }
+            if (b1 == 0xE0) {
+                if (i + 1 >= end) {
+                    return false;
+                }
+                int b2 = data[i++] & 0xFF;
+                int b3 = data[i++] & 0xFF;
+                if (b2 < 0xA0 || b2 > 0xBF || !isContinuation(b3)) {
+                    return false;
+                }
+                continue;
+            }
+            if (b1 >= 0xE1 && b1 <= 0xEC) {
+                if (i + 1 >= end) {
+                    return false;
+                }
+                int b2 = data[i++] & 0xFF;
+                int b3 = data[i++] & 0xFF;
+                if (!isContinuation(b2) || !isContinuation(b3)) {
+                    return false;
+                }
+                continue;
+            }
+            if (b1 == 0xED) {
+                if (i + 1 >= end) {
+                    return false;
+                }
+                int b2 = data[i++] & 0xFF;
+                int b3 = data[i++] & 0xFF;
+                if (b2 < 0x80 || b2 > 0x9F || !isContinuation(b3)) {
+                    return false;
+                }
+                continue;
+            }
+            if (b1 >= 0xEE && b1 <= 0xEF) {
+                if (i + 1 >= end) {
+                    return false;
+                }
+                int b2 = data[i++] & 0xFF;
+                int b3 = data[i++] & 0xFF;
+                if (!isContinuation(b2) || !isContinuation(b3)) {
+                    return false;
+                }
+                continue;
+            }
+            if (b1 == 0xF0) {
+                if (i + 2 >= end) {
+                    return false;
+                }
+                int b2 = data[i++] & 0xFF;
+                int b3 = data[i++] & 0xFF;
+                int b4 = data[i++] & 0xFF;
+                if (b2 < 0x90 || b2 > 0xBF || !isContinuation(b3) || !isContinuation(b4)) {
+                    return false;
+                }
+                continue;
+            }
+            if (b1 >= 0xF1 && b1 <= 0xF3) {
+                if (i + 2 >= end) {
+                    return false;
+                }
+                int b2 = data[i++] & 0xFF;
+                int b3 = data[i++] & 0xFF;
+                int b4 = data[i++] & 0xFF;
+                if (!isContinuation(b2) || !isContinuation(b3) || !isContinuation(b4)) {
+                    return false;
+                }
+                continue;
+            }
+            if (b1 == 0xF4) {
+                if (i + 2 >= end) {
+                    return false;
+                }
+                int b2 = data[i++] & 0xFF;
+                int b3 = data[i++] & 0xFF;
+                int b4 = data[i++] & 0xFF;
+                if (b2 < 0x80 || b2 > 0x8F || !isContinuation(b3) || !isContinuation(b4)) {
+                    return false;
+                }
+                continue;
+            }
+            return false;
+        }
+        return true;
+    }
+
+    private static boolean isContinuation(int b) {
+        return b >= 0x80 && b <= 0xBF;
     }
 
     // -----------------------------------------------------------------------
@@ -531,6 +712,8 @@ public final class Stmt2ColumnFieldBuffer {
         nullCount = 0;
         tableCount = 0;
         lastTableName = null;
+        lastTableNameBytes = null;
+        lastTableNameBytesLength = 0;
         if (fixedWidthSlab != null) {
             fixedWidthSlab.reset();
             return;
