@@ -122,10 +122,10 @@ public class WSRetryableStmtCompatibilityTest {
                 boolean.class, method.getReturnType());
         
         // Verify the method works correctly
-        assertTrue("Version 3.4.1.10 should support bind-exec",
-                com.taosdata.jdbc.utils.VersionUtil.supportStmt2BindExec("3.4.1.10"));
-        assertFalse("Version 3.4.1.9 should not support bind-exec",
-                com.taosdata.jdbc.utils.VersionUtil.supportStmt2BindExec("3.4.1.9"));
+        assertTrue("Version 3.4.1.13 should support bind-exec",
+                com.taosdata.jdbc.utils.VersionUtil.supportStmt2BindExec("3.4.1.13"));
+        assertFalse("Version 3.4.1.12 should not support bind-exec",
+                com.taosdata.jdbc.utils.VersionUtil.supportStmt2BindExec("3.4.1.12"));
     }
 
     /**

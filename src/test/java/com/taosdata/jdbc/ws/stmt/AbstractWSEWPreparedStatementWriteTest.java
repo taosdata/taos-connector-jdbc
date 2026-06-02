@@ -27,11 +27,10 @@ public abstract class AbstractWSEWPreparedStatementWriteTest {
     public void testAutoCreateSubtable_roundTripsAllTypes() throws SQLException {
         String subTable = expectedRouteName().toLowerCase() + "_all_type";
         long current = System.currentTimeMillis();
-        try (PreparedStatement statement = prepareWSEWStatement(
-                WsStmtWriteTestSupport.asyncInsertSql(dbName, stableName))) {
+        try (PreparedStatement statement = prepareWSEWStatement(asyncInsertSql())) {
             statement.setString(1, subTable);
             statement.setInt(2, 1);
-            WsStmtWriteTestSupport.bindAllTypes(statement, 3, current);
+            bindAllTypes(statement, 3, current);
             statement.addBatch();
 
             int[] result = statement.executeBatch();
@@ -42,7 +41,7 @@ public abstract class AbstractWSEWPreparedStatementWriteTest {
 
         try (Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery("select * from " + dbName + ".`" + subTable + "`")) {
-            WsStmtWriteTestSupport.assertAllTypeRow(resultSet, current);
+            assertAllTypeRow(resultSet, current);
         }
     }
 
@@ -55,10 +54,9 @@ public abstract class AbstractWSEWPreparedStatementWriteTest {
                     + " using " + dbName + "." + stableName + " tags(1)");
         }
 
-        try (PreparedStatement statement = prepareWSEWStatement(
-                WsStmtWriteTestSupport.stableInsertSql(dbName, stableName))) {
+        try (PreparedStatement statement = prepareWSEWStatement(stableInsertSql())) {
             statement.setString(1, subTable);
-            WsStmtWriteTestSupport.bindNullTypes(statement, 2, current);
+            bindNullTypes(statement, 2, current);
             statement.addBatch();
 
             int[] result = statement.executeBatch();
@@ -69,7 +67,7 @@ public abstract class AbstractWSEWPreparedStatementWriteTest {
 
         try (Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery("select * from " + dbName + ".`" + subTable + "`")) {
-            WsStmtWriteTestSupport.assertNullTypeRow(resultSet, current);
+            assertNullTypeRow(resultSet, current);
         }
     }
 
@@ -88,7 +86,7 @@ public abstract class AbstractWSEWPreparedStatementWriteTest {
         }
         WsStmtWriteTestSupport.recreateDatabase(connection, dbName);
         try (Statement statement = connection.createStatement()) {
-            WsStmtWriteTestSupport.createAllTypeStable(statement, dbName, stableName);
+            createStable(statement);
         }
     }
 
@@ -98,5 +96,33 @@ public abstract class AbstractWSEWPreparedStatementWriteTest {
         if (connection != null) {
             connection.close();
         }
+    }
+
+    protected String stableInsertSql() {
+        return WsStmtWriteTestSupport.stableInsertSql(dbName, stableName);
+    }
+
+    protected String asyncInsertSql() {
+        return WsStmtWriteTestSupport.asyncInsertSql(dbName, stableName);
+    }
+
+    protected void createStable(Statement statement) throws SQLException {
+        WsStmtWriteTestSupport.createAllTypeStable(statement, dbName, stableName);
+    }
+
+    protected void bindAllTypes(PreparedStatement statement, int startIndex, long current) throws SQLException {
+        WsStmtWriteTestSupport.bindAllTypes(statement, startIndex, current);
+    }
+
+    protected void bindNullTypes(PreparedStatement statement, int startIndex, long current) throws SQLException {
+        WsStmtWriteTestSupport.bindNullTypes(statement, startIndex, current);
+    }
+
+    protected void assertAllTypeRow(ResultSet resultSet, long current) throws SQLException {
+        WsStmtWriteTestSupport.assertAllTypeRow(resultSet, current);
+    }
+
+    protected void assertNullTypeRow(ResultSet resultSet, long current) throws SQLException {
+        WsStmtWriteTestSupport.assertNullTypeRow(resultSet, current);
     }
 }

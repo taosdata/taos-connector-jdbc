@@ -91,6 +91,14 @@ final class WsStmtWriteTestSupport {
                 + "c19 decimal(30,10))");
     }
 
+    static void createAllTypeTable336(Statement statement, String dbName, String tableName) throws SQLException {
+        statement.execute("create table if not exists " + dbName + "." + tableName
+                + "(ts timestamp, c1 tinyint, c2 smallint, c3 int, c4 bigint, "
+                + "c5 float, c6 double, c7 bool, c8 binary(10), c9 nchar(10), c10 varchar(20), "
+                + "c11 varbinary(100), c12 geometry(100), c13 tinyint unsigned, c14 smallint unsigned, "
+                + "c15 int unsigned, c16 bigint unsigned)");
+    }
+
     static void createAllTypeStable(Statement statement, String dbName, String stableName) throws SQLException {
         statement.execute("create stable if not exists " + dbName + "." + stableName
                 + "(ts timestamp, c1 tinyint, c2 smallint, c3 int, c4 bigint, "
@@ -100,9 +108,22 @@ final class WsStmtWriteTestSupport {
                 + "c19 decimal(30,10)) tags (groupId int)");
     }
 
+    static void createAllTypeStable336(Statement statement, String dbName, String stableName) throws SQLException {
+        statement.execute("create stable if not exists " + dbName + "." + stableName
+                + "(ts timestamp, c1 tinyint, c2 smallint, c3 int, c4 bigint, "
+                + "c5 float, c6 double, c7 bool, c8 binary(10), c9 nchar(10), c10 varchar(20), "
+                + "c11 varbinary(100), c12 geometry(100), c13 tinyint unsigned, c14 smallint unsigned, "
+                + "c15 int unsigned, c16 bigint unsigned) tags (groupId int)");
+    }
+
     static String tableInsertSql(String dbName, String tableName) {
         return "insert into " + dbName + "." + tableName
                 + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    }
+
+    static String tableInsertSql336(String dbName, String tableName) {
+        return "insert into " + dbName + "." + tableName
+                + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     }
 
     static String stableInsertSql(String dbName, String stableName) {
@@ -112,9 +133,21 @@ final class WsStmtWriteTestSupport {
                 + "values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     }
 
+    static String stableInsertSql336(String dbName, String stableName) {
+        return "insert into " + dbName + "." + stableName
+                + "(tbname, ts, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, "
+                + "c13, c14, c15, c16) "
+                + "values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    }
+
     static String asyncInsertSql(String dbName, String stableName) {
         return "ASYNC_INSERT INTO ? USING " + dbName + "." + stableName
                 + " TAGS(?) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    }
+
+    static String asyncInsertSql336(String dbName, String stableName) {
+        return "ASYNC_INSERT INTO ? USING " + dbName + "." + stableName
+                + " TAGS(?) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     }
 
     static void bindAllTypes(PreparedStatement statement, int startIndex, long current) throws SQLException {
@@ -140,6 +173,26 @@ final class WsStmtWriteTestSupport {
         statement.setBigDecimal(startIndex + 19, new BigDecimal(DECIMAL_VALUE_2));
     }
 
+    static void bindAllTypes336(PreparedStatement statement, int startIndex, long current) throws SQLException {
+        statement.setTimestamp(startIndex, new Timestamp(current));
+        statement.setByte(startIndex + 1, (byte) 2);
+        statement.setShort(startIndex + 2, (short) 3);
+        statement.setInt(startIndex + 3, 4);
+        statement.setLong(startIndex + 4, 5L);
+        statement.setFloat(startIndex + 5, 6.6f);
+        statement.setDouble(startIndex + 6, 7.7);
+        statement.setBoolean(startIndex + 7, true);
+        statement.setString(startIndex + 8, "hello");
+        statement.setNString(startIndex + 9, "世界");
+        statement.setString(startIndex + 10, "hello world");
+        statement.setBytes(startIndex + 11, EXPECTED_VAR_BINARY);
+        statement.setBytes(startIndex + 12, EXPECTED_GEOMETRY);
+        statement.setShort(startIndex + 13, TSDBConstants.MAX_UNSIGNED_BYTE);
+        statement.setInt(startIndex + 14, TSDBConstants.MAX_UNSIGNED_SHORT);
+        statement.setLong(startIndex + 15, TSDBConstants.MAX_UNSIGNED_INT);
+        statement.setObject(startIndex + 16, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
+    }
+
     static void bindNullTypes(PreparedStatement statement, int startIndex, long current) throws SQLException {
         statement.setTimestamp(startIndex, new Timestamp(current));
         statement.setNull(startIndex + 1, Types.TINYINT);
@@ -161,6 +214,26 @@ final class WsStmtWriteTestSupport {
         statement.setNull(startIndex + 17, Types.BLOB);
         statement.setNull(startIndex + 18, Types.DECIMAL);
         statement.setNull(startIndex + 19, Types.DECIMAL);
+    }
+
+    static void bindNullTypes336(PreparedStatement statement, int startIndex, long current) throws SQLException {
+        statement.setTimestamp(startIndex, new Timestamp(current));
+        statement.setNull(startIndex + 1, Types.TINYINT);
+        statement.setNull(startIndex + 2, Types.SMALLINT);
+        statement.setNull(startIndex + 3, Types.INTEGER);
+        statement.setNull(startIndex + 4, Types.BIGINT);
+        statement.setNull(startIndex + 5, Types.FLOAT);
+        statement.setNull(startIndex + 6, Types.DOUBLE);
+        statement.setNull(startIndex + 7, Types.BOOLEAN);
+        statement.setString(startIndex + 8, null);
+        statement.setNString(startIndex + 9, null);
+        statement.setString(startIndex + 10, null);
+        statement.setNull(startIndex + 11, Types.VARBINARY);
+        statement.setNull(startIndex + 12, Types.VARBINARY);
+        statement.setNull(startIndex + 13, Types.SMALLINT);
+        statement.setNull(startIndex + 14, Types.INTEGER);
+        statement.setNull(startIndex + 15, Types.BIGINT);
+        statement.setNull(startIndex + 16, Types.BIGINT);
     }
 
     static void assertAllTypeRow(ResultSet resultSet, long current) throws SQLException {
@@ -188,6 +261,28 @@ final class WsStmtWriteTestSupport {
         Assert.assertFalse(resultSet.next());
     }
 
+    static void assertAllTypeRow336(ResultSet resultSet, long current) throws SQLException {
+        Assert.assertTrue(resultSet.next());
+        Assert.assertEquals(new Timestamp(current), resultSet.getTimestamp(1));
+        Assert.assertEquals((byte) 2, resultSet.getByte(2));
+        Assert.assertEquals((short) 3, resultSet.getShort(3));
+        Assert.assertEquals(4, resultSet.getInt(4));
+        Assert.assertEquals(5L, resultSet.getLong(5));
+        Assert.assertEquals(6.6f, resultSet.getFloat(6), 0.0001);
+        Assert.assertEquals(7.7, resultSet.getDouble(7), 0.0001);
+        Assert.assertTrue(resultSet.getBoolean(8));
+        Assert.assertEquals("hello", resultSet.getString(9));
+        Assert.assertEquals("世界", resultSet.getString(10));
+        Assert.assertEquals("hello world", resultSet.getString(11));
+        Assert.assertArrayEquals(EXPECTED_VAR_BINARY, resultSet.getBytes(12));
+        Assert.assertArrayEquals(EXPECTED_GEOMETRY, resultSet.getBytes(13));
+        Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_BYTE, resultSet.getShort(14));
+        Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_SHORT, resultSet.getInt(15));
+        Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_INT, resultSet.getLong(16));
+        Assert.assertEquals(new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG), resultSet.getObject(17));
+        Assert.assertFalse(resultSet.next());
+    }
+
     static void assertNullTypeRow(ResultSet resultSet, long current) throws SQLException {
         Assert.assertTrue(resultSet.next());
         Assert.assertEquals(new Timestamp(current), resultSet.getTimestamp(1));
@@ -207,6 +302,25 @@ final class WsStmtWriteTestSupport {
         Assert.assertNull(resultSet.getBlob(18));
         Assert.assertNull(resultSet.getBigDecimal(19));
         Assert.assertNull(resultSet.getBigDecimal(20));
+        Assert.assertFalse(resultSet.next());
+    }
+
+    static void assertNullTypeRow336(ResultSet resultSet, long current) throws SQLException {
+        Assert.assertTrue(resultSet.next());
+        Assert.assertEquals(new Timestamp(current), resultSet.getTimestamp(1));
+        for (int i = 2; i <= 8; i++) {
+            resultSet.getObject(i);
+            Assert.assertTrue("column " + i + " should be null", resultSet.wasNull());
+        }
+        Assert.assertNull(resultSet.getString(9));
+        Assert.assertNull(resultSet.getString(10));
+        Assert.assertNull(resultSet.getString(11));
+        Assert.assertNull(resultSet.getBytes(12));
+        Assert.assertNull(resultSet.getBytes(13));
+        for (int i = 14; i <= 17; i++) {
+            resultSet.getObject(i);
+            Assert.assertTrue("column " + i + " should be null", resultSet.wasNull());
+        }
         Assert.assertFalse(resultSet.next());
     }
 }

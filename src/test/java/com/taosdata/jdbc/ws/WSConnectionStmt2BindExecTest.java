@@ -27,8 +27,8 @@ public class WSConnectionStmt2BindExecTest {
      */
     @Test
     public void testAboveMinimumVersionSupportsStmt2BindExec() {
-        assertTrue("Version 3.4.1.11 should support stmt2_bind_exec",
-                com.taosdata.jdbc.utils.VersionUtil.supportStmt2BindExec("3.4.1.11"));
+        assertTrue("Version 3.4.1.14 should support stmt2_bind_exec",
+                com.taosdata.jdbc.utils.VersionUtil.supportStmt2BindExec("3.4.1.14"));
         assertTrue("Version 3.4.2.0 should support stmt2_bind_exec",
                 com.taosdata.jdbc.utils.VersionUtil.supportStmt2BindExec("3.4.2.0"));
         assertTrue("Version 4.0.0.0 should support stmt2_bind_exec",
@@ -40,8 +40,8 @@ public class WSConnectionStmt2BindExecTest {
      */
     @Test
     public void testBelowMinimumVersionDoesNotSupportStmt2BindExec() {
-        assertFalse("Version 3.4.1.9 should not support stmt2_bind_exec",
-                com.taosdata.jdbc.utils.VersionUtil.supportStmt2BindExec("3.4.1.9"));
+        assertFalse("Version 3.4.1.12 should not support stmt2_bind_exec",
+                com.taosdata.jdbc.utils.VersionUtil.supportStmt2BindExec("3.4.1.12"));
         assertFalse("Version 3.4.0.10 should not support stmt2_bind_exec",
                 com.taosdata.jdbc.utils.VersionUtil.supportStmt2BindExec("3.4.0.10"));
         assertFalse("Version 3.0.0.0 should not support stmt2_bind_exec",
@@ -71,8 +71,8 @@ public class WSConnectionStmt2BindExecTest {
      */
     @Test
     public void testVersionWithAlphaSuffixAboveMinimum() {
-        assertTrue("Version 3.4.1.11.alpha should support stmt2_bind_exec",
-                com.taosdata.jdbc.utils.VersionUtil.supportStmt2BindExec("3.4.1.11.alpha"));
+        assertTrue("Version 3.4.1.14.alpha should support stmt2_bind_exec",
+                com.taosdata.jdbc.utils.VersionUtil.supportStmt2BindExec("3.4.1.14.alpha"));
     }
 
     /**
@@ -80,8 +80,8 @@ public class WSConnectionStmt2BindExecTest {
      */
     @Test
     public void testVersionWithAlphaSuffixAtMinimum() {
-        assertFalse("Version 3.4.1.10.alpha should not support stmt2_bind_exec (pre-release)",
-                com.taosdata.jdbc.utils.VersionUtil.supportStmt2BindExec("3.4.1.10.alpha"));
+        assertFalse("Version 3.4.1.13.alpha should not support stmt2_bind_exec (pre-release)",
+                com.taosdata.jdbc.utils.VersionUtil.supportStmt2BindExec("3.4.1.13.alpha"));
     }
 
     /**
@@ -89,7 +89,7 @@ public class WSConnectionStmt2BindExecTest {
      */
     @Test
     public void testVersionWithAlphaSuffixBelowMinimum() {
-        assertFalse("Version 3.4.1.9.alpha should not support stmt2_bind_exec",
-                com.taosdata.jdbc.utils.VersionUtil.supportStmt2BindExec("3.4.1.9.alpha"));
+        assertFalse("Version 3.4.1.12.alpha should not support stmt2_bind_exec",
+                com.taosdata.jdbc.utils.VersionUtil.supportStmt2BindExec("3.4.1.12.alpha"));
     }
 }
