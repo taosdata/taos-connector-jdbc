@@ -210,11 +210,11 @@ public class WSConnectionRoutingTest {
     }
 
     // -----------------------------------------------------------------------
-    // Test: pbsMode=line no longer forces the removed row-mode implementation
+    // Test: capable insert route uses columnar stmt2 prepared statement
     // -----------------------------------------------------------------------
 
     @Test
-    public void insert_lineModeOnBindExecServer_returnsWSColumnPreparedStatement() throws Exception {
+    public void insert_bindExecServer_returnsWSColumnPreparedStatement() throws Exception {
         stubInsertPrepare();
         Mockito.when(param.getAsyncWrite()).thenReturn(null);
 
@@ -223,7 +223,7 @@ public class WSConnectionRoutingTest {
         try (PreparedStatement stmt = conn.prepareStatement("INSERT INTO t VALUES (?,?)")) {
             assertNotNull(stmt);
             assertTrue(
-                    "Expected WSColumnPreparedStatement when pbsMode=line is ignored, got: "
+                    "Expected WSColumnPreparedStatement on bind-exec capable server, got: "
                             + stmt.getClass().getSimpleName(),
                     stmt instanceof WSColumnPreparedStatement);
         }

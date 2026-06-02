@@ -1,8 +1,19 @@
 package com.taosdata.jdbc.ws;
 
+import com.taosdata.jdbc.AbstractConnection;
+import com.taosdata.jdbc.common.ConnectionParam;
+import com.taosdata.jdbc.ws.stmt2.entity.StmtInfo;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import org.junit.Test;
 
+import java.time.ZoneId;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Source-level enforcement tests for the simplified WSRetryableStmt compatibility rules.
@@ -50,42 +61,49 @@ public class WSRetryableStmtCompatibilityEnforcementTest {
         }
     }
 
-    /**
-     * Code review test: verify the constructor derives write eligibility from websocket capability.
-     */
     @Test
     public void testConstructorDerivesWriteEligibilityFromWSConnectionCapability() throws Exception {
-        String sourceFile = "src/main/java/com/taosdata/jdbc/ws/WSRetryableStmt.java";
-        java.nio.file.Path sourcePath = java.nio.file.Paths.get(sourceFile);
-        
-        if (!java.nio.file.Files.exists(sourcePath)) {
-            fail("Source file not found: " + sourceFile);
-        }
-        
-        String sourceCode = new String(java.nio.file.Files.readAllBytes(sourcePath));
-        
-        assertTrue("Constructor should derive write eligibility from WSConnection.supportsStmt2BindExec()",
-                sourceCode.contains("this.useBindExec = ((WSConnection) connection).supportsStmt2BindExec();"));
+        ConnectionParam param = mockParam();
+        WSRetryableStmtRealBehaviorTest.FakeTransport transport =
+                new WSRetryableStmtRealBehaviorTest.FakeTransport(param);
+        WSConnection capableConnection = mock(WSConnection.class);
+        when(capableConnection.supportsStmt2BindExec()).thenReturn(true);
+
+        WSRetryableStmt capableStmt = newStmt(capableConnection, param, transport, "INSERT INTO t VALUES(?)");
+        assertTrue("Capable WSConnection should enable bind-exec for writes", capableStmt.isUsingBindExec());
+
+        AbstractConnection nonWsConnection = mock(AbstractConnection.class);
+        WSRetryableStmt nonWsStmt = newStmt(nonWsConnection, param, transport, "INSERT INTO t VALUES(?)");
+        assertFalse("Non-WSConnection should not enable bind-exec", nonWsStmt.isUsingBindExec());
     }
 
-    /**
-     * Query operations must stay on the legacy path even when write eligibility is enabled.
-     */
     @Test
     public void testQueryPathIsSeparatedFromWriteBindExecGate() throws Exception {
-        String sourceFile = "src/main/java/com/taosdata/jdbc/ws/WSRetryableStmt.java";
-        java.nio.file.Path sourcePath = java.nio.file.Paths.get(sourceFile);
-        
-        if (!java.nio.file.Files.exists(sourcePath)) {
-            fail("Source file not found: " + sourceFile);
+        ConnectionParam param = mockParam();
+        WSRetryableStmtRealBehaviorTest.FakeTransport transport =
+                new WSRetryableStmtRealBehaviorTest.FakeTransport(param);
+        WSConnection capableConnection = mock(WSConnection.class);
+        when(capableConnection.supportsStmt2BindExec()).thenReturn(true);
+
+        WSRetryableStmt stmt = newStmt(capableConnection, param, transport, "SELECT * FROM t WHERE c1=?");
+        assertTrue("Capable websocket connection should enable bind-exec for writes", stmt.isUsingBindExec());
+
+        ByteBuf rawBlock = Unpooled.buffer(32);
+        rawBlock.writeLongLE(0L);
+        rawBlock.writeLongLE(12345L);
+        rawBlock.writeIntLE(1);
+        try {
+            stmt.queryWithRetry(rawBlock);
+            List<String> actions = transport.getRecordedActions();
+            assertEquals("Should send exactly 3 actions", 3, actions.size());
+            assertEquals("First action should be stmt2_bind", "stmt2_bind", actions.get(0));
+            assertEquals("Second action should be stmt2_exec", "stmt2_exec", actions.get(1));
+            assertEquals("Third action should be stmt2_result",
+                    com.taosdata.jdbc.ws.entity.Action.STMT2_USE_RESULT.getAction(), actions.get(2));
+            assertFalse("Query path should not send stmt2_bind_exec", actions.contains("stmt2_bind_exec"));
+        } finally {
+            rawBlock.release();
         }
-        
-        String sourceCode = new String(java.nio.file.Files.readAllBytes(sourcePath));
-        
-        assertTrue("Bind-exec gate should apply only to write operations",
-                sourceCode.contains("useBindExec && operationType == OPERATION_TYPE_WRITE"));
-        assertTrue("queryWithRetry should execute with OPERATION_TYPE_QUERY",
-                sourceCode.contains("executeWithRetry(rawBlock, OPERATION_TYPE_QUERY"));
     }
 
     /**
@@ -99,5 +117,29 @@ public class WSRetryableStmtCompatibilityEnforcementTest {
                 boolean.class, method.getReturnType());
         assertTrue("supportsStmt2BindExec should be public",
                 java.lang.reflect.Modifier.isPublic(method.getModifiers()));
+    }
+
+    private static ConnectionParam mockParam() {
+        ConnectionParam param = mock(ConnectionParam.class);
+        when(param.isEnableAutoConnect()).thenReturn(false);
+        when(param.getRetryTimes()).thenReturn(1);
+        when(param.getRequestTimeout()).thenReturn(5000);
+        when(param.getZoneId()).thenReturn(ZoneId.systemDefault());
+        return param;
+    }
+
+    private static WSRetryableStmt newStmt(AbstractConnection connection, ConnectionParam param,
+                                           Transport transport, String sql) {
+        StmtInfo stmtInfo = new StmtInfo(sql);
+        stmtInfo.setStmtId(12345L);
+        return new WSRetryableStmt(
+                connection,
+                param,
+                "test_db",
+                transport,
+                1L,
+                stmtInfo,
+                new AtomicInteger(0)
+        );
     }
 }

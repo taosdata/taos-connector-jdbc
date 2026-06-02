@@ -63,7 +63,7 @@ public class WSEWChunkSizingUtilTest {
      * stays well within int range and is a valid positive chunk size.
      */
     @Test
-    public void deriveWantedSpec_veryLargeMaxSingleValueIsCappeAndDoesNotOverflow() {
+    public void deriveWantedSpec_veryLargeMaxSingleValueIsCappedAndDoesNotOverflow() {
         // 1 MB observed in 1000 rows, scaling to a batch of the same size → projected = 1 MB.
         // maxSingleValueBytes is close to Integer.MAX_VALUE (much larger than projected),
         // but dynamicMaxChunkBytes = roundUpToPowerOfTwo(max(64KB, 512KB)) = 512KB caps it.
