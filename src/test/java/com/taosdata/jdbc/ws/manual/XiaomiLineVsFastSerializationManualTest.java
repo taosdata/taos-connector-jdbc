@@ -10,7 +10,7 @@
 //import com.taosdata.jdbc.utils.Utils;
 //import com.taosdata.jdbc.ws.WSConnection;
 //import com.taosdata.jdbc.ws.Transport;
-//import com.taosdata.jdbc.ws.WSColumnFastPreparedStatement;
+//import com.taosdata.jdbc.ws.WSColumnPreparedStatement;
 //import com.taosdata.jdbc.ws.stmt2.Stmt2BindExecRequestBuilder;
 //import com.taosdata.jdbc.ws.stmt2.entity.Field;
 //import com.taosdata.jdbc.ws.stmt2.entity.Stmt2PrepareResp;
@@ -700,13 +700,13 @@
 //                        pstmt instanceof WSRowPreparedStatement);
 //                return;
 //            case JDBC:
-//                assertEquals("Expected stmt2BindMode=jdbc to alias WSColumnFastPreparedStatement, got "
+//                assertEquals("Expected stmt2BindMode=jdbc to alias WSColumnPreparedStatement, got "
 //                                + pstmt.getClass().getName(),
-//                        WSColumnFastPreparedStatement.class, pstmt.getClass());
+//                        WSColumnPreparedStatement.class, pstmt.getClass());
 //                return;
 //            case FAST:
-//                assertTrue("Expected WSColumnFastPreparedStatement, got " + pstmt.getClass().getName(),
-//                        pstmt instanceof WSColumnFastPreparedStatement);
+//                assertTrue("Expected WSColumnPreparedStatement, got " + pstmt.getClass().getName(),
+//                        pstmt instanceof WSColumnPreparedStatement);
 //                return;
 //            default:
 //                throw new AssertionError("Unsupported route mode: " + routeMode);
@@ -1180,7 +1180,7 @@
 //
 //    private static final class FastSerializerSession implements ReusableSerializer {
 //        private final XiaomiSchema schema;
-//        private final WSColumnFastPreparedStatement stmt;
+//        private final WSColumnPreparedStatement stmt;
 //        private final Stmt2PayloadAccess access;
 //
 //        private FastSerializerSession(XiaomiSchema schema) throws Exception {
@@ -1188,9 +1188,9 @@
 //            ConnectionParam param = mockParam();
 //            Transport transport = mockTransport(param);
 //            AbstractConnection conn = mock(AbstractConnection.class);
-//            this.stmt = new WSColumnFastPreparedStatement(
+//            this.stmt = new WSColumnPreparedStatement(
 //                    transport, param, "testdb", conn, schema.insertSql(), 0L, schema.prepareResp());
-//            this.access = stmt2PayloadAccess(stmt, WSColumnFastPreparedStatement.class);
+//            this.access = stmt2PayloadAccess(stmt, WSColumnPreparedStatement.class);
 //        }
 //
 //        @Override

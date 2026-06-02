@@ -1103,7 +1103,7 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
      *
      * <p>In normal websocket routing, bind-exec-capable ordinary inserts are upgraded
      * earlier in {@link WSConnection#prepareStatement(String)} to
-     * {@link WSColumnFastPreparedStatement}, so this method mainly covers the legacy
+     * {@link WSColumnPreparedStatement}, so this method mainly covers the legacy
      * {@code TSWSPreparedStatement} path plus direct test construction.
      */
     private int executeInsertImpl() throws SQLException {

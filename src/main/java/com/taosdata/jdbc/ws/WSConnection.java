@@ -118,7 +118,7 @@ public class WSConnection extends AbstractConnection {
             } else {
                 // Route insert statements to the stmt2 bind-exec producer on supported servers.
                 if (isInsert && supportsStmt2BindExec()) {
-                    return new WSColumnFastPreparedStatement(transport,
+                    return new WSColumnPreparedStatement(transport,
                             param,
                             database,
                             this,

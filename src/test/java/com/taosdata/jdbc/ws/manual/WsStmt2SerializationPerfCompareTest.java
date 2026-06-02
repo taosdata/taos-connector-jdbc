@@ -4,7 +4,7 @@
 //import com.taosdata.jdbc.common.ConnectionParam;
 //import com.taosdata.jdbc.enums.FieldBindType;
 //import com.taosdata.jdbc.ws.Transport;
-//import com.taosdata.jdbc.ws.WSColumnFastPreparedStatement;
+//import com.taosdata.jdbc.ws.WSColumnPreparedStatement;
 //import com.taosdata.jdbc.ws.stmt2.Stmt2BindExecRequestBuilder;
 //import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnBindSerializer;
 //import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnFieldBuffer;
@@ -284,11 +284,11 @@
 //        AbstractConnection conn = mock(AbstractConnection.class);
 //        Stmt2PrepareResp prepResp = realisticInsertPrepareResp();
 //
-//        WSColumnFastPreparedStatement stmt = new WSColumnFastPreparedStatement(
+//        WSColumnPreparedStatement stmt = new WSColumnPreparedStatement(
 //                transport, param, "testdb", conn,
 //                "insert into meters (tbname, ts, current, voltage, phase) values(?,?,?,?,?)",
 //                0L, prepResp);
-//        Stmt2PayloadAccess access = stmt2PayloadAccess(stmt, WSColumnFastPreparedStatement.class);
+//        Stmt2PayloadAccess access = stmt2PayloadAccess(stmt, WSColumnPreparedStatement.class);
 //
 //        try {
 //            for (int i = 0; i < workload.rows(); i++) {
@@ -319,14 +319,14 @@
 //        AbstractConnection conn = mock(AbstractConnection.class);
 //        Stmt2PrepareResp prepResp = realisticInsertPrepareResp();
 //
-//        WSColumnFastPreparedStatement stmt = new WSColumnFastPreparedStatement(
+//        WSColumnPreparedStatement stmt = new WSColumnPreparedStatement(
 //                transport, param, "testdb", conn,
 //                "insert into meters (tbname, ts, current, voltage, phase) values(?,?,?,?,?)",
 //                0L, prepResp);
 //
 //        try {
 //            bindRealisticWorkload(stmt, workload);
-//            return buildStmt2RequestBytes(stmt, WSColumnFastPreparedStatement.class);
+//            return buildStmt2RequestBytes(stmt, WSColumnPreparedStatement.class);
 //        } finally {
 //            stmt.close();
 //        }

@@ -31,7 +31,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-public class WSColumnFastPreparedStatementTest {
+public class WSColumnPreparedStatementTest {
 
     private Transport transport;
     private ConnectionParam param;
@@ -52,17 +52,17 @@ public class WSColumnFastPreparedStatementTest {
 
     @Test
     public void standaloneFastStatement_extendsWSRetryableStmtDirectly() {
-        assertEquals(WSRetryableStmt.class, WSColumnFastPreparedStatement.class.getSuperclass());
+        assertEquals(WSRetryableStmt.class, WSColumnPreparedStatement.class.getSuperclass());
     }
 
     @Test
     public void standaloneFastStatement_implementsTaosPrepareStatement() {
-        assertTrue(TaosPrepareStatement.class.isAssignableFrom(WSColumnFastPreparedStatement.class));
+        assertTrue(TaosPrepareStatement.class.isAssignableFrom(WSColumnPreparedStatement.class));
     }
 
     @Test
     public void executeBatch_rowCountMismatch_resetsStateAndThrows() throws Exception {
-        WSColumnFastPreparedStatement stmt = buildStmt(twoFields(TSDB_DATA_TYPE_INT, TSDB_DATA_TYPE_VARCHAR));
+        WSColumnPreparedStatement stmt = buildStmt(twoFields(TSDB_DATA_TYPE_INT, TSDB_DATA_TYPE_VARCHAR));
 
         stmt.setInt(1, 7);
         stmt.addBatch();
@@ -76,7 +76,7 @@ public class WSColumnFastPreparedStatementTest {
 
     @Test
     public void executeUpdate_requiresExactlyOneRow() throws Exception {
-        WSColumnFastPreparedStatement stmt = buildStmt(java.util.Collections.singletonList(field(
+        WSColumnPreparedStatement stmt = buildStmt(java.util.Collections.singletonList(field(
                 (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_INT)));
 
         stmt.setInt(1, 1);
@@ -89,7 +89,7 @@ public class WSColumnFastPreparedStatementTest {
     @Test
     public void executeBatch_bindExecTransportConsumesRequestBuffer_withoutDoubleRelease() throws Exception {
         stubBindExecTransportConsumesRequestBuffer(1);
-        WSColumnFastPreparedStatement stmt = buildStmt(twoFields(TSDB_DATA_TYPE_VARCHAR, TSDB_DATA_TYPE_INT));
+        WSColumnPreparedStatement stmt = buildStmt(twoFields(TSDB_DATA_TYPE_VARCHAR, TSDB_DATA_TYPE_INT));
 
         stmt.setString(1, "value");
         stmt.setInt(2, 7);
@@ -106,7 +106,7 @@ public class WSColumnFastPreparedStatementTest {
 
     @Test
     public void constructor_enablesBindExecWritePathForCapableConnection() {
-        WSColumnFastPreparedStatement stmt = buildStmt(Collections.singletonList(field(
+        WSColumnPreparedStatement stmt = buildStmt(Collections.singletonList(field(
                 (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_INT)));
 
         assertTrue(stmt.isUsingBindExec());
@@ -114,7 +114,7 @@ public class WSColumnFastPreparedStatementTest {
 
     @Test
     public void clearBatch_reusesColumnBuffersAndResetsCounter() throws Exception {
-        WSColumnFastPreparedStatement stmt = buildStmt(java.util.Collections.singletonList(field(
+        WSColumnPreparedStatement stmt = buildStmt(java.util.Collections.singletonList(field(
                 (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_INT)));
 
         stmt.setInt(1, 1);
@@ -133,7 +133,7 @@ public class WSColumnFastPreparedStatementTest {
 
     @Test
     public void clearBatch_keepsVarWidthReusableBufferInstance() throws Exception {
-        WSColumnFastPreparedStatement stmt = buildStmt(Collections.singletonList(field(
+        WSColumnPreparedStatement stmt = buildStmt(Collections.singletonList(field(
                 (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_VARCHAR)));
 
         stmt.setString(1, "first-value");
@@ -152,7 +152,7 @@ public class WSColumnFastPreparedStatementTest {
 
     @Test
     public void clearBatch_recreatesVarWidthBufferWhenSpecChanges() throws Exception {
-        WSColumnFastPreparedStatement stmt = buildStmt(Collections.singletonList(field(
+        WSColumnPreparedStatement stmt = buildStmt(Collections.singletonList(field(
                 (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_VARCHAR)));
 
         stmt.setString(1, "first-value");
@@ -172,7 +172,7 @@ public class WSColumnFastPreparedStatementTest {
 
     @Test
     public void constructor_initializesBatchStatsScaffolding() throws Exception {
-        WSColumnFastPreparedStatement stmt = buildStmt(twoFields(TSDB_DATA_TYPE_INT, TSDB_DATA_TYPE_VARCHAR));
+        WSColumnPreparedStatement stmt = buildStmt(twoFields(TSDB_DATA_TYPE_INT, TSDB_DATA_TYPE_VARCHAR));
 
         Stmt2ChunkSizingUtil.FieldBatchStats[] stats = getBatchStats(stmt);
 
@@ -211,7 +211,7 @@ public class WSColumnFastPreparedStatementTest {
                     });
 
             try {
-                new WSColumnFastPreparedStatement(transport, param, "test_db", connection,
+                new WSColumnPreparedStatement(transport, param, "test_db", connection,
                         "INSERT INTO t VALUES (?, ?)", 1L, resp);
                 fail("expected OutOfMemoryError");
             } catch (OutOfMemoryError expected) {
@@ -224,11 +224,11 @@ public class WSColumnFastPreparedStatementTest {
 
     @Test
     public void resetFastState_nullsReleasedSlotWhenReallocationFails() throws Exception {
-        WSColumnFastPreparedStatement stmt = buildStmt(Collections.singletonList(field(
+        WSColumnPreparedStatement stmt = buildStmt(Collections.singletonList(field(
                 (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_VARCHAR)));
         Stmt2ColumnFieldBuffer original = getColumnBuffers(stmt)[0];
         setNextBufferSpec(stmt, 0, new Stmt2ChunkSizingUtil.BufferSpec(16 * 1024, 2));
-        java.lang.reflect.Method resetFastStateMethod = WSColumnFastPreparedStatement.class
+        java.lang.reflect.Method resetFastStateMethod = WSColumnPreparedStatement.class
                 .getDeclaredMethod("resetFastState");
         resetFastStateMethod.setAccessible(true);
 
@@ -246,7 +246,7 @@ public class WSColumnFastPreparedStatementTest {
             }
         }
 
-        java.lang.reflect.Field columnBuffersField = WSColumnFastPreparedStatement.class
+        java.lang.reflect.Field columnBuffersField = WSColumnPreparedStatement.class
                 .getDeclaredField("columnBuffers");
         columnBuffersField.setAccessible(true);
         assertNull(columnBuffersField.get(stmt));
@@ -261,7 +261,7 @@ public class WSColumnFastPreparedStatementTest {
     @Test
     public void executeBatch_varWidthOverflowUpdatesNextSpecForFollowingBatch() throws Exception {
         stubBindExecTransportConsumesRequestBuffer(1);
-        WSColumnFastPreparedStatement stmt = buildStmt(Collections.singletonList(field(
+        WSColumnPreparedStatement stmt = buildStmt(Collections.singletonList(field(
                 (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_VARCHAR)));
         String largeValue = String.join("", Collections.nCopies(50_000, "x"));
 
@@ -276,7 +276,7 @@ public class WSColumnFastPreparedStatementTest {
     @Test
     public void updateNextBufferSpecsAfterSuccessfulBatch_keepsOtherSizingUpdatesWhenOneFieldOverflows()
             throws Exception {
-        WSColumnFastPreparedStatement stmt = buildStmt(twoFields(TSDB_DATA_TYPE_VARCHAR, TSDB_DATA_TYPE_VARCHAR));
+        WSColumnPreparedStatement stmt = buildStmt(twoFields(TSDB_DATA_TYPE_VARCHAR, TSDB_DATA_TYPE_VARCHAR));
         Stmt2ChunkSizingUtil.FieldBatchStats[] stats = getBatchStats(stmt);
 
         stats[0].recordValueBytes(50L * 1024, 1024, 1);
@@ -299,7 +299,7 @@ public class WSColumnFastPreparedStatementTest {
 
     @Test
     public void clearBatch_resetsVarWidthBatchStats() throws Exception {
-        WSColumnFastPreparedStatement stmt = buildStmt(Collections.singletonList(field(
+        WSColumnPreparedStatement stmt = buildStmt(Collections.singletonList(field(
                 (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_VARCHAR)));
 
         stmt.setString(1, "first-value");
@@ -314,7 +314,7 @@ public class WSColumnFastPreparedStatementTest {
 
     @Test
     public void setString_tbnameRejectsNull() throws Exception {
-        WSColumnFastPreparedStatement stmt = buildStmt(tbNameAndColFields());
+        WSColumnPreparedStatement stmt = buildStmt(tbNameAndColFields());
 
         SQLException nullEx = assertSqlException(() -> stmt.setString(1, null));
         assertEquals(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, nullEx.getErrorCode());
@@ -324,7 +324,7 @@ public class WSColumnFastPreparedStatementTest {
 
     @Test
     public void setString_tbnameRejectsEmpty() throws Exception {
-        WSColumnFastPreparedStatement stmt = buildStmt(tbNameAndColFields());
+        WSColumnPreparedStatement stmt = buildStmt(tbNameAndColFields());
 
         SQLException emptyEx = assertSqlException(() -> stmt.setString(1, ""));
         assertTrue(emptyEx.getMessage().contains("Table name not set for row"));
@@ -333,7 +333,7 @@ public class WSColumnFastPreparedStatementTest {
 
     @Test
     public void setNull_tbnameRejectsNull() throws Exception {
-        WSColumnFastPreparedStatement stmt = buildStmt(tbNameAndColFields());
+        WSColumnPreparedStatement stmt = buildStmt(tbNameAndColFields());
 
         SQLException ex = assertSqlException(() -> stmt.setNull(1, java.sql.Types.VARCHAR));
         assertTrue(ex.getMessage().contains("Table name not set for row"));
@@ -342,7 +342,7 @@ public class WSColumnFastPreparedStatementTest {
 
     @Test
     public void setObject_tbnameRejectsNull() throws Exception {
-        WSColumnFastPreparedStatement stmt = buildStmt(tbNameAndColFields());
+        WSColumnPreparedStatement stmt = buildStmt(tbNameAndColFields());
 
         SQLException ex = assertSqlException(() -> stmt.setObject(1, null));
         assertTrue(ex.getMessage().contains("Table name not set for row"));
@@ -351,7 +351,7 @@ public class WSColumnFastPreparedStatementTest {
 
     @Test
     public void setBytes_tbnameAcceptsValidUtf8() throws Exception {
-        WSColumnFastPreparedStatement stmt = buildStmt(tbNameAndColFields());
+        WSColumnPreparedStatement stmt = buildStmt(tbNameAndColFields());
 
         stmt.setBytes(1, "d000000001".getBytes(StandardCharsets.UTF_8));
 
@@ -361,7 +361,7 @@ public class WSColumnFastPreparedStatementTest {
 
     @Test
     public void setBytes_tbnameUsesRawTbNameAppend() throws Exception {
-        WSColumnFastPreparedStatement stmt = buildStmt(tbNameAndColFields());
+        WSColumnPreparedStatement stmt = buildStmt(tbNameAndColFields());
         Stmt2ColumnFieldBuffer spyBuffer = Mockito.spy(new Stmt2ColumnFieldBuffer(
                 Stmt2FieldMeta.fromField(field((byte) FieldBindType.TAOS_FIELD_TBNAME.getValue(), TSDB_DATA_TYPE_VARCHAR))));
         setColumnBuffer(stmt, 0, spyBuffer);
@@ -375,7 +375,7 @@ public class WSColumnFastPreparedStatementTest {
 
     @Test
     public void setString_tbnameAcceptsValidUtf8() throws Exception {
-        WSColumnFastPreparedStatement stmt = buildStmt(tbNameAndColFields());
+        WSColumnPreparedStatement stmt = buildStmt(tbNameAndColFields());
 
         stmt.setString(1, "涛思_01");
 
@@ -385,7 +385,7 @@ public class WSColumnFastPreparedStatementTest {
 
     @Test
     public void setTableName_usesTbNameField() throws Exception {
-        WSColumnFastPreparedStatement stmt = buildStmt(tbNameAndColFields());
+        WSColumnPreparedStatement stmt = buildStmt(tbNameAndColFields());
 
         stmt.setTableName("t_01");
         stmt.setInt(0, Collections.singletonList(7));
@@ -398,7 +398,7 @@ public class WSColumnFastPreparedStatementTest {
 
     @Test
     public void setTagInt_usesTagOrdinal() throws Exception {
-        WSColumnFastPreparedStatement stmt = buildStmt(tbNameTagTagAndColFields());
+        WSColumnPreparedStatement stmt = buildStmt(tbNameTagTagAndColFields());
         Stmt2ColumnFieldBuffer tag0Buffer = Mockito.spy(new Stmt2ColumnFieldBuffer(
                 Stmt2FieldMeta.fromField(field((byte) FieldBindType.TAOS_FIELD_TAG.getValue(), TSDB_DATA_TYPE_INT))));
         Stmt2ColumnFieldBuffer tag1Buffer = Mockito.spy(new Stmt2ColumnFieldBuffer(
@@ -421,7 +421,7 @@ public class WSColumnFastPreparedStatementTest {
 
     @Test
     public void setTagString_usesTagOrdinal() throws Exception {
-        WSColumnFastPreparedStatement stmt = buildStmt(tbNameTagTagAndColFields());
+        WSColumnPreparedStatement stmt = buildStmt(tbNameTagTagAndColFields());
         Stmt2ColumnFieldBuffer tag0Buffer = Mockito.spy(new Stmt2ColumnFieldBuffer(
                 Stmt2FieldMeta.fromField(field((byte) FieldBindType.TAOS_FIELD_TAG.getValue(), TSDB_DATA_TYPE_INT))));
         Stmt2ColumnFieldBuffer tag1Buffer = Mockito.spy(new Stmt2ColumnFieldBuffer(
@@ -444,7 +444,7 @@ public class WSColumnFastPreparedStatementTest {
 
     @Test
     public void columnDataAddBatch_repeatsTableNameAndTagsForColumnRows() throws Exception {
-        WSColumnFastPreparedStatement stmt = buildStmt(tbNameTagTagAndColFields());
+        WSColumnPreparedStatement stmt = buildStmt(tbNameTagTagAndColFields());
 
         stmt.setTableName("t_01");
         stmt.setTagInt(0, 42);
@@ -463,7 +463,7 @@ public class WSColumnFastPreparedStatementTest {
     @Test
     public void columnDataExecuteBatch_usesBindExecAndResetsState() throws Exception {
         stubBindExecTransportConsumesRequestBuffer(2);
-        WSColumnFastPreparedStatement stmt = buildStmt(tbNameAndColFields());
+        WSColumnPreparedStatement stmt = buildStmt(tbNameAndColFields());
 
         stmt.setTableName("t_01");
         stmt.setInt(0, java.util.Arrays.asList(7, 8));
@@ -478,7 +478,7 @@ public class WSColumnFastPreparedStatementTest {
 
     @Test
     public void setString_usesDirectStringAppendForVarWidthColumn() throws Exception {
-        WSColumnFastPreparedStatement stmt = buildStmt(Collections.singletonList(field(
+        WSColumnPreparedStatement stmt = buildStmt(Collections.singletonList(field(
                 (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_VARCHAR)));
         Stmt2ColumnFieldBuffer spyBuffer = Mockito.spy(new Stmt2ColumnFieldBuffer(
                 Stmt2FieldMeta.fromField(field((byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_VARCHAR))));
@@ -492,7 +492,7 @@ public class WSColumnFastPreparedStatementTest {
 
     @Test
     public void setString_tbnameUsesDirectTbNameAppend() throws Exception {
-        WSColumnFastPreparedStatement stmt = buildStmt(tbNameAndColFields());
+        WSColumnPreparedStatement stmt = buildStmt(tbNameAndColFields());
         Stmt2ColumnFieldBuffer spyBuffer = Mockito.spy(new Stmt2ColumnFieldBuffer(
                 Stmt2FieldMeta.fromField(field((byte) FieldBindType.TAOS_FIELD_TBNAME.getValue(), TSDB_DATA_TYPE_VARCHAR))));
         setColumnBuffer(stmt, 0, spyBuffer);
@@ -505,7 +505,7 @@ public class WSColumnFastPreparedStatementTest {
 
     @Test
     public void setBytes_tbnameRejectsInvalidUtf8() throws Exception {
-        WSColumnFastPreparedStatement stmt = buildStmt(tbNameAndColFields());
+        WSColumnPreparedStatement stmt = buildStmt(tbNameAndColFields());
 
         SQLException ex = assertSqlException(() -> stmt.setBytes(1, new byte[]{(byte) 0xC3, 0x28}));
         assertTrue(ex.getMessage().contains("tbname"));
@@ -514,7 +514,7 @@ public class WSColumnFastPreparedStatementTest {
 
     @Test
     public void setShort_utinyintFieldAcceptsUnsignedByteRange() throws Exception {
-        WSColumnFastPreparedStatement stmt = buildStmt(java.util.Collections.singletonList(field(
+        WSColumnPreparedStatement stmt = buildStmt(java.util.Collections.singletonList(field(
                 (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_UTINYINT)));
 
         stmt.setShort(1, (short) 255);
@@ -524,19 +524,19 @@ public class WSColumnFastPreparedStatementTest {
 
     @Test
     public void setShort_utinyintFieldRejectsOutOfRangeValue() throws Exception {
-        WSColumnFastPreparedStatement stmt = buildStmt(java.util.Collections.singletonList(field(
+        WSColumnPreparedStatement stmt = buildStmt(java.util.Collections.singletonList(field(
                 (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_UTINYINT)));
 
         SQLException ex = assertSqlException(() -> stmt.setShort(1, (short) 256));
         assertTrue(ex.getMessage().contains("utinyint value is out of range"));
     }
 
-    private WSColumnFastPreparedStatement buildStmt(List<Field> fields) {
+    private WSColumnPreparedStatement buildStmt(List<Field> fields) {
         Stmt2PrepareResp resp = new Stmt2PrepareResp();
         resp.setInsert(true);
         resp.setStmtId(1L);
         resp.setFields(fields);
-        return new WSColumnFastPreparedStatement(transport, param, "test_db",
+        return new WSColumnPreparedStatement(transport, param, "test_db",
                 connection, "INSERT INTO t VALUES (?)", 1L, resp);
     }
 
@@ -589,9 +589,9 @@ public class WSColumnFastPreparedStatementTest {
         return field;
     }
 
-    private static Stmt2ColumnFieldBuffer[] getColumnBuffers(WSColumnFastPreparedStatement stmt) {
+    private static Stmt2ColumnFieldBuffer[] getColumnBuffers(WSColumnPreparedStatement stmt) {
         try {
-            java.lang.reflect.Field directField = WSColumnFastPreparedStatement.class.getDeclaredField("columnBuffers");
+            java.lang.reflect.Field directField = WSColumnPreparedStatement.class.getDeclaredField("columnBuffers");
             directField.setAccessible(true);
             Stmt2ColumnFieldBuffer[] directBuffers = (Stmt2ColumnFieldBuffer[]) directField.get(stmt);
             if (directBuffers != null) {
@@ -602,7 +602,7 @@ public class WSColumnFastPreparedStatementTest {
         }
 
         try {
-            java.lang.reflect.Field batchStateField = WSColumnFastPreparedStatement.class.getDeclaredField("batchState");
+            java.lang.reflect.Field batchStateField = WSColumnPreparedStatement.class.getDeclaredField("batchState");
             batchStateField.setAccessible(true);
             Object batchState = batchStateField.get(stmt);
             if (batchState == null) {
@@ -617,35 +617,35 @@ public class WSColumnFastPreparedStatementTest {
         }
     }
 
-    private static Stmt2ChunkSizingUtil.FieldBatchStats[] getBatchStats(WSColumnFastPreparedStatement stmt)
+    private static Stmt2ChunkSizingUtil.FieldBatchStats[] getBatchStats(WSColumnPreparedStatement stmt)
             throws Exception {
-        java.lang.reflect.Field batchStatsField = WSColumnFastPreparedStatement.class.getDeclaredField("batchStats");
+        java.lang.reflect.Field batchStatsField = WSColumnPreparedStatement.class.getDeclaredField("batchStats");
         batchStatsField.setAccessible(true);
         return (Stmt2ChunkSizingUtil.FieldBatchStats[]) batchStatsField.get(stmt);
     }
 
     private static void setNextBufferSpec(
-            WSColumnFastPreparedStatement stmt,
+            WSColumnPreparedStatement stmt,
             int index,
             Stmt2ChunkSizingUtil.BufferSpec spec) throws Exception {
         java.lang.reflect.Field nextSpecsField =
-                WSColumnFastPreparedStatement.class.getDeclaredField("nextBufferSpecs");
+                WSColumnPreparedStatement.class.getDeclaredField("nextBufferSpecs");
         nextSpecsField.setAccessible(true);
         Stmt2ChunkSizingUtil.BufferSpec[] nextSpecs =
                 (Stmt2ChunkSizingUtil.BufferSpec[]) nextSpecsField.get(stmt);
         nextSpecs[index] = spec;
     }
 
-    private static Stmt2ChunkSizingUtil.BufferSpec[] getNextBufferSpecs(WSColumnFastPreparedStatement stmt)
+    private static Stmt2ChunkSizingUtil.BufferSpec[] getNextBufferSpecs(WSColumnPreparedStatement stmt)
             throws Exception {
         java.lang.reflect.Field nextSpecsField =
-                WSColumnFastPreparedStatement.class.getDeclaredField("nextBufferSpecs");
+                WSColumnPreparedStatement.class.getDeclaredField("nextBufferSpecs");
         nextSpecsField.setAccessible(true);
         return (Stmt2ChunkSizingUtil.BufferSpec[]) nextSpecsField.get(stmt);
     }
 
     private static void setColumnBuffer(
-            WSColumnFastPreparedStatement stmt,
+            WSColumnPreparedStatement stmt,
             int index,
             Stmt2ColumnFieldBuffer buffer) throws Exception {
         Stmt2ColumnFieldBuffer[] buffers = getColumnBuffers(stmt);
@@ -657,24 +657,24 @@ public class WSColumnFastPreparedStatementTest {
     }
 
     private static void setUnderuseStreak(
-            WSColumnFastPreparedStatement stmt,
+            WSColumnPreparedStatement stmt,
             int index,
             int streak) throws Exception {
-        java.lang.reflect.Field field = WSColumnFastPreparedStatement.class.getDeclaredField("underuseStreaks");
+        java.lang.reflect.Field field = WSColumnPreparedStatement.class.getDeclaredField("underuseStreaks");
         field.setAccessible(true);
         int[] streaks = (int[]) field.get(stmt);
         streaks[index] = streak;
     }
 
-    private static int getUnderuseStreak(WSColumnFastPreparedStatement stmt, int index) throws Exception {
-        java.lang.reflect.Field field = WSColumnFastPreparedStatement.class.getDeclaredField("underuseStreaks");
+    private static int getUnderuseStreak(WSColumnPreparedStatement stmt, int index) throws Exception {
+        java.lang.reflect.Field field = WSColumnPreparedStatement.class.getDeclaredField("underuseStreaks");
         field.setAccessible(true);
         return ((int[]) field.get(stmt))[index];
     }
 
-    private static void invokeUpdateNextBufferSpecsAfterSuccessfulBatch(WSColumnFastPreparedStatement stmt)
+    private static void invokeUpdateNextBufferSpecsAfterSuccessfulBatch(WSColumnPreparedStatement stmt)
             throws Exception {
-        java.lang.reflect.Method method = WSColumnFastPreparedStatement.class
+        java.lang.reflect.Method method = WSColumnPreparedStatement.class
                 .getDeclaredMethod("updateNextBufferSpecsAfterSuccessfulBatch");
         method.setAccessible(true);
         method.invoke(stmt);

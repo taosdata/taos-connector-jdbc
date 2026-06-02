@@ -134,11 +134,11 @@ public class WSConnectionRoutingTest {
 
     // -----------------------------------------------------------------------
     // Test: insert + bind-exec server + default/auto stmt2bindmode
-    //       → WSColumnFastPreparedStatement
+    //       → WSColumnPreparedStatement
     // -----------------------------------------------------------------------
 
     @Test
-    public void insert_bindExecServer_autoStmt2BindMode_returnsWSColumnFastPreparedStatement() throws Exception {
+    public void insert_bindExecServer_autoStmt2BindMode_returnsWSColumnPreparedStatement() throws Exception {
         stubInsertPrepare();
         Mockito.when(param.getAsyncWrite()).thenReturn(null);
 
@@ -148,14 +148,14 @@ public class WSConnectionRoutingTest {
         try (PreparedStatement stmt = conn.prepareStatement("INSERT INTO t VALUES (?,?)")) {
             assertNotNull(stmt);
             assertTrue(
-                    "Expected WSColumnFastPreparedStatement for insert on bind-exec server, got: "
+                    "Expected WSColumnPreparedStatement for insert on bind-exec server, got: "
                             + stmt.getClass().getSimpleName(),
-                    stmt instanceof WSColumnFastPreparedStatement);
+                    stmt instanceof WSColumnPreparedStatement);
         }
     }
 
     @Test
-    public void insert_oldServer_columnStmt2BindMode_returnsWSColumnFastPreparedStatement() throws Exception {
+    public void insert_oldServer_columnStmt2BindMode_returnsWSColumnPreparedStatement() throws Exception {
         stubInsertPrepare();
         Mockito.when(param.getAsyncWrite()).thenReturn(null);
         Mockito.when(param.getStmt2BindMode()).thenReturn("column");
@@ -165,9 +165,9 @@ public class WSConnectionRoutingTest {
         try (PreparedStatement stmt = conn.prepareStatement("INSERT INTO t VALUES (?,?)")) {
             assertNotNull(stmt);
             assertTrue(
-                    "Expected WSColumnFastPreparedStatement for stmt2bindmode=column regardless of version, got: "
+                    "Expected WSColumnPreparedStatement for stmt2bindmode=column regardless of version, got: "
                             + stmt.getClass().getSimpleName(),
-                    stmt instanceof WSColumnFastPreparedStatement);
+                    stmt instanceof WSColumnPreparedStatement);
         }
     }
 
@@ -214,7 +214,7 @@ public class WSConnectionRoutingTest {
     // -----------------------------------------------------------------------
 
     @Test
-    public void insert_lineModeOnBindExecServer_returnsWSColumnFastPreparedStatement() throws Exception {
+    public void insert_lineModeOnBindExecServer_returnsWSColumnPreparedStatement() throws Exception {
         stubInsertPrepare();
         Mockito.when(param.getAsyncWrite()).thenReturn(null);
 
@@ -223,9 +223,9 @@ public class WSConnectionRoutingTest {
         try (PreparedStatement stmt = conn.prepareStatement("INSERT INTO t VALUES (?,?)")) {
             assertNotNull(stmt);
             assertTrue(
-                    "Expected WSColumnFastPreparedStatement when pbsMode=line is ignored, got: "
+                    "Expected WSColumnPreparedStatement when pbsMode=line is ignored, got: "
                             + stmt.getClass().getSimpleName(),
-                    stmt instanceof WSColumnFastPreparedStatement);
+                    stmt instanceof WSColumnPreparedStatement);
         }
     }
 
@@ -324,12 +324,12 @@ public class WSConnectionRoutingTest {
     }
 
     // -----------------------------------------------------------------------
-    // Test: insert with TAOS_FIELD_QUERY field + supported server → still WSColumnFastPreparedStatement
+    // Test: insert with TAOS_FIELD_QUERY field + supported server → still WSColumnPreparedStatement
     // Verifies routing is version-based only; there is no shape gate for query fields.
     // -----------------------------------------------------------------------
 
     @Test
-    public void insert_bindExecServer_withQueryField_stillRoutesToWSColumnFastPreparedStatement()
+    public void insert_bindExecServer_withQueryField_stillRoutesToWSColumnPreparedStatement()
             throws Exception {
         // Build a prepare response that includes a TAOS_FIELD_QUERY field
         Stmt2Resp initResp = new Stmt2Resp();
@@ -367,8 +367,8 @@ public class WSConnectionRoutingTest {
             assertNotNull(stmt);
             assertTrue(
                     "Routing must be version-based only; TAOS_FIELD_QUERY shape must not gate "
-                            + "WSColumnFastPreparedStatement. Got: " + stmt.getClass().getSimpleName(),
-                    stmt instanceof WSColumnFastPreparedStatement);
+                            + "WSColumnPreparedStatement. Got: " + stmt.getClass().getSimpleName(),
+                    stmt instanceof WSColumnPreparedStatement);
         }
     }
 }

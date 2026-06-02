@@ -4,9 +4,12 @@ import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
-import com.taosdata.jdbc.ws.WSColumnFastPreparedStatement;
+import com.taosdata.jdbc.ws.WSColumnPreparedStatement;
 import com.taosdata.jdbc.ws.WSConnection;
+import io.netty.util.ResourceLeakDetector;
+import org.junit.AfterClass;
 import org.junit.Assume;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.sql.*;
@@ -22,7 +25,7 @@ import static org.junit.Assert.*;
  * mvn test -Dtest=WsStmtRealPerformanceBenchmarkTest -Dws.perf.benchmark=true -Djacoco.skip=true
  * </pre>
  *
- * <p>Compares {@link WSColumnFastPreparedStatement} through both the default fast route and the
+ * <p>Compares {@link WSColumnPreparedStatement} through both the default fast route and the
  * {@code stmt2BindMode=jdbc} alias, plus {@link WSRowPreparedStatement} using 100 batches x 10,000 rows
  * with one row per subtable.
  */
@@ -43,6 +46,17 @@ public class WsStmtRealPerformanceBenchmarkTest {
         FAST,
         JDBC,
         LINE
+    }
+
+    @BeforeClass
+    public static void setUp() {
+        TestUtils.runInMain();
+        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+    }
+
+    @AfterClass
+    public static void tearDown() {
+        System.gc();
     }
 
     private static final class BenchmarkResult {

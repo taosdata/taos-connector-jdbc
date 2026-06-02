@@ -40,7 +40,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
 
-public class WSColumnFastPreparedStatement extends WSRetryableStmt implements TaosPrepareStatement {
+public class WSColumnPreparedStatement extends WSRetryableStmt implements TaosPrepareStatement {
     private static final BigInteger MAX_UNSIGNED_LONG_VALUE = new BigInteger(MAX_UNSIGNED_LONG);
 
     private final Stmt2FieldMeta[] fieldMetas;
@@ -59,7 +59,7 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Ta
     private final Object[] pendingTagValues;
     private final boolean[] pendingTagSet;
 
-    public WSColumnFastPreparedStatement(Transport transport,
+    public WSColumnPreparedStatement(Transport transport,
                                          ConnectionParam param,
                                          String database,
                                          AbstractConnection connection,
@@ -796,7 +796,7 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Ta
     @Override
     public ResultSet executeQuery() throws SQLException {
         throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE,
-                "WSColumnFastPreparedStatement only supports insert; use TSWSPreparedStatement for queries");
+                "WSColumnPreparedStatement only supports insert; use TSWSPreparedStatement for queries");
     }
 
     @Override

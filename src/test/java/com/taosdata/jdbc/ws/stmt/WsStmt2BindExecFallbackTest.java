@@ -7,7 +7,7 @@ import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.utils.VersionUtil;
 import com.taosdata.jdbc.ws.Transport;
 import com.taosdata.jdbc.ws.TSWSPreparedStatement;
-import com.taosdata.jdbc.ws.WSColumnFastPreparedStatement;
+import com.taosdata.jdbc.ws.WSColumnPreparedStatement;
 import com.taosdata.jdbc.ws.WSConnection;
 import com.taosdata.jdbc.ws.entity.Code;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnBindSerializer;
@@ -757,7 +757,7 @@ public class WsStmt2BindExecFallbackTest {
     }
 
     @Test
-    public void testRouting_capableServer_returnsWSColumnFastPreparedStatement() throws Exception {
+    public void testRouting_capableServer_returnsWSColumnPreparedStatement() throws Exception {
         Stmt2PrepareResp prepResp = buildInsertPrepareResp();
         Transport transport = buildMockTransport(prepResp);
         ConnectionParam param = buildMockConnectionParam();
@@ -767,8 +767,8 @@ public class WsStmt2BindExecFallbackTest {
         PreparedStatement stmt = conn.prepareStatement("INSERT INTO t VALUES(?,?)");
 
         assertTrue("capable server (" + TSDBConstants.MIN_STMT2_BIND_EXEC_VERSION
-                        + ") must return WSColumnFastPreparedStatement",
-                stmt instanceof WSColumnFastPreparedStatement);
+                        + ") must return WSColumnPreparedStatement",
+                stmt instanceof WSColumnPreparedStatement);
     }
 
     @Test
@@ -786,7 +786,7 @@ public class WsStmt2BindExecFallbackTest {
     }
 
     @Test
-    public void testRouting_capableVersions_allReturnWSColumnFastPreparedStatement() throws Exception {
+    public void testRouting_capableVersions_allReturnWSColumnPreparedStatement() throws Exception {
         for (String ver : new String[]{
                 TSDBConstants.MIN_STMT2_BIND_EXEC_VERSION, "3.4.1.11", "3.4.2.0", "4.0.0.0"}) {
             Stmt2PrepareResp prepResp = buildInsertPrepareResp();
@@ -797,8 +797,8 @@ public class WsStmt2BindExecFallbackTest {
 
             PreparedStatement stmt = conn.prepareStatement("INSERT INTO t VALUES(?,?)");
 
-            assertTrue("v" + ver + " must return WSColumnFastPreparedStatement",
-                    stmt instanceof WSColumnFastPreparedStatement);
+            assertTrue("v" + ver + " must return WSColumnPreparedStatement",
+                    stmt instanceof WSColumnPreparedStatement);
         }
     }
 
@@ -819,15 +819,15 @@ public class WsStmt2BindExecFallbackTest {
     }
 
     // -----------------------------------------------------------------------
-    // 9. WSColumnFastPreparedStatement runtime send-path (STMT2_BIND_EXEC)
+    // 9. WSColumnPreparedStatement runtime send-path (STMT2_BIND_EXEC)
     // -----------------------------------------------------------------------
 
-    /** Creates WSColumnFastPreparedStatement directly with a capable-server WSConnection. */
-    private static WSColumnFastPreparedStatement buildWSColumnFastPreparedStatement(
+    /** Creates WSColumnPreparedStatement directly with a capable-server WSConnection. */
+    private static WSColumnPreparedStatement buildWSColumnPreparedStatement(
             Transport transport, ConnectionParam param, Stmt2PrepareResp prepResp) {
         WSConnection conn = new WSConnection("jdbc:TAOS-RS://localhost:6041/testdb",
                 new Properties(), transport, param, TSDBConstants.MIN_STMT2_BIND_EXEC_VERSION);
-        return new WSColumnFastPreparedStatement(transport, param, "testdb", conn,
+        return new WSColumnPreparedStatement(transport, param, "testdb", conn,
                 "INSERT INTO t VALUES(?,?)", 1L, prepResp);
     }
 
@@ -858,8 +858,8 @@ public class WsStmt2BindExecFallbackTest {
     public void testColumnStmt_executeUpdate_sendsSingleStmt2BindExec() throws Exception {
         ConnectionParam param = buildMockConnectionParam();
         Transport transport = buildExecuteTransport(param, 1);
-        WSColumnFastPreparedStatement stmt =
-                buildWSColumnFastPreparedStatement(transport, param, buildInsertPrepareResp());
+        WSColumnPreparedStatement stmt =
+                buildWSColumnPreparedStatement(transport, param, buildInsertPrepareResp());
 
         stmt.setTimestamp(1, new Timestamp(1700000000000L));
         stmt.setInt(2, 42);
@@ -877,8 +877,8 @@ public class WsStmt2BindExecFallbackTest {
     public void testColumnStmt_executeBatch_sendsSingleStmt2BindExec() throws Exception {
         ConnectionParam param = buildMockConnectionParam();
         Transport transport = buildExecuteTransport(param, 3);
-        WSColumnFastPreparedStatement stmt =
-                buildWSColumnFastPreparedStatement(transport, param, buildInsertPrepareResp());
+        WSColumnPreparedStatement stmt =
+                buildWSColumnPreparedStatement(transport, param, buildInsertPrepareResp());
 
         for (int i = 0; i < 3; i++) {
             stmt.setTimestamp(1, new Timestamp(1700000000000L + (long) i * 1000L));
@@ -897,8 +897,8 @@ public class WsStmt2BindExecFallbackTest {
     public void testColumnStmt_executeBatch_resetsBatchStateForReuse() throws Exception {
         ConnectionParam param = buildMockConnectionParam();
         Transport transport = buildExecuteTransport(param, 2);
-        WSColumnFastPreparedStatement stmt =
-                buildWSColumnFastPreparedStatement(transport, param, buildInsertPrepareResp());
+        WSColumnPreparedStatement stmt =
+                buildWSColumnPreparedStatement(transport, param, buildInsertPrepareResp());
 
         // First batch: 2 rows
         for (int i = 0; i < 2; i++) {
