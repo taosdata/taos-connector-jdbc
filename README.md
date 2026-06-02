@@ -63,11 +63,7 @@ All tests are located in the `src/test/java/com/taosdata/jdbc` directory of the 
 The test cases use the JUnit framework. Generally, a connection is established and a database is created in the `before` method, and the database is droped and the connection is released in the `after` method.
 
 ### 5.3 Performance Testing
-A manual websocket performance benchmark is available at
-`src/test/java/com/taosdata/jdbc/ws/stmt/WsStmtRealPerformanceBenchmarkTest.java`.
-
-Example:
-`mvn test -Dtest=WsStmtRealPerformanceBenchmarkTest -Dws.perf.benchmark=true -Djacoco.skip=true`
+Performance testing is in progress.
 
 ## 6. CI/CD
 - [Build Workflow](https://github.com/taosdata/taos-connector-jdbc/actions/workflows/build.yml)
