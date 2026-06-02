@@ -85,7 +85,7 @@ jobs:
           cd TDengine
           mkdir -p debug
           cd debug
-          cmake .. -DBUILD_JDBC=false -DBUILD_TOOLS=false -DBUILD_HTTP=false -DBUILD_DEPENDENCY_TESTS=false
+          cmake .. -DBUILD_JDBC=false -DBUILD_TOOLS=false -DBUILD_HTTP=false -DBUILD_DEPENDENCY_TESTS=false -DBUILD_CONTRIB=ON
           make -j $(nproc)
 
       - name: Save cache on build success
