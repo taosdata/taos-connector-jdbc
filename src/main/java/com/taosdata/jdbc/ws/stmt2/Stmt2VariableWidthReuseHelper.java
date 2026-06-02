@@ -2,15 +2,15 @@ package com.taosdata.jdbc.ws.stmt2;
 
 public final class Stmt2VariableWidthReuseHelper {
     public static final class SizingDecision {
-        private final WSEWChunkSizingUtil.BufferSpec nextSpec;
+        private final Stmt2ChunkSizingUtil.BufferSpec nextSpec;
         private final int nextUnderuseStreak;
 
-        public SizingDecision(WSEWChunkSizingUtil.BufferSpec nextSpec, int nextUnderuseStreak) {
+        public SizingDecision(Stmt2ChunkSizingUtil.BufferSpec nextSpec, int nextUnderuseStreak) {
             this.nextSpec = nextSpec;
             this.nextUnderuseStreak = nextUnderuseStreak;
         }
 
-        public WSEWChunkSizingUtil.BufferSpec getNextSpec() {
+        public Stmt2ChunkSizingUtil.BufferSpec getNextSpec() {
             return nextSpec;
         }
 
@@ -22,17 +22,17 @@ public final class Stmt2VariableWidthReuseHelper {
     private Stmt2VariableWidthReuseHelper() {
     }
 
-    public static WSEWChunkSizingUtil.BufferSpec resolveBufferSpec(
-            WSEWChunkSizingUtil.BufferSpec[] specs, int index) {
+    public static Stmt2ChunkSizingUtil.BufferSpec resolveBufferSpec(
+            Stmt2ChunkSizingUtil.BufferSpec[] specs, int index) {
         if (specs != null && index < specs.length && specs[index] != null) {
             return specs[index];
         }
-        return WSEWChunkSizingUtil.bootstrapSpec();
+        return Stmt2ChunkSizingUtil.bootstrapSpec();
     }
 
     public static Stmt2ColumnFieldBuffer createReusableVariableWidthBuffer(
             Stmt2FieldMeta meta,
-            WSEWChunkSizingUtil.BufferSpec spec) {
+            Stmt2ChunkSizingUtil.BufferSpec spec) {
         Stmt2ColumnFieldBuffer buffer = Stmt2ColumnFieldBuffer.forReusableValueBuffer(
                 meta, null, spec.getChunkBytes(), spec.getChunkBytes(), spec.getReusableChunkCount());
         try {
@@ -45,8 +45,8 @@ public final class Stmt2VariableWidthReuseHelper {
     }
 
     public static boolean bufferSpecsEqual(
-            WSEWChunkSizingUtil.BufferSpec left,
-            WSEWChunkSizingUtil.BufferSpec right) {
+            Stmt2ChunkSizingUtil.BufferSpec left,
+            Stmt2ChunkSizingUtil.BufferSpec right) {
         if (left == null || right == null) {
             return false;
         }
@@ -58,8 +58,8 @@ public final class Stmt2VariableWidthReuseHelper {
     }
 
     public static SizingDecision reactiveDecision(
-            WSEWChunkSizingUtil.BufferSpec current,
-            WSEWChunkSizingUtil.FieldBatchStats stats,
+            Stmt2ChunkSizingUtil.BufferSpec current,
+            Stmt2ChunkSizingUtil.FieldBatchStats stats,
             int underuseStreak) {
         long currentReusableBytes = (long) current.getChunkBytes() * current.getReusableChunkCount();
         boolean shouldGrow = stats.getOverflowCount() > 0
@@ -78,21 +78,21 @@ public final class Stmt2VariableWidthReuseHelper {
             int chunkCount = (int) Math.max(
                     1L,
                     (stats.getObservedValueBytes() + chunkBytes - 1) / chunkBytes);
-            return new SizingDecision(new WSEWChunkSizingUtil.BufferSpec(chunkBytes, chunkCount), 0);
+            return new SizingDecision(new Stmt2ChunkSizingUtil.BufferSpec(chunkBytes, chunkCount), 0);
         }
 
         if (stats.getObservedValueBytes() < currentReusableBytes / 2) {
-            if (underuseStreak >= WSEWChunkSizingUtil.SHRINK_STREAK_THRESHOLD) {
+            if (underuseStreak >= Stmt2ChunkSizingUtil.SHRINK_STREAK_THRESHOLD) {
                 if (current.getReusableChunkCount() > 1) {
                     return new SizingDecision(
-                            new WSEWChunkSizingUtil.BufferSpec(
+                            new Stmt2ChunkSizingUtil.BufferSpec(
                                     current.getChunkBytes(),
                                     current.getReusableChunkCount() - 1),
                             0);
                 }
                 int smallerChunk = Math.max(minChunkBytes(), current.getChunkBytes() >> 1);
                 if (smallerChunk < current.getChunkBytes()) {
-                    return new SizingDecision(new WSEWChunkSizingUtil.BufferSpec(smallerChunk, 1), 0);
+                    return new SizingDecision(new Stmt2ChunkSizingUtil.BufferSpec(smallerChunk, 1), 0);
                 }
                 return new SizingDecision(current, underuseStreak);
             }
@@ -104,7 +104,7 @@ public final class Stmt2VariableWidthReuseHelper {
 
     private static void primeReusableBuffer(
             Stmt2ColumnFieldBuffer buffer,
-            WSEWChunkSizingUtil.BufferSpec spec) {
+            Stmt2ChunkSizingUtil.BufferSpec spec) {
         buffer.primeReusableValueChunks(spec.getReusableChunkCount());
     }
 
@@ -119,6 +119,6 @@ public final class Stmt2VariableWidthReuseHelper {
     }
 
     private static int minChunkBytes() {
-        return WSEWChunkSizingUtil.bootstrapSpec().getChunkBytes();
+        return Stmt2ChunkSizingUtil.bootstrapSpec().getChunkBytes();
     }
 }

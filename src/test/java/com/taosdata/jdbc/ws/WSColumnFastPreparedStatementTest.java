@@ -1,6 +1,5 @@
 package com.taosdata.jdbc.ws;
 
-import com.taosdata.jdbc.AbstractConnection;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.TaosPrepareStatement;
 import com.taosdata.jdbc.common.ConnectionParam;
@@ -8,7 +7,7 @@ import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnFieldBuffer;
 import com.taosdata.jdbc.ws.stmt2.Stmt2FieldMeta;
 import com.taosdata.jdbc.ws.stmt2.Stmt2VariableWidthReuseHelper;
-import com.taosdata.jdbc.ws.stmt2.WSEWChunkSizingUtil;
+import com.taosdata.jdbc.ws.stmt2.Stmt2ChunkSizingUtil;
 import com.taosdata.jdbc.ws.stmt2.entity.Stmt2ExecResp;
 import com.taosdata.jdbc.ws.stmt2.entity.Field;
 import com.taosdata.jdbc.ws.stmt2.entity.Stmt2PrepareResp;
@@ -19,7 +18,6 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
 import java.sql.SQLException;
-import java.sql.SQLFeatureNotSupportedException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -161,7 +159,7 @@ public class WSColumnFastPreparedStatementTest {
         stmt.addBatch();
 
         Stmt2ColumnFieldBuffer beforeBuffer = getColumnBuffers(stmt)[0];
-        setNextBufferSpec(stmt, 0, new WSEWChunkSizingUtil.BufferSpec(16 * 1024, 2));
+        setNextBufferSpec(stmt, 0, new Stmt2ChunkSizingUtil.BufferSpec(16 * 1024, 2));
 
         stmt.clearBatch();
 
@@ -176,7 +174,7 @@ public class WSColumnFastPreparedStatementTest {
     public void constructor_initializesBatchStatsScaffolding() throws Exception {
         WSColumnFastPreparedStatement stmt = buildStmt(twoFields(TSDB_DATA_TYPE_INT, TSDB_DATA_TYPE_VARCHAR));
 
-        WSEWChunkSizingUtil.FieldBatchStats[] stats = getBatchStats(stmt);
+        Stmt2ChunkSizingUtil.FieldBatchStats[] stats = getBatchStats(stmt);
 
         assertEquals(2, stats.length);
         assertTrue(stats[0] != null);
@@ -202,7 +200,7 @@ public class WSColumnFastPreparedStatementTest {
         try (MockedStatic<Stmt2VariableWidthReuseHelper> mocked = Mockito.mockStatic(
                 Stmt2VariableWidthReuseHelper.class, Mockito.CALLS_REAL_METHODS)) {
             mocked.when(() -> Stmt2VariableWidthReuseHelper.resolveBufferSpec(Mockito.any(), Mockito.anyInt()))
-                    .thenReturn(new WSEWChunkSizingUtil.BufferSpec(8 * 1024, 1));
+                    .thenReturn(new Stmt2ChunkSizingUtil.BufferSpec(8 * 1024, 1));
             mocked.when(() -> Stmt2VariableWidthReuseHelper.createReusableVariableWidthBuffer(
                     Mockito.any(), Mockito.any()))
                     .thenAnswer(invocation -> {
@@ -229,7 +227,7 @@ public class WSColumnFastPreparedStatementTest {
         WSColumnFastPreparedStatement stmt = buildStmt(Collections.singletonList(field(
                 (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_VARCHAR)));
         Stmt2ColumnFieldBuffer original = getColumnBuffers(stmt)[0];
-        setNextBufferSpec(stmt, 0, new WSEWChunkSizingUtil.BufferSpec(16 * 1024, 2));
+        setNextBufferSpec(stmt, 0, new Stmt2ChunkSizingUtil.BufferSpec(16 * 1024, 2));
         java.lang.reflect.Method resetFastStateMethod = WSColumnFastPreparedStatement.class
                 .getDeclaredMethod("resetFastState");
         resetFastStateMethod.setAccessible(true);
@@ -271,7 +269,7 @@ public class WSColumnFastPreparedStatementTest {
         stmt.addBatch();
         stmt.executeBatch();
 
-        WSEWChunkSizingUtil.BufferSpec nextSpec = getNextBufferSpecs(stmt)[0];
+        Stmt2ChunkSizingUtil.BufferSpec nextSpec = getNextBufferSpecs(stmt)[0];
         assertTrue(nextSpec.getChunkBytes() > 8 * 1024);
     }
 
@@ -279,19 +277,19 @@ public class WSColumnFastPreparedStatementTest {
     public void updateNextBufferSpecsAfterSuccessfulBatch_keepsOtherSizingUpdatesWhenOneFieldOverflows()
             throws Exception {
         WSColumnFastPreparedStatement stmt = buildStmt(twoFields(TSDB_DATA_TYPE_VARCHAR, TSDB_DATA_TYPE_VARCHAR));
-        WSEWChunkSizingUtil.FieldBatchStats[] stats = getBatchStats(stmt);
+        Stmt2ChunkSizingUtil.FieldBatchStats[] stats = getBatchStats(stmt);
 
         stats[0].recordValueBytes(50L * 1024, 1024, 1);
         stats[0].setActiveChunksUsed(9);
         stats[1].recordValueBytes(1L, 1, 1);
         setColumnBuffer(stmt, 1, newBufferWithoutReusableSpecButOverflowing());
-        setNextBufferSpec(stmt, 1, new WSEWChunkSizingUtil.BufferSpec(Integer.MAX_VALUE, 1));
+        setNextBufferSpec(stmt, 1, new Stmt2ChunkSizingUtil.BufferSpec(Integer.MAX_VALUE, 1));
         setUnderuseStreak(stmt, 0, 11);
         setUnderuseStreak(stmt, 1, 13);
 
         invokeUpdateNextBufferSpecsAfterSuccessfulBatch(stmt);
 
-        WSEWChunkSizingUtil.BufferSpec[] nextSpecs = getNextBufferSpecs(stmt);
+        Stmt2ChunkSizingUtil.BufferSpec[] nextSpecs = getNextBufferSpecs(stmt);
         assertTrue(nextSpecs[0].getChunkBytes() > 8 * 1024);
         assertEquals(0, getUnderuseStreak(stmt, 0));
         assertEquals(Integer.MAX_VALUE, nextSpecs[1].getChunkBytes());
@@ -619,31 +617,31 @@ public class WSColumnFastPreparedStatementTest {
         }
     }
 
-    private static WSEWChunkSizingUtil.FieldBatchStats[] getBatchStats(WSColumnFastPreparedStatement stmt)
+    private static Stmt2ChunkSizingUtil.FieldBatchStats[] getBatchStats(WSColumnFastPreparedStatement stmt)
             throws Exception {
         java.lang.reflect.Field batchStatsField = WSColumnFastPreparedStatement.class.getDeclaredField("batchStats");
         batchStatsField.setAccessible(true);
-        return (WSEWChunkSizingUtil.FieldBatchStats[]) batchStatsField.get(stmt);
+        return (Stmt2ChunkSizingUtil.FieldBatchStats[]) batchStatsField.get(stmt);
     }
 
     private static void setNextBufferSpec(
             WSColumnFastPreparedStatement stmt,
             int index,
-            WSEWChunkSizingUtil.BufferSpec spec) throws Exception {
+            Stmt2ChunkSizingUtil.BufferSpec spec) throws Exception {
         java.lang.reflect.Field nextSpecsField =
                 WSColumnFastPreparedStatement.class.getDeclaredField("nextBufferSpecs");
         nextSpecsField.setAccessible(true);
-        WSEWChunkSizingUtil.BufferSpec[] nextSpecs =
-                (WSEWChunkSizingUtil.BufferSpec[]) nextSpecsField.get(stmt);
+        Stmt2ChunkSizingUtil.BufferSpec[] nextSpecs =
+                (Stmt2ChunkSizingUtil.BufferSpec[]) nextSpecsField.get(stmt);
         nextSpecs[index] = spec;
     }
 
-    private static WSEWChunkSizingUtil.BufferSpec[] getNextBufferSpecs(WSColumnFastPreparedStatement stmt)
+    private static Stmt2ChunkSizingUtil.BufferSpec[] getNextBufferSpecs(WSColumnFastPreparedStatement stmt)
             throws Exception {
         java.lang.reflect.Field nextSpecsField =
                 WSColumnFastPreparedStatement.class.getDeclaredField("nextBufferSpecs");
         nextSpecsField.setAccessible(true);
-        return (WSEWChunkSizingUtil.BufferSpec[]) nextSpecsField.get(stmt);
+        return (Stmt2ChunkSizingUtil.BufferSpec[]) nextSpecsField.get(stmt);
     }
 
     private static void setColumnBuffer(

@@ -465,64 +465,6 @@ public class AutoExpandingBuffer {
         return composite.readableBytes() + currentBuffer.readableBytes();
     }
 
-    public void truncateReadableBytes(int targetReadableBytes) {
-        if (stopWrite) {
-            throw new IllegalStateException("Cannot truncate after stopWrite has been called");
-        }
-        int readableBytes = readableBytes();
-        if (targetReadableBytes < 0 || targetReadableBytes > readableBytes) {
-            throw new IllegalArgumentException(
-                    "targetReadableBytes out of range: " + targetReadableBytes + " (readableBytes=" + readableBytes + ")");
-        }
-        int bytesToTrim = readableBytes - targetReadableBytes;
-        if (bytesToTrim == 0) {
-            return;
-        }
-
-        int committedReadableBytes = composite.readableBytes();
-        if (targetReadableBytes >= committedReadableBytes) {
-            currentBuffer.writerIndex(targetReadableBytes - committedReadableBytes);
-            return;
-        }
-
-        CompositeByteBuf truncatedComposite = allocator.compositeBuffer(composite.maxNumComponents());
-        ByteBuf truncatedCurrent = null;
-        boolean success = false;
-        try {
-            int remaining = targetReadableBytes;
-            for (int i = 0; i < composite.numComponents() && remaining > 0; i++) {
-                ByteBuf component = composite.component(i);
-                int componentReadableBytes = component.readableBytes();
-                if (remaining >= componentReadableBytes) {
-                    truncatedComposite.addComponent(
-                            true,
-                            component.retainedSlice(component.readerIndex(), componentReadableBytes));
-                    remaining -= componentReadableBytes;
-                } else {
-                    truncatedCurrent = allocator.buffer(Math.max(bufferSize, remaining));
-                    truncatedCurrent.writeBytes(component, component.readerIndex(), remaining);
-                    remaining = 0;
-                }
-            }
-            if (truncatedCurrent == null) {
-                truncatedCurrent = allocator.buffer(bufferSize);
-            }
-
-            Utils.releaseByteBuf(composite);
-            Utils.releaseByteBuf(currentBuffer);
-            composite = truncatedComposite;
-            currentBuffer = truncatedCurrent;
-            success = true;
-        } finally {
-            if (!success) {
-                Utils.releaseByteBuf(truncatedComposite);
-                if (truncatedCurrent != null && truncatedCurrent != currentBuffer) {
-                    Utils.releaseByteBuf(truncatedCurrent);
-                }
-            }
-        }
-    }
-
     public ByteBuf retainedDuplicate() {
         stopWrite();
         return composite.retainedDuplicate();

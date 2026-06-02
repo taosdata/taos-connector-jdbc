@@ -1,6 +1,6 @@
 package com.taosdata.jdbc.ws.stmt2;
 
-public final class WSEWChunkSizingUtil {
+public final class Stmt2ChunkSizingUtil {
     private static final int BOOTSTRAP_CHUNK_BYTES = 8 * 1024;
     private static final int TARGET_ACTIVE_CHUNKS = 4;
     private static final int MIN_ACTIVE_CHUNKS = 2;
@@ -171,6 +171,6 @@ public final class WSEWChunkSizingUtil {
         return (int) result;
     }
 
-    private WSEWChunkSizingUtil() {
+    private Stmt2ChunkSizingUtil() {
     }
 }

@@ -2,9 +2,10 @@ package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.common.Column;
 import com.taosdata.jdbc.enums.FieldBindType;
+import com.taosdata.jdbc.ws.stmt2.Stmt2BindExecRequestBuilder;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnBindSerializer;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnFieldBuffer;
-import com.taosdata.jdbc.ws.stmt2.WSEWChunkSizingUtil;
+import com.taosdata.jdbc.ws.stmt2.Stmt2ChunkSizingUtil;
 import com.taosdata.jdbc.ws.stmt2.entity.Field;
 import com.taosdata.jdbc.ws.stmt2.entity.Stmt2PrepareResp;
 import com.taosdata.jdbc.ws.stmt2.entity.StmtInfo;
@@ -17,10 +18,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.lang.reflect.Method;
-import java.sql.SQLException;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,7 +26,6 @@ import java.util.Map;
 import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_BINARY;
 import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_INT;
 import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP;
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
@@ -47,75 +44,74 @@ public class WSEWColumnPreparedStatementTest {
     }
 
     @Test
-    public void buildColumnBuffersFromQueuedRows_preservesQueuedTableOrder() throws Exception {
-        List<Map<Integer, Column>> rows = Arrays.asList(
+    public void serializationTask_preservesQueuedTableOrderInPayloadHeader() throws Exception {
+        EWBackendThreadInfo info = new EWBackendThreadInfo(16, 16);
+        enqueueRows(info,
                 row("d0", 1000L, 11),
                 row("d1", 2000L, 12),
                 row("d0", 3000L, 13));
 
-        Stmt2ColumnFieldBuffer[] buffers = null;
-        try {
-            buffers = WSEWColumnPreparedStatement.buildColumnBuffersFromQueuedRows(rows, stmtInfo());
+        new WSEWColumnPreparedStatement.ColumnarWSEWSerializationTask(info, 3, stmtInfo(), true).invoke();
 
-            assertEquals(3, buffers[0].getRowCount());
-            assertEquals(3, buffers[1].getRowCount());
-            assertEquals(3, buffers[2].getRowCount());
-            assertEquals(3, buffers[0].computeTableCount());
+        EWRawBlock block = info.getSerialQueue().poll();
+        assertNotNull("task should have produced a serialized block", block);
+        assertTrue("no serialization error expected", block.getLastError() == null);
+        ByteBuf rawBlock = block.getByteBuf();
+        try {
+            int payloadOffset = Stmt2BindExecRequestBuilder.HEADER_SIZE;
+            assertEquals(3, rawBlock.getIntLE(payloadOffset
+                    + Stmt2ColumnBindSerializer.HEADER_ROW_COUNT_OFFSET));
+            assertEquals(3, rawBlock.getIntLE(payloadOffset
+                    + Stmt2ColumnBindSerializer.HEADER_TABLE_COUNT_OFFSET));
         } finally {
-            if (buffers != null) {
-                for (Stmt2ColumnFieldBuffer buffer : buffers) {
-                    if (buffer != null) {
-                        buffer.release();
-                    }
-                }
-            }
+            releaseRawBlock(block);
+            info.releaseReusableColumnBuffers();
         }
     }
 
-    @Test(expected = SQLException.class)
-    public void buildColumnBuffersFromQueuedRows_rejectsMissingTbname() throws Exception {
+    @Test
+    public void serializationTask_rejectsMissingTbname() throws Exception {
+        EWBackendThreadInfo info = new EWBackendThreadInfo(16, 16);
         Map<Integer, Column> row = new HashMap<>();
         row.put(2, new Column(1000L, TSDB_DATA_TYPE_TIMESTAMP, 2));
         row.put(3, new Column(11, TSDB_DATA_TYPE_INT, 3));
-        WSEWColumnPreparedStatement.buildColumnBuffersFromQueuedRows(
-                Collections.singletonList(row),
-                stmtInfo());
+        info.getWriteQueue().put(row);
+
+        new WSEWColumnPreparedStatement.ColumnarWSEWSerializationTask(info, 1, stmtInfo(), true).invoke();
+
+        EWRawBlock block = info.getSerialQueue().poll();
+        assertNotNull("task must enqueue an error block for missing tbname", block);
+        assertNotNull("error block must carry the exception", block.getLastError());
+        assertTrue(block.getLastError().getMessage().contains("Missing bound column at index 1"));
+        assertEquals(1, block.getRowCount());
+        info.releaseReusableColumnBuffers();
     }
 
     @Test
-    public void buildColumnBuffersFromQueuedRows_reusesProvidedBuffersAcrossBatches() throws Exception {
-        Method method = WSEWColumnPreparedStatement.class.getDeclaredMethod(
-                "buildColumnBuffersFromQueuedRows",
-                List.class,
-                StmtInfo.class,
-                Stmt2ColumnFieldBuffer[].class);
-        method.setAccessible(true);
-
-        List<Map<Integer, Column>> firstRows = Arrays.asList(
+    public void serializationTask_reusesProvidedBuffersAcrossBatches() throws Exception {
+        EWBackendThreadInfo info = new EWBackendThreadInfo(16, 16);
+        enqueueRows(info,
                 row("d0", 1000L, 11),
                 row("d1", 2000L, 12));
-        List<Map<Integer, Column>> secondRows = Collections.singletonList(
-                row("d2", 3000L, 21));
 
-        Stmt2ColumnFieldBuffer[] reused = null;
-        Stmt2ColumnFieldBuffer[] expected = null;
+        new WSEWColumnPreparedStatement.ColumnarWSEWSerializationTask(info, 2, stmtInfo(), true).invoke();
+        releaseRawBlock(info.getSerialQueue().poll());
+
+        Stmt2ColumnFieldBuffer[] reused = info.getReusableColumnBuffers();
+        Object reusableValueBuffer = getDeclaredField(reused[0], "reusableValueBuffer");
+        assertNotNull("tbname buffer should use reusable chunked storage in EW reuse path", reusableValueBuffer);
+
+        enqueueRows(info, row("d2", 3000L, 21));
+        new WSEWColumnPreparedStatement.ColumnarWSEWSerializationTask(info, 1, stmtInfo(), true).invoke();
+        releaseRawBlock(info.getSerialQueue().poll());
+
+        Stmt2ColumnFieldBuffer[] second = info.getReusableColumnBuffers();
         try {
-            reused = (Stmt2ColumnFieldBuffer[]) method.invoke(null, firstRows, stmtInfo(), null);
-            Object reusableValueBuffer = getDeclaredField(reused[0], "reusableValueBuffer");
-            assertNotNull("tbname buffer should switch to reusable chunked storage in EW reuse path", reusableValueBuffer);
-
-            Stmt2ColumnFieldBuffer[] second = (Stmt2ColumnFieldBuffer[]) method.invoke(null, secondRows, stmtInfo(), reused);
             assertSame(reused, second);
             assertSame(reused[0], second[0]);
             assertSame(reusableValueBuffer, getDeclaredField(second[0], "reusableValueBuffer"));
-
-            expected = WSEWColumnPreparedStatement.buildColumnBuffersFromQueuedRows(secondRows, stmtInfo());
-            assertArrayEquals(
-                    Stmt2ColumnBindSerializer.serialize(expected),
-                    Stmt2ColumnBindSerializer.serialize(second));
         } finally {
-            releaseBuffers(expected);
-            releaseBuffers(reused);
+            info.releaseReusableColumnBuffers();
         }
     }
 
@@ -160,72 +156,6 @@ public class WSEWColumnPreparedStatementTest {
         java.lang.reflect.Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         return field.get(target);
-    }
-
-    private static void releaseBuffers(Stmt2ColumnFieldBuffer[] buffers) {
-        if (buffers == null) {
-            return;
-        }
-        for (Stmt2ColumnFieldBuffer buffer : buffers) {
-            if (buffer != null) {
-                buffer.release();
-            }
-        }
-    }
-
-    @Test
-    public void buildColumnBuffersFromQueuedRows_collectsStatsDuringAppend() throws Exception {
-        Method method = WSEWColumnPreparedStatement.class.getDeclaredMethod(
-                "buildColumnBuffersFromQueuedRows",
-                List.class,
-                StmtInfo.class,
-                Stmt2ColumnFieldBuffer[].class,
-                WSEWChunkSizingUtil.FieldBatchStats[].class);
-        method.setAccessible(true);
-
-        List<Map<Integer, Column>> rows = Arrays.asList(
-                wideRow("d0", 1000L, "aaaa", "bbbb"),
-                wideRow("d1", 2000L, "cccc", "dddd"));
-        WSEWChunkSizingUtil.FieldBatchStats[] stats =
-                new WSEWChunkSizingUtil.FieldBatchStats[] {null, null, null, null};
-
-        Stmt2ColumnFieldBuffer[] buffers = null;
-        try {
-            buffers = (Stmt2ColumnFieldBuffer[]) method.invoke(null, rows, wideStmtInfo(), null, stats);
-
-            assertNotNull(buffers);
-            assertNotNull("tbname stats must be collected (slot 0)", stats[0]);
-            assertEquals(2, stats[0].getRowsWritten());
-            assertTrue(stats[0].getObservedValueBytes() >= 2);
-            assertNotNull(stats[2]);
-            assertEquals(2, stats[2].getRowsWritten());
-            assertTrue(stats[2].getObservedValueBytes() >= 8);
-        } finally {
-            releaseBuffers(buffers);
-        }
-    }
-
-    @Test
-    public void buildColumnBuffersFromQueuedRows_rejectsUndersizedStatsArray() throws Exception {
-        Method method = WSEWColumnPreparedStatement.class.getDeclaredMethod(
-                "buildColumnBuffersFromQueuedRows",
-                List.class,
-                StmtInfo.class,
-                Stmt2ColumnFieldBuffer[].class,
-                WSEWChunkSizingUtil.FieldBatchStats[].class);
-        method.setAccessible(true);
-
-        List<Map<Integer, Column>> rows = Collections.singletonList(wideRow("d0", 1000L, "a", "b"));
-        // wideStmtInfo has 4 fields; pass only 2 slots — must be rejected
-        WSEWChunkSizingUtil.FieldBatchStats[] tooShort =
-                new WSEWChunkSizingUtil.FieldBatchStats[2];
-        try {
-            method.invoke(null, rows, wideStmtInfo(), null, tooShort);
-            throw new AssertionError("Expected IllegalArgumentException for undersized stats array");
-        } catch (java.lang.reflect.InvocationTargetException e) {
-            assertTrue("Expected IllegalArgumentException",
-                    e.getCause() instanceof IllegalArgumentException);
-        }
     }
 
     private static Map<Integer, Column> wideRow(String tbname, long ts, String v1, String v2) {
@@ -312,7 +242,7 @@ public class WSEWColumnPreparedStatementTest {
         new WSEWColumnPreparedStatement.ColumnarWSEWSerializationTask(info, 1, stmt, true).invoke();
         releaseRawBlock(info.getSerialQueue().poll());
 
-        WSEWChunkSizingUtil.BufferSpec bootstrap = WSEWChunkSizingUtil.bootstrapSpec();
+        Stmt2ChunkSizingUtil.BufferSpec bootstrap = Stmt2ChunkSizingUtil.bootstrapSpec();
         assertBufferSpecEquals(bootstrap, info.getReusableColumnBuffers()[2].currentReusableSpec());
         assertBufferSpecEquals(bootstrap, info.getReusableColumnBuffers()[3].currentReusableSpec());
         info.releaseReusableColumnBuffers();
@@ -329,8 +259,8 @@ public class WSEWColumnPreparedStatementTest {
         new WSEWColumnPreparedStatement.ColumnarWSEWSerializationTask(info, 2, stmt, true).invoke();
         releaseRawBlock(info.getSerialQueue().poll());
 
-        WSEWChunkSizingUtil.BufferSpec bootstrap = WSEWChunkSizingUtil.bootstrapSpec();
-        WSEWChunkSizingUtil.BufferSpec grown = info.getNextBufferSpecs()[2];
+        Stmt2ChunkSizingUtil.BufferSpec bootstrap = Stmt2ChunkSizingUtil.bootstrapSpec();
+        Stmt2ChunkSizingUtil.BufferSpec grown = info.getNextBufferSpecs()[2];
         assertNotNull(grown);
         assertTrue(grown.getChunkBytes() > bootstrap.getChunkBytes());
         assertTrue(grown.getReusableChunkCount() > bootstrap.getReusableChunkCount());
@@ -348,8 +278,8 @@ public class WSEWColumnPreparedStatementTest {
     public void nextBatch_reusesWhenCapacityIsEnoughAndChunksAreNotTooFragmented() throws Exception {
         EWBackendThreadInfo info = new EWBackendThreadInfo(16, 16);
         StmtInfo stmt = wideStmtInfo();
-        WSEWChunkSizingUtil.BufferSpec largeSpec = new WSEWChunkSizingUtil.BufferSpec(64 * 1024, 4);
-        info.setNextBufferSpecs(new WSEWChunkSizingUtil.BufferSpec[] {null, null, largeSpec, largeSpec});
+        Stmt2ChunkSizingUtil.BufferSpec largeSpec = new Stmt2ChunkSizingUtil.BufferSpec(64 * 1024, 4);
+        info.setNextBufferSpecs(new Stmt2ChunkSizingUtil.BufferSpec[] {null, null, largeSpec, largeSpec});
         info.setUnderuseStreaks(new int[stmt.getFields().size()]);
 
         enqueueRows(info, wideRow("d0", 1000L, "a", "b"));
@@ -366,9 +296,9 @@ public class WSEWColumnPreparedStatementTest {
     public void nextBatch_shrinksOnlyAfterHundredUnderusedBatches() throws Exception {
         EWBackendThreadInfo info = new EWBackendThreadInfo(16, 16);
         StmtInfo stmt = wideStmtInfo();
-        WSEWChunkSizingUtil.BufferSpec largeSpec = new WSEWChunkSizingUtil.BufferSpec(64 * 1024, 4);
-        WSEWChunkSizingUtil.BufferSpec smallSpec = WSEWChunkSizingUtil.bootstrapSpec();
-        info.setNextBufferSpecs(new WSEWChunkSizingUtil.BufferSpec[] {null, null, largeSpec, largeSpec});
+        Stmt2ChunkSizingUtil.BufferSpec largeSpec = new Stmt2ChunkSizingUtil.BufferSpec(64 * 1024, 4);
+        Stmt2ChunkSizingUtil.BufferSpec smallSpec = Stmt2ChunkSizingUtil.bootstrapSpec();
+        info.setNextBufferSpecs(new Stmt2ChunkSizingUtil.BufferSpec[] {null, null, largeSpec, largeSpec});
         info.setUnderuseStreaks(new int[stmt.getFields().size()]);
 
         for (int i = 0; i < 99; i++) {
@@ -409,8 +339,8 @@ public class WSEWColumnPreparedStatementTest {
         }
     }
 
-    private static void assertBufferSpecEquals(WSEWChunkSizingUtil.BufferSpec expected,
-                                               WSEWChunkSizingUtil.BufferSpec actual) {
+    private static void assertBufferSpecEquals(Stmt2ChunkSizingUtil.BufferSpec expected,
+                                               Stmt2ChunkSizingUtil.BufferSpec actual) {
         assertNotNull(actual);
         assertEquals(expected.getChunkBytes(), actual.getChunkBytes());
         assertEquals(expected.getReusableChunkCount(), actual.getReusableChunkCount());
@@ -443,7 +373,7 @@ public class WSEWColumnPreparedStatementTest {
                 WSEWColumnPreparedStatement.ColumnarWSEWSerializationTask.class
                         .getDeclaredField("batchStats");
         batchStatsField.setAccessible(true);
-        batchStatsField.set(task, new WSEWChunkSizingUtil.FieldBatchStats[2]);
+        batchStatsField.set(task, new Stmt2ChunkSizingUtil.FieldBatchStats[2]);
 
         task.invoke();
 
@@ -457,25 +387,11 @@ public class WSEWColumnPreparedStatementTest {
     }
 
     /**
-     * Regression: {@code IllegalStateException} thrown inside the inner try-block of
-     * {@code ColumnarWSEWSerializationTask.compute()} (e.g. from {@code primeReusableBuffer}
-     * or {@code ensureReusableColumnBuffers}) must enqueue an error block rather than
-     * escaping unchecked and leaving {@code waitWriteCompleted()} hanging.
-     *
-     * We inject the exception by overriding {@code releaseReusableColumnBuffers()} in an
-     * anonymous {@code EWBackendThreadInfo} subclass.  When {@code reusableColumnBuffers} is
-     * null the buffer-spec match check fails, causing {@code ensureReusableColumnBuffers} to
-     * call {@code releaseReusableColumnBuffers()} — which is where our injected
-     * {@code IllegalStateException} fires.
-     *
-     * <p>Note: triggering the real {@code primeReusableBuffer} ISE path (which wraps a
-     * {@code SQLException} from {@code appendBytes}) requires making a Netty buffer
-     * allocation fail mid-write — not practical without mocking.  The anonymous-subclass
-     * approach exercises the same catch-block in {@code compute()}, giving equivalent
-     * regression coverage.
+     * Buffer initialization is eager now: initialization failures should fail task
+     * construction instead of being deferred to {@code compute()} as an error block.
      */
-    @Test
-    public void serializationTask_illegalStateExceptionProducesErrorBlockNotHang() throws Exception {
+    @Test(expected = IllegalStateException.class)
+    public void serializationTask_illegalStateExceptionFailsTaskConstruction() {
         EWBackendThreadInfo info = new EWBackendThreadInfo(16, 16) {
             @Override
             public void releaseReusableColumnBuffers() {
@@ -483,19 +399,8 @@ public class WSEWColumnPreparedStatementTest {
             }
         };
         StmtInfo stmt = wideStmtInfo();
-        enqueueRows(info, wideRow("d0", 1000L, "hello", "world"));
 
-        WSEWColumnPreparedStatement.ColumnarWSEWSerializationTask task =
-                new WSEWColumnPreparedStatement.ColumnarWSEWSerializationTask(info, 1, stmt, false);
-        task.invoke();
-
-        EWRawBlock block = info.getSerialQueue().poll();
-        assertNotNull("task must enqueue a block (not hang) when ISE escapes buffer init", block);
-        assertNotNull("error block must carry the exception", block.getLastError());
-        assertTrue("error message must mention buffer initialization",
-                block.getLastError().getMessage() != null
-                        && block.getLastError().getMessage().length() > 0);
-        assertEquals("rows must still be accounted for", 1, block.getRowCount());
+        new WSEWColumnPreparedStatement.ColumnarWSEWSerializationTask(info, 1, stmt, false);
     }
 
     private static String repeated(char c, int count) {

@@ -1,4 +1,4 @@
-package com.taosdata.jdbc.ws.stmt;
+package com.taosdata.jdbc.ws.manual;
 
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.utils.SpecifyAddress;

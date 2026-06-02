@@ -17,10 +17,15 @@ import java.time.DateTimeException;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Properties;
 import java.util.function.Consumer;
 
 public class ConnectionParam {
+    public static final String STMT2_BIND_MODE_AUTO = "auto";
+    public static final String STMT2_BIND_MODE_COLUMN = "column";
+    public static final String STMT2_BIND_MODE_TRADITIONAL = "traditional";
+
     private List<Endpoint> endpoints;
     private String database;
     private String cloudToken;
@@ -52,6 +57,7 @@ public class ConnectionParam {
     private boolean strictCheck;
     private int retryTimes;
     private String asyncWrite;
+    private String stmt2BindMode;
     private int wsKeepAlive;
     private int healthCheckInitInterval;
     private int healthCheckMaxInterval;
@@ -95,6 +101,7 @@ public class ConnectionParam {
         this.strictCheck = builder.strictCheck;
         this.retryTimes = builder.retryTimes;
         this.asyncWrite = builder.asyncWrite;
+        this.stmt2BindMode = builder.stmt2BindMode == null ? STMT2_BIND_MODE_AUTO : builder.stmt2BindMode;
         this.textMessageHandler = builder.textMessageHandler;
         this.binaryMessageHandler = builder.binaryMessageHandler;
         this.wsKeepAlive = builder.wsKeepAlive;
@@ -220,6 +227,10 @@ public class ConnectionParam {
 
     public void setAsyncWrite(String asyncWrite) {
         this.asyncWrite = asyncWrite;
+    }
+
+    public void setStmt2BindMode(String stmt2BindMode) {
+        this.stmt2BindMode = stmt2BindMode;
     }
 
     public void setWsKeepAlive(int wsKeepAlive) {
@@ -355,6 +366,10 @@ public class ConnectionParam {
 
     public String getAsyncWrite() {
         return asyncWrite;
+    }
+
+    public String getStmt2BindMode() {
+        return stmt2BindMode;
     }
 
     public int getWsKeepAlive() {
@@ -571,6 +586,16 @@ public class ConnectionParam {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "PROPERTY_KEY_ASYNC_WRITE only support STMT");
         }
 
+        String stmt2BindMode = properties.getProperty(TSDBDriver.PROPERTY_KEY_STMT2_BIND_MODE, STMT2_BIND_MODE_AUTO)
+                .trim()
+                .toLowerCase(Locale.ROOT);
+        if (!STMT2_BIND_MODE_AUTO.equals(stmt2BindMode)
+                && !STMT2_BIND_MODE_COLUMN.equals(stmt2BindMode)
+                && !STMT2_BIND_MODE_TRADITIONAL.equals(stmt2BindMode)) {
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE,
+                    "PROPERTY_KEY_STMT2_BIND_MODE only support auto, column, traditional");
+        }
+
         int wsKeepAlive = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_WS_KEEP_ALIVE_SECONDS, "300"));
         if (wsKeepAlive <= 0){
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_WS_KEEP_ALIVE_SECONDS");
@@ -642,6 +667,7 @@ public class ConnectionParam {
                 .setStrictCheck(strictCheck)
                 .setRetryTimes(retryTimes)
                 .setAsyncWrite(asyncWrite)
+                .setStmt2BindMode(stmt2BindMode)
                 .setWsKeepAlive(wsKeepAlive)
                 .setHealthCheckInitInterval(healthCheckInitInterval)
                 .setHealthCheckMaxInterval(healthCheckMaxInterval)
@@ -690,6 +716,7 @@ public class ConnectionParam {
         sb.append(", strictCheck=").append(strictCheck);
         sb.append(", retryTimes=").append(retryTimes);
         sb.append(", asyncWrite='").append(asyncWrite).append('\'');
+        sb.append(", stmt2BindMode='").append(stmt2BindMode).append('\'');
         sb.append(", wsKeepAlive=").append(wsKeepAlive);
         sb.append(", healthCheckInitInterval=").append(healthCheckInitInterval);
         sb.append(", healthCheckMaxInterval=").append(healthCheckMaxInterval);
@@ -735,6 +762,7 @@ public class ConnectionParam {
         private boolean strictCheck;
         private int retryTimes;
         private String asyncWrite;
+        private String stmt2BindMode = STMT2_BIND_MODE_AUTO;
         private int wsKeepAlive;
         private int healthCheckInitInterval;
         private int healthCheckMaxInterval;
@@ -882,6 +910,11 @@ public class ConnectionParam {
             return this;
         }
 
+        public Builder setStmt2BindMode(String stmt2BindMode) {
+            this.stmt2BindMode = stmt2BindMode;
+            return this;
+        }
+
         public Builder setWsKeepAlive(int wsKeepAlive) {
             this.wsKeepAlive = wsKeepAlive;
             return this;
@@ -971,6 +1004,7 @@ public class ConnectionParam {
                 .setStrictCheck(original.isStrictCheck())
                 .setRetryTimes(original.getRetryTimes())
                 .setAsyncWrite(original.getAsyncWrite())
+                .setStmt2BindMode(original.getStmt2BindMode())
                 .setWsKeepAlive(original.getWsKeepAlive())
                 .setHealthCheckInitInterval(original.getHealthCheckInitInterval())
                 .setHealthCheckMaxInterval(original.getHealthCheckMaxInterval())

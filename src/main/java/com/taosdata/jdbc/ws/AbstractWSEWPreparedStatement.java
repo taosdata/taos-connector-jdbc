@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public abstract class AbstractWSEWPreparedStatement extends AbsWSPreparedStatement {
     private static final Logger log = LoggerFactory.getLogger(AbstractWSEWPreparedStatement.class);
     private static final ForkJoinPool SERIALIZE_EXECUTOR = Utils.getForkJoinPool();
+    private static final long WRITE_QUEUE_SKEW_CHECK_INTERVAL_NANOS = TimeUnit.MINUTES.toNanos(5);
 
     private final boolean copyData;
     private final int writeThreadNum;
@@ -49,6 +50,7 @@ public abstract class AbstractWSEWPreparedStatement extends AbsWSPreparedStateme
     private final List<WorkerThread> workerThreadList;
     private final SyncObj syncObj = new SyncObj();
     private int addBatchCounts = 0;
+    private long lastWriteQueueSkewCheckNanos = System.nanoTime();
 
     protected AbstractWSEWPreparedStatement(Transport transport,
                                             ConnectionParam param,
@@ -178,6 +180,7 @@ public abstract class AbstractWSEWPreparedStatement extends AbsWSPreparedStateme
                 throw new SQLException("Interrupted while adding batch", e);
             }
 
+            warnIfWriteQueuesSkewed();
             triggerSerializeIfNeeded(backendThreadInfo);
             remainingUnprocessedRows.incrementAndGet();
             addBatchCounts++;
@@ -328,6 +331,84 @@ public abstract class AbstractWSEWPreparedStatement extends AbsWSPreparedStateme
                     }
                 }
             }
+        }
+    }
+
+    private void warnIfWriteQueuesSkewed() {
+        if (writeThreadNum <= 1) {
+            return;
+        }
+
+        long now = System.nanoTime();
+        if (now - lastWriteQueueSkewCheckNanos < WRITE_QUEUE_SKEW_CHECK_INTERVAL_NANOS) {
+            return;
+        }
+        lastWriteQueueSkewCheckNanos = now;
+
+        int batchSize = param.getBatchSizeByRow();
+        QueueSkewStats stats = analyzeWriteQueueSkew(getWriteQueueSizes(), batchSize);
+        if (!stats.skewed) {
+            return;
+        }
+
+        log.warn("EW write queue distribution is skewed, stmt id: {}, max queue index: {}, max queue size: {}, other average queue size: {}, batch size: {}, queue sizes: {}.",
+                stmtInfo.getStmtId(),
+                stats.maxQueueIndex,
+                stats.maxQueueSize,
+                stats.otherAverageQueueSize,
+                batchSize,
+                Arrays.toString(stats.queueSizes));
+    }
+
+    private int[] getWriteQueueSizes() {
+        int[] queueSizes = new int[backendThreadInfoList.size()];
+        for (int i = 0; i < backendThreadInfoList.size(); i++) {
+            queueSizes[i] = backendThreadInfoList.get(i).getWriteQueue().size();
+        }
+        return queueSizes;
+    }
+
+    static QueueSkewStats analyzeWriteQueueSkew(int[] queueSizes, int batchSize) {
+        if (queueSizes == null || queueSizes.length <= 1 || batchSize <= 0) {
+            return new QueueSkewStats(queueSizes, -1, 0, 0, false);
+        }
+
+        int maxQueueIndex = 0;
+        int maxQueueSize = queueSizes[0];
+        long totalQueueSize = queueSizes[0];
+        for (int i = 1; i < queueSizes.length; i++) {
+            int queueSize = queueSizes[i];
+            totalQueueSize += queueSize;
+            if (queueSize > maxQueueSize) {
+                maxQueueSize = queueSize;
+                maxQueueIndex = i;
+            }
+        }
+
+        double otherAverageQueueSize = (totalQueueSize - maxQueueSize) / (double) (queueSizes.length - 1);
+        boolean skewed = maxQueueSize >= batchSize
+                && otherAverageQueueSize < batchSize
+                && maxQueueSize > 3.0d * Math.max(otherAverageQueueSize, 1.0d);
+        return new QueueSkewStats(queueSizes, maxQueueIndex, maxQueueSize, otherAverageQueueSize, skewed);
+    }
+
+    static final class QueueSkewStats {
+        final int[] queueSizes;
+        final int maxQueueIndex;
+        final int maxQueueSize;
+        final double otherAverageQueueSize;
+        final boolean skewed;
+
+        QueueSkewStats(int[] queueSizes,
+                       int maxQueueIndex,
+                       int maxQueueSize,
+                       double otherAverageQueueSize,
+                       boolean skewed) {
+            this.queueSizes = queueSizes == null ? new int[0] : Arrays.copyOf(queueSizes, queueSizes.length);
+            this.maxQueueIndex = maxQueueIndex;
+            this.maxQueueSize = maxQueueSize;
+            this.otherAverageQueueSize = otherAverageQueueSize;
+            this.skewed = skewed;
         }
     }
 

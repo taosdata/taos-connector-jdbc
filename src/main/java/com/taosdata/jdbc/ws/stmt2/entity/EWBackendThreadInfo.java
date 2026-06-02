@@ -2,7 +2,7 @@ package com.taosdata.jdbc.ws.stmt2.entity;
 
 import com.taosdata.jdbc.common.Column;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnFieldBuffer;
-import com.taosdata.jdbc.ws.stmt2.WSEWChunkSizingUtil;
+import com.taosdata.jdbc.ws.stmt2.Stmt2ChunkSizingUtil;
 
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -13,7 +13,7 @@ public class EWBackendThreadInfo {
     private final ArrayBlockingQueue<EWRawBlock> serialQueue;
     private final AtomicBoolean serializeRunning;
     private volatile Stmt2ColumnFieldBuffer[] reusableColumnBuffers;
-    private volatile WSEWChunkSizingUtil.BufferSpec[] nextBufferSpecs;
+    private volatile Stmt2ChunkSizingUtil.BufferSpec[] nextBufferSpecs;
     private volatile int[] underuseStreaks;
 
     public EWBackendThreadInfo(int writeQueueSize, int serialQueueSize) {
@@ -51,11 +51,11 @@ public class EWBackendThreadInfo {
         reusableColumnBuffers = null;
     }
 
-    public WSEWChunkSizingUtil.BufferSpec[] getNextBufferSpecs() {
+    public Stmt2ChunkSizingUtil.BufferSpec[] getNextBufferSpecs() {
         return nextBufferSpecs;
     }
 
-    public void setNextBufferSpecs(WSEWChunkSizingUtil.BufferSpec[] nextBufferSpecs) {
+    public void setNextBufferSpecs(Stmt2ChunkSizingUtil.BufferSpec[] nextBufferSpecs) {
         this.nextBufferSpecs = nextBufferSpecs;
     }
 

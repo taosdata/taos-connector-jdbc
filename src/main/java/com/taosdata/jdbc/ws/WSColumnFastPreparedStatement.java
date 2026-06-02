@@ -15,7 +15,7 @@ import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnBindSerializer;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnFieldBuffer;
 import com.taosdata.jdbc.ws.stmt2.Stmt2FieldMeta;
 import com.taosdata.jdbc.ws.stmt2.Stmt2VariableWidthReuseHelper;
-import com.taosdata.jdbc.ws.stmt2.WSEWChunkSizingUtil;
+import com.taosdata.jdbc.ws.stmt2.Stmt2ChunkSizingUtil;
 import com.taosdata.jdbc.ws.stmt2.entity.Field;
 import com.taosdata.jdbc.ws.stmt2.entity.RequestFactory;
 import com.taosdata.jdbc.ws.stmt2.entity.StmtInfo;
@@ -50,9 +50,9 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Ta
     private final int[] colFieldIdxByOrdinal;
     private Stmt2ColumnFieldBuffer[] columnBuffers;
     private Stmt2ColumnFieldBuffer.BufferSizeHints[] bufferSizeHints;
-    private WSEWChunkSizingUtil.BufferSpec[] nextBufferSpecs;
+    private Stmt2ChunkSizingUtil.BufferSpec[] nextBufferSpecs;
     private int[] underuseStreaks;
-    private final WSEWChunkSizingUtil.FieldBatchStats[] batchStats;
+    private final Stmt2ChunkSizingUtil.FieldBatchStats[] batchStats;
     private int expectedRowCount;
     private String pendingTableName;
     private boolean pendingTableNameSet;
@@ -82,7 +82,7 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Ta
                 fieldMetas, (byte) FieldBindType.TAOS_FIELD_TAG.getValue());
         this.colFieldIdxByOrdinal = resolveFieldIndexesByBindType(
                 fieldMetas, (byte) FieldBindType.TAOS_FIELD_COL.getValue());
-        this.nextBufferSpecs = new WSEWChunkSizingUtil.BufferSpec[n];
+        this.nextBufferSpecs = new Stmt2ChunkSizingUtil.BufferSpec[n];
         this.underuseStreaks = new int[n];
         this.batchStats = initBatchStats(n);
         this.pendingTagValues = new Object[tagFieldIdxByOrdinal.length];
@@ -180,10 +180,10 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Ta
         setTagUnchecked(index, value);
     }
 
-    private static WSEWChunkSizingUtil.FieldBatchStats[] initBatchStats(int count) {
-        WSEWChunkSizingUtil.FieldBatchStats[] stats = new WSEWChunkSizingUtil.FieldBatchStats[count];
+    private static Stmt2ChunkSizingUtil.FieldBatchStats[] initBatchStats(int count) {
+        Stmt2ChunkSizingUtil.FieldBatchStats[] stats = new Stmt2ChunkSizingUtil.FieldBatchStats[count];
         for (int i = 0; i < count; i++) {
-            stats[i] = new WSEWChunkSizingUtil.FieldBatchStats();
+            stats[i] = new Stmt2ChunkSizingUtil.FieldBatchStats();
         }
         return stats;
     }
@@ -976,7 +976,7 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Ta
     }
 
     private void updateNextBufferSpecsAfterSuccessfulBatch() {
-        WSEWChunkSizingUtil.BufferSpec[] resolvedSpecs = new WSEWChunkSizingUtil.BufferSpec[columnBuffers.length];
+        Stmt2ChunkSizingUtil.BufferSpec[] resolvedSpecs = new Stmt2ChunkSizingUtil.BufferSpec[columnBuffers.length];
         int[] resolvedUnderuseStreaks = new int[underuseStreaks.length];
         for (int i = 0; i < columnBuffers.length; i++) {
             if (!fieldMetas[i].isVariableWidth()) {
@@ -985,10 +985,10 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Ta
                 continue;
             }
 
-            WSEWChunkSizingUtil.FieldBatchStats stats = batchStats[i];
+            Stmt2ChunkSizingUtil.FieldBatchStats stats = batchStats[i];
             stats.setActiveChunksUsed(columnBuffers[i].activeReusableChunkCount());
             stats.setOverflowCount(columnBuffers[i].reusableOverflowCount());
-            WSEWChunkSizingUtil.BufferSpec current = columnBuffers[i].currentReusableSpec();
+            Stmt2ChunkSizingUtil.BufferSpec current = columnBuffers[i].currentReusableSpec();
             if (current == null) {
                 current = Stmt2VariableWidthReuseHelper.resolveBufferSpec(nextBufferSpecs, i);
             }
@@ -1011,7 +1011,7 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Ta
         try {
             for (int i = 0; i < fieldMetas.length; i++) {
                 if (fieldMetas[i].isVariableWidth()) {
-                    WSEWChunkSizingUtil.BufferSpec spec =
+                    Stmt2ChunkSizingUtil.BufferSpec spec =
                             Stmt2VariableWidthReuseHelper.resolveBufferSpec(nextBufferSpecs, i);
                     buffers[i] = Stmt2VariableWidthReuseHelper.createReusableVariableWidthBuffer(fieldMetas[i], spec);
                 } else {
@@ -1045,7 +1045,7 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Ta
                     columnBuffers[i].reset();
                     continue;
                 }
-                WSEWChunkSizingUtil.BufferSpec wanted =
+                Stmt2ChunkSizingUtil.BufferSpec wanted =
                         Stmt2VariableWidthReuseHelper.resolveBufferSpec(nextBufferSpecs, i);
                 if (Stmt2VariableWidthReuseHelper.bufferSpecsEqual(
                         columnBuffers[i].currentReusableSpec(), wanted)) {
@@ -1073,7 +1073,7 @@ public class WSColumnFastPreparedStatement extends WSRetryableStmt implements Ta
     }
 
     private void resetBatchStats() {
-        for (WSEWChunkSizingUtil.FieldBatchStats stat : batchStats) {
+        for (Stmt2ChunkSizingUtil.FieldBatchStats stat : batchStats) {
             if (stat != null) {
                 stat.reset();
             }

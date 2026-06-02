@@ -153,6 +153,7 @@ public class TSDBDriver extends AbstractDriver {
     public static final String PROPERTY_KEY_STRICT_CHECK = "strictCheck";
     public static final String PROPERTY_KEY_RETRY_TIMES = "retryTimes";
     public static final String PROPERTY_KEY_ASYNC_WRITE = "asyncWrite";
+    public static final String PROPERTY_KEY_STMT2_BIND_MODE = "stmt2bindmode";
 
     /**
      * for health check

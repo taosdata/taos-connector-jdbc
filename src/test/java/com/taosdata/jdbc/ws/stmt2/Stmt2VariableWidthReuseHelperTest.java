@@ -20,7 +20,7 @@ public class Stmt2VariableWidthReuseHelperTest {
                 (byte) FieldBindType.TAOS_FIELD_COL.getValue(),
                 (byte) TSDB_DATA_TYPE_VARCHAR,
                 (byte) 0);
-        WSEWChunkSizingUtil.BufferSpec spec = new WSEWChunkSizingUtil.BufferSpec(16 * 1024, 3);
+        Stmt2ChunkSizingUtil.BufferSpec spec = new Stmt2ChunkSizingUtil.BufferSpec(16 * 1024, 3);
 
         Stmt2ColumnFieldBuffer buffer = Stmt2VariableWidthReuseHelper.createReusableVariableWidthBuffer(meta, spec);
         try {
@@ -40,7 +40,7 @@ public class Stmt2VariableWidthReuseHelperTest {
                 (byte) FieldBindType.TAOS_FIELD_COL.getValue(),
                 (byte) TSDB_DATA_TYPE_VARCHAR,
                 (byte) 0);
-        WSEWChunkSizingUtil.BufferSpec spec = new WSEWChunkSizingUtil.BufferSpec(16 * 1024, 3);
+        Stmt2ChunkSizingUtil.BufferSpec spec = new Stmt2ChunkSizingUtil.BufferSpec(16 * 1024, 3);
         Stmt2ColumnFieldBuffer buffer = Stmt2VariableWidthReuseHelper.createReusableVariableWidthBuffer(meta, spec);
         try {
             String value = asciiString(12 * 1024);
@@ -56,33 +56,33 @@ public class Stmt2VariableWidthReuseHelperTest {
 
     @Test
     public void resolveBufferSpec_fallsBackToBootstrapSpecForMissingInputs() {
-        WSEWChunkSizingUtil.BufferSpec bootstrap = WSEWChunkSizingUtil.bootstrapSpec();
+        Stmt2ChunkSizingUtil.BufferSpec bootstrap = Stmt2ChunkSizingUtil.bootstrapSpec();
 
         assertBootstrapSpec(bootstrap,
                 Stmt2VariableWidthReuseHelper.resolveBufferSpec(null, 0));
         assertBootstrapSpec(bootstrap,
-                Stmt2VariableWidthReuseHelper.resolveBufferSpec(new WSEWChunkSizingUtil.BufferSpec[0], 0));
+                Stmt2VariableWidthReuseHelper.resolveBufferSpec(new Stmt2ChunkSizingUtil.BufferSpec[0], 0));
         assertBootstrapSpec(bootstrap,
                 Stmt2VariableWidthReuseHelper.resolveBufferSpec(
-                        new WSEWChunkSizingUtil.BufferSpec[] {null}, 0));
+                        new Stmt2ChunkSizingUtil.BufferSpec[] {null}, 0));
     }
 
     @Test
     public void bufferSpecsEqual_comparesChunkBytesAndReusableCount() {
         assertTrue(Stmt2VariableWidthReuseHelper.bufferSpecsEqual(
-                new WSEWChunkSizingUtil.BufferSpec(8 * 1024, 1),
-                new WSEWChunkSizingUtil.BufferSpec(8 * 1024, 1)));
+                new Stmt2ChunkSizingUtil.BufferSpec(8 * 1024, 1),
+                new Stmt2ChunkSizingUtil.BufferSpec(8 * 1024, 1)));
         assertFalse(Stmt2VariableWidthReuseHelper.bufferSpecsEqual(
-                new WSEWChunkSizingUtil.BufferSpec(8 * 1024, 1),
-                new WSEWChunkSizingUtil.BufferSpec(16 * 1024, 1)));
+                new Stmt2ChunkSizingUtil.BufferSpec(8 * 1024, 1),
+                new Stmt2ChunkSizingUtil.BufferSpec(16 * 1024, 1)));
         assertFalse(Stmt2VariableWidthReuseHelper.bufferSpecsEqual(
-                new WSEWChunkSizingUtil.BufferSpec(8 * 1024, 1),
-                new WSEWChunkSizingUtil.BufferSpec(8 * 1024, 2)));
+                new Stmt2ChunkSizingUtil.BufferSpec(8 * 1024, 1),
+                new Stmt2ChunkSizingUtil.BufferSpec(8 * 1024, 2)));
     }
 
     @Test
     public void bufferSpecsEqual_handlesNullArguments() {
-        WSEWChunkSizingUtil.BufferSpec spec = new WSEWChunkSizingUtil.BufferSpec(8 * 1024, 1);
+        Stmt2ChunkSizingUtil.BufferSpec spec = new Stmt2ChunkSizingUtil.BufferSpec(8 * 1024, 1);
 
         assertFalse(Stmt2VariableWidthReuseHelper.bufferSpecsEqual(null, null));
         assertFalse(Stmt2VariableWidthReuseHelper.bufferSpecsEqual(null, spec));
@@ -95,7 +95,7 @@ public class Stmt2VariableWidthReuseHelperTest {
                 (byte) FieldBindType.TAOS_FIELD_COL.getValue(),
                 (byte) TSDB_DATA_TYPE_VARCHAR,
                 (byte) 0);
-        WSEWChunkSizingUtil.BufferSpec spec = new WSEWChunkSizingUtil.BufferSpec(16 * 1024, 3);
+        Stmt2ChunkSizingUtil.BufferSpec spec = new Stmt2ChunkSizingUtil.BufferSpec(16 * 1024, 3);
         Stmt2ColumnFieldBuffer realBuffer = Stmt2ColumnFieldBuffer.forReusableValueBuffer(
                 meta, null, spec.getChunkBytes(), spec.getChunkBytes(), spec.getReusableChunkCount());
         Stmt2ColumnFieldBuffer spyBuffer = Mockito.spy(realBuffer);
@@ -123,8 +123,8 @@ public class Stmt2VariableWidthReuseHelperTest {
 
     @Test
     public void reactiveSizing_growsWhenOverflowOrTooManyChunks() {
-        WSEWChunkSizingUtil.BufferSpec current = new WSEWChunkSizingUtil.BufferSpec(8 * 1024, 1);
-        WSEWChunkSizingUtil.FieldBatchStats stats = new WSEWChunkSizingUtil.FieldBatchStats();
+        Stmt2ChunkSizingUtil.BufferSpec current = new Stmt2ChunkSizingUtil.BufferSpec(8 * 1024, 1);
+        Stmt2ChunkSizingUtil.FieldBatchStats stats = new Stmt2ChunkSizingUtil.FieldBatchStats();
         stats.recordValueBytes(80L * 1024, 1024, 100);
         stats.setActiveChunksUsed(9);
         stats.setOverflowCount(1);
@@ -138,8 +138,8 @@ public class Stmt2VariableWidthReuseHelperTest {
 
     @Test
     public void reactiveSizing_throwsClearOverflowErrorWhenGrowthExceedsIntMax() {
-        WSEWChunkSizingUtil.BufferSpec current = new WSEWChunkSizingUtil.BufferSpec(Integer.MAX_VALUE, 1);
-        WSEWChunkSizingUtil.FieldBatchStats stats = new WSEWChunkSizingUtil.FieldBatchStats();
+        Stmt2ChunkSizingUtil.BufferSpec current = new Stmt2ChunkSizingUtil.BufferSpec(Integer.MAX_VALUE, 1);
+        Stmt2ChunkSizingUtil.FieldBatchStats stats = new Stmt2ChunkSizingUtil.FieldBatchStats();
         stats.recordValueBytes(1L, 1, 1);
         stats.setOverflowCount(1);
 
@@ -153,11 +153,11 @@ public class Stmt2VariableWidthReuseHelperTest {
 
     @Test
     public void reactiveSizing_shrinksOnlyAfterHundredHalfUtilizedBatches() {
-        WSEWChunkSizingUtil.BufferSpec current = new WSEWChunkSizingUtil.BufferSpec(16 * 1024, 4);
-        WSEWChunkSizingUtil.FieldBatchStats stats = new WSEWChunkSizingUtil.FieldBatchStats();
+        Stmt2ChunkSizingUtil.BufferSpec current = new Stmt2ChunkSizingUtil.BufferSpec(16 * 1024, 4);
+        Stmt2ChunkSizingUtil.FieldBatchStats stats = new Stmt2ChunkSizingUtil.FieldBatchStats();
         stats.recordValueBytes(20L * 1024, 128, 100);
         stats.setActiveChunksUsed(2);
-        int threshold = WSEWChunkSizingUtil.SHRINK_STREAK_THRESHOLD;
+        int threshold = Stmt2ChunkSizingUtil.SHRINK_STREAK_THRESHOLD;
 
         Stmt2VariableWidthReuseHelper.SizingDecision before =
                 Stmt2VariableWidthReuseHelper.reactiveDecision(current, stats, threshold - 1);
@@ -170,21 +170,21 @@ public class Stmt2VariableWidthReuseHelperTest {
 
     @Test
     public void reactiveSizing_atBootstrapFloor_keepsUnderuseStreak() {
-        WSEWChunkSizingUtil.BufferSpec current = WSEWChunkSizingUtil.bootstrapSpec();
-        WSEWChunkSizingUtil.FieldBatchStats stats = new WSEWChunkSizingUtil.FieldBatchStats();
+        Stmt2ChunkSizingUtil.BufferSpec current = Stmt2ChunkSizingUtil.bootstrapSpec();
+        Stmt2ChunkSizingUtil.FieldBatchStats stats = new Stmt2ChunkSizingUtil.FieldBatchStats();
         stats.recordValueBytes(128, 128, 1);
 
         Stmt2VariableWidthReuseHelper.SizingDecision decision =
                 Stmt2VariableWidthReuseHelper.reactiveDecision(
-                        current, stats, WSEWChunkSizingUtil.SHRINK_STREAK_THRESHOLD);
+                        current, stats, Stmt2ChunkSizingUtil.SHRINK_STREAK_THRESHOLD);
 
         assertEquals(current.getChunkBytes(), decision.getNextSpec().getChunkBytes());
         assertEquals(current.getReusableChunkCount(), decision.getNextSpec().getReusableChunkCount());
-        assertEquals(WSEWChunkSizingUtil.SHRINK_STREAK_THRESHOLD, decision.getNextUnderuseStreak());
+        assertEquals(Stmt2ChunkSizingUtil.SHRINK_STREAK_THRESHOLD, decision.getNextUnderuseStreak());
     }
 
-    private static void assertBootstrapSpec(WSEWChunkSizingUtil.BufferSpec expected,
-            WSEWChunkSizingUtil.BufferSpec actual) {
+    private static void assertBootstrapSpec(Stmt2ChunkSizingUtil.BufferSpec expected,
+                                            Stmt2ChunkSizingUtil.BufferSpec actual) {
         assertEquals(expected.getChunkBytes(), actual.getChunkBytes());
         assertEquals(expected.getReusableChunkCount(), actual.getReusableChunkCount());
     }

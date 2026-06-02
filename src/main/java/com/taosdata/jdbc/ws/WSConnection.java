@@ -254,13 +254,15 @@ public class WSConnection extends AbstractConnection {
         }
     }
 
-    /**
-     * Check if the server supports stmt2_bind_exec action.
-     * This action allows combining bind and exec into a single binary request.
-     *
-     * @return true if stmt2_bind_exec is supported by the server
-     */
     public boolean supportsStmt2BindExec() {
+        String stmt2BindMode = param.getStmt2BindMode();
+        // stmt2bindmode is a routing override: column/traditional intentionally bypass version gating.
+        if (ConnectionParam.STMT2_BIND_MODE_COLUMN.equalsIgnoreCase(stmt2BindMode)) {
+            return true;
+        }
+        if (ConnectionParam.STMT2_BIND_MODE_TRADITIONAL.equalsIgnoreCase(stmt2BindMode)) {
+            return false;
+        }
         return this.supportStmt2BindExec;
     }
 }

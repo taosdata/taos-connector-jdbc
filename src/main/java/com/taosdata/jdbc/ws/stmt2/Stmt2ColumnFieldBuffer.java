@@ -664,7 +664,7 @@ public final class Stmt2ColumnFieldBuffer {
                                         : valueBuffer.readableBytes()));
     }
 
-    public WSEWChunkSizingUtil.BufferSpec currentReusableSpec() {
+    public Stmt2ChunkSizingUtil.BufferSpec currentReusableSpec() {
         if (reusableValueBuffer == null) {
             return null;
         }
@@ -672,7 +672,7 @@ public final class Stmt2ColumnFieldBuffer {
         if (count <= 0) {
             return null;
         }
-        return new WSEWChunkSizingUtil.BufferSpec(
+        return new Stmt2ChunkSizingUtil.BufferSpec(
                 reusableValueBuffer.chunkBytes(),
                 count);
     }

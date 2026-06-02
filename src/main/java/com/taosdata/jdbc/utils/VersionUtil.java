@@ -42,17 +42,12 @@ public class VersionUtil {
     /**
      * Check if the server supports stmt2_bind_exec action.
      * This action allows combining bind and exec into a single binary request.
-     * Minimum supported version: 3.4.1.10.
-     * For local validation, the check can be overridden with
-     * -Dws.forceStmt2BindExec=true.
+     * Minimum supported version is defined by {@link com.taosdata.jdbc.TSDBConstants#MIN_STMT2_BIND_EXEC_VERSION}.
      *
      * @param version server version string
      * @return true if stmt2_bind_exec is supported
      */
     public static boolean supportStmt2BindExec(String version) {
-        if (Boolean.getBoolean("ws.forceStmt2BindExec")) {
-            return true;
-        }
         if (version != null) {
             try {
                 return compareVersions(version, MIN_STMT2_BIND_EXEC_VERSION) >= 0;

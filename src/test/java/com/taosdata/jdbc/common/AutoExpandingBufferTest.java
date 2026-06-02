@@ -430,26 +430,6 @@ public class AutoExpandingBufferTest {
         }
     }
 
-    @Test
-    public void truncateReadableBytes_removesTrimmedCompositeBytes_beforeFutureWrites() throws SQLException {
-        AutoExpandingBuffer autoExpandingBuffer = new AutoExpandingBuffer(4, 4);
-
-        try {
-            autoExpandingBuffer.writeBytes("abcdefghij".getBytes(StandardCharsets.UTF_8));
-
-            autoExpandingBuffer.truncateReadableBytes(3);
-            autoExpandingBuffer.writeBytes("XYZ".getBytes(StandardCharsets.UTF_8));
-            autoExpandingBuffer.stopWrite();
-
-            assertEquals(6, autoExpandingBuffer.getBuffer().readableBytes());
-            assertArrayEquals(
-                    "abcXYZ".getBytes(StandardCharsets.UTF_8),
-                    getCompositeContent(autoExpandingBuffer.getBuffer()));
-        } finally {
-            autoExpandingBuffer.release();
-        }
-    }
-
     // ====================================== Exception Handling Tests ======================================
     @Test
     public void testDoubleRelease() {

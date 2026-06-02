@@ -47,6 +47,7 @@ public class WSConnectionRoutingTest {
         Mockito.when(param.getZoneId()).thenReturn(null);
         Mockito.when(param.getRetryTimes()).thenReturn(1);
         Mockito.when(param.getDatabase()).thenReturn("testdb");
+        Mockito.when(param.getStmt2BindMode()).thenReturn("auto");
     }
 
     // -----------------------------------------------------------------------
@@ -132,14 +133,13 @@ public class WSConnectionRoutingTest {
     }
 
     // -----------------------------------------------------------------------
-    // Test: insert + bind-exec server + default/null stmt2BindMode
+    // Test: insert + bind-exec server + default/auto stmt2bindmode
     //       → WSColumnFastPreparedStatement
     // -----------------------------------------------------------------------
 
     @Test
-    public void insert_bindExecServer_defaultStmt2BindMode_returnsWSColumnFastPreparedStatement() throws Exception {
+    public void insert_bindExecServer_autoStmt2BindMode_returnsWSColumnFastPreparedStatement() throws Exception {
         stubInsertPrepare();
-        // pbsMode is NOT "line"
         Mockito.when(param.getAsyncWrite()).thenReturn(null);
 
         // Server version >= MIN_STMT2_BIND_EXEC_VERSION → supportsStmt2BindExec() returns true
@@ -155,34 +155,36 @@ public class WSConnectionRoutingTest {
     }
 
     @Test
-    public void insert_bindExecServer_fastStmt2BindMode_returnsWSColumnFastPreparedStatement() throws Exception {
+    public void insert_oldServer_columnStmt2BindMode_returnsWSColumnFastPreparedStatement() throws Exception {
         stubInsertPrepare();
         Mockito.when(param.getAsyncWrite()).thenReturn(null);
+        Mockito.when(param.getStmt2BindMode()).thenReturn("column");
 
-        WSConnection conn = makeConnection(TSDBConstants.MIN_STMT2_BIND_EXEC_VERSION);
+        WSConnection conn = makeConnection("3.3.9.9");
 
         try (PreparedStatement stmt = conn.prepareStatement("INSERT INTO t VALUES (?,?)")) {
             assertNotNull(stmt);
             assertTrue(
-                    "Expected WSColumnFastPreparedStatement for stmt2BindMode=fast, got: "
+                    "Expected WSColumnFastPreparedStatement for stmt2bindmode=column regardless of version, got: "
                             + stmt.getClass().getSimpleName(),
                     stmt instanceof WSColumnFastPreparedStatement);
         }
     }
 
     @Test
-    public void insert_bindExecServer_jdbcStmt2BindMode_returnsWSColumnFastPreparedStatement() throws Exception {
+    public void insert_bindExecServer_traditionalStmt2BindMode_returnsTSWSPreparedStatement() throws Exception {
         stubInsertPrepare();
         Mockito.when(param.getAsyncWrite()).thenReturn(null);
+        Mockito.when(param.getStmt2BindMode()).thenReturn("traditional");
 
         WSConnection conn = makeConnection(TSDBConstants.MIN_STMT2_BIND_EXEC_VERSION);
 
         try (PreparedStatement stmt = conn.prepareStatement("INSERT INTO t VALUES (?,?)")) {
             assertNotNull(stmt);
             assertTrue(
-                    "Expected WSColumnFastPreparedStatement for stmt2BindMode=jdbc, got: "
+                    "Expected TSWSPreparedStatement for stmt2bindmode=traditional, got: "
                             + stmt.getClass().getSimpleName(),
-                    stmt instanceof WSColumnFastPreparedStatement);
+                    stmt instanceof TSWSPreparedStatement);
         }
     }
 
@@ -196,7 +198,7 @@ public class WSConnectionRoutingTest {
         Mockito.when(param.getAsyncWrite()).thenReturn(null);
 
         // Server version < MIN_STMT2_BIND_EXEC_VERSION → supportsStmt2BindExec() returns false
-        WSConnection conn = makeConnection("3.4.1.4");
+        WSConnection conn = makeConnection("3.3.9.9");
 
         try (PreparedStatement stmt = conn.prepareStatement("INSERT INTO t VALUES (?,?)")) {
             assertNotNull(stmt);
@@ -253,11 +255,51 @@ public class WSConnectionRoutingTest {
         Mockito.when(param.getCacheSizeByRow()).thenReturn(1000);
         Mockito.when(param.getBatchSizeByRow()).thenReturn(100);
 
-        WSConnection conn = makeConnection("3.4.1.4");
+        WSConnection conn = makeConnection("3.3.9.9");
 
         try (PreparedStatement stmt = conn.prepareStatement("ASYNC_INSERT INTO ? USING meters TAGS (?) VALUES (?,?)")) {
             assertNotNull(stmt);
             assertEquals(WSEWPreparedStatement.class, stmt.getClass());
+        }
+    }
+
+    @Test
+    public void asyncInsert_oldServer_columnStmt2BindMode_returnsWSEWColumnPreparedStatement() throws Exception {
+        stubInsertPrepare(true);
+        Mockito.when(param.getAsyncWrite()).thenReturn(null);
+        Mockito.when(param.getStmt2BindMode()).thenReturn("column");
+        Mockito.when(param.getBackendWriteThreadNum()).thenReturn(1);
+        Mockito.when(param.getCacheSizeByRow()).thenReturn(1000);
+        Mockito.when(param.getBatchSizeByRow()).thenReturn(100);
+
+        WSConnection conn = makeConnection("3.3.9.9");
+
+        try (PreparedStatement stmt = conn.prepareStatement("ASYNC_INSERT INTO ? USING meters TAGS (?) VALUES (?,?)")) {
+            assertNotNull(stmt);
+            assertEquals(
+                    "stmt2bindmode=column should use column EW regardless of version",
+                    WSEWColumnPreparedStatement.class,
+                    stmt.getClass());
+        }
+    }
+
+    @Test
+    public void asyncInsert_bindExecServer_traditionalStmt2BindMode_returnsLegacyWSEWPreparedStatement() throws Exception {
+        stubInsertPrepare(true);
+        Mockito.when(param.getAsyncWrite()).thenReturn(null);
+        Mockito.when(param.getStmt2BindMode()).thenReturn("traditional");
+        Mockito.when(param.getBackendWriteThreadNum()).thenReturn(1);
+        Mockito.when(param.getCacheSizeByRow()).thenReturn(1000);
+        Mockito.when(param.getBatchSizeByRow()).thenReturn(100);
+
+        WSConnection conn = makeConnection(TSDBConstants.MIN_STMT2_BIND_EXEC_VERSION);
+
+        try (PreparedStatement stmt = conn.prepareStatement("ASYNC_INSERT INTO ? USING meters TAGS (?) VALUES (?,?)")) {
+            assertNotNull(stmt);
+            assertEquals(
+                    "stmt2bindmode=traditional should keep legacy EW even on bind-exec servers",
+                    WSEWPreparedStatement.class,
+                    stmt.getClass());
         }
     }
 
