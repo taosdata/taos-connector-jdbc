@@ -32,10 +32,11 @@ public class WSColumnPreparedStatementWriteTest {
 
     @Test
     public void testExecuteUpdate_columnRoute_roundTripsAllTypes() throws SQLException {
-        String sql = "insert into " + dbName + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "insert into " + dbName + "." + tableName
+                + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement statement = prepareColumnStatement(sql)) {
             ParameterMetaData parameterMetaData = statement.getParameterMetaData();
-            Assert.assertEquals(19, parameterMetaData.getParameterCount());
+            Assert.assertEquals(20, parameterMetaData.getParameterCount());
             Assert.assertEquals(ParameterMetaData.parameterNullableUnknown, parameterMetaData.isNullable(1));
             Assert.assertTrue(parameterMetaData.isSigned(2));
             Assert.assertEquals(0, parameterMetaData.getPrecision(2));
@@ -63,8 +64,9 @@ public class WSColumnPreparedStatementWriteTest {
             statement.setInt(15, TSDBConstants.MAX_UNSIGNED_SHORT);
             statement.setLong(16, TSDBConstants.MAX_UNSIGNED_INT);
             statement.setObject(17, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
-            statement.setBigDecimal(18, new BigDecimal(DECIMAL_VALUE_1));
-            statement.setBigDecimal(19, new BigDecimal(DECIMAL_VALUE_2));
+            statement.setBlob(18, new TDBlob(EXPECTED_BLOB, true));
+            statement.setBigDecimal(19, new BigDecimal(DECIMAL_VALUE_1));
+            statement.setBigDecimal(20, new BigDecimal(DECIMAL_VALUE_2));
 
             statement.executeUpdate();
 
@@ -87,8 +89,9 @@ public class WSColumnPreparedStatementWriteTest {
                 Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_SHORT, resultSet.getInt(15));
                 Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_INT, resultSet.getLong(16));
                 Assert.assertEquals(new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG), resultSet.getObject(17));
-                Assert.assertEquals(0, resultSet.getBigDecimal(18).compareTo(new BigDecimal(DECIMAL_VALUE_1)));
-                Assert.assertEquals(0, resultSet.getBigDecimal(19).compareTo(new BigDecimal(DECIMAL_VALUE_2)));
+                Assert.assertArrayEquals(EXPECTED_BLOB, resultSet.getBlob(18).getBytes(1, EXPECTED_BLOB.length));
+                Assert.assertEquals(0, resultSet.getBigDecimal(19).compareTo(new BigDecimal(DECIMAL_VALUE_1)));
+                Assert.assertEquals(0, resultSet.getBigDecimal(20).compareTo(new BigDecimal(DECIMAL_VALUE_2)));
                 Assert.assertEquals(new Date(current), resultSet.getDate(1));
                 Assert.assertEquals(new Time(current), resultSet.getTime(1));
                 Assert.assertEquals(new Timestamp(current), resultSet.getTimestamp(1));
@@ -99,7 +102,8 @@ public class WSColumnPreparedStatementWriteTest {
 
     @Test
     public void testExecuteUpdate_columnRoute_roundTripsNulls() throws SQLException {
-        String sql = "insert into " + dbName + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "insert into " + dbName + "." + tableName
+                + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement statement = prepareColumnStatement(sql)) {
             long current = System.currentTimeMillis();
             statement.setTimestamp(1, new Timestamp(current));
@@ -119,8 +123,9 @@ public class WSColumnPreparedStatementWriteTest {
             statement.setNull(15, Types.INTEGER);
             statement.setNull(16, Types.BIGINT);
             statement.setNull(17, Types.BIGINT);
-            statement.setNull(18, Types.DECIMAL);
+            statement.setNull(18, Types.BLOB);
             statement.setNull(19, Types.DECIMAL);
+            statement.setNull(20, Types.DECIMAL);
 
             statement.executeUpdate();
 
@@ -167,15 +172,17 @@ public class WSColumnPreparedStatementWriteTest {
                 resultSet.getObject(17);
                 Assert.assertTrue(resultSet.wasNull());
 
-                Assert.assertNull(resultSet.getBigDecimal(18));
+                Assert.assertNull(resultSet.getBlob(18));
                 Assert.assertNull(resultSet.getBigDecimal(19));
+                Assert.assertNull(resultSet.getBigDecimal(20));
             }
         }
     }
 
     @Test
     public void testSetObject_columnRoute_roundTripsAllTypes() throws SQLException {
-        String sql = "insert into " + dbName + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "insert into " + dbName + "." + tableName
+                + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement statement = prepareColumnStatement(sql)) {
             long current = System.currentTimeMillis();
             statement.setObject(1, new Timestamp(current));
@@ -195,8 +202,9 @@ public class WSColumnPreparedStatementWriteTest {
             statement.setObject(15, TSDBConstants.MAX_UNSIGNED_SHORT);
             statement.setObject(16, TSDBConstants.MAX_UNSIGNED_INT);
             statement.setObject(17, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
-            statement.setObject(18, new BigDecimal(DECIMAL_VALUE_1));
-            statement.setObject(19, new BigDecimal(DECIMAL_VALUE_2));
+            statement.setObject(18, new TDBlob(EXPECTED_BLOB, true));
+            statement.setObject(19, new BigDecimal(DECIMAL_VALUE_1));
+            statement.setObject(20, new BigDecimal(DECIMAL_VALUE_2));
 
             statement.executeUpdate();
 
@@ -219,8 +227,9 @@ public class WSColumnPreparedStatementWriteTest {
                 Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_SHORT, resultSet.getInt(15));
                 Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_INT, resultSet.getLong(16));
                 Assert.assertEquals(new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG), resultSet.getObject(17));
-                Assert.assertEquals(0, resultSet.getBigDecimal(18).compareTo(new BigDecimal(DECIMAL_VALUE_1)));
-                Assert.assertEquals(0, resultSet.getBigDecimal(19).compareTo(new BigDecimal(DECIMAL_VALUE_2)));
+                Assert.assertArrayEquals(EXPECTED_BLOB, resultSet.getBlob(18).getBytes(1, EXPECTED_BLOB.length));
+                Assert.assertEquals(0, resultSet.getBigDecimal(19).compareTo(new BigDecimal(DECIMAL_VALUE_1)));
+                Assert.assertEquals(0, resultSet.getBigDecimal(20).compareTo(new BigDecimal(DECIMAL_VALUE_2)));
                 Assert.assertEquals(new Date(current), resultSet.getDate(1));
                 Assert.assertEquals(new Time(current), resultSet.getTime(1));
                 Assert.assertEquals(new Timestamp(current), resultSet.getTimestamp(1));
@@ -231,7 +240,8 @@ public class WSColumnPreparedStatementWriteTest {
 
     @Test
     public void testSetObjectWithSqlType_columnRoute_roundTripsAllTypes() throws SQLException {
-        String sql = "insert into " + dbName + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "insert into " + dbName + "." + tableName
+                + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement statement = prepareColumnStatement(sql)) {
             long current = System.currentTimeMillis();
             statement.setObject(1, new Timestamp(current), Types.TIMESTAMP);
@@ -251,8 +261,9 @@ public class WSColumnPreparedStatementWriteTest {
             statement.setObject(15, TSDBConstants.MAX_UNSIGNED_SHORT, Types.INTEGER);
             statement.setObject(16, TSDBConstants.MAX_UNSIGNED_INT, Types.BIGINT);
             statement.setObject(17, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
-            statement.setObject(18, new BigDecimal(DECIMAL_VALUE_1), Types.DECIMAL);
-            statement.setObject(19, new BigDecimal(DECIMAL_VALUE_2), Types.DECIMAL);
+            statement.setObject(18, new TDBlob(EXPECTED_BLOB, true), Types.BLOB);
+            statement.setObject(19, new BigDecimal(DECIMAL_VALUE_1), Types.DECIMAL);
+            statement.setObject(20, new BigDecimal(DECIMAL_VALUE_2), Types.DECIMAL);
 
             statement.executeUpdate();
 
@@ -275,8 +286,9 @@ public class WSColumnPreparedStatementWriteTest {
                 Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_SHORT, resultSet.getInt(15));
                 Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_INT, resultSet.getLong(16));
                 Assert.assertEquals(new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG), resultSet.getObject(17));
-                Assert.assertEquals(0, resultSet.getBigDecimal(18).compareTo(new BigDecimal(DECIMAL_VALUE_1)));
-                Assert.assertEquals(0, resultSet.getBigDecimal(19).compareTo(new BigDecimal(DECIMAL_VALUE_2)));
+                Assert.assertArrayEquals(EXPECTED_BLOB, resultSet.getBlob(18).getBytes(1, EXPECTED_BLOB.length));
+                Assert.assertEquals(0, resultSet.getBigDecimal(19).compareTo(new BigDecimal(DECIMAL_VALUE_1)));
+                Assert.assertEquals(0, resultSet.getBigDecimal(20).compareTo(new BigDecimal(DECIMAL_VALUE_2)));
                 Assert.assertEquals(new Date(current), resultSet.getDate(1));
                 Assert.assertEquals(new Time(current), resultSet.getTime(1));
                 Assert.assertEquals(new Timestamp(current), resultSet.getTimestamp(1));
@@ -364,7 +376,8 @@ public class WSColumnPreparedStatementWriteTest {
 
     @Test
     public void testExecuteCriticalValue_columnRoute() throws SQLException {
-        String sql = "insert into " + dbName + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "insert into " + dbName + "." + tableName
+                + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement statement = prepareColumnStatement(sql)) {
             statement.setTimestamp(1, new Timestamp(0));
             statement.setByte(2, (byte) 127);
@@ -383,8 +396,9 @@ public class WSColumnPreparedStatementWriteTest {
             statement.setInt(15, TSDBConstants.MAX_UNSIGNED_SHORT);
             statement.setLong(16, TSDBConstants.MAX_UNSIGNED_INT);
             statement.setObject(17, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
-            statement.setBigDecimal(18, new BigDecimal(DECIMAL_VALUE_1));
-            statement.setBigDecimal(19, new BigDecimal(DECIMAL_VALUE_2));
+            statement.setBlob(18, new TDBlob(EXPECTED_BLOB, true));
+            statement.setBigDecimal(19, new BigDecimal(DECIMAL_VALUE_1));
+            statement.setBigDecimal(20, new BigDecimal(DECIMAL_VALUE_2));
 
             statement.executeUpdate();
         }
@@ -520,7 +534,8 @@ public class WSColumnPreparedStatementWriteTest {
                     + "(ts timestamp, c1 tinyint, c2 smallint, c3 int, c4 bigint, "
                     + "c5 float, c6 double, c7 bool, c8 binary(10), c9 nchar(10), c10 varchar(20), "
                     + "c11 varbinary(100), c12 geometry(100), c13 tinyint unsigned, c14 smallint unsigned, "
-                    + "c15 int unsigned, c16 bigint unsigned, c17 decimal(4,2), c18 decimal(30,10))");
+                    + "c15 int unsigned, c16 bigint unsigned, c17 blob, c18 decimal(4,2), "
+                    + "c19 decimal(30,10))");
             statement.execute("create table if not exists " + dbName + "." + blobTableName
                     + "(ts timestamp, c1 blob)");
             statement.execute("create table if not exists " + dbName + "." + tableName2

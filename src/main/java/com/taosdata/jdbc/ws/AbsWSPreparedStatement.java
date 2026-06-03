@@ -494,33 +494,103 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
 
         switch (targetSqlType) {
             case Types.BOOLEAN:
-                colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_BOOL, parameterIndex));
+                if (x instanceof Boolean) {
+                    setBoolean(parameterIndex, (Boolean) x);
+                } else if (x instanceof Number) {
+                    setBoolean(parameterIndex, ((Number) x).intValue() != 0);
+                } else {
+                    throw new SQLException("Invalid type for boolean: " + x.getClass().getName());
+                }
                 break;
             case Types.TINYINT:
-                colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_TINYINT, parameterIndex));
+                if (x instanceof Number) {
+                    setByte(parameterIndex, ((Number) x).byteValue());
+                } else if (x instanceof Boolean) {
+                    setByte(parameterIndex, (byte) ((Boolean) x ? 1 : 0));
+                } else {
+                    throw new SQLException("Invalid type for byte: " + x.getClass().getName());
+                }
                 break;
             case Types.SMALLINT:
-                colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_SMALLINT, parameterIndex));
+                if (x instanceof Number) {
+                    setShort(parameterIndex, ((Number) x).shortValue());
+                } else if (x instanceof Boolean) {
+                    setShort(parameterIndex, (short) ((Boolean) x ? 1 : 0));
+                } else {
+                    throw new SQLException("Invalid type for short: " + x.getClass().getName());
+                }
                 break;
             case Types.INTEGER:
-                colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_INT, parameterIndex));
+                if (x instanceof Number) {
+                    setInt(parameterIndex, ((Number) x).intValue());
+                } else if (x instanceof Boolean) {
+                    setInt(parameterIndex, (Boolean) x ? 1 : 0);
+                } else {
+                    throw new SQLException("Invalid type for int: " + x.getClass().getName());
+                }
                 break;
             case Types.BIGINT:
-                colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_BIGINT, parameterIndex));
+                if (x instanceof Number) {
+                    setLong(parameterIndex, ((Number) x).longValue());
+                } else if (x instanceof Boolean) {
+                    setLong(parameterIndex, (Boolean) x ? 1 : 0);
+                } else {
+                    throw new SQLException("Invalid type for long: " + x.getClass().getName());
+                }
                 break;
             case Types.FLOAT:
-                colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_FLOAT, parameterIndex));
+                if (x instanceof Number) {
+                    setFloat(parameterIndex, ((Number) x).floatValue());
+                } else if (x instanceof Boolean) {
+                    setFloat(parameterIndex, (Boolean) x ? 1 : 0);
+                } else {
+                    throw new SQLException("Invalid type for float: " + x.getClass().getName());
+                }
                 break;
             case Types.DOUBLE:
-                colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_DOUBLE, parameterIndex));
+                if (x instanceof Number) {
+                    setDouble(parameterIndex, ((Number) x).doubleValue());
+                } else if (x instanceof Boolean) {
+                    setDouble(parameterIndex, (Boolean) x ? 1 : 0);
+                } else {
+                    throw new SQLException("Invalid type for double: " + x.getClass().getName());
+                }
                 break;
             case Types.TIMESTAMP:
-                Instant instant = DateTimeUtils.toInstant((Timestamp) x, zoneId);
-                colOrderedMap.put(parameterIndex, new Column(instant, TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
+                if (x instanceof Timestamp) {
+                    setTimestamp(parameterIndex, (Timestamp) x);
+                } else if (x instanceof Date) {
+                    setDate(parameterIndex, (Date) x);
+                } else if (x instanceof Time) {
+                    setTime(parameterIndex, (Time) x);
+                } else if (x instanceof LocalDateTime) {
+                    if (zoneId == null) {
+                        setTimestamp(parameterIndex, Timestamp.valueOf((LocalDateTime) x));
+                    } else {
+                        Instant instant = ((LocalDateTime) x).atZone(zoneId).toInstant();
+                        colOrderedMap.put(parameterIndex, new Column(instant, TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
+                    }
+                } else if (x instanceof Instant) {
+                    colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
+                } else if (x instanceof ZonedDateTime) {
+                    Instant instant = ((ZonedDateTime) x).toInstant();
+                    colOrderedMap.put(parameterIndex, new Column(instant, TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
+                } else if (x instanceof OffsetDateTime) {
+                    Instant instant = ((OffsetDateTime) x).toInstant();
+                    colOrderedMap.put(parameterIndex, new Column(instant, TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
+                } else {
+                    throw new SQLException("Invalid type for timestamp: " + x.getClass().getName());
+                }
                 break;
             case Types.BINARY:
             case Types.VARCHAR:
-                colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_BINARY, parameterIndex));
+                if (x instanceof byte[]) {
+                    colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_BINARY, parameterIndex));
+                } else if (x instanceof String) {
+                    setString(parameterIndex, (String) x);
+                } else {
+                    throw new SQLException("Invalid type for binary: " + x.getClass().getName());
+                }
                 break;
             case Types.BLOB:
                 if (x instanceof byte[]) {
@@ -534,10 +604,23 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
                 }
                 break;
             case Types.VARBINARY:
-                colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_VARBINARY, parameterIndex));
+                if (x instanceof byte[]) {
+                    colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_VARBINARY, parameterIndex));
+                } else if (x instanceof String) {
+                    byte[] bytes = ((String) x).getBytes(StandardCharsets.UTF_8);
+                    colOrderedMap.put(parameterIndex, new Column(bytes, TSDB_DATA_TYPE_VARBINARY, parameterIndex));
+                } else {
+                    throw new SQLException("Invalid type for varbinary: " + x.getClass().getName());
+                }
                 break;
             case Types.NCHAR:
-                colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_NCHAR, parameterIndex));
+                if (x instanceof byte[]) {
+                    colOrderedMap.put(parameterIndex, new Column(x, TSDB_DATA_TYPE_NCHAR, parameterIndex));
+                } else if (x instanceof String) {
+                    setNString(parameterIndex, (String) x);
+                } else {
+                    throw new SQLException("Invalid type for nchar: " + x.getClass().getName());
+                }
                 break;
             // json
             case Types.OTHER:
@@ -548,10 +631,11 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
                 }
                 break;
             case Types.DECIMAL:
-                colOrderedMap.put(parameterIndex,
-                        new Column(((BigDecimal)x).toPlainString().getBytes(StandardCharsets.UTF_8),
-                        TSDB_DATA_TYPE_DECIMAL128,
-                                parameterIndex));
+                if (x instanceof BigDecimal) {
+                    setBigDecimal(parameterIndex, (BigDecimal) x);
+                } else {
+                    throw new SQLException("Invalid type for decimal: " + x.getClass().getName());
+                }
                 break;
             default:
                 throw new SQLException("unsupported type: " + targetSqlType);
