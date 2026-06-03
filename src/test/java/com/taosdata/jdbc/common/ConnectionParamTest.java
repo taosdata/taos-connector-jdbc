@@ -491,7 +491,7 @@ public class ConnectionParamTest {
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_STMT2_BIND_MODE, "column");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_STMT_BIND_MODE, "column");
 
         ConnectionParam param = ConnectionParam.getParam(properties);
         assertEquals("column", param.getStmt2BindMode());
@@ -502,7 +502,7 @@ public class ConnectionParamTest {
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_STMT2_BIND_MODE, "traditional");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_STMT_BIND_MODE, "traditional");
 
         ConnectionParam param = ConnectionParam.getParam(properties);
         assertEquals("traditional", param.getStmt2BindMode());
@@ -513,7 +513,7 @@ public class ConnectionParamTest {
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_STMT2_BIND_MODE, "Column");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_STMT_BIND_MODE, "Column");
 
         ConnectionParam param = ConnectionParam.getParam(properties);
         assertEquals("column", param.getStmt2BindMode());
@@ -524,7 +524,7 @@ public class ConnectionParamTest {
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, TestEnvUtil.getUser());
         properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, TestEnvUtil.getPassword());
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_STMT2_BIND_MODE, "fast");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_STMT_BIND_MODE, "fast");
 
         ConnectionParam.getParam(properties);
     }

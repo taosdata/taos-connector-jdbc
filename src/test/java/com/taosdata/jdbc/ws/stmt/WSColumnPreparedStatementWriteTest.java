@@ -521,10 +521,10 @@ public class WSColumnPreparedStatementWriteTest {
             url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
         }
         Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_STMT2_BIND_MODE, "column");
+        properties.setProperty(TSDBDriver.PROPERTY_KEY_STMT_BIND_MODE, "column");
         connection = DriverManager.getConnection(url, properties);
         Assert.assertTrue("Column all-type test requires WSConnection", connection instanceof WSConnection);
-        Assert.assertTrue("stmt2bindmode=column should force WSColumnPreparedStatement route",
+        Assert.assertTrue("stmtBindMode=column should force WSColumnPreparedStatement route",
                 ((WSConnection) connection).supportsStmt2BindExec());
         try (Statement statement = connection.createStatement()) {
             statement.execute("drop database if exists " + dbName);

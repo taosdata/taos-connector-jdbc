@@ -9,14 +9,8 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 public class WSEWPreparedStatementWrite336Test extends AbstractWSEWPreparedStatementWriteTest {
-    @Override
-    protected String stmt2BindMode() {
-        return "traditional";
-    }
-
-    @Override
-    protected Class<?> expectedStatementClass() {
-        return WSEWPreparedStatement.class;
+    public WSEWPreparedStatementWrite336Test() {
+        super("traditional", WSEWPreparedStatement.class);
     }
 
     @Override

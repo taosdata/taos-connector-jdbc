@@ -133,12 +133,12 @@ public class WSConnectionRoutingTest {
     }
 
     // -----------------------------------------------------------------------
-    // Test: insert + bind-exec server + default/auto stmt2bindmode
+    // Test: insert + bind-exec server + default/auto stmtBindMode
     //       → WSColumnPreparedStatement
     // -----------------------------------------------------------------------
 
     @Test
-    public void insert_bindExecServer_autoStmt2BindMode_returnsWSColumnPreparedStatement() throws Exception {
+    public void insert_bindExecServer_autoStmtBindMode_returnsWSColumnPreparedStatement() throws Exception {
         stubInsertPrepare();
         Mockito.when(param.getAsyncWrite()).thenReturn(null);
 
@@ -155,7 +155,7 @@ public class WSConnectionRoutingTest {
     }
 
     @Test
-    public void insert_oldServer_columnStmt2BindMode_returnsWSColumnPreparedStatement() throws Exception {
+    public void insert_oldServer_columnStmtBindMode_returnsWSColumnPreparedStatement() throws Exception {
         stubInsertPrepare();
         Mockito.when(param.getAsyncWrite()).thenReturn(null);
         Mockito.when(param.getStmt2BindMode()).thenReturn("column");
@@ -165,14 +165,14 @@ public class WSConnectionRoutingTest {
         try (PreparedStatement stmt = conn.prepareStatement("INSERT INTO t VALUES (?,?)")) {
             assertNotNull(stmt);
             assertTrue(
-                    "Expected WSColumnPreparedStatement for stmt2bindmode=column regardless of version, got: "
+                    "Expected WSColumnPreparedStatement for stmtBindMode=column regardless of version, got: "
                             + stmt.getClass().getSimpleName(),
                     stmt instanceof WSColumnPreparedStatement);
         }
     }
 
     @Test
-    public void insert_bindExecServer_traditionalStmt2BindMode_returnsTSWSPreparedStatement() throws Exception {
+    public void insert_bindExecServer_traditionalStmtBindMode_returnsTSWSPreparedStatement() throws Exception {
         stubInsertPrepare();
         Mockito.when(param.getAsyncWrite()).thenReturn(null);
         Mockito.when(param.getStmt2BindMode()).thenReturn("traditional");
@@ -182,7 +182,7 @@ public class WSConnectionRoutingTest {
         try (PreparedStatement stmt = conn.prepareStatement("INSERT INTO t VALUES (?,?)")) {
             assertNotNull(stmt);
             assertTrue(
-                    "Expected TSWSPreparedStatement for stmt2bindmode=traditional, got: "
+                    "Expected TSWSPreparedStatement for stmtBindMode=traditional, got: "
                             + stmt.getClass().getSimpleName(),
                     stmt instanceof TSWSPreparedStatement);
         }
@@ -264,7 +264,7 @@ public class WSConnectionRoutingTest {
     }
 
     @Test
-    public void asyncInsert_oldServer_columnStmt2BindMode_returnsWSEWColumnPreparedStatement() throws Exception {
+    public void asyncInsert_oldServer_columnStmtBindMode_returnsWSEWColumnPreparedStatement() throws Exception {
         stubInsertPrepare(true);
         Mockito.when(param.getAsyncWrite()).thenReturn(null);
         Mockito.when(param.getStmt2BindMode()).thenReturn("column");
@@ -277,14 +277,14 @@ public class WSConnectionRoutingTest {
         try (PreparedStatement stmt = conn.prepareStatement("ASYNC_INSERT INTO ? USING meters TAGS (?) VALUES (?,?)")) {
             assertNotNull(stmt);
             assertEquals(
-                    "stmt2bindmode=column should use column EW regardless of version",
+                    "stmtBindMode=column should use column EW regardless of version",
                     WSEWColumnPreparedStatement.class,
                     stmt.getClass());
         }
     }
 
     @Test
-    public void asyncInsert_bindExecServer_traditionalStmt2BindMode_returnsLegacyWSEWPreparedStatement() throws Exception {
+    public void asyncInsert_bindExecServer_traditionalStmtBindMode_returnsLegacyWSEWPreparedStatement() throws Exception {
         stubInsertPrepare(true);
         Mockito.when(param.getAsyncWrite()).thenReturn(null);
         Mockito.when(param.getStmt2BindMode()).thenReturn("traditional");
@@ -297,7 +297,7 @@ public class WSConnectionRoutingTest {
         try (PreparedStatement stmt = conn.prepareStatement("ASYNC_INSERT INTO ? USING meters TAGS (?) VALUES (?,?)")) {
             assertNotNull(stmt);
             assertEquals(
-                    "stmt2bindmode=traditional should keep legacy EW even on bind-exec servers",
+                    "stmtBindMode=traditional should keep legacy EW even on bind-exec servers",
                     WSEWPreparedStatement.class,
                     stmt.getClass());
         }

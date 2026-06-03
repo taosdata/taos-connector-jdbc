@@ -336,7 +336,7 @@ public class WsPStmtLineModeNullTest {
         preparedStatement.setTimestamp(1, timestamp, cal);
     }
 
-    @Test(expected = SQLException.class)
+    @Test
     public void testSetNull_WithTypeName() throws SQLException {
         preparedStatement.setNull(1, java.sql.Types.VARCHAR, "VARCHAR");
     }
@@ -469,10 +469,9 @@ public class WsPStmtLineModeNullTest {
     public void before() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestWithoutUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
-        } else {
-            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
+            url = "jdbc:TAOS-WS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&stmtBindMode=traditional";
         }
+
         Properties properties = new Properties();
         connection = DriverManager.getConnection(url, properties);
         try (Statement statement = connection.createStatement()) {

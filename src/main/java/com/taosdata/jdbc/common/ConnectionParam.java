@@ -597,14 +597,14 @@ public class ConnectionParam {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "PROPERTY_KEY_ASYNC_WRITE only support STMT");
         }
 
-        String stmt2BindMode = properties.getProperty(TSDBDriver.PROPERTY_KEY_STMT2_BIND_MODE, STMT2_BIND_MODE_AUTO)
+        String stmt2BindMode = properties.getProperty(TSDBDriver.PROPERTY_KEY_STMT_BIND_MODE, STMT2_BIND_MODE_AUTO)
                 .trim()
                 .toLowerCase(Locale.ROOT);
         if (!STMT2_BIND_MODE_AUTO.equals(stmt2BindMode)
                 && !STMT2_BIND_MODE_COLUMN.equals(stmt2BindMode)
                 && !STMT2_BIND_MODE_TRADITIONAL.equals(stmt2BindMode)) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE,
-                    "PROPERTY_KEY_STMT2_BIND_MODE only support auto, column, traditional");
+                    "PROPERTY_KEY_STMT_BIND_MODE only support auto, column, traditional");
         }
 
         int wsKeepAlive = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_WS_KEEP_ALIVE_SECONDS, "300"));

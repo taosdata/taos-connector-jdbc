@@ -48,7 +48,7 @@ final class WsStmtWriteTestSupport {
         }
         Properties properties = new Properties();
         if (stmt2BindMode != null) {
-            properties.setProperty(TSDBDriver.PROPERTY_KEY_STMT2_BIND_MODE, stmt2BindMode);
+            properties.setProperty(TSDBDriver.PROPERTY_KEY_STMT_BIND_MODE, stmt2BindMode);
         }
         if (asyncWrite) {
             properties.setProperty(TSDBDriver.PROPERTY_KEY_ASYNC_WRITE, "stmt");

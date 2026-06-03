@@ -256,7 +256,7 @@ public class WSConnection extends AbstractConnection {
 
     public boolean supportsStmt2BindExec() {
         String stmt2BindMode = param.getStmt2BindMode();
-        // stmt2bindmode is a routing override: column/traditional intentionally bypass version gating.
+        // stmtBindMode is a routing override: column/traditional intentionally bypass version gating.
         if (ConnectionParam.STMT2_BIND_MODE_COLUMN.equalsIgnoreCase(stmt2BindMode)) {
             return true;
         }

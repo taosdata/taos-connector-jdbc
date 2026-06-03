@@ -20,7 +20,7 @@ import java.util.Random;
 
 @FixMethodOrder
 public class WsEfficientWritingTest {
-    private final String host = "localhost";
+    private final String host = TestEnvUtil.getHost();
     private final String db_name = TestUtils.camelToSnake(WsEfficientWritingTest.class);
     private final String tableName = "wpt";
     private final String tableNameCopyData = "wpt_cp";

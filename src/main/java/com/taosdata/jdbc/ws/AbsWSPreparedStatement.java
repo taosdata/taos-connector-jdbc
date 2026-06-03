@@ -936,7 +936,7 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
 
     @Override
     public void setNull(int parameterIndex, int sqlType, String typeName) throws SQLException {
-        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
+        setNull(parameterIndex, sqlType);
     }
 
     @Override

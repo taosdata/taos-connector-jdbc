@@ -14,10 +14,21 @@ public abstract class AbstractWSEWPreparedStatementWriteTest {
     protected final String dbName = WsStmtWriteTestSupport.dbName(getClass());
     protected final String stableName = "swpt";
     protected Connection connection;
+    private final String stmt2BindMode;
+    private final Class<?> expectedStatementClass;
 
-    protected abstract String stmt2BindMode();
+    protected AbstractWSEWPreparedStatementWriteTest(String stmt2BindMode, Class<?> expectedStatementClass) {
+        this.stmt2BindMode = stmt2BindMode;
+        this.expectedStatementClass = expectedStatementClass;
+    }
 
-    protected abstract Class<?> expectedStatementClass();
+    protected String stmt2BindMode() {
+        return stmt2BindMode;
+    }
+
+    protected Class<?> expectedStatementClass() {
+        return expectedStatementClass;
+    }
 
     protected String expectedRouteName() {
         return expectedStatementClass().getSimpleName();
@@ -68,6 +79,38 @@ public abstract class AbstractWSEWPreparedStatementWriteTest {
         try (Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery("select * from " + dbName + ".`" + subTable + "`")) {
             assertNullTypeRow(resultSet, current);
+        }
+    }
+
+    @Test
+    public void testMultiSubtableBatch_roundTripsRowCounts() throws SQLException {
+        int tableCount = 3;
+        int rowsPerTable = 2;
+        int totalRows = tableCount * rowsPerTable;
+        String subTablePrefix = expectedRouteName().toLowerCase() + "_multi_";
+        long current = System.currentTimeMillis();
+
+        try (PreparedStatement statement = prepareWSEWStatement(asyncInsertSql())) {
+            for (int table = 0; table < tableCount; table++) {
+                for (int row = 0; row < rowsPerTable; row++) {
+                    statement.setString(1, subTablePrefix + table);
+                    statement.setInt(2, table);
+                    bindAllTypes(statement, 3, current + table * 1000L + row);
+                    statement.addBatch();
+                }
+            }
+
+            int[] result = statement.executeBatch();
+            Assert.assertEquals(totalRows, result.length);
+            for (int item : result) {
+                Assert.assertEquals(Statement.SUCCESS_NO_INFO, item);
+            }
+            Assert.assertEquals(totalRows, statement.executeUpdate());
+        }
+
+        assertRowCount(dbName + "." + stableName, totalRows);
+        for (int table = 0; table < tableCount; table++) {
+            assertRowCount(dbName + ".`" + subTablePrefix + table + "`", rowsPerTable);
         }
     }
 
@@ -124,5 +167,13 @@ public abstract class AbstractWSEWPreparedStatementWriteTest {
 
     protected void assertNullTypeRow(ResultSet resultSet, long current) throws SQLException {
         WsStmtWriteTestSupport.assertNullTypeRow(resultSet, current);
+    }
+
+    private void assertRowCount(String tableExpression, int expectedRows) throws SQLException {
+        try (Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery("select count(*) from " + tableExpression)) {
+            Assert.assertTrue(resultSet.next());
+            Assert.assertEquals(expectedRows, resultSet.getInt(1));
+        }
     }
 }
