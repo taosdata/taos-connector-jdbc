@@ -70,20 +70,24 @@ public class ReusableChunkedBufferTest {
         ctor.setAccessible(true);
         Object buffer = ctor.newInstance(8 * 1024, 4 * 1024, 3);
 
-        Method writeBytes = clazz.getDeclaredMethod("writeBytes", byte[].class, int.class, int.class);
-        writeBytes.setAccessible(true);
-        writeBytes.invoke(buffer, new byte[10 * 1024], 0, 10 * 1024);
+        try {
+            Method writeBytes = clazz.getDeclaredMethod("writeBytes", byte[].class, int.class, int.class);
+            writeBytes.setAccessible(true);
+            writeBytes.invoke(buffer, new byte[10 * 1024], 0, 10 * 1024);
 
-        Method chunkBytes = clazz.getDeclaredMethod("chunkBytes");
-        Method cachedChunkCount = clazz.getDeclaredMethod("cachedReusableChunkCount");
-        Method activeChunkCount = clazz.getDeclaredMethod("activeChunkCount");
-        chunkBytes.setAccessible(true);
-        cachedChunkCount.setAccessible(true);
-        activeChunkCount.setAccessible(true);
+            Method chunkBytes = clazz.getDeclaredMethod("chunkBytes");
+            Method cachedChunkCount = clazz.getDeclaredMethod("cachedReusableChunkCount");
+            Method activeChunkCount = clazz.getDeclaredMethod("activeChunkCount");
+            chunkBytes.setAccessible(true);
+            cachedChunkCount.setAccessible(true);
+            activeChunkCount.setAccessible(true);
 
-        assertEquals(8 * 1024, chunkBytes.invoke(buffer));
-        assertEquals(2, activeChunkCount.invoke(buffer));
-        assertEquals(2, cachedChunkCount.invoke(buffer));
+            assertEquals(8 * 1024, chunkBytes.invoke(buffer));
+            assertEquals(2, activeChunkCount.invoke(buffer));
+            assertEquals(2, cachedChunkCount.invoke(buffer));
+        } finally {
+            release(buffer);
+        }
     }
 
     @Test

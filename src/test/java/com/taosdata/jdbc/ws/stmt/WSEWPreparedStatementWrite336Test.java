@@ -5,6 +5,8 @@ import com.taosdata.jdbc.ws.WSEWPreparedStatement;
 import io.netty.util.ResourceLeakDetector;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
 
 public class WSEWPreparedStatementWrite336Test extends AbstractWSEWPreparedStatementWriteTest {
     @Override
@@ -52,6 +54,12 @@ public class WSEWPreparedStatementWrite336Test extends AbstractWSEWPreparedState
     @Override
     protected void assertNullTypeRow(java.sql.ResultSet resultSet, long current) throws java.sql.SQLException {
         WsStmtWriteTestSupport.assertNullTypeRow336(resultSet, current);
+    }
+
+    @Override
+    @Ignore("testPrecreatedSubtable_roundTripsNulls runs only in the main-version WSEW write tests")
+    @Test
+    public void testPrecreatedSubtable_roundTripsNulls() {
     }
 
     @BeforeClass

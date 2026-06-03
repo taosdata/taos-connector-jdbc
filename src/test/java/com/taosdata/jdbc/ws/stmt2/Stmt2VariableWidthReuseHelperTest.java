@@ -100,8 +100,7 @@ public class Stmt2VariableWidthReuseHelperTest {
                 meta, null, spec.getChunkBytes(), spec.getChunkBytes(), spec.getReusableChunkCount());
         Stmt2ColumnFieldBuffer spyBuffer = Mockito.spy(realBuffer);
 
-        try (MockedStatic<Stmt2ColumnFieldBuffer> mocked = Mockito.mockStatic(
-                Stmt2ColumnFieldBuffer.class, Mockito.CALLS_REAL_METHODS)) {
+        try (MockedStatic<Stmt2ColumnFieldBuffer> mocked = Mockito.mockStatic(Stmt2ColumnFieldBuffer.class)) {
             mocked.when(() -> Stmt2ColumnFieldBuffer.forReusableValueBuffer(
                     meta, null, spec.getChunkBytes(), spec.getChunkBytes(), spec.getReusableChunkCount()))
                     .thenReturn(spyBuffer);

@@ -10,6 +10,7 @@ import com.taosdata.jdbc.ws.entity.Action;
 import com.taosdata.jdbc.ws.entity.FetchBlockHealthCheckResp;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakDetector;
 import org.junit.*;
 import org.mockito.ArgumentCaptor;
@@ -53,6 +54,11 @@ public class Fetch2StepTest {
         fetch2Step = new Fetch2Step(rebalanceManager);
 
         when(context.getWsClient()).thenReturn(wsClient);
+        doAnswer(invocation -> {
+            ByteBuf buf = invocation.getArgument(0);
+            ReferenceCountUtil.safeRelease(buf);
+            return null;
+        }).when(wsClient).send(any(ByteBuf.class));
         when(context.getInFlightRequest()).thenReturn(inFlightRequest);
         when(context.getParam()).thenReturn(param);
         when(context.getEndpoint()).thenReturn(endpoint);

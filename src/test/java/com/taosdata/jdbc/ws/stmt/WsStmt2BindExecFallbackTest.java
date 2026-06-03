@@ -20,6 +20,7 @@ import com.taosdata.jdbc.ws.stmt2.entity.Stmt2PrepareResp;
 import com.taosdata.jdbc.ws.stmt2.entity.Stmt2Resp;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -119,6 +120,25 @@ public class WsStmt2BindExecFallbackTest {
      */
     private static int varBufLengthOffset(int blockStart, int rows) {
         return blockStart + 12 + rows + 1 + rows * 4;
+    }
+
+    private static byte[] serializeAndRelease(Stmt2ColumnFieldBuffer... columns) throws SQLException {
+        try {
+            return Stmt2ColumnBindSerializer.serialize(columns);
+        } finally {
+            releaseColumns(columns);
+        }
+    }
+
+    private static void releaseColumns(Stmt2ColumnFieldBuffer... columns) {
+        if (columns == null) {
+            return;
+        }
+        for (Stmt2ColumnFieldBuffer column : columns) {
+            if (column != null) {
+                column.release();
+            }
+        }
     }
 
     private static Stmt2FieldMeta colMeta(int fieldType) {
@@ -248,7 +268,7 @@ public class WsStmt2BindExecFallbackTest {
         tsCol.appendTimestamp(1700000000000L);
         intCol.appendInt(42);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(
+        byte[] payload = serializeAndRelease(
                 new Stmt2ColumnFieldBuffer[]{tsCol, intCol});
 
         assertEquals("row_count", 1, readLE32(payload, HEADER_ROW_COUNT_OFFSET));
@@ -268,7 +288,7 @@ public class WsStmt2BindExecFallbackTest {
             intCol.appendInt(i);
         }
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(
+        byte[] payload = serializeAndRelease(
                 new Stmt2ColumnFieldBuffer[]{tsCol, intCol});
 
         assertEquals("row_count", 5, readLE32(payload, HEADER_ROW_COUNT_OFFSET));
@@ -293,7 +313,7 @@ public class WsStmt2BindExecFallbackTest {
         tsBuf.appendTimestamp(1700000000000L);
         valBuf.appendDouble(3.14);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(
+        byte[] payload = serializeAndRelease(
                 new Stmt2ColumnFieldBuffer[]{tbNameBuf, tagBuf, tsBuf, valBuf});
 
         assertEquals("row_count", 1, readLE32(payload, HEADER_ROW_COUNT_OFFSET));
@@ -316,7 +336,7 @@ public class WsStmt2BindExecFallbackTest {
         tsBuf.appendTimestamp(1700000000000L);
         tsBuf.appendTimestamp(1700000001000L);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(
+        byte[] payload = serializeAndRelease(
                 new Stmt2ColumnFieldBuffer[]{tbNameBuf, tagBuf, tsBuf});
 
         assertEquals("row_count", 2, readLE32(payload, HEADER_ROW_COUNT_OFFSET));
@@ -337,7 +357,7 @@ public class WsStmt2BindExecFallbackTest {
         tsBuf.appendTimestamp(1700000000000L);
         tsBuf.appendTimestamp(1700000001000L);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(
+        byte[] payload = serializeAndRelease(
                 new Stmt2ColumnFieldBuffer[]{tbNameBuf, tagBuf, tsBuf});
 
         assertEquals("row_count", 2, readLE32(payload, HEADER_ROW_COUNT_OFFSET));
@@ -361,7 +381,7 @@ public class WsStmt2BindExecFallbackTest {
             tsBuf.appendTimestamp(1700000000000L + i);
         }
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(
+        byte[] payload = serializeAndRelease(
                 new Stmt2ColumnFieldBuffer[]{tbNameBuf, tagBuf, tsBuf});
 
         assertEquals("3 distinct tables → table_count 3",
@@ -381,7 +401,7 @@ public class WsStmt2BindExecFallbackTest {
             tsBuf.appendTimestamp(1700000000000L + i);
         }
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(
+        byte[] payload = serializeAndRelease(
                 new Stmt2ColumnFieldBuffer[]{tbNameBuf, tsBuf});
 
         assertEquals("run-length table_count", 3, readLE32(payload, HEADER_TABLE_COUNT_OFFSET));
@@ -397,7 +417,7 @@ public class WsStmt2BindExecFallbackTest {
         buf.appendBool(true);
         buf.appendBool(false);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{buf});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{buf});
         assertEquals("row_count", 2, readLE32(payload, HEADER_ROW_COUNT_OFFSET));
 
         int blockStart = HEADER_SIZE;
@@ -413,7 +433,7 @@ public class WsStmt2BindExecFallbackTest {
         Stmt2ColumnFieldBuffer buf = new Stmt2ColumnFieldBuffer(colMeta(TSDB_DATA_TYPE_TINYINT));
         buf.appendTinyInt((byte) 127);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{buf});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{buf});
         int blockStart = HEADER_SIZE;
         assertEquals("type", TSDB_DATA_TYPE_TINYINT, readLE32(payload, blockStart + 4));
         assertEquals("value", 127, payload[blockStart + 18] & 0xFF);
@@ -424,7 +444,7 @@ public class WsStmt2BindExecFallbackTest {
         Stmt2ColumnFieldBuffer buf = new Stmt2ColumnFieldBuffer(colMeta(TSDB_DATA_TYPE_UTINYINT));
         buf.appendUTinyInt((byte) 200); // unsigned 200
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{buf});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{buf});
         int blockStart = HEADER_SIZE;
         assertEquals("value (unsigned 200)", 200, payload[blockStart + 18] & 0xFF);
     }
@@ -434,7 +454,7 @@ public class WsStmt2BindExecFallbackTest {
         Stmt2ColumnFieldBuffer buf = new Stmt2ColumnFieldBuffer(colMeta(TSDB_DATA_TYPE_SMALLINT));
         buf.appendSmallInt((short) 0x3210);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{buf});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{buf});
         int blockStart = HEADER_SIZE;
         assertEquals("type", TSDB_DATA_TYPE_SMALLINT, readLE32(payload, blockStart + 4));
         // LE: low byte first
@@ -450,7 +470,7 @@ public class WsStmt2BindExecFallbackTest {
             buf.appendInt(v);
         }
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{buf});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{buf});
         assertEquals("row_count", vals.length, readLE32(payload, HEADER_ROW_COUNT_OFFSET));
 
         int blockStart = HEADER_SIZE;
@@ -467,7 +487,7 @@ public class WsStmt2BindExecFallbackTest {
         Stmt2ColumnFieldBuffer buf = new Stmt2ColumnFieldBuffer(colMeta(TSDB_DATA_TYPE_BIGINT));
         buf.appendBigInt(val);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{buf});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{buf});
         int blockStart = HEADER_SIZE;
         assertEquals("bigint value", val, readLE64(payload, blockStart + 18));
     }
@@ -478,7 +498,7 @@ public class WsStmt2BindExecFallbackTest {
         Stmt2ColumnFieldBuffer buf = new Stmt2ColumnFieldBuffer(colMeta(TSDB_DATA_TYPE_FLOAT));
         buf.appendFloat(val);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{buf});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{buf});
         int blockStart = HEADER_SIZE;
         int rawBits = readLE32(payload, blockStart + 18);
         assertEquals("float value", val, Float.intBitsToFloat(rawBits), 0.000001f);
@@ -490,7 +510,7 @@ public class WsStmt2BindExecFallbackTest {
         Stmt2ColumnFieldBuffer buf = new Stmt2ColumnFieldBuffer(colMeta(TSDB_DATA_TYPE_DOUBLE));
         buf.appendDouble(val);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{buf});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{buf});
         int blockStart = HEADER_SIZE;
         long rawBits = readLE64(payload, blockStart + 18);
         assertEquals("double value", val, Double.longBitsToDouble(rawBits), 0.0);
@@ -502,7 +522,7 @@ public class WsStmt2BindExecFallbackTest {
         Stmt2ColumnFieldBuffer buf = new Stmt2ColumnFieldBuffer(colMeta(TSDB_DATA_TYPE_TIMESTAMP));
         buf.appendTimestamp(ts);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{buf});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{buf});
         int blockStart = HEADER_SIZE;
         assertEquals("timestamp type", TSDB_DATA_TYPE_TIMESTAMP, readLE32(payload, blockStart + 4));
         assertEquals("timestamp value", ts, readLE64(payload, blockStart + 18));
@@ -520,7 +540,7 @@ public class WsStmt2BindExecFallbackTest {
         Stmt2ColumnFieldBuffer buf = new Stmt2ColumnFieldBuffer(colMeta(TSDB_DATA_TYPE_VARCHAR));
         buf.appendBytes(encoded);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{buf});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{buf});
 
         int blockStart = HEADER_SIZE;
         assertEquals("type VARCHAR", TSDB_DATA_TYPE_VARCHAR, readLE32(payload, blockStart + 4));
@@ -548,7 +568,7 @@ public class WsStmt2BindExecFallbackTest {
             buf.appendBytes(v.getBytes(StandardCharsets.UTF_8));
         }
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{buf});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{buf});
         assertEquals("row_count", values.length, readLE32(payload, HEADER_ROW_COUNT_OFFSET));
 
         int blockStart = HEADER_SIZE;
@@ -564,7 +584,7 @@ public class WsStmt2BindExecFallbackTest {
         Stmt2ColumnFieldBuffer buf = new Stmt2ColumnFieldBuffer(colMeta(TSDB_DATA_TYPE_VARBINARY));
         buf.appendBytes(data);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{buf});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{buf});
         int blockStart = HEADER_SIZE;
         assertEquals("type VARBINARY", TSDB_DATA_TYPE_VARBINARY, readLE32(payload, blockStart + 4));
         assertEquals("length[0]", data.length, readLE32(payload, blockStart + 14));
@@ -579,7 +599,7 @@ public class WsStmt2BindExecFallbackTest {
         Stmt2ColumnFieldBuffer buf = new Stmt2ColumnFieldBuffer(colMeta(TSDB_DATA_TYPE_INT));
         buf.appendNull();
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{buf});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{buf});
 
         int blockStart = HEADER_SIZE;
         // is_null[0] is at offset blockStart + 12
@@ -593,7 +613,7 @@ public class WsStmt2BindExecFallbackTest {
         buf.appendNull();
         buf.appendNull();
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{buf});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{buf});
 
         int blockStart = HEADER_SIZE;
         int rows = 3;
@@ -612,7 +632,7 @@ public class WsStmt2BindExecFallbackTest {
         buf.appendNull();
         buf.appendInt(-7);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{buf});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{buf});
 
         int blockStart = HEADER_SIZE;
         int rows = 3;
@@ -634,7 +654,7 @@ public class WsStmt2BindExecFallbackTest {
         buf.appendNull();
         buf.appendBytes("world".getBytes(StandardCharsets.UTF_8));
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{buf});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{buf});
 
         int blockStart = HEADER_SIZE;
         // is_null[0]=0, is_null[1]=1, is_null[2]=0
@@ -663,7 +683,7 @@ public class WsStmt2BindExecFallbackTest {
             val.appendBytes(("row" + i).getBytes(StandardCharsets.UTF_8));
         }
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(
+        byte[] payload = serializeAndRelease(
                 new Stmt2ColumnFieldBuffer[]{ts, val});
 
         assertEquals("total_length header must equal payload.length",
@@ -675,7 +695,7 @@ public class WsStmt2BindExecFallbackTest {
         Stmt2ColumnFieldBuffer buf = new Stmt2ColumnFieldBuffer(colMeta(TSDB_DATA_TYPE_INT));
         buf.appendInt(1);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{buf});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{buf});
 
         assertEquals("field_offset always equals HEADER_SIZE",
                 HEADER_SIZE, readLE32(payload, HEADER_FIELD_OFFSET_OFFSET));
@@ -689,7 +709,7 @@ public class WsStmt2BindExecFallbackTest {
         // c2 has 0 rows → mismatch
 
         try {
-            Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{c1, c2});
+            serializeAndRelease(new Stmt2ColumnFieldBuffer[]{c1, c2});
             fail("Expected SQLException on row-count mismatch");
         } catch (SQLException e) {
             assertTrue("message mentions mismatch",
@@ -843,7 +863,10 @@ public class WsStmt2BindExecFallbackTest {
             execResp.setAffected(affectedRows);
             execResp.setStmtId(42L);
             when(transport.send(eq("stmt2_bind_exec"), anyLong(), any(ByteBuf.class),
-                    eq(false), anyLong())).thenReturn(execResp);
+                    eq(false), anyLong())).thenAnswer(invocation -> {
+                ReferenceCountUtil.safeRelease(invocation.getArgument(2));
+                return execResp;
+            });
             Stmt2Resp closeResp = new Stmt2Resp();
             closeResp.setCode(Code.SUCCESS.getCode());
             when(transport.send(any(com.taosdata.jdbc.ws.entity.Request.class), anyLong()))

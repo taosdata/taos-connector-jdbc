@@ -50,6 +50,33 @@ public class Stmt2ColumnBindSerializerTest {
         return Stmt2FieldMeta.of((byte) bindType, (byte) fieldType, (byte) precision);
     }
 
+    private static byte[] serializeAndRelease(Stmt2ColumnFieldBuffer... columns) throws SQLException {
+        try {
+            return Stmt2ColumnBindSerializer.serialize(columns);
+        } finally {
+            releaseColumns(columns);
+        }
+    }
+
+    private static byte[] serializeQueryAndRelease(Stmt2ColumnFieldBuffer... columns) throws SQLException {
+        try {
+            return Stmt2ColumnBindSerializer.serializeQuery(columns);
+        } finally {
+            releaseColumns(columns);
+        }
+    }
+
+    private static void releaseColumns(Stmt2ColumnFieldBuffer... columns) {
+        if (columns == null) {
+            return;
+        }
+        for (Stmt2ColumnFieldBuffer column : columns) {
+            if (column != null) {
+                column.release();
+            }
+        }
+    }
+
     private static ByteBuf internalBuffer(Stmt2ColumnFieldBuffer column, String fieldName) {
         try {
             Field field = Stmt2ColumnFieldBuffer.class.getDeclaredField(fieldName);
@@ -73,7 +100,7 @@ public class Stmt2ColumnBindSerializerTest {
                 meta(FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_INT));
         col.appendInt(42);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{col});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{col});
 
         assertEquals("total_length matches payload length",
                 payload.length, readLE32(payload, HEADER_TOTAL_LENGTH_OFFSET));
@@ -94,7 +121,7 @@ public class Stmt2ColumnBindSerializerTest {
             c2.appendBigInt(i);
         }
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(
+        byte[] payload = serializeAndRelease(
                 new Stmt2ColumnFieldBuffer[]{c1, c2});
 
         assertEquals(payload.length, readLE32(payload, HEADER_TOTAL_LENGTH_OFFSET));
@@ -114,7 +141,7 @@ public class Stmt2ColumnBindSerializerTest {
                 meta(FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_INT));
         col.appendInt(0x01020304);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{col});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{col});
         int blockStart = HEADER_SIZE;
 
         // Column block layout: totalLen(4) type(4) num(4) isNull(1) haveLen(1) bufLen(4) value(4)
@@ -136,7 +163,7 @@ public class Stmt2ColumnBindSerializerTest {
                 meta(FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_BIGINT));
         col.appendBigInt(val);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{col});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{col});
         int blockStart = HEADER_SIZE;
         // 17 + 1 (null) + 8 (value) = 26
         int expectedBlockLen = 17 + 1 + 8;
@@ -151,7 +178,7 @@ public class Stmt2ColumnBindSerializerTest {
                 meta(FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_BOOL));
         col.appendBool(true);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{col});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{col});
         int blockStart = HEADER_SIZE;
         // 17 + 1 + 1 = 19
         assertEquals(19, readLE32(payload, blockStart));
@@ -164,7 +191,7 @@ public class Stmt2ColumnBindSerializerTest {
                 meta(FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_FLOAT));
         col.appendFloat(3.14f);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{col});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{col});
         int blockStart = HEADER_SIZE;
         // 17 + 1 + 4 = 22
         assertEquals(22, readLE32(payload, blockStart));
@@ -179,7 +206,7 @@ public class Stmt2ColumnBindSerializerTest {
         int rawBits = Float.floatToRawIntBits(3.14f);
         col.appendFixed4Raw(rawBits);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{col});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{col});
         int blockStart = HEADER_SIZE;
         assertEquals(rawBits, readLE32(payload, blockStart + 18));
     }
@@ -191,7 +218,7 @@ public class Stmt2ColumnBindSerializerTest {
                 meta(FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_DOUBLE));
         col.appendDouble(val);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{col});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{col});
         int blockStart = HEADER_SIZE;
         // 17 + 1 + 8 = 26
         assertEquals(26, readLE32(payload, blockStart));
@@ -206,7 +233,7 @@ public class Stmt2ColumnBindSerializerTest {
         long rawBits = Double.doubleToRawLongBits(Math.PI);
         col.appendFixed8Raw(rawBits);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{col});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{col});
         int blockStart = HEADER_SIZE;
         assertEquals(rawBits, readLE64(payload, blockStart + 18));
     }
@@ -218,7 +245,7 @@ public class Stmt2ColumnBindSerializerTest {
                 meta(FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_TIMESTAMP));
         col.appendTimestamp(ts);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{col});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{col});
         int blockStart = HEADER_SIZE;
         assertEquals(TSDB_DATA_TYPE_TIMESTAMP, readLE32(payload, blockStart + 4));
         assertEquals("buffer_length", 8, readLE32(payload, blockStart + 14));
@@ -231,7 +258,7 @@ public class Stmt2ColumnBindSerializerTest {
                 meta(FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_SMALLINT));
         col.appendSmallInt((short) 0x1234);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{col});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{col});
         int blockStart = HEADER_SIZE;
         // 17 + 1 + 2 = 20
         assertEquals(20, readLE32(payload, blockStart));
@@ -247,7 +274,7 @@ public class Stmt2ColumnBindSerializerTest {
                 meta(FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_TINYINT));
         col.appendTinyInt((byte) 99);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{col});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{col});
         int blockStart = HEADER_SIZE;
         // 17 + 1 + 1 = 19
         assertEquals(19, readLE32(payload, blockStart));
@@ -348,7 +375,7 @@ public class Stmt2ColumnBindSerializerTest {
                 meta(FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_INT));
         col.appendNull();
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{col});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{col});
         int blockStart = HEADER_SIZE;
 
         assertEquals("is_null[0] must be 1", 1, payload[blockStart + 12] & 0xFF);
@@ -364,7 +391,7 @@ public class Stmt2ColumnBindSerializerTest {
         col.appendNull();
         col.appendInt(3);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{col});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{col});
         int blockStart = HEADER_SIZE;
 
         assertEquals("num", 3, readLE32(payload, blockStart + 8));
@@ -385,7 +412,7 @@ public class Stmt2ColumnBindSerializerTest {
         col.appendNull();
         col.appendNull();
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{col});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{col});
         int blockStart = HEADER_SIZE;
 
         // is_null at blockStart+12, haveLength at blockStart+14 (after 2 null bytes)
@@ -406,7 +433,7 @@ public class Stmt2ColumnBindSerializerTest {
                 meta(FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_VARCHAR));
         col.appendBytes(data);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{col});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{col});
         int blockStart = HEADER_SIZE;
 
         assertEquals("type", TSDB_DATA_TYPE_VARCHAR, readLE32(payload, blockStart + 4));
@@ -429,7 +456,7 @@ public class Stmt2ColumnBindSerializerTest {
         col.appendNull();
         col.appendBytes(world);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{col});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{col});
         int blockStart = HEADER_SIZE;
 
         assertEquals("is_null[0]", 0, payload[blockStart + 12] & 0xFF);
@@ -459,7 +486,7 @@ public class Stmt2ColumnBindSerializerTest {
         col.appendInt(1);
         col.appendInt(2);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(
+        byte[] payload = serializeAndRelease(
                 new Stmt2ColumnFieldBuffer[]{tbName, col});
         assertEquals("table_count", 1, readLE32(payload, HEADER_TABLE_COUNT_OFFSET));
     }
@@ -474,7 +501,7 @@ public class Stmt2ColumnBindSerializerTest {
         for (int i = 0; i < 3; i++) { tbName.appendTbName("t1"); col.appendInt(i); }
         for (int i = 0; i < 2; i++) { tbName.appendTbName("t2"); col.appendInt(i); }
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(
+        byte[] payload = serializeAndRelease(
                 new Stmt2ColumnFieldBuffer[]{tbName, col});
         assertEquals("table_count", 2, readLE32(payload, HEADER_TABLE_COUNT_OFFSET));
     }
@@ -495,7 +522,7 @@ public class Stmt2ColumnBindSerializerTest {
         col.appendInt(2);
         col.appendInt(3);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(
+        byte[] payload = serializeAndRelease(
                 new Stmt2ColumnFieldBuffer[]{tbName, col});
         assertEquals("table_count", 2, readLE32(payload, HEADER_TABLE_COUNT_OFFSET));
     }
@@ -510,7 +537,7 @@ public class Stmt2ColumnBindSerializerTest {
                 meta(FieldBindType.TAOS_FIELD_QUERY.getValue(), TSDB_DATA_TYPE_INT));
         col.appendInt(7);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{col});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{col});
         assertEquals("row_count", 1, readLE32(payload, HEADER_ROW_COUNT_OFFSET));
         assertEquals("total_length matches", payload.length,
                 readLE32(payload, HEADER_TOTAL_LENGTH_OFFSET));
@@ -522,7 +549,7 @@ public class Stmt2ColumnBindSerializerTest {
                 meta(FieldBindType.TAOS_FIELD_QUERY.getValue(), TSDB_DATA_TYPE_INT));
         col.appendInt(1);
         col.appendInt(2);
-        Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{col});
+        serializeAndRelease(new Stmt2ColumnFieldBuffer[]{col});
     }
 
     @Test
@@ -531,7 +558,7 @@ public class Stmt2ColumnBindSerializerTest {
                 meta(FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_BIGINT));
         col.appendBigInt(42L);
 
-        byte[] payload = Stmt2ColumnBindSerializer.serializeQuery(new Stmt2ColumnFieldBuffer[]{col});
+        byte[] payload = serializeQueryAndRelease(new Stmt2ColumnFieldBuffer[]{col});
         assertEquals(1, readLE32(payload, HEADER_ROW_COUNT_OFFSET));
         assertEquals(1, readLE32(payload, HEADER_TABLE_COUNT_OFFSET));
     }
@@ -542,7 +569,7 @@ public class Stmt2ColumnBindSerializerTest {
                 meta(FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_INT));
         col.appendInt(1);
         col.appendInt(2);
-        Stmt2ColumnBindSerializer.serializeQuery(new Stmt2ColumnFieldBuffer[]{col});
+        serializeQueryAndRelease(new Stmt2ColumnFieldBuffer[]{col});
     }
 
     // ------------------------------------------------------------------
@@ -558,7 +585,7 @@ public class Stmt2ColumnBindSerializerTest {
         c1.appendInt(1);
         c2.appendInt(1);
         c2.appendInt(2);
-        Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{c1, c2});
+        serializeAndRelease(new Stmt2ColumnFieldBuffer[]{c1, c2});
     }
 
     // ------------------------------------------------------------------
@@ -576,7 +603,7 @@ public class Stmt2ColumnBindSerializerTest {
             c2.appendBytes(("row" + i).getBytes(StandardCharsets.UTF_8));
         }
 
-        byte[] payload = Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[]{c1, c2});
+        byte[] payload = serializeAndRelease(new Stmt2ColumnFieldBuffer[]{c1, c2});
         int declared = readLE32(payload, HEADER_TOTAL_LENGTH_OFFSET);
         assertEquals("declared total_length == actual length", payload.length, declared);
 
