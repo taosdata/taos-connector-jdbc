@@ -127,17 +127,17 @@ public class WSRetryableStmt extends WSStatement {
             retryCount = param.getRetryTimes();
         }
         for (int i = 0; i < retryCount; i++) {
-            if (i > 0) {
-                rawBlock = orgRawBlock.copy();
-                rawBlock.readerIndex(originalReaderIndex);
-                rawBlock.writerIndex(originalWriterIndex);
-            }
-
             long reqId = ReqId.getReqID();
             try {
                 if (reconnectCount != transport.getReconnectCount() && param.isEnableAutoConnect()) {
                     initStmt(1);
                     reconnectCount = transport.getReconnectCount();
+                }
+
+                if (i > 0) {
+                    rawBlock = orgRawBlock.copy();
+                    rawBlock.readerIndex(originalReaderIndex);
+                    rawBlock.writerIndex(originalWriterIndex);
                 }
 
                 modifyStmtIdAndReqId(rawBlock, stmtInfo.getStmtId(), reqId);

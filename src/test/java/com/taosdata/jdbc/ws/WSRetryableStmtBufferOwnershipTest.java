@@ -1,5 +1,6 @@
 package com.taosdata.jdbc.ws;
 
+import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.common.Endpoint;
 import com.taosdata.jdbc.ws.entity.Action;
@@ -14,14 +15,21 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.lang.reflect.Field;
+import java.sql.SQLException;
 import java.time.ZoneId;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 public class WSRetryableStmtBufferOwnershipTest {
@@ -62,6 +70,51 @@ public class WSRetryableStmtBufferOwnershipTest {
             stmt.writeBlockWithRetrySync(rawBlock);
             assertEquals(1, rawBlock.refCnt());
         } finally {
+            if (rawBlock.refCnt() > 0) {
+                rawBlock.release();
+            }
+        }
+    }
+
+    @Test
+    public void retryDoesNotCopyRawBlockBeforeReconnectInitSucceeds() throws Exception {
+        ConnectionParam param = buildConnectionParam();
+        when(param.isEnableAutoConnect()).thenReturn(true);
+        when(param.getRetryTimes()).thenReturn(2);
+
+        Transport transport = mock(Transport.class);
+        when(transport.getConnectionParam()).thenReturn(param);
+        when(transport.isConnected()).thenReturn(false);
+        when(transport.getReconnectCount()).thenReturn(0, 0, 0, 0, 1);
+        when(transport.send(anyString(), anyLong(), any(ByteBuf.class), any(Boolean.class), anyLong()))
+                .thenThrow(new SQLException(
+                        "timeout",
+                        "",
+                        TSDBErrorNumbers.ERROR_QUERY_TIMEOUT));
+        when(transport.send(any(com.taosdata.jdbc.ws.entity.Request.class)))
+                .thenThrow(new SQLException("init failed"));
+
+        WSRetryableStmt stmt = buildStmt(param, transport);
+        ByteBuf rawBlock = spy(newRawBlock());
+        AtomicReference<ByteBuf> retryCopy = new AtomicReference<>();
+        doAnswer(invocation -> {
+            ByteBuf copy = newRawBlock();
+            retryCopy.set(copy);
+            return copy;
+        }).when(rawBlock).copy();
+
+        try {
+            try {
+                stmt.writeBlockWithRetrySync(rawBlock);
+                fail("Expected reconnect init failure");
+            } catch (SQLException expected) {
+                assertEquals("init failed", expected.getMessage());
+            }
+            assertNull("retry copy must not be allocated until reconnect init succeeds", retryCopy.get());
+        } finally {
+            if (retryCopy.get() != null && retryCopy.get().refCnt() > 0) {
+                retryCopy.get().release();
+            }
             if (rawBlock.refCnt() > 0) {
                 rawBlock.release();
             }
