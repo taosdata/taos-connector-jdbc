@@ -1,11 +1,23 @@
 package com.taosdata.jdbc.ws;
 
+import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.ws.entity.Action;
+import com.taosdata.jdbc.ws.stmt2.entity.ResultResp;
+import com.taosdata.jdbc.ws.stmt2.entity.StmtInfo;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import org.junit.Test;
 
 import java.lang.reflect.Field;
+import java.time.ZoneId;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Compatibility tests for the simplified WSRetryableStmt bind-exec model.
@@ -76,20 +88,54 @@ public class WSRetryableStmtCompatibilityTest {
     }
 
     /**
-     * Test that the implementation still keeps both protocol paths and gates bind-exec
-     * to write operations only.
+     * Test that the implementation still keeps both protocol paths and gates
+     * bind-exec to write operations only.
      */
     @Test
-    public void testBothCodePathsExist() throws Exception {
+    public void testWriteAndQueryProtocolPathsAreSeparatedByOperationType() throws Exception {
         Field operationWrite = WSRetryableStmt.class.getDeclaredField("OPERATION_TYPE_WRITE");
         Field operationQuery = WSRetryableStmt.class.getDeclaredField("OPERATION_TYPE_QUERY");
         assertNotNull("OPERATION_TYPE_WRITE should exist", operationWrite);
         assertNotNull("OPERATION_TYPE_QUERY should exist", operationQuery);
 
-        String sourceFile = "src/main/java/com/taosdata/jdbc/ws/WSRetryableStmt.java";
-        String sourceCode = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(sourceFile)));
-        assertTrue("Write path should gate bind-exec by operation type",
-                sourceCode.contains("useBindExec && operationType == OPERATION_TYPE_WRITE"));
+        ConnectionParam param = mockParam();
+        WSConnection capableConnection = mock(WSConnection.class);
+        when(capableConnection.supportsStmt2BindExec()).thenReturn(true);
+
+        WSRetryableStmtRealBehaviorTest.FakeTransport writeTransport =
+                new WSRetryableStmtRealBehaviorTest.FakeTransport(param);
+        WSRetryableStmt writeStmt = newStmt(capableConnection, param, writeTransport,
+                "INSERT INTO t VALUES(?)");
+        ByteBuf writeBlock = newRawBlock();
+        try {
+            writeStmt.writeBlockWithRetrySync(writeBlock);
+            assertEquals("Write path should use stmt2_bind_exec only",
+                    Collections.singletonList(Action.STMT2_BIND_EXEC.getAction()),
+                    writeTransport.getRecordedActions());
+        } finally {
+            releaseIfNeeded(writeBlock);
+        }
+
+        WSRetryableStmtRealBehaviorTest.FakeTransport queryTransport =
+                new WSRetryableStmtRealBehaviorTest.FakeTransport(param);
+        WSRetryableStmt queryStmt = newStmt(capableConnection, param, queryTransport,
+                "SELECT * FROM t WHERE c1=?");
+        ByteBuf queryBlock = newRawBlock();
+        try {
+            ResultResp result = queryStmt.queryWithRetry(queryBlock);
+            assertNotNull("Query path should return a result response", result);
+            List<String> actions = queryTransport.getRecordedActions();
+            assertEquals("Query path should stay on bind + exec + result",
+                    Arrays.asList(
+                            Action.STMT2_BIND.getAction(),
+                            Action.STMT2_EXEC.getAction(),
+                            Action.STMT2_USE_RESULT.getAction()),
+                    actions);
+            assertFalse("Query path should not send stmt2_bind_exec",
+                    actions.contains(Action.STMT2_BIND_EXEC.getAction()));
+        } finally {
+            releaseIfNeeded(queryBlock);
+        }
     }
 
     /**
@@ -149,5 +195,43 @@ public class WSRetryableStmtCompatibilityTest {
                 bindAction, Action.STMT2_BIND_EXEC);
         assertNotEquals("STMT2_EXEC should differ from STMT2_BIND_EXEC",
                 execAction, Action.STMT2_BIND_EXEC);
+    }
+
+    private static ConnectionParam mockParam() {
+        ConnectionParam param = mock(ConnectionParam.class);
+        when(param.isEnableAutoConnect()).thenReturn(false);
+        when(param.getRetryTimes()).thenReturn(1);
+        when(param.getRequestTimeout()).thenReturn(5000);
+        when(param.getZoneId()).thenReturn(ZoneId.systemDefault());
+        return param;
+    }
+
+    private static WSRetryableStmt newStmt(WSConnection connection, ConnectionParam param,
+                                           Transport transport, String sql) {
+        StmtInfo stmtInfo = new StmtInfo(sql);
+        stmtInfo.setStmtId(12345L);
+        return new WSRetryableStmt(
+                connection,
+                param,
+                "test_db",
+                transport,
+                1L,
+                stmtInfo,
+                new AtomicInteger(0)
+        );
+    }
+
+    private static ByteBuf newRawBlock() {
+        ByteBuf rawBlock = Unpooled.buffer(32);
+        rawBlock.writeLongLE(0L);
+        rawBlock.writeLongLE(12345L);
+        rawBlock.writeIntLE(1);
+        return rawBlock;
+    }
+
+    private static void releaseIfNeeded(ByteBuf buffer) {
+        if (buffer.refCnt() > 0) {
+            buffer.release();
+        }
     }
 }

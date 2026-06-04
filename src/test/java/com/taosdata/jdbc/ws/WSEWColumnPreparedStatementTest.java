@@ -18,14 +18,27 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import javax.sql.rowset.serial.SerialBlob;
+import java.math.BigInteger;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_BINARY;
+import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_BIGINT;
+import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_BLOB;
+import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_BOOL;
+import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_DOUBLE;
+import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_FLOAT;
 import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_INT;
+import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_SMALLINT;
 import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP;
+import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_TINYINT;
+import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_UBIGINT;
+import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_VARBINARY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
@@ -63,6 +76,58 @@ public class WSEWColumnPreparedStatementTest {
                     + Stmt2ColumnBindSerializer.HEADER_ROW_COUNT_OFFSET));
             assertEquals(3, rawBlock.getIntLE(payloadOffset
                     + Stmt2ColumnBindSerializer.HEADER_TABLE_COUNT_OFFSET));
+        } finally {
+            releaseRawBlock(block);
+            info.releaseReusableColumnBuffers();
+        }
+    }
+
+    @Test
+    public void serializationTask_serializesSupportedColumnValueConversions() throws Exception {
+        EWBackendThreadInfo info = new EWBackendThreadInfo(16, 16);
+        StmtInfo stmt = conversionStmtInfo();
+        enqueueRows(info,
+                conversionRow("d0",
+                        true,
+                        false,
+                        true,
+                        false,
+                        true,
+                        new BigInteger("18446744073709551615"),
+                        true,
+                        false,
+                        Instant.ofEpochMilli(1000L),
+                        "binary-text",
+                        new SerialBlob(new byte[]{1, 2, 3}),
+                        new byte[]{4, 5}),
+                conversionRow("d1",
+                        0,
+                        7,
+                        8,
+                        9,
+                        10L,
+                        11L,
+                        1.5f,
+                        2.5d,
+                        Timestamp.from(Instant.ofEpochMilli(2000L)),
+                        "binary-text-2".getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                        "blob-text",
+                        new byte[]{6, 7}));
+
+        new WSEWColumnPreparedStatement.ColumnarWSEWSerializationTask(info, 2, stmt, true).invoke();
+
+        EWRawBlock block = info.getSerialQueue().poll();
+        assertNotNull("task should have produced a serialized block", block);
+        assertTrue("no serialization error expected", block.getLastError() == null);
+        ByteBuf rawBlock = block.getByteBuf();
+        try {
+            int payloadOffset = Stmt2BindExecRequestBuilder.HEADER_SIZE;
+            assertEquals(2, rawBlock.getIntLE(payloadOffset
+                    + Stmt2ColumnBindSerializer.HEADER_ROW_COUNT_OFFSET));
+            assertEquals(2, rawBlock.getIntLE(payloadOffset
+                    + Stmt2ColumnBindSerializer.HEADER_TABLE_COUNT_OFFSET));
+            assertEquals(stmt.getFields().size(), rawBlock.getIntLE(payloadOffset
+                    + Stmt2ColumnBindSerializer.HEADER_FIELD_COUNT_OFFSET));
         } finally {
             releaseRawBlock(block);
             info.releaseReusableColumnBuffers();
@@ -173,6 +238,56 @@ public class WSEWColumnPreparedStatementTest {
         prepareResp.setStmtId(2L);
         prepareResp.setFields(Arrays.asList(tbnameField(), tsField(), binaryField(), binaryField()));
         return new StmtInfo(prepareResp, "INSERT INTO ? VALUES (?, ?, ?)");
+    }
+
+    private static StmtInfo conversionStmtInfo() {
+        Stmt2PrepareResp prepareResp = new Stmt2PrepareResp();
+        prepareResp.setInsert(true);
+        prepareResp.setStmtId(3L);
+        prepareResp.setFields(Arrays.asList(
+                tbnameField(),
+                colField(TSDB_DATA_TYPE_BOOL),
+                colField(TSDB_DATA_TYPE_TINYINT),
+                colField(TSDB_DATA_TYPE_SMALLINT),
+                colField(TSDB_DATA_TYPE_INT),
+                colField(TSDB_DATA_TYPE_BIGINT),
+                colField(TSDB_DATA_TYPE_UBIGINT),
+                colField(TSDB_DATA_TYPE_FLOAT),
+                colField(TSDB_DATA_TYPE_DOUBLE),
+                colField(TSDB_DATA_TYPE_TIMESTAMP),
+                colField(TSDB_DATA_TYPE_BINARY),
+                colField(TSDB_DATA_TYPE_BLOB),
+                colField(TSDB_DATA_TYPE_VARBINARY)));
+        return new StmtInfo(prepareResp, "INSERT INTO ? VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    }
+
+    private static Field colField(int fieldType) {
+        Field field = new Field();
+        field.setBindType((byte) FieldBindType.TAOS_FIELD_COL.getValue());
+        field.setFieldType((byte) fieldType);
+        return field;
+    }
+
+    private static Map<Integer, Column> conversionRow(String tbname, Object boolValue, Object tinyValue,
+                                                      Object smallValue, Object intValue, Object bigValue,
+                                                      Object uBigValue, Object floatValue, Object doubleValue,
+                                                      Object tsValue, Object binaryValue, Object blobValue,
+                                                      Object varbinaryValue) {
+        Map<Integer, Column> row = new HashMap<>();
+        row.put(1, new Column(tbname, TSDB_DATA_TYPE_BINARY, 1));
+        row.put(2, new Column(boolValue, TSDB_DATA_TYPE_BOOL, 2));
+        row.put(3, new Column(tinyValue, TSDB_DATA_TYPE_TINYINT, 3));
+        row.put(4, new Column(smallValue, TSDB_DATA_TYPE_SMALLINT, 4));
+        row.put(5, new Column(intValue, TSDB_DATA_TYPE_INT, 5));
+        row.put(6, new Column(bigValue, TSDB_DATA_TYPE_BIGINT, 6));
+        row.put(7, new Column(uBigValue, TSDB_DATA_TYPE_UBIGINT, 7));
+        row.put(8, new Column(floatValue, TSDB_DATA_TYPE_FLOAT, 8));
+        row.put(9, new Column(doubleValue, TSDB_DATA_TYPE_DOUBLE, 9));
+        row.put(10, new Column(tsValue, TSDB_DATA_TYPE_TIMESTAMP, 10));
+        row.put(11, new Column(binaryValue, TSDB_DATA_TYPE_BINARY, 11));
+        row.put(12, new Column(blobValue, TSDB_DATA_TYPE_BLOB, 12));
+        row.put(13, new Column(varbinaryValue, TSDB_DATA_TYPE_VARBINARY, 13));
+        return row;
     }
 
     @Test

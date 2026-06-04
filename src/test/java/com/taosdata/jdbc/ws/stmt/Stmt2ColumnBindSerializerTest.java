@@ -365,6 +365,80 @@ public class Stmt2ColumnBindSerializerTest {
         }
     }
 
+    @Test
+    public void testSerializeRejectsNullOrEmptyColumns() throws SQLException {
+        assertThrows(SQLException.class, () -> Stmt2ColumnBindSerializer.serialize(null));
+        assertThrows(SQLException.class, () -> Stmt2ColumnBindSerializer.serialize(new Stmt2ColumnFieldBuffer[0]));
+        assertThrows(SQLException.class, () -> Stmt2ColumnBindSerializer.serializeQuery(null));
+        assertThrows(SQLException.class, () -> Stmt2ColumnBindSerializer.serializeQuery(new Stmt2ColumnFieldBuffer[0]));
+        assertThrows(SQLException.class, () -> Stmt2ColumnBindSerializer.serializeBuffer(null, 1));
+        assertThrows(SQLException.class, () -> Stmt2ColumnBindSerializer.serializeBuffer(new Stmt2ColumnFieldBuffer[0], 1));
+    }
+
+    @Test
+    public void testSerializeDetachedBuffer_returnsDirectIndependentPayload() throws SQLException {
+        Stmt2ColumnFieldBuffer col = new Stmt2ColumnFieldBuffer(
+                meta(FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_INT));
+        col.appendInt(42);
+
+        ByteBuf detached = Stmt2ColumnBindSerializer.serializeDetachedBuffer(new Stmt2ColumnFieldBuffer[]{col});
+        try {
+            assertTrue(detached.isDirect());
+            assertEquals(1, detached.getIntLE(HEADER_ROW_COUNT_OFFSET));
+            assertEquals(42, detached.getIntLE(HEADER_SIZE + 18));
+        } finally {
+            detached.release();
+            col.release();
+        }
+    }
+
+    @Test
+    public void testSerializeBuffer_explicitTableCount() throws SQLException {
+        Stmt2ColumnFieldBuffer col = new Stmt2ColumnFieldBuffer(
+                meta(FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_INT));
+        col.appendInt(1);
+        col.appendInt(2);
+
+        ByteBuf payload = Stmt2ColumnBindSerializer.serializeBuffer(new Stmt2ColumnFieldBuffer[]{col}, 7);
+        try {
+            assertEquals(2, payload.getIntLE(HEADER_ROW_COUNT_OFFSET));
+            assertEquals(7, payload.getIntLE(HEADER_TABLE_COUNT_OFFSET));
+        } finally {
+            payload.release();
+            col.release();
+        }
+    }
+
+    @Test
+    public void testSerializeBuffer_explicitTableCountRejectsMismatchAndQueryMultiRow() throws SQLException {
+        Stmt2ColumnFieldBuffer oneRow = new Stmt2ColumnFieldBuffer(
+                meta(FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_INT));
+        Stmt2ColumnFieldBuffer twoRows = new Stmt2ColumnFieldBuffer(
+                meta(FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_INT));
+        oneRow.appendInt(1);
+        twoRows.appendInt(1);
+        twoRows.appendInt(2);
+        try {
+            assertThrows(SQLException.class,
+                    () -> Stmt2ColumnBindSerializer.serializeBuffer(
+                            new Stmt2ColumnFieldBuffer[]{oneRow, twoRows}, 1));
+        } finally {
+            oneRow.release();
+            twoRows.release();
+        }
+
+        Stmt2ColumnFieldBuffer query = new Stmt2ColumnFieldBuffer(
+                meta(FieldBindType.TAOS_FIELD_QUERY.getValue(), TSDB_DATA_TYPE_INT));
+        query.appendInt(1);
+        query.appendInt(2);
+        try {
+            assertThrows(SQLException.class,
+                    () -> Stmt2ColumnBindSerializer.serializeBuffer(new Stmt2ColumnFieldBuffer[]{query}, 1));
+        } finally {
+            query.release();
+        }
+    }
+
     // ------------------------------------------------------------------
     // Null handling tests
     // ------------------------------------------------------------------
