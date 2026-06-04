@@ -2,9 +2,7 @@ package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.common.TDBlob;
-import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.StringUtils;
-import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.TSWSPreparedStatement;
 import io.netty.util.ResourceLeakDetector;
@@ -360,13 +358,7 @@ public class WsPstmtAllTypeTest {
 
     @Before
     public void before() throws SQLException {
-        String url = SpecifyAddress.getInstance().getRestWithoutUrl();
-        if (url == null) {
-            url = "jdbc:TAOS-WS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&stmtBindMode=traditional";
-        }
-
-        Properties properties = new Properties();
-        connection = DriverManager.getConnection(url, properties);
+        connection = DriverManager.getConnection(WsStmtWriteTestSupport.traditionalWebSocketUrl(), new Properties());
         try (Statement statement = connection.createStatement()) {
             statement.execute("drop database if exists " + dbName);
             statement.execute("create database " + dbName + " keep 36500");

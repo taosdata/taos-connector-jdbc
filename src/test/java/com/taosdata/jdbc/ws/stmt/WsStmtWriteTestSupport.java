@@ -38,6 +38,30 @@ final class WsStmtWriteTestSupport {
         return TestUtils.camelToSnake(testClass);
     }
 
+    static String traditionalWebSocketUrl() {
+        return webSocketUrl(SpecifyAddress.getInstance().getWebSocketWithoutUrl(), true, false);
+    }
+
+    static String webSocketUrl(String baseUrl, boolean traditionalMode, boolean batchFetch) {
+        String url = baseUrl;
+        if (url == null) {
+            url = "jdbc:TAOS-WS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getWsPort() + "/";
+        }
+        url = appendUrlParam(url, "user", TestEnvUtil.getUser());
+        url = appendUrlParam(url, "password", TestEnvUtil.getPassword());
+        if (batchFetch) {
+            url = appendUrlParam(url, "batchfetch", "true");
+        }
+        if (traditionalMode) {
+            url = appendUrlParam(url, "stmtBindMode", "traditional");
+        }
+        return url;
+    }
+
+    private static String appendUrlParam(String url, String key, String value) {
+        return url + (url.indexOf('?') >= 0 ? "&" : "?") + key + "=" + value;
+    }
+
     static Connection openWebSocketConnection(String stmt2BindMode, boolean asyncWrite) throws SQLException {
         String url = SpecifyAddress.getInstance().getWebSocketWithoutUrl();
         if (url == null) {

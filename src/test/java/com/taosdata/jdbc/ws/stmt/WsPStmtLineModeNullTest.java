@@ -1,7 +1,5 @@
 package com.taosdata.jdbc.ws.stmt;
 
-import com.taosdata.jdbc.utils.SpecifyAddress;
-import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -467,13 +465,7 @@ public class WsPStmtLineModeNullTest {
 
     @Before
     public void before() throws SQLException {
-        String url = SpecifyAddress.getInstance().getRestWithoutUrl();
-        if (url == null) {
-            url = "jdbc:TAOS-WS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&stmtBindMode=traditional";
-        }
-
-        Properties properties = new Properties();
-        connection = DriverManager.getConnection(url, properties);
+        connection = DriverManager.getConnection(WsStmtWriteTestSupport.traditionalWebSocketUrl(), new Properties());
         try (Statement statement = connection.createStatement()) {
             statement.execute("drop database if exists " + db_name);
             statement.execute("create database " + db_name + " keep 36500");
@@ -509,4 +501,3 @@ public class WsPStmtLineModeNullTest {
     }
 
 }
-
