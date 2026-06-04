@@ -122,7 +122,7 @@ public class TSDBErrorTest {
     }
 
     @Test
-    public void lineModeUnsupportedErrorCode_isRemovedFromTSDBErrorNumbers() {
+    public void traditionalUnsupportedErrorCode_isRemovedFromTSDBErrorNumbers() {
         try {
             TSDBErrorNumbers.class.getDeclaredField("ERROR_LINE_BIND_MODE_UNSUPPORTED_IN_SERVER");
             fail("ERROR_LINE_BIND_MODE_UNSUPPORTED_IN_SERVER should be removed with line-mode cleanup");
@@ -132,7 +132,7 @@ public class TSDBErrorTest {
     }
 
     @Test
-    public void removedLineModeErrorCode_fallsBackToUnknownMessage() {
+    public void removedTraditionalErrorCode_fallsBackToUnknownMessage() {
         assertEquals(TSDBError.getErrorMessage(TSDBErrorNumbers.ERROR_UNKNOWN),
                 TSDBError.getErrorMessage(0x2324));
     }

@@ -17,8 +17,8 @@ import java.util.Calendar;
 import java.util.Properties;
 import java.util.TimeZone;
 
-public class WsPStmtLineModeNullTest {
-            final String db_name = TestUtils.camelToSnake(WsPStmtLineModeNullTest.class);
+public class WsPStmtTraditionalNullTest {
+    final String db_name = TestUtils.camelToSnake(WsPStmtTraditionalNullTest.class);
     final String tableName = "wpt";
     String stableName = "swpt";
     Connection connection;

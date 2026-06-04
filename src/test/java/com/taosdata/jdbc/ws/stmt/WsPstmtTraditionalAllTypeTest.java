@@ -11,8 +11,8 @@ import java.sql.*;
 import java.time.Instant;
 import java.util.Properties;
 
-public class WsPstmtLineModeAllTypeTest {
-    final String dbName = TestUtils.camelToSnake(WsPstmtLineModeAllTypeTest.class);
+public class WsPstmtTraditionalAllTypeTest {
+    final String dbName = TestUtils.camelToSnake(WsPstmtTraditionalAllTypeTest.class);
     final String tableName = "wpt";
     final String stableName = "swpt";
 
