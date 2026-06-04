@@ -135,6 +135,37 @@ public class WSEWColumnPreparedStatementTest {
     }
 
     @Test
+    public void serializationTask_rejectsOutOfRangeUBigIntBigInteger() throws Exception {
+        EWBackendThreadInfo info = new EWBackendThreadInfo(16, 16);
+        StmtInfo stmt = conversionStmtInfo();
+        enqueueRows(info, conversionRow("d0",
+                true,
+                1,
+                2,
+                3,
+                4L,
+                new BigInteger("18446744073709551616"),
+                1.5f,
+                2.5d,
+                Instant.ofEpochMilli(1000L),
+                "binary-text",
+                "blob-text",
+                new byte[]{1, 2}));
+
+        new WSEWColumnPreparedStatement.ColumnarWSEWSerializationTask(info, 1, stmt, true).invoke();
+
+        EWRawBlock block = info.getSerialQueue().poll();
+        try {
+            assertNotNull("task must enqueue an error block for out-of-range ubigint", block);
+            assertNotNull("error block must carry the exception", block.getLastError());
+            assertTrue(block.getLastError().getMessage().contains("ubigint value is out of range"));
+        } finally {
+            releaseRawBlock(block);
+            info.releaseReusableColumnBuffers();
+        }
+    }
+
+    @Test
     public void serializationTask_rejectsMissingTbname() throws Exception {
         EWBackendThreadInfo info = new EWBackendThreadInfo(16, 16);
         Map<Integer, Column> row = new HashMap<>();

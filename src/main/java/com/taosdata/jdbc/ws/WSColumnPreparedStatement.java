@@ -39,9 +39,9 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
+import static com.taosdata.jdbc.utils.UnsignedDataUtils.toUnsignedLongBits;
 
 public class WSColumnPreparedStatement extends WSRetryableStmt implements TaosPrepareStatement {
-    private static final BigInteger MAX_UNSIGNED_LONG_VALUE = new BigInteger(MAX_UNSIGNED_LONG);
 
     private final Stmt2FieldMeta[] fieldMetas;
     private final byte[] fixedWidths;
@@ -607,12 +607,7 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements TaosPr
         } else if (x instanceof OffsetDateTime) {
             stageTimestamp(parameterIndex, DateTimeUtils.toLong((OffsetDateTime) x, stmtInfo.getPrecision()));
         } else if (x instanceof BigInteger) {
-            BigInteger v = (BigInteger) x;
-            if (v.compareTo(BigInteger.ZERO) < 0 || v.compareTo(MAX_UNSIGNED_LONG_VALUE) > 0) {
-                throw TSDBError.createSQLException(
-                        TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "ubigint value is out of range");
-            }
-            stageFixed(parameterIndex - 1, v.longValue());
+            stageFixed(parameterIndex - 1, toUnsignedLongBits((BigInteger) x));
         } else if (x instanceof Blob) {
             stageVar(parameterIndex - 1, ((Blob) x).getBytes(1, (int) ((Blob) x).length()));
         } else if (x instanceof BigDecimal) {

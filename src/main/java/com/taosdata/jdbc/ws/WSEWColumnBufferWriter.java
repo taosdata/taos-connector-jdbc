@@ -39,6 +39,7 @@ import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_UINT;
 import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_USMALLINT;
 import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_UTINYINT;
 import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_VARBINARY;
+import static com.taosdata.jdbc.utils.UnsignedDataUtils.toUnsignedLongBits;
 
 final class WSEWColumnBufferWriter {
     private final StmtInfo stmtInfo;
@@ -256,7 +257,7 @@ final class WSEWColumnBufferWriter {
                 return;
             case TSDB_DATA_TYPE_UBIGINT:
                 if (value instanceof BigInteger) {
-                    buffer.appendUBigInt(((BigInteger) value).longValue());
+                    buffer.appendUBigInt(toUnsignedLongBits((BigInteger) value));
                 } else if (value instanceof Number) {
                     buffer.appendUBigInt(((Number) value).longValue());
                 } else {
