@@ -69,6 +69,20 @@ public class AutoExpandingBufferTest {
         }
     }
 
+    @Test
+    public void writeByte_throwsWhenExpansionWouldExceedMaxComponents() throws SQLException {
+        AutoExpandingBuffer smallBuffer = new AutoExpandingBuffer(1, 1);
+        try {
+            smallBuffer.writeByte((byte) 1);
+            smallBuffer.writeByte((byte) 2);
+
+            SQLException ex = assertThrows(SQLException.class, () -> smallBuffer.writeByte((byte) 3));
+            assertTrue(ex.getMessage().contains("Data too long"));
+        } finally {
+            smallBuffer.release();
+        }
+    }
+
     // ====================================== writeString Tests ======================================
     @Test
     public void writeString_UTF8Encoding() throws SQLException {

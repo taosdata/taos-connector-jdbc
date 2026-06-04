@@ -24,6 +24,8 @@ import java.util.Collections;
 import java.util.List;
 
 import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_INT;
+import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_BLOB;
+import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP;
 import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_UTINYINT;
 import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_VARCHAR;
 import static org.junit.Assert.assertEquals;
@@ -48,6 +50,7 @@ public class WSColumnPreparedStatementTest {
         Mockito.when(param.getRequestTimeout()).thenReturn(30_000);
         Mockito.when(param.getZoneId()).thenReturn(null);
         Mockito.when(connection.supportsStmt2BindExec()).thenReturn(true);
+        Mockito.when(connection.isSupportBlob()).thenReturn(true);
     }
 
     @Test
@@ -374,6 +377,35 @@ public class WSColumnPreparedStatementTest {
     }
 
     @Test
+    public void setBytes_tbnameRejectsNull() throws Exception {
+        WSColumnPreparedStatement stmt = buildStmt(tbNameAndColFields());
+
+        SQLException ex = assertSqlException(() -> stmt.setBytes(1, null));
+
+        assertEquals(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, ex.getErrorCode());
+        assertTrue(ex.getMessage().contains("table name can't be null"));
+    }
+
+    @Test
+    public void setNString_tbnameRejectsNull() throws Exception {
+        WSColumnPreparedStatement stmt = buildStmt(tbNameAndColFields());
+
+        SQLException ex = assertSqlException(() -> stmt.setNString(1, null));
+
+        assertEquals(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, ex.getErrorCode());
+        assertTrue(ex.getMessage().contains("table name can't be null"));
+    }
+
+    @Test
+    public void fixedWidthSetter_rejectsTbnameParameter() throws Exception {
+        WSColumnPreparedStatement stmt = buildStmt(tbNameAndColFields());
+
+        SQLException ex = assertSqlException(() -> stmt.setInt(1, 7));
+
+        assertTrue(ex.getMessage().contains("Table name not set for row"));
+    }
+
+    @Test
     public void setString_tbnameAcceptsValidUtf8() throws Exception {
         WSColumnPreparedStatement stmt = buildStmt(tbNameAndColFields());
 
@@ -531,9 +563,225 @@ public class WSColumnPreparedStatementTest {
         assertTrue(ex.getMessage().contains("utinyint value is out of range"));
     }
 
+    @Test
+    public void setTableName_rejectsStatementWithoutTbnameField() throws Exception {
+        WSColumnPreparedStatement stmt = buildStmt(Collections.singletonList(field(
+                (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_INT)));
+
+        SQLException ex = assertSqlException(() -> stmt.setTableName("t_01"));
+
+        assertTrue(ex.getMessage().contains("No table name field"));
+    }
+
+    @Test
+    public void columnDataAddBatch_validatesExtensionInputsBeforeAppendingRows() throws Exception {
+        WSColumnPreparedStatement stmt = buildStmt(tbNameTagTagAndColFields());
+
+        SQLException noData = assertSqlException(stmt::columnDataAddBatch);
+        assertTrue(noData.getMessage().contains("No column data bound"));
+
+        SQLException badColumnIndex = assertSqlException(() -> stmt.setInt(1, Collections.singletonList(7)));
+        assertEquals(TSDBErrorNumbers.ERROR_PARAMETER_INDEX_OUT_RANGE, badColumnIndex.getErrorCode());
+
+        SQLException nullColumnList = assertSqlException(() -> stmt.setInt(0, null));
+        assertTrue(nullColumnList.getMessage().contains("Column data list must not be null"));
+
+        IllegalArgumentException badTagIndex = assertIllegalArgumentException(() -> stmt.setTagInt(2, 42));
+        assertTrue(badTagIndex.getMessage().contains("Failed to bind tag at index 2"));
+
+        stmt.setInt(0, Collections.singletonList(7));
+        SQLException missingTableName = assertSqlException(stmt::columnDataAddBatch);
+        assertTrue(missingTableName.getMessage().contains("Table name not set for row"));
+
+        stmt.setTableName("t_01");
+        SQLException missingTag = assertSqlException(stmt::columnDataAddBatch);
+        assertTrue(missingTag.getMessage().contains("Tag value not set at index 0"));
+    }
+
+    @Test
+    public void columnDataAddBatch_rejectsMismatchedExtensionColumnRowCounts() throws Exception {
+        WSColumnPreparedStatement stmt = buildStmt(twoFields(TSDB_DATA_TYPE_INT, TSDB_DATA_TYPE_VARCHAR));
+
+        stmt.setInt(0, java.util.Arrays.asList(1, 2));
+        stmt.setString(1, Collections.singletonList("one"), 10);
+
+        SQLException ex = assertSqlException(stmt::columnDataAddBatch);
+        assertTrue(ex.getMessage().contains("column data row count mismatch"));
+    }
+
+    @Test
+    public void columnDataAddBatch_acceptsNullColumnListValues() throws Exception {
+        WSColumnPreparedStatement stmt = buildStmt(tbNameTagTagAndColFields());
+
+        stmt.setTableName("t_01");
+        stmt.setTagInt(0, 42);
+        stmt.setTagString(1, "loc");
+        stmt.setInt(0, java.util.Arrays.asList(7, null));
+        stmt.columnDataAddBatch();
+
+        assertEquals(2, stmt.getExpectedRowCount());
+        assertEquals(2, stmt.getColumnBuffer(3).getRowCount());
+    }
+
+    @Test
+    public void setObjectWithSqlType_rejectsInvalidJavaTypes() throws Exception {
+        WSColumnPreparedStatement stmt = buildStmt(Collections.singletonList(field(
+                (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_INT)));
+
+        assertSetObjectTypeError(stmt, java.sql.Types.BOOLEAN, "bad", "Invalid type for boolean");
+        assertSetObjectTypeError(stmt, java.sql.Types.TINYINT, "bad", "Invalid type for byte");
+        assertSetObjectTypeError(stmt, java.sql.Types.SMALLINT, "bad", "Invalid type for short");
+        assertSetObjectTypeError(stmt, java.sql.Types.INTEGER, "bad", "Invalid type for int");
+        assertSetObjectTypeError(stmt, java.sql.Types.BIGINT, "bad", "Invalid type for long");
+        assertSetObjectTypeError(stmt, java.sql.Types.FLOAT, "bad", "Invalid type for float");
+        assertSetObjectTypeError(stmt, java.sql.Types.DOUBLE, "bad", "Invalid type for double");
+        assertSetObjectTypeError(stmt, java.sql.Types.TIMESTAMP, "bad", "Invalid type for timestamp");
+        assertSetObjectTypeError(stmt, java.sql.Types.VARCHAR, new Object(), "Invalid type for binary");
+        assertSetObjectTypeError(stmt, java.sql.Types.BLOB, "bad", "Invalid type for blob");
+        assertSetObjectTypeError(stmt, java.sql.Types.DECIMAL, "bad", "Invalid type for decimal");
+        assertSetObjectTypeError(stmt, java.sql.Types.ARRAY, 1, "unsupported type");
+    }
+
+    @Test
+    public void setObjectUnsupportedType_rejectsUnknownJavaType() throws Exception {
+        WSColumnPreparedStatement stmt = buildStmt(Collections.singletonList(field(
+                (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_INT)));
+
+        SQLException ex = assertSqlException(() -> stmt.setObject(1, new Object()));
+
+        assertTrue(ex.getMessage().contains("Unsupported data type"));
+    }
+
+    @Test
+    public void temporalAndBlobSetters_handleNullsCalendarsAndStreams() throws Exception {
+        WSColumnPreparedStatement timestampStmt = buildStmt(Collections.singletonList(field(
+                (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_TIMESTAMP)));
+
+        timestampStmt.setTimestamp(1, (java.sql.Timestamp) null);
+        timestampStmt.setTimestamp(1, new java.sql.Timestamp(0), java.util.Calendar.getInstance());
+        timestampStmt.setDate(1, null);
+        timestampStmt.setDate(1, new java.sql.Date(1));
+        timestampStmt.setTime(1, null);
+        timestampStmt.setTime(1, new java.sql.Time(2));
+        assertEquals(6, timestampStmt.getColumnBuffer(0).getRowCount());
+
+        WSColumnPreparedStatement varcharStmt = buildStmt(Collections.singletonList(field(
+                (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_VARCHAR)));
+        varcharStmt.setBigDecimal(1, (java.math.BigDecimal) null);
+        varcharStmt.setNull(1, java.sql.Types.VARCHAR, "varchar");
+        assertEquals(2, varcharStmt.getColumnBuffer(0).getRowCount());
+
+        WSColumnPreparedStatement blobStmt = buildStmt(Collections.singletonList(field(
+                (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_BLOB)));
+        byte[] bytes = new byte[]{1, 2, 3};
+        blobStmt.setBlob(1, (java.sql.Blob) null);
+        blobStmt.setBlob(1, new java.io.ByteArrayInputStream(bytes), bytes.length);
+        blobStmt.setBlob(1, new java.io.ByteArrayInputStream(bytes));
+        assertEquals(3, blobStmt.getColumnBuffer(0).getRowCount());
+    }
+
+    @Test
+    public void setObject_coversTemporalAndVariableWidthSpecializations() throws Exception {
+        WSColumnPreparedStatement timestampStmt = buildStmt(Collections.singletonList(field(
+                (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_TIMESTAMP)));
+        timestampStmt.setObject(1, null);
+        timestampStmt.setObject(1, new java.sql.Date(1));
+        timestampStmt.setObject(1, new java.sql.Time(2));
+        timestampStmt.setObject(1, new java.sql.Timestamp(3));
+        timestampStmt.setObject(1, java.time.LocalDateTime.of(1970, 1, 1, 0, 0));
+        timestampStmt.setObject(1, java.time.Instant.ofEpochMilli(4));
+        timestampStmt.setObject(1, java.time.ZonedDateTime.ofInstant(
+                java.time.Instant.ofEpochMilli(5), java.time.ZoneId.of("UTC")));
+        timestampStmt.setObject(1, java.time.OffsetDateTime.ofInstant(
+                java.time.Instant.ofEpochMilli(6), java.time.ZoneId.of("UTC")));
+        assertEquals(8, timestampStmt.getColumnBuffer(0).getRowCount());
+
+        Mockito.when(param.getZoneId()).thenReturn(java.time.ZoneId.of("UTC"));
+        WSColumnPreparedStatement zonedTimestampStmt = buildStmt(Collections.singletonList(field(
+                (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_TIMESTAMP)));
+        zonedTimestampStmt.setObject(1, java.time.LocalDateTime.of(1970, 1, 1, 0, 0));
+        zonedTimestampStmt.setObject(1, java.time.LocalDateTime.of(1970, 1, 1, 0, 0), java.sql.Types.TIMESTAMP);
+        assertEquals(2, zonedTimestampStmt.getColumnBuffer(0).getRowCount());
+
+        WSColumnPreparedStatement blobStmt = buildStmt(Collections.singletonList(field(
+                (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_BLOB)));
+        byte[] bytes = new byte[]{1, 2, 3};
+        blobStmt.setObject(1, bytes, java.sql.Types.BLOB);
+        blobStmt.setObject(1, new com.taosdata.jdbc.common.TDBlob(bytes, true), java.sql.Types.BLOB);
+        blobStmt.setObject(1, new com.taosdata.jdbc.common.TDBlob(bytes, true));
+        assertEquals(3, blobStmt.getColumnBuffer(0).getRowCount());
+    }
+
+    @Test
+    public void insertOnlyMethodsValidateClosedAndQueryStates() throws Exception {
+        WSColumnPreparedStatement stmt = buildStmt(Collections.singletonList(field(
+                (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_INT)));
+        SQLException queryEx = assertSqlException(stmt::executeQuery);
+        assertTrue(queryEx.getMessage().contains("only supports insert"));
+        assertNull(stmt.getMetaData());
+
+        WSColumnPreparedStatement nonInsert = buildStmt(Collections.singletonList(field(
+                (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_INT)), false);
+        SQLException nonInsertEx = assertSqlException(nonInsert::executeUpdate);
+        assertTrue(nonInsertEx.getMessage().contains("insert SQL must be prepared"));
+
+        stmt.close();
+        assertEquals(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED, assertSqlException(stmt::addBatch).getErrorCode());
+        assertEquals(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED, assertSqlException(stmt::clearBatch).getErrorCode());
+        assertEquals(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED, assertSqlException(stmt::executeBatch).getErrorCode());
+        assertEquals(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED, assertSqlException(stmt::execute).getErrorCode());
+        assertEquals(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED, assertSqlException(stmt::executeUpdate).getErrorCode());
+        assertEquals(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED, assertSqlException(stmt::getParameterMetaData).getErrorCode());
+        assertEquals(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED, assertSqlException(stmt::columnDataAddBatch).getErrorCode());
+    }
+
+    @Test
+    @SuppressWarnings("deprecation")
+    public void unsupportedJdbcMethodsReturnExplicitUnsupportedErrors() throws Exception {
+        WSColumnPreparedStatement stmt = buildStmt(Collections.singletonList(field(
+                (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_INT)));
+
+        assertUnsupportedMethod(() -> stmt.setObject(1, 1, java.sql.Types.INTEGER, 0));
+        assertUnsupportedMethod(() -> stmt.setAsciiStream(1, new java.io.ByteArrayInputStream(new byte[0]), 0));
+        assertUnsupportedMethod(() -> stmt.setUnicodeStream(1, new java.io.ByteArrayInputStream(new byte[0]), 0));
+        assertUnsupportedMethod(() -> stmt.setBinaryStream(1, new java.io.ByteArrayInputStream(new byte[0]), 0));
+        assertUnsupportedMethod(() -> stmt.setCharacterStream(1, new java.io.StringReader("x"), 1));
+        assertUnsupportedMethod(() -> stmt.setAsciiStream(1, new java.io.ByteArrayInputStream(new byte[0]), 1L));
+        assertUnsupportedMethod(() -> stmt.setBinaryStream(1, new java.io.ByteArrayInputStream(new byte[0]), 1L));
+        assertUnsupportedMethod(() -> stmt.setAsciiStream(1, new java.io.ByteArrayInputStream(new byte[0])));
+        assertUnsupportedMethod(() -> stmt.setBinaryStream(1, new java.io.ByteArrayInputStream(new byte[0])));
+        assertUnsupportedMethod(() -> stmt.setCharacterStream(1, new java.io.StringReader("x"), 1L));
+        assertUnsupportedMethod(() -> stmt.setCharacterStream(1, new java.io.StringReader("x")));
+        assertUnsupportedMethod(() -> stmt.setNCharacterStream(1, new java.io.StringReader("x"), 1L));
+        assertUnsupportedMethod(() -> stmt.setNCharacterStream(1, new java.io.StringReader("x")));
+        assertUnsupportedMethod(() -> stmt.setClob(1, (java.sql.Clob) null));
+        assertUnsupportedMethod(() -> stmt.setClob(1, new java.io.StringReader("x"), 1L));
+        assertUnsupportedMethod(() -> stmt.setClob(1, new java.io.StringReader("x")));
+        assertUnsupportedMethod(() -> stmt.setNClob(1, (java.sql.NClob) null));
+        assertUnsupportedMethod(() -> stmt.setNClob(1, new java.io.StringReader("x"), 1L));
+        assertUnsupportedMethod(() -> stmt.setNClob(1, new java.io.StringReader("x")));
+        assertUnsupportedMethod(() -> stmt.setDate(1, new java.sql.Date(0), java.util.Calendar.getInstance()));
+        assertUnsupportedMethod(() -> stmt.setTime(1, new java.sql.Time(0), java.util.Calendar.getInstance()));
+        assertUnsupportedMethod(stmt::clearParameters);
+        assertUnsupportedMethod(() -> stmt.setArray(1, null));
+        assertUnsupportedMethod(() -> stmt.setRef(1, null));
+        assertUnsupportedMethod(() -> stmt.setRowId(1, null));
+        assertUnsupportedMethod(() -> stmt.setSQLXML(1, null));
+        assertUnsupportedMethod(() -> stmt.setURL(1, null));
+        assertUnsupportedMethod(() -> stmt.addBatch("insert into t values(1)"));
+
+        stmt.close();
+        SQLException ex = assertSqlException(() -> stmt.addBatch("insert into t values(1)"));
+        assertEquals(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED, ex.getErrorCode());
+    }
+
     private WSColumnPreparedStatement buildStmt(List<Field> fields) {
+        return buildStmt(fields, true);
+    }
+
+    private WSColumnPreparedStatement buildStmt(List<Field> fields, boolean insert) {
         Stmt2PrepareResp resp = new Stmt2PrepareResp();
-        resp.setInsert(true);
+        resp.setInsert(insert);
         resp.setStmtId(1L);
         resp.setFields(fields);
         return new WSColumnPreparedStatement(transport, param, "test_db",
@@ -705,6 +953,27 @@ public class WSColumnPreparedStatementTest {
         } catch (SQLException ex) {
             return ex;
         }
+    }
+
+    private static IllegalArgumentException assertIllegalArgumentException(ThrowingRunnable runnable) throws Exception {
+        try {
+            runnable.run();
+            fail("Expected IllegalArgumentException");
+            return null;
+        } catch (IllegalArgumentException ex) {
+            return ex;
+        }
+    }
+
+    private static void assertSetObjectTypeError(WSColumnPreparedStatement stmt, int sqlType,
+                                                 Object value, String message) throws Exception {
+        SQLException ex = assertSqlException(() -> stmt.setObject(1, value, sqlType));
+        assertTrue(ex.getMessage().contains(message));
+    }
+
+    private static void assertUnsupportedMethod(ThrowingRunnable runnable) throws Exception {
+        SQLException ex = assertSqlException(runnable);
+        assertEquals(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD, ex.getErrorCode());
     }
 
     private static int cachedChunkCount(Stmt2ColumnFieldBuffer buffer) throws Exception {

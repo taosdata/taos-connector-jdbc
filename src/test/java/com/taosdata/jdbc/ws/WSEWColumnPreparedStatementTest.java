@@ -135,6 +135,77 @@ public class WSEWColumnPreparedStatementTest {
     }
 
     @Test
+    public void serializationTask_acceptsBinaryTableName() throws Exception {
+        EWBackendThreadInfo info = new EWBackendThreadInfo(16, 16);
+        Map<Integer, Column> row = row("d0", 1000L, 11);
+        row.put(1, new Column("d0".getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                TSDB_DATA_TYPE_BINARY, 1));
+        info.getWriteQueue().put(row);
+
+        new WSEWColumnPreparedStatement.ColumnarWSEWSerializationTask(info, 1, stmtInfo(), true).invoke();
+
+        EWRawBlock block = info.getSerialQueue().poll();
+        try {
+            assertNotNull("task should have produced a serialized block", block);
+            assertTrue("no serialization error expected", block.getLastError() == null);
+        } finally {
+            releaseRawBlock(block);
+            info.releaseReusableColumnBuffers();
+        }
+    }
+
+    @Test
+    public void columnBufferWriter_ignoresNullBufferArraysDuringCleanup() {
+        WSEWColumnBufferWriter writer = new WSEWColumnBufferWriter(stmtInfo());
+
+        writer.resetColumnBuffers(null);
+        writer.releaseColumnBuffers(null);
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void columnBufferWriter_rejectsNullReusableBuffers() throws Exception {
+        WSEWColumnBufferWriter writer = new WSEWColumnBufferWriter(stmtInfo());
+
+        writer.buildFromQueuedRows(Arrays.asList(row("d0", 1000L, 11)), null, null);
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void columnBufferWriter_rejectsReusableBufferCountMismatch() throws Exception {
+        WSEWColumnBufferWriter writer = new WSEWColumnBufferWriter(stmtInfo());
+
+        writer.buildFromQueuedRows(Arrays.asList(row("d0", 1000L, 11)),
+                new Stmt2ColumnFieldBuffer[1], null);
+    }
+
+    @Test
+    public void serializationTask_rejectsUnsupportedTableNameType() throws Exception {
+        EWBackendThreadInfo info = new EWBackendThreadInfo(16, 16);
+        Map<Integer, Column> row = row("d0", 1000L, 11);
+        row.put(1, new Column(123, TSDB_DATA_TYPE_BINARY, 1));
+        info.getWriteQueue().put(row);
+
+        new WSEWColumnPreparedStatement.ColumnarWSEWSerializationTask(info, 1, stmtInfo(), true).invoke();
+
+        assertSerializationError(info, "table name must be string or binary");
+    }
+
+    @Test
+    public void serializationTask_rejectsUnsupportedColumnJavaTypes() throws Exception {
+        assertSingleColumnSerializationError(TSDB_DATA_TYPE_BOOL, "bad", "Unsupported java value type");
+        assertSingleColumnSerializationError(TSDB_DATA_TYPE_TINYINT, "bad", "Unsupported java value type");
+        assertSingleColumnSerializationError(TSDB_DATA_TYPE_SMALLINT, "bad", "Unsupported java value type");
+        assertSingleColumnSerializationError(TSDB_DATA_TYPE_INT, "bad", "Unsupported java value type");
+        assertSingleColumnSerializationError(TSDB_DATA_TYPE_BIGINT, "bad", "Unsupported java value type");
+        assertSingleColumnSerializationError(TSDB_DATA_TYPE_UBIGINT, "bad", "Unsupported java value type");
+        assertSingleColumnSerializationError(TSDB_DATA_TYPE_FLOAT, "bad", "Unsupported java value type");
+        assertSingleColumnSerializationError(TSDB_DATA_TYPE_DOUBLE, "bad", "Unsupported java value type");
+        assertSingleColumnSerializationError(TSDB_DATA_TYPE_TIMESTAMP, "bad", "Unsupported java value type");
+        assertSingleColumnSerializationError(TSDB_DATA_TYPE_BINARY, new Object(), "Unsupported java value type");
+        assertSingleColumnSerializationError(TSDB_DATA_TYPE_INT, 127, 1,
+                "Unsupported field type for WSEW columnar serialization");
+    }
+
+    @Test
     public void serializationTask_rejectsOutOfRangeUBigIntBigInteger() throws Exception {
         EWBackendThreadInfo info = new EWBackendThreadInfo(16, 16);
         StmtInfo stmt = conversionStmtInfo();
@@ -163,6 +234,46 @@ public class WSEWColumnPreparedStatementTest {
             releaseRawBlock(block);
             info.releaseReusableColumnBuffers();
         }
+    }
+
+    private static void assertSingleColumnSerializationError(int fieldType, Object value, String message)
+            throws Exception {
+        assertSingleColumnSerializationError(fieldType, fieldType, value, message);
+    }
+
+    private static void assertSingleColumnSerializationError(int metaFieldType, int columnFieldType,
+                                                            Object value, String message)
+            throws Exception {
+        EWBackendThreadInfo info = new EWBackendThreadInfo(16, 16);
+        StmtInfo stmt = singleColumnStmtInfo(metaFieldType);
+        Map<Integer, Column> row = new HashMap<>();
+        row.put(1, new Column("d0", TSDB_DATA_TYPE_BINARY, 1));
+        row.put(2, new Column(value, columnFieldType, 2));
+        info.getWriteQueue().put(row);
+
+        new WSEWColumnPreparedStatement.ColumnarWSEWSerializationTask(info, 1, stmt, true).invoke();
+
+        assertSerializationError(info, message);
+    }
+
+    private static void assertSerializationError(EWBackendThreadInfo info, String message) {
+        EWRawBlock block = info.getSerialQueue().poll();
+        try {
+            assertNotNull("task must enqueue an error block", block);
+            assertNotNull("error block must carry the exception", block.getLastError());
+            assertTrue(block.getLastError().getMessage().contains(message));
+        } finally {
+            releaseRawBlock(block);
+            info.releaseReusableColumnBuffers();
+        }
+    }
+
+    private static StmtInfo singleColumnStmtInfo(int fieldType) {
+        Stmt2PrepareResp prepareResp = new Stmt2PrepareResp();
+        prepareResp.setInsert(true);
+        prepareResp.setStmtId(4L);
+        prepareResp.setFields(Arrays.asList(tbnameField(), colField(fieldType)));
+        return new StmtInfo(prepareResp, "INSERT INTO ? VALUES (?)");
     }
 
     @Test

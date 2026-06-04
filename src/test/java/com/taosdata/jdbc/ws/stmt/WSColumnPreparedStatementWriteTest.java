@@ -2,6 +2,7 @@ package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.TSDBDriver;
+import com.taosdata.jdbc.TaosPrepareStatement;
 import com.taosdata.jdbc.common.TDBlob;
 import com.taosdata.jdbc.utils.*;
 import com.taosdata.jdbc.ws.WSColumnPreparedStatement;
@@ -13,11 +14,13 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.*;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.Properties;
 
 public class WSColumnPreparedStatementWriteTest {
     private final String dbName = TestUtils.camelToSnake(WSColumnPreparedStatementWriteTest.class);
     private final String tableName = "wpt";
+    private final String stableName = "swpt_ext";
     private final String blobTableName = "wpt_blob";
     private final String tableName2 = "unsigned_stable";
     private Connection connection;
@@ -298,6 +301,87 @@ public class WSColumnPreparedStatementWriteTest {
     }
 
     @Test
+    public void testColumnDataExtension_columnRoute_roundTripsAllTypes() throws SQLException {
+        String sql = "insert into ? using " + dbName + "." + stableName
+                + " tags (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                + "values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        try (TaosPrepareStatement statement = (TaosPrepareStatement) prepareColumnStatement(sql)) {
+            long current = System.currentTimeMillis();
+            statement.setTableName("ext_all_types_1");
+            statement.setTagTimestamp(0, new Timestamp(current));
+            statement.setTagByte(1, (byte) 2);
+            statement.setTagShort(2, (short) 3);
+            statement.setTagInt(3, 4);
+            statement.setTagLong(4, 5L);
+            statement.setTagFloat(5, 6.6f);
+            statement.setTagDouble(6, 7.7);
+            statement.setTagBoolean(7, true);
+            statement.setTagString(8, "hello");
+            statement.setTagNString(9, "世界");
+            statement.setTagString(10, "hello world");
+            statement.setTagVarbinary(11, EXPECTED_VAR_BINARY);
+            statement.setTagGeometry(12, EXPECTED_GEOMETRY);
+            statement.setTagShort(13, TSDBConstants.MAX_UNSIGNED_BYTE);
+            statement.setTagInt(14, TSDBConstants.MAX_UNSIGNED_SHORT);
+            statement.setTagLong(15, TSDBConstants.MAX_UNSIGNED_INT);
+            statement.setTagBigInteger(16, new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG));
+
+            statement.setTimestamp(0, Collections.singletonList(current));
+            statement.setByte(1, Collections.singletonList((byte) 2));
+            statement.setShort(2, Collections.singletonList((short) 3));
+            statement.setInt(3, Collections.singletonList(4));
+            statement.setLong(4, Collections.singletonList(5L));
+            statement.setFloat(5, Collections.singletonList(6.6f));
+            statement.setDouble(6, Collections.singletonList(7.7));
+            statement.setBoolean(7, Collections.singletonList(true));
+            statement.setString(8, Collections.singletonList("hello"), 10);
+            statement.setNString(9, Collections.singletonList("世界"), 10);
+            statement.setString(10, Collections.singletonList("hello world"), 20);
+            statement.setVarbinary(11, Collections.singletonList(EXPECTED_VAR_BINARY), 100);
+            statement.setGeometry(12, Collections.singletonList(EXPECTED_GEOMETRY), 100);
+            statement.setShort(13, Collections.singletonList((short) TSDBConstants.MAX_UNSIGNED_BYTE));
+            statement.setInt(14, Collections.singletonList(TSDBConstants.MAX_UNSIGNED_SHORT));
+            statement.setLong(15, Collections.singletonList(TSDBConstants.MAX_UNSIGNED_INT));
+            statement.setBigInteger(16, Collections.singletonList(new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG)));
+            statement.setBlob(17, Collections.<Blob>singletonList(new TDBlob(EXPECTED_BLOB, true)), 100);
+            statement.setBigDecimal(18, Collections.singletonList(new BigDecimal(DECIMAL_VALUE_1)));
+            statement.setBigDecimal(19, Collections.singletonList(new BigDecimal(DECIMAL_VALUE_2)));
+
+            statement.columnDataAddBatch();
+            statement.columnDataExecuteBatch();
+
+            try (ResultSet resultSet = statement.executeQuery(
+                    "select ts, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, "
+                            + "c13, c14, c15, c16, c17, c18, c19 from " + dbName + "." + stableName)) {
+                WsStmtWriteTestSupport.assertAllTypeRow(resultSet, current);
+            }
+            try (ResultSet resultSet = statement.executeQuery(
+                    "select t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, "
+                            + "t14, t15, t16, t17 from " + dbName + "." + stableName)) {
+                Assert.assertTrue(resultSet.next());
+                Assert.assertEquals(new Timestamp(current), resultSet.getTimestamp(1));
+                Assert.assertEquals((byte) 2, resultSet.getByte(2));
+                Assert.assertEquals((short) 3, resultSet.getShort(3));
+                Assert.assertEquals(4, resultSet.getInt(4));
+                Assert.assertEquals(5L, resultSet.getLong(5));
+                Assert.assertEquals(6.6f, resultSet.getFloat(6), 0.0001);
+                Assert.assertEquals(7.7, resultSet.getDouble(7), 0.0001);
+                Assert.assertTrue(resultSet.getBoolean(8));
+                Assert.assertEquals("hello", resultSet.getString(9));
+                Assert.assertEquals("世界", resultSet.getString(10));
+                Assert.assertEquals("hello world", resultSet.getString(11));
+                Assert.assertArrayEquals(EXPECTED_VAR_BINARY, resultSet.getBytes(12));
+                Assert.assertArrayEquals(EXPECTED_GEOMETRY, resultSet.getBytes(13));
+                Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_BYTE, resultSet.getShort(14));
+                Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_SHORT, resultSet.getInt(15));
+                Assert.assertEquals(TSDBConstants.MAX_UNSIGNED_INT, resultSet.getLong(16));
+                Assert.assertEquals(new BigInteger(TSDBConstants.MAX_UNSIGNED_LONG), resultSet.getObject(17));
+                Assert.assertFalse(resultSet.next());
+            }
+        }
+    }
+
+    @Test
     public void testSetObject_columnRoute_coercesBooleanAcrossNumericTypes() throws SQLException {
         String sql = "insert into " + dbName + "." + tableName + " (ts, c1, c2, c3, c4, c5, c6) values(?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement statement = prepareColumnStatement(sql)) {
@@ -536,6 +620,15 @@ public class WSColumnPreparedStatementWriteTest {
                     + "c11 varbinary(100), c12 geometry(100), c13 tinyint unsigned, c14 smallint unsigned, "
                     + "c15 int unsigned, c16 bigint unsigned, c17 blob, c18 decimal(4,2), "
                     + "c19 decimal(30,10))");
+            statement.execute("create stable if not exists " + dbName + "." + stableName
+                    + "(ts timestamp, c1 tinyint, c2 smallint, c3 int, c4 bigint, "
+                    + "c5 float, c6 double, c7 bool, c8 binary(10), c9 nchar(10), c10 varchar(20), "
+                    + "c11 varbinary(100), c12 geometry(100), c13 tinyint unsigned, c14 smallint unsigned, "
+                    + "c15 int unsigned, c16 bigint unsigned, c17 blob, c18 decimal(4,2), "
+                    + "c19 decimal(30,10)) tags (t1 timestamp, t2 tinyint, t3 smallint, t4 int, t5 bigint, "
+                    + "t6 float, t7 double, t8 bool, t9 binary(10), t10 nchar(10), t11 varchar(20), "
+                    + "t12 varbinary(100), t13 geometry(100), t14 tinyint unsigned, "
+                    + "t15 smallint unsigned, t16 int unsigned, t17 bigint unsigned)");
             statement.execute("create table if not exists " + dbName + "." + blobTableName
                     + "(ts timestamp, c1 blob)");
             statement.execute("create table if not exists " + dbName + "." + tableName2
