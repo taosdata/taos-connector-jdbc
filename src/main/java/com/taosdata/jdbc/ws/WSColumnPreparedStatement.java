@@ -265,7 +265,12 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements TaosPr
 
     @Override
     public void setByte(int parameterIndex, byte x) throws SQLException {
-        stageFixed(parameterIndex - 1, x & 0xFFL);
+        byte ft = fieldType(parameterIndex);
+        if (ft == TSDB_DATA_TYPE_UTINYINT) {
+            stageFixed(parameterIndex - 1, x & 0xFFL);
+        } else {
+            stageFixed(parameterIndex - 1, x);
+        }
     }
 
     @Override

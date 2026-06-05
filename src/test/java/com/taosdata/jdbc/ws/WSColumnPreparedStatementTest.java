@@ -18,12 +18,17 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
 import java.sql.SQLException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_BIGINT;
 import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_INT;
+import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_SMALLINT;
+import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_TINYINT;
 import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_BLOB;
 import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP;
 import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_UTINYINT;
@@ -773,6 +778,115 @@ public class WSColumnPreparedStatementTest {
         stmt.close();
         SQLException ex = assertSqlException(() -> stmt.addBatch("insert into t values(1)"));
         assertEquals(TSDBErrorNumbers.ERROR_STATEMENT_CLOSED, ex.getErrorCode());
+    }
+
+    // ---- setByte sign/zero extension tests ----
+
+    /**
+     * Fixed-width block layout (little-endian): 4B total_len, 4B type, 4B rowCount,
+     * rowCount × 1B null-flag, 1B have_length, 4B buffer_len, then raw values.
+     */
+    private static final int FIXED_BLOCK_HEADER = 17;
+
+    private static byte[] rawFixedBlock(WSColumnPreparedStatement stmt, int paramIdx) throws Exception {
+        return stmt.getColumnBuffer(paramIdx - 1).buildColumnBlock();
+    }
+
+    /**
+     * Read the raw value bytes at a given offset from the block, width bytes.
+     */
+    private static long readRawLE(byte[] block, int rawOffset, int width) {
+        long v = 0;
+        for (int i = 0; i < width; i++) {
+            v |= (block[rawOffset + i] & 0xFFL) << (i * 8);
+        }
+        return v;
+    }
+
+    private static long readFixedRaw(byte[] block, int rowCount, int width, int desiredRow) {
+        // header: 4B total_len + 4B type + 4B num + rowCount*1B nulls + 1B have_len + 4B buf_len
+        int rawOffset = FIXED_BLOCK_HEADER + rowCount + desiredRow * width;
+        return readRawLE(block, rawOffset, width);
+    }
+
+    @Test
+    public void setByte_negativeOnTinyInt_preservesNegative() throws Exception {
+        WSColumnPreparedStatement stmt = buildStmt(Collections.singletonList(field(
+                (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_TINYINT)));
+        stmt.setByte(1, (byte) -1);
+        byte[] block = rawFixedBlock(stmt, 1);
+        long raw = readFixedRaw(block, 1, 1, 0) & 0xFF;
+        assertEquals("TINYINT raw value", 0xFF, raw);
+    }
+
+    @Test
+    public void setByte_negativeOnSmallInt_signExtendsToNegativeOne() throws Exception {
+        WSColumnPreparedStatement stmt = buildStmt(Collections.singletonList(field(
+                (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_SMALLINT)));
+        stmt.setByte(1, (byte) -1);
+        byte[] block = rawFixedBlock(stmt, 1);
+        long raw = readFixedRaw(block, 1, 2, 0) & 0xFFFF;
+        assertEquals("SMALLINT raw value", 0xFFFF, raw);
+    }
+
+    @Test
+    public void setByte_negativeOnInt_signExtendsToNegativeOne() throws Exception {
+        WSColumnPreparedStatement stmt = buildStmt(Collections.singletonList(field(
+                (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_INT)));
+        stmt.setByte(1, (byte) -1);
+        byte[] block = rawFixedBlock(stmt, 1);
+        long raw = readFixedRaw(block, 1, 4, 0) & 0xFFFFFFFFL;
+        assertEquals("INT raw value", 0xFFFFFFFFL, raw);
+    }
+
+    @Test
+    public void setByte_negativeOnBigInt_signExtendsToNegativeOne() throws Exception {
+        WSColumnPreparedStatement stmt = buildStmt(Collections.singletonList(field(
+                (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_BIGINT)));
+        stmt.setByte(1, (byte) -1);
+        byte[] block = rawFixedBlock(stmt, 1);
+        long raw = readFixedRaw(block, 1, 8, 0);
+        assertEquals("BIGINT raw value", -1L, raw);
+    }
+
+    @Test
+    public void setByte_negativeOnUnsignedTinyInt_zeroExtends() throws Exception {
+        WSColumnPreparedStatement stmt = buildStmt(Collections.singletonList(field(
+                (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_UTINYINT)));
+        stmt.setByte(1, (byte) -1);
+        byte[] block = rawFixedBlock(stmt, 1);
+        long raw = readFixedRaw(block, 1, 1, 0) & 0xFF;
+        assertEquals("UTINYINT raw value (unsigned 255)", 0xFF, raw);
+    }
+
+    @Test
+    public void setByte_positiveOnUnsignedTinyInt_preservesValue() throws Exception {
+        WSColumnPreparedStatement stmt = buildStmt(Collections.singletonList(field(
+                (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_UTINYINT)));
+        stmt.setByte(1, (byte) 127);
+        byte[] block = rawFixedBlock(stmt, 1);
+        long raw = readFixedRaw(block, 1, 1, 0) & 0xFF;
+        assertEquals("UTINYINT raw value", 0x7F, raw);
+    }
+
+    @Test
+    public void setObject_byteOnSmallInt_signExtends() throws Exception {
+        WSColumnPreparedStatement stmt = buildStmt(Collections.singletonList(field(
+                (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_SMALLINT)));
+        stmt.setObject(1, Byte.valueOf((byte) -1));
+        byte[] block = rawFixedBlock(stmt, 1);
+        long raw = readFixedRaw(block, 1, 2, 0) & 0xFFFF;
+        assertEquals("SMALLINT raw via Byte setObject", 0xFFFF, raw);
+    }
+
+    @Test
+    public void setObject_byteWithTinyIntType_signExtendsToWiderColumn() throws Exception {
+        WSColumnPreparedStatement stmt = buildStmt(Collections.singletonList(field(
+                (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_INT)));
+        stmt.setObject(1, Byte.valueOf((byte) -1), java.sql.Types.TINYINT);
+        byte[] block = rawFixedBlock(stmt, 1);
+        long raw = readFixedRaw(block, 1, 4, 0) & 0xFFFFFFFFL;
+        assertEquals("INT raw via setObject(Types.TINYINT, -1)", 0xFFFFFFFFL, raw);
     }
 
     private WSColumnPreparedStatement buildStmt(List<Field> fields) {
