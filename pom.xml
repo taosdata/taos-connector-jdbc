@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.taosdata.jdbc</groupId>
     <artifactId>taos-jdbcdriver</artifactId>
-    <version>3.8.3</version>
+    <version>3.8.4</version>
 
     <packaging>jar</packaging>
     <name>JDBCDriver</name>
@@ -237,6 +237,9 @@
                 <version>3.2.5</version>
                 <configuration>
                     <skip>true</skip>
+                    <systemPropertyVariables>
+                        <taos.rebalance.deterministic>true</taos.rebalance.deterministic>
+                    </systemPropertyVariables>
                 </configuration>
                 <executions>
                     <execution>

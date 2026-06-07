@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -25,6 +26,9 @@ import static com.taosdata.jdbc.TSDBErrorNumbers.ERROR_CONNECTION_TIMEOUT;
  */
 public class WSConnectionManager implements AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(WSConnectionManager.class);
+
+    private static final boolean SHUFFLE_ENDPOINTS =
+            !Boolean.getBoolean("taos.rebalance.deterministic");
 
     private final AtomicInteger reconnectCount = new AtomicInteger(0);
     private boolean firstDisconnect = true;
@@ -52,6 +56,9 @@ public class WSConnectionManager implements AutoCloseable {
         this.inFlightRequest = inFlightRequest;
         this.defaultTimeout = param.getRequestTimeout();
         expandEndpointsFromKnownCluster();
+        if (SHUFFLE_ENDPOINTS) {
+            Collections.shuffle(connectionParam.getEndpoints());
+        }
         initializeClients();
         rebalanceManager.newCluster(param.getEndpoints());
     }
