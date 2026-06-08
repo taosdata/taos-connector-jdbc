@@ -27,24 +27,18 @@ public class WsPstmtReconnectInsertTest {
     static final String TABLE_NAME = "wpt";
     static Connection connection;
     private final String actionStr;
-    private final String mode;
 
-    public WsPstmtReconnectInsertTest(String actionStr, String mode) {
+    public WsPstmtReconnectInsertTest(String actionStr) {
         this.actionStr = actionStr;
-        this.mode = mode;
     }
+
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][] {
-                { "\"action\":\"stmt2_init\"", "" },
-                { "\"action\":\"stmt2_prepare\"", "" },
-                { "\"action\":\"stmt2_bind\"", "" },
-                { "\"action\":\"stmt2_exec\"", "" },
-
-                { "\"action\":\"stmt2_init\"", "line" },
-                { "\"action\":\"stmt2_prepare\"", "line" },
-                { "\"action\":\"stmt2_bind\"", "line" },
-                { "\"action\":\"stmt2_exec\"", "line" }
+                { "\"action\":\"stmt2_init\"" },
+                { "\"action\":\"stmt2_prepare\"" },
+                { "\"action\":\"stmt2_bind\"" },
+                { "\"action\":\"stmt2_exec\"" }
         });
     }
 
@@ -95,10 +89,6 @@ public class WsPstmtReconnectInsertTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_RETRY_COUNT, "3");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, "5000");
 
-        if ("line".equalsIgnoreCase(this.mode)) {
-            properties.setProperty(TSDBDriver.PROPERTY_KEY_PBS_MODE, this.mode);
-        }
-
         stmt2Write(url, properties);
         mockB.stop();
     }
@@ -117,10 +107,6 @@ public class WsPstmtReconnectInsertTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_INTERVAL_MS, "2000");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_RETRY_COUNT, "3");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, "5000");
-
-        if ("line".equalsIgnoreCase(this.mode)) {
-            properties.setProperty(TSDBDriver.PROPERTY_KEY_PBS_MODE, this.mode);
-        }
 
         String sql = "INSERT INTO " + DB_NAME + "." + TABLE_NAME + "(tbname, groupId, location, ts, current, voltage, phase) VALUES (?,?,?,?,?,?,?)";
 
@@ -207,4 +193,3 @@ public class WsPstmtReconnectInsertTest {
         RebalanceManager.getInstance().clearAllForTest();
     }
 }
-

@@ -155,6 +155,7 @@ public class TSDBDriver extends AbstractDriver {
     public static final String PROPERTY_KEY_STRICT_CHECK = "strictCheck";
     public static final String PROPERTY_KEY_RETRY_TIMES = "retryTimes";
     public static final String PROPERTY_KEY_ASYNC_WRITE = "asyncWrite";
+    public static final String PROPERTY_KEY_STMT_BIND_MODE = "stmtBindMode";
 
     /**
      * for health check
@@ -167,11 +168,6 @@ public class TSDBDriver extends AbstractDriver {
     public static final String PROPERTY_KEY_HEALTH_CHECK_RECOVERY_INTERVAL = "healthCheckRecoveryInterval";
     public static final String PROPERTY_KEY_REBALANCE_THRESHOLD = "rebalanceThreshold";
     public static final String PROPERTY_KEY_REBALANCE_CON_BASE_COUNT = "rebalanceConBaseCount";
-
-    /**
-     * for stmt bind mode
-     */
-    public static final String PROPERTY_KEY_PBS_MODE = "pbsMode";
 
     /**
      * max message number send to server concurrently

@@ -1,6 +1,8 @@
 package com.taosdata.jdbc.ws.stmt2.entity;
 
 import com.taosdata.jdbc.common.Column;
+import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnFieldBuffer;
+import com.taosdata.jdbc.ws.stmt2.Stmt2ChunkSizingUtil;
 
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -10,6 +12,10 @@ public class EWBackendThreadInfo {
     private final ArrayBlockingQueue<Map<Integer, Column>> writeQueue;
     private final ArrayBlockingQueue<EWRawBlock> serialQueue;
     private final AtomicBoolean serializeRunning;
+    private volatile Stmt2ColumnFieldBuffer[] reusableColumnBuffers;
+    private volatile Stmt2ChunkSizingUtil.BufferSpec[] nextBufferSpecs;
+    private volatile int[] underuseStreaks;
+
     public EWBackendThreadInfo(int writeQueueSize, int serialQueueSize) {
         this.serializeRunning = new AtomicBoolean(false);
         this.writeQueue = new ArrayBlockingQueue<>(writeQueueSize);
@@ -23,5 +29,41 @@ public class EWBackendThreadInfo {
     }
     public AtomicBoolean getSerializeRunning() {
         return serializeRunning;
+    }
+
+    public Stmt2ColumnFieldBuffer[] getReusableColumnBuffers() {
+        return reusableColumnBuffers;
+    }
+
+    public void setReusableColumnBuffers(Stmt2ColumnFieldBuffer[] reusableColumnBuffers) {
+        this.reusableColumnBuffers = reusableColumnBuffers;
+    }
+
+    public void releaseReusableColumnBuffers() {
+        if (reusableColumnBuffers == null) {
+            return;
+        }
+        for (Stmt2ColumnFieldBuffer buffer : reusableColumnBuffers) {
+            if (buffer != null) {
+                buffer.release();
+            }
+        }
+        reusableColumnBuffers = null;
+    }
+
+    public Stmt2ChunkSizingUtil.BufferSpec[] getNextBufferSpecs() {
+        return nextBufferSpecs;
+    }
+
+    public void setNextBufferSpecs(Stmt2ChunkSizingUtil.BufferSpec[] nextBufferSpecs) {
+        this.nextBufferSpecs = nextBufferSpecs;
+    }
+
+    public int[] getUnderuseStreaks() {
+        return underuseStreaks;
+    }
+
+    public void setUnderuseStreaks(int[] underuseStreaks) {
+        this.underuseStreaks = underuseStreaks;
     }
 }
