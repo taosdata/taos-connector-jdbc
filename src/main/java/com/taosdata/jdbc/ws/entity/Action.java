@@ -30,6 +30,7 @@ public enum Action {
     STMT2_PREPARE("stmt2_prepare", Stmt2PrepareResp.class),
     STMT2_BIND("stmt2_bind", Stmt2Resp.class),
     STMT2_EXEC("stmt2_exec", Stmt2ExecResp.class),
+    STMT2_BIND_EXEC("stmt2_bind_exec", Stmt2ExecResp.class),
     // response means nothing
     STMT2_CLOSE("stmt2_close", Stmt2Resp.class),
     STMT2_USE_RESULT("stmt2_result", ResultResp.class),

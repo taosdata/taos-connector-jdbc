@@ -1104,7 +1104,7 @@ public class TSWSPreparedStatementTest {
             }
         }
 
-        assert(haveResult);
+        Assert.assertTrue(haveResult);
 
     }
 
@@ -1157,7 +1157,7 @@ public class TSWSPreparedStatementTest {
     public static void beforeClass() throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
+            url = "jdbc:TAOS-WS://" + HOST + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&stmtBindMode=traditional";
         }
         conn = DriverManager.getConnection(url);
         try (Statement stmt = conn.createStatement()) {
@@ -1181,4 +1181,3 @@ public class TSWSPreparedStatementTest {
         }
     }
 }
-

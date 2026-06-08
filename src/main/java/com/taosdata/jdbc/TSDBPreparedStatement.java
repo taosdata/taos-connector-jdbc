@@ -918,6 +918,7 @@ public class TSDBPreparedStatement extends TSDBStatement implements TaosPrepareS
         this.columnDataClearBatchInternal();
     }
 
+    @Override
     public void columnDataExecuteBatch() throws SQLException {
         TSDBJNIConnector connector = ((TSDBConnection) this.getConnection()).getConnector();
         connector.executeBatch(this.nativeStmtHandle);

@@ -1,8 +1,5 @@
 package com.taosdata.jdbc.ws.stmt;
 
-import com.taosdata.jdbc.TSDBDriver;
-import com.taosdata.jdbc.utils.SpecifyAddress;
-import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -14,15 +11,14 @@ import java.io.InputStream;
 import java.io.Reader;
 import java.io.StringReader;
 import java.net.MalformedURLException;
-import java.math.BigDecimal;
 import java.net.URL;
 import java.sql.*;
 import java.util.Calendar;
 import java.util.Properties;
 import java.util.TimeZone;
 
-public class WsPStmtLineModeNullTest {
-            final String db_name = TestUtils.camelToSnake(WsPStmtLineModeNullTest.class);
+public class WsPStmtTraditionalNullTest {
+    final String db_name = TestUtils.camelToSnake(WsPStmtTraditionalNullTest.class);
     final String tableName = "wpt";
     String stableName = "swpt";
     Connection connection;
@@ -338,7 +334,7 @@ public class WsPStmtLineModeNullTest {
         preparedStatement.setTimestamp(1, timestamp, cal);
     }
 
-    @Test(expected = SQLException.class)
+    @Test
     public void testSetNull_WithTypeName() throws SQLException {
         preparedStatement.setNull(1, java.sql.Types.VARCHAR, "VARCHAR");
     }
@@ -469,15 +465,7 @@ public class WsPStmtLineModeNullTest {
 
     @Before
     public void before() throws SQLException {
-        String url = SpecifyAddress.getInstance().getRestWithoutUrl();
-        if (url == null) {
-            url = "jdbc:TAOS-WS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
-        } else {
-            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
-        }
-        Properties properties = new Properties();
-        properties.setProperty(TSDBDriver.PROPERTY_KEY_PBS_MODE, "line");
-        connection = DriverManager.getConnection(url, properties);
+        connection = DriverManager.getConnection(WsStmtWriteTestSupport.traditionalWebSocketUrl(), new Properties());
         try (Statement statement = connection.createStatement()) {
             statement.execute("drop database if exists " + db_name);
             statement.execute("create database " + db_name + " keep 36500");
@@ -513,4 +501,3 @@ public class WsPStmtLineModeNullTest {
     }
 
 }
-

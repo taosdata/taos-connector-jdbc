@@ -30,6 +30,9 @@ public class WSRetryableStmt extends WSStatement {
     protected final AtomicReference<SQLException> lastError = new AtomicReference<>(null);
     protected final AtomicInteger batchInsertedRowsInner;
     private long reconnectCount;
+    // Whether write operations on this statement may use STMT2_BIND_EXEC.
+    // Query operations always stay on the legacy bind + exec flow.
+    private final boolean useBindExec;
 
     public WSRetryableStmt(AbstractConnection connection,
                            ConnectionParam param,
@@ -43,6 +46,7 @@ public class WSRetryableStmt extends WSStatement {
         this.stmtInfo = stmtInfo;
         this.batchInsertedRowsInner = batchInsertedRows;
         this.reconnectCount = transport.getReconnectCount();
+        this.useBindExec = connection instanceof WSConnection && ((WSConnection) connection).supportsStmt2BindExec();
     }
 
     public void initStmt(int retryTimes) throws SQLException {
@@ -70,7 +74,21 @@ public class WSRetryableStmt extends WSStatement {
         }
     }
 
-    public void writeBlockWithRetrySync(ByteBuf rawBlock) throws SQLException {
+    /**
+     * Sends one stmt2 write request through the retry/reconnect loop.
+     *
+     * <p>The caller is responsible for allocating {@code rawBlock} with the header
+     * layout expected by {@link #modifyStmtIdAndReqId}: reqId (8 bytes LE) at offset 0
+     * followed by stmtId (8 bytes LE) at offset 8, then the payload.
+     *
+     * <p>Protocol selection is internal to {@link #executeWithRetry(ByteBuf, int, boolean)}:
+     * write operations use {@code STMT2_BIND_EXEC} when the owning {@link WSConnection}
+     * reports bind-exec capability, while queries always stay on the legacy
+     * {@code STMT2_BIND} + {@code STMT2_EXEC} flow.
+     *
+     * @param rawBlock the raw binary payload to send
+     */
+    protected void writeBlockWithRetrySync(ByteBuf rawBlock) throws SQLException {
         Utils.retainByteBuf(rawBlock);
         try {
             executeWithRetry(rawBlock, OPERATION_TYPE_WRITE, param.isEnableAutoConnect());
@@ -109,12 +127,6 @@ public class WSRetryableStmt extends WSStatement {
             retryCount = param.getRetryTimes();
         }
         for (int i = 0; i < retryCount; i++) {
-            if (i > 0) {
-                rawBlock = orgRawBlock.copy();
-                rawBlock.readerIndex(originalReaderIndex);
-                rawBlock.writerIndex(originalWriterIndex);
-            }
-
             long reqId = ReqId.getReqID();
             try {
                 if (reconnectCount != transport.getReconnectCount() && param.isEnableAutoConnect()) {
@@ -122,21 +134,38 @@ public class WSRetryableStmt extends WSStatement {
                     reconnectCount = transport.getReconnectCount();
                 }
 
-                modifyStmtIdAndReqId(rawBlock, stmtInfo.getStmtId(), reqId);
-
-                // Execute bind operation
-                Stmt2Resp bindResp = (Stmt2Resp) transport.send(Action.STMT2_BIND.getAction(),
-                        reqId, rawBlock, false, this.getQueryTimeoutInMs());
-                if (Code.SUCCESS.getCode() != bindResp.getCode()) {
-                    throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
+                if (i > 0) {
+                    rawBlock = orgRawBlock.copy();
+                    rawBlock.readerIndex(originalReaderIndex);
+                    rawBlock.writerIndex(originalWriterIndex);
                 }
 
-                // Execute operation
-                reqId = ReqId.getReqID();
-                Request request = RequestFactory.generateExec(stmtInfo.getStmtId(), reqId);
-                Stmt2ExecResp resp = (Stmt2ExecResp) transport.send(request, false, this.getQueryTimeoutInMs());
-                if (Code.SUCCESS.getCode() != resp.getCode()) {
-                    throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
+                modifyStmtIdAndReqId(rawBlock, stmtInfo.getStmtId(), reqId);
+                Stmt2ExecResp resp;
+
+                if (useBindExec && operationType == OPERATION_TYPE_WRITE) {
+                    // New path: STMT2_BIND_EXEC combines bind and exec
+                    resp = (Stmt2ExecResp) transport.send(Action.STMT2_BIND_EXEC.getAction(),
+                            reqId, rawBlock, false, this.getQueryTimeoutInMs());
+                    if (Code.SUCCESS.getCode() != resp.getCode()) {
+                        throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
+                    }
+                } else {
+                    // Legacy path: STMT2_BIND + STMT2_EXEC
+                    // Execute bind operation
+                    Stmt2Resp bindResp = (Stmt2Resp) transport.send(Action.STMT2_BIND.getAction(),
+                            reqId, rawBlock, false, this.getQueryTimeoutInMs());
+                    if (Code.SUCCESS.getCode() != bindResp.getCode()) {
+                        throw new SQLException("(0x" + Integer.toHexString(bindResp.getCode()) + "):" + bindResp.getMessage());
+                    }
+
+                    // Execute operation
+                    reqId = ReqId.getReqID();
+                    Request request = RequestFactory.generateExec(stmtInfo.getStmtId(), reqId);
+                    resp = (Stmt2ExecResp) transport.send(request, false, this.getQueryTimeoutInMs());
+                    if (Code.SUCCESS.getCode() != resp.getCode()) {
+                        throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
+                    }
                 }
 
                 // Process result based on operation type
@@ -147,10 +176,10 @@ public class WSRetryableStmt extends WSStatement {
                 } else if (operationType == OPERATION_TYPE_QUERY) {
                     // Get query result
                     reqId = ReqId.getReqID();
-                    request = RequestFactory.generateUseResult(stmtInfo.getStmtId(), reqId);
+                    Request request = RequestFactory.generateUseResult(stmtInfo.getStmtId(), reqId);
                     ResultResp useResultResp = (ResultResp) transport.send(request, false, this.getQueryTimeoutInMs());
-                    if (Code.SUCCESS.getCode() != resp.getCode()) {
-                        throw new SQLException("(0x" + Integer.toHexString(resp.getCode()) + "):" + resp.getMessage());
+                    if (Code.SUCCESS.getCode() != useResultResp.getCode()) {
+                        throw new SQLException("(0x" + Integer.toHexString(useResultResp.getCode()) + "):" + useResultResp.getMessage());
                     }
                     return useResultResp;
                 } else {
@@ -158,7 +187,7 @@ public class WSRetryableStmt extends WSStatement {
                 }
             } catch (SQLException e) {
                 // Handle exception based on operation type
-                boolean shouldContinue = handleException(e, i, reconnectCount, operationType);
+                boolean shouldContinue = handleException(e, i, retryCount, reconnectCount, operationType);
                 if (!shouldContinue) {
                     lastError.set(e);
                     break;
@@ -178,16 +207,16 @@ public class WSRetryableStmt extends WSStatement {
         return null;
     }
 
-    private boolean handleException(SQLException e, int retryCount, long reconnectCount, int operationType) {
+    private boolean handleException(SQLException e, int retryIndex, int maxAttempts, long reconnectCount, int operationType) {
         String operationName = (operationType == OPERATION_TYPE_WRITE) ? "writeBlockWithRetry" : "queryWithRetry";
 
-        if (retryCount == param.getRetryTimes() - 1) {
+        if (retryIndex >= maxAttempts - 1) {
             lastError.set(e);
             return false; // Exception will be thrown externally
         }
 
         log.error("Error in {}, stmt id: {}, retry times: {}, code: {}, msg: {}",
-                operationName, stmtInfo.getStmtId(), retryCount, e.getErrorCode(), e.getMessage());
+                operationName, stmtInfo.getStmtId(), retryIndex, e.getErrorCode(), e.getMessage());
 
         // Check if retry is needed
         return shouldRetry(e, reconnectCount);
@@ -220,5 +249,19 @@ public class WSRetryableStmt extends WSStatement {
             Request close = RequestFactory.generateClose(stmtInfo.getStmtId(), reqId);
             transport.send(close, this.getQueryTimeoutInMs());
         }
+    }
+
+    /**
+     * Package-private, test-only hook that exposes whether this statement is eligible to
+     * use {@code STMT2_BIND_EXEC} for write operations.
+     *
+     * <p>This does not mean every operation uses bind-exec: query operations still run
+     * through the legacy bind + exec flow.
+     *
+     * @return true if writes may use {@code STMT2_BIND_EXEC}; false if all operations
+     * use the legacy {@code STMT2_BIND} + {@code STMT2_EXEC} flow
+     */
+    boolean isUsingBindExec() {
+        return useBindExec;
     }
 }

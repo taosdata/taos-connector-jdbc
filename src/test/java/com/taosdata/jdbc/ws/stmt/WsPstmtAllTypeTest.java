@@ -2,9 +2,7 @@ package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.TSDBConstants;
 import com.taosdata.jdbc.common.TDBlob;
-import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.StringUtils;
-import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.TSWSPreparedStatement;
 import io.netty.util.ResourceLeakDetector;
@@ -17,7 +15,7 @@ import java.util.Collections;
 import java.util.Properties;
 
 public class WsPstmtAllTypeTest {
-            final String db_name = TestUtils.camelToSnake(WsPstmtAllTypeTest.class);
+            final String dbName = TestUtils.camelToSnake(WsPstmtAllTypeTest.class);
     final String tableName = "wpt";
     final String stableName = "swpt";
 
@@ -31,7 +29,7 @@ public class WsPstmtAllTypeTest {
 
     @Test
     public void testExecuteUpdate() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "insert into " + dbName + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             long current = System.currentTimeMillis();
             statement.setTimestamp(1, new Timestamp(current));
@@ -60,7 +58,7 @@ public class WsPstmtAllTypeTest {
 
             statement.executeUpdate();
 
-            try (ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + tableName)) {
+            try (ResultSet resultSet = statement.executeQuery("select * from " + dbName + "." + tableName)) {
                 resultSet.next();
                 Assert.assertEquals(new Timestamp(current), resultSet.getTimestamp(1));
                 Assert.assertEquals((byte) 2, resultSet.getByte(2));
@@ -96,7 +94,7 @@ public class WsPstmtAllTypeTest {
 
     @Test
     public void testExecuteUpdate2() throws SQLException {
-        String sql = "insert into stb_1 using " + db_name + "." + stableName + " tags (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) values (?, ?, ?)";
+        String sql = "insert into stb_1 using " + dbName + "." + stableName + " tags (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) values (?, ?, ?)";
         try (TSWSPreparedStatement statement = connection.prepareStatement(sql).unwrap(TSWSPreparedStatement.class)) {
             long current = System.currentTimeMillis();
             statement.setTagTimestamp(0, new Timestamp(current));
@@ -123,7 +121,7 @@ public class WsPstmtAllTypeTest {
             statement.columnDataAddBatch();
             statement.columnDataExecuteBatch();
 
-            try (ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + stableName)) {
+            try (ResultSet resultSet = statement.executeQuery("select * from " + dbName + "." + stableName)) {
                 resultSet.next();
                 Assert.assertEquals(new Timestamp(current), resultSet.getTimestamp(1));
                 Assert.assertEquals((byte) 2, resultSet.getByte(2));
@@ -154,7 +152,7 @@ public class WsPstmtAllTypeTest {
 
     @Test
     public void testExecuteUpdateWithSetObject() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "insert into " + dbName + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             long current = System.currentTimeMillis();
             statement.setObject(1, new Timestamp(current));
@@ -183,7 +181,7 @@ public class WsPstmtAllTypeTest {
 
             statement.executeUpdate();
 
-            try (ResultSet resultSet = statement.executeQuery("select * from " + db_name + "." + tableName)) {
+            try (ResultSet resultSet = statement.executeQuery("select * from " + dbName + "." + tableName)) {
                 resultSet.next();
                 Assert.assertEquals(new Timestamp(current), resultSet.getTimestamp(1));
                 Assert.assertEquals((byte) 2, resultSet.getByte(2));
@@ -218,7 +216,7 @@ public class WsPstmtAllTypeTest {
 
     @Test
     public void testExecuteCriticalValue() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "insert into " + dbName + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (TSWSPreparedStatement statement = connection.prepareStatement(sql).unwrap(TSWSPreparedStatement.class)) {
             statement.setTimestamp(1, new Timestamp(0));
             statement.setByte(2, (byte) 127);
@@ -248,7 +246,7 @@ public class WsPstmtAllTypeTest {
 
     @Test(expected = SQLException.class)
     public void testUtinyIntOutOfRange() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName2 + " values(?, ?, ?, ?, ?)";
+        String sql = "insert into " + dbName + "." + tableName2 + " values(?, ?, ?, ?, ?)";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setTimestamp(1, new Timestamp(0));
             statement.setShort(2, (short) (TSDBConstants.MAX_UNSIGNED_BYTE + 1));
@@ -262,7 +260,7 @@ public class WsPstmtAllTypeTest {
 
     @Test(expected = SQLException.class)
     public void testUtinyIntOutOfRange2() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName2 + " values(?, ?, ?, ?, ?)";
+        String sql = "insert into " + dbName + "." + tableName2 + " values(?, ?, ?, ?, ?)";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setTimestamp(1, new Timestamp(0));
             statement.setShort(2, (short) -1);
@@ -276,7 +274,7 @@ public class WsPstmtAllTypeTest {
 
     @Test(expected = SQLException.class)
     public void testUShortOutOfRange() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName2 + " values(?, ?, ?, ?, ?)";
+        String sql = "insert into " + dbName + "." + tableName2 + " values(?, ?, ?, ?, ?)";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setTimestamp(1, new Timestamp(0));
             statement.setShort(2, (short) 0);
@@ -290,7 +288,7 @@ public class WsPstmtAllTypeTest {
 
     @Test(expected = SQLException.class)
     public void testUShortOutOfRange2() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName2 + " values(?, ?, ?, ?, ?)";
+        String sql = "insert into " + dbName + "." + tableName2 + " values(?, ?, ?, ?, ?)";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setTimestamp(1, new Timestamp(0));
             statement.setShort(2, (short) 0);
@@ -304,7 +302,7 @@ public class WsPstmtAllTypeTest {
 
     @Test(expected = SQLException.class)
     public void testUIntOutOfRange() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName2 + " values(?, ?, ?, ?, ?)";
+        String sql = "insert into " + dbName + "." + tableName2 + " values(?, ?, ?, ?, ?)";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setTimestamp(1, new Timestamp(0));
             statement.setShort(2, (short) 0);
@@ -318,7 +316,7 @@ public class WsPstmtAllTypeTest {
 
     @Test(expected = SQLException.class)
     public void testUIntOutOfRange2() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName2 + " values(?, ?, ?, ?, ?)";
+        String sql = "insert into " + dbName + "." + tableName2 + " values(?, ?, ?, ?, ?)";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setTimestamp(1, new Timestamp(0));
             statement.setShort(2, (short) 0);
@@ -332,7 +330,7 @@ public class WsPstmtAllTypeTest {
 
     @Test(expected = SQLException.class)
     public void testULongOutOfRange() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName2 + " values(?, ?, ?, ?, ?)";
+        String sql = "insert into " + dbName + "." + tableName2 + " values(?, ?, ?, ?, ?)";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setTimestamp(1, new Timestamp(0));
             statement.setShort(2, (short) 0);
@@ -346,7 +344,7 @@ public class WsPstmtAllTypeTest {
 
     @Test(expected = SQLException.class)
     public void testULongOutOfRange2() throws SQLException {
-        String sql = "insert into " + db_name + "." + tableName2 + " values(?, ?, ?, ?, ?)";
+        String sql = "insert into " + dbName + "." + tableName2 + " values(?, ?, ?, ?, ?)";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setTimestamp(1, new Timestamp(0));
             statement.setShort(2, (short) 0);
@@ -360,30 +358,23 @@ public class WsPstmtAllTypeTest {
 
     @Before
     public void before() throws SQLException {
-        String url = SpecifyAddress.getInstance().getRestWithoutUrl();
-        if (url == null) {
-            url = "jdbc:TAOS-RS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
-        } else {
-            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
-        }
-        Properties properties = new Properties();
-        connection = DriverManager.getConnection(url, properties);
+        connection = DriverManager.getConnection(WsStmtWriteTestSupport.traditionalWebSocketUrl(), new Properties());
         try (Statement statement = connection.createStatement()) {
-            statement.execute("drop database if exists " + db_name);
-            statement.execute("create database " + db_name + " keep 36500");
-            statement.execute("use " + db_name);
-            statement.execute("create table if not exists " + db_name + "." + tableName +
+            statement.execute("drop database if exists " + dbName);
+            statement.execute("create database " + dbName + " keep 36500");
+            statement.execute("use " + dbName);
+            statement.execute("create table if not exists " + dbName + "." + tableName +
                     "(ts timestamp, c1 tinyint, c2 smallint, c3 int, c4 bigint, " +
                     "c5 float, c6 double, c7 bool, c8 binary(10), c9 nchar(10), c10 varchar(20), c11 varbinary(100), c12 geometry(100)," +
                     "c13 tinyint unsigned, c14 smallint unsigned, c15 int unsigned, c16 bigint unsigned, c17 blob, " +
                     "c18 decimal(4,2), c19 decimal(30,10))");
 
-            statement.execute("create stable if not exists " + db_name + "." + stableName +
+            statement.execute("create stable if not exists " + dbName + "." + stableName +
                     "(ts timestamp, c1 tinyint, c2 blob) tags (t1 timestamp, t2 tinyint, t3 smallint, t4 int, t5 bigint, " +
                     "t6 float, t7 double, t8 bool, t9 binary(10), t10 nchar(10), t11 varchar(20), t12 varbinary(100), t13 geometry(100)," +
                     "t14 tinyint unsigned, t15 smallint unsigned, t16 int unsigned, t17 bigint unsigned)");
 
-            statement.execute("create table if not exists " + db_name + "." + tableName2 +
+            statement.execute("create table if not exists " + dbName + "." + tableName2 +
                     "(ts timestamp, " +
                     "c1 tinyint unsigned, c2 smallint unsigned, c3 int unsigned, c4 bigint unsigned)");
         }
@@ -392,7 +383,7 @@ public class WsPstmtAllTypeTest {
     @After
     public void after() throws SQLException {
         try (Statement statement = connection.createStatement()) {
-            statement.execute("drop database if exists " + db_name);
+            statement.execute("drop database if exists " + dbName);
         }
         connection.close();
     }

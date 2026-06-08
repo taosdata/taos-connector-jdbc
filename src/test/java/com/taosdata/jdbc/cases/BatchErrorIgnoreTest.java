@@ -89,7 +89,7 @@ public class BatchErrorIgnoreTest {
         }
 
         // then
-        assert results != null;
+        Assert.assertNotNull(results);
         Assert.assertEquals(12, results.length);
         Assert.assertEquals(1, results[0]);
         Assert.assertEquals(1, results[1]);
@@ -154,4 +154,3 @@ public class BatchErrorIgnoreTest {
         }
     }
 }
-

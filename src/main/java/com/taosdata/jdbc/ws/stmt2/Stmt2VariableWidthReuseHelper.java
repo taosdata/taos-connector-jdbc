@@ -1,0 +1,124 @@
+package com.taosdata.jdbc.ws.stmt2;
+
+public final class Stmt2VariableWidthReuseHelper {
+    public static final class SizingDecision {
+        private final Stmt2ChunkSizingUtil.BufferSpec nextSpec;
+        private final int nextUnderuseStreak;
+
+        public SizingDecision(Stmt2ChunkSizingUtil.BufferSpec nextSpec, int nextUnderuseStreak) {
+            this.nextSpec = nextSpec;
+            this.nextUnderuseStreak = nextUnderuseStreak;
+        }
+
+        public Stmt2ChunkSizingUtil.BufferSpec getNextSpec() {
+            return nextSpec;
+        }
+
+        public int getNextUnderuseStreak() {
+            return nextUnderuseStreak;
+        }
+    }
+
+    private Stmt2VariableWidthReuseHelper() {
+    }
+
+    public static Stmt2ChunkSizingUtil.BufferSpec resolveBufferSpec(
+            Stmt2ChunkSizingUtil.BufferSpec[] specs, int index) {
+        if (specs != null && index < specs.length && specs[index] != null) {
+            return specs[index];
+        }
+        return Stmt2ChunkSizingUtil.bootstrapSpec();
+    }
+
+    public static Stmt2ColumnFieldBuffer createReusableVariableWidthBuffer(
+            Stmt2FieldMeta meta,
+            Stmt2ChunkSizingUtil.BufferSpec spec) {
+        Stmt2ColumnFieldBuffer buffer = Stmt2ColumnFieldBuffer.forReusableValueBuffer(
+                meta, null, spec.getChunkBytes(), spec.getChunkBytes(), spec.getReusableChunkCount());
+        try {
+            primeReusableBuffer(buffer, spec);
+            return buffer;
+        } catch (Throwable t) {
+            buffer.release();
+            throw t;
+        }
+    }
+
+    public static boolean bufferSpecsEqual(
+            Stmt2ChunkSizingUtil.BufferSpec left,
+            Stmt2ChunkSizingUtil.BufferSpec right) {
+        if (left == null || right == null) {
+            return false;
+        }
+        if (left == right) {
+            return true;
+        }
+        return left.getChunkBytes() == right.getChunkBytes()
+                && left.getReusableChunkCount() == right.getReusableChunkCount();
+    }
+
+    public static SizingDecision reactiveDecision(
+            Stmt2ChunkSizingUtil.BufferSpec current,
+            Stmt2ChunkSizingUtil.FieldBatchStats stats,
+            int underuseStreak) {
+        long currentReusableBytes = (long) current.getChunkBytes() * current.getReusableChunkCount();
+        boolean shouldGrow = stats.getOverflowCount() > 0
+                || stats.getActiveChunksUsed() > 8
+                || stats.getObservedValueBytes() > currentReusableBytes;
+        if (shouldGrow) {
+            long wantedChunkBytes = Math.max(
+                    (long) current.getChunkBytes() << 1,
+                    roundUpPow2(Math.max(
+                            stats.getMaxSingleValueBytes(),
+                            stats.getObservedValueBytes() / 4)));
+            if (wantedChunkBytes > Integer.MAX_VALUE) {
+                throw new IllegalArgumentException("chunk size overflow: " + wantedChunkBytes);
+            }
+            int chunkBytes = (int) Math.max(current.getChunkBytes(), wantedChunkBytes);
+            int chunkCount = (int) Math.max(
+                    1L,
+                    (stats.getObservedValueBytes() + chunkBytes - 1) / chunkBytes);
+            return new SizingDecision(new Stmt2ChunkSizingUtil.BufferSpec(chunkBytes, chunkCount), 0);
+        }
+
+        if (stats.getObservedValueBytes() < currentReusableBytes / 2) {
+            if (underuseStreak >= Stmt2ChunkSizingUtil.SHRINK_STREAK_THRESHOLD) {
+                if (current.getReusableChunkCount() > 1) {
+                    return new SizingDecision(
+                            new Stmt2ChunkSizingUtil.BufferSpec(
+                                    current.getChunkBytes(),
+                                    current.getReusableChunkCount() - 1),
+                            0);
+                }
+                int smallerChunk = Math.max(minChunkBytes(), current.getChunkBytes() >> 1);
+                if (smallerChunk < current.getChunkBytes()) {
+                    return new SizingDecision(new Stmt2ChunkSizingUtil.BufferSpec(smallerChunk, 1), 0);
+                }
+                return new SizingDecision(current, underuseStreak);
+            }
+            return new SizingDecision(current, underuseStreak + 1);
+        }
+
+        return new SizingDecision(current, 0);
+    }
+
+    private static void primeReusableBuffer(
+            Stmt2ColumnFieldBuffer buffer,
+            Stmt2ChunkSizingUtil.BufferSpec spec) {
+        buffer.primeReusableValueChunks(spec.getReusableChunkCount());
+    }
+
+    private static int roundUpPow2(long value) {
+        long adjusted = Math.max(1L, value);
+        long highest = Long.highestOneBit(adjusted);
+        long result = highest == adjusted ? highest : highest << 1;
+        if (result <= 0 || result > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("chunk size overflow: " + value);
+        }
+        return (int) Math.max(minChunkBytes(), result);
+    }
+
+    private static int minChunkBytes() {
+        return Stmt2ChunkSizingUtil.bootstrapSpec().getChunkBytes();
+    }
+}

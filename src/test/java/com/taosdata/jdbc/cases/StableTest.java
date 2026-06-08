@@ -14,6 +14,7 @@ import java.sql.*;
 import java.util.Properties;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class StableTest {
@@ -51,7 +52,7 @@ public class StableTest {
             final String sql = "create table " + STB_NAME + " (ts timestamp, v1 int, v2 int) tags (tg nchar(20)) ";
             stmt.execute(sql);
         } catch (SQLException e) {
-            assert false : "error create stable" + e.getMessage();
+            fail("error create stable" + e.getMessage());
         }
     }
 
@@ -61,7 +62,7 @@ public class StableTest {
             final String sql = "create table t1 using " + STB_NAME + " tags (\"beijing\")";
             stmt.execute(sql);
         } catch (SQLException e) {
-            assert false : "error create table" + e.getMessage();
+            fail("error create table" + e.getMessage());
         }
     }
 
@@ -77,7 +78,7 @@ public class StableTest {
             rs.close();
             assertEquals(4, num);
         } catch (SQLException e) {
-            assert false : "error describe stable" + e.getMessage();
+            fail("error describe stable" + e.getMessage());
         }
     }
 
@@ -92,7 +93,7 @@ public class StableTest {
             rs.close();
             assertEquals(4, num);
         } catch (SQLException e) {
-            assert false : "error describe stable" + e.getMessage();
+            fail("error describe stable" + e.getMessage());
         }
     }
 
@@ -111,4 +112,3 @@ public class StableTest {
 
     }
 }
-

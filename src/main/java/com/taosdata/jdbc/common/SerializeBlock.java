@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
+import static com.taosdata.jdbc.utils.UnsignedDataUtils.toUnsignedLongBits;
 
 public class SerializeBlock {
     private SerializeBlock() {
@@ -212,11 +213,7 @@ public class SerializeBlock {
 
                 for (Object o: objectList){
                     if (o != null) {
-                        BigInteger v = (BigInteger) o;
-                        if (v.compareTo(BigInteger.ZERO) < 0 || v.compareTo(new BigInteger(MAX_UNSIGNED_LONG)) > 0){
-                            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "ubigint value is out of range");
-                        }
-                        buf.writeLongLE(v.longValue());
+                        buf.writeLongLE(toUnsignedLongBits((BigInteger) o));
                     } else {
                         buf.writeLongLE(0L);
                     }

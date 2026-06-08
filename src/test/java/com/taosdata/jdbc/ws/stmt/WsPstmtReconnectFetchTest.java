@@ -8,16 +8,11 @@ import com.taosdata.jdbc.ws.TaosAdapterMock;
 import com.taosdata.jdbc.ws.loadbalance.RebalanceManager;
 import io.netty.util.ResourceLeakDetector;
 import org.junit.*;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.sql.*;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Properties;
 
-@RunWith(Parameterized.class)
 @FixMethodOrder
 public class WsPstmtReconnectFetchTest {
 
@@ -25,14 +20,7 @@ public class WsPstmtReconnectFetchTest {
     static final String DB_NAME = TestUtils.camelToSnake(WsPstmtReconnectFetchTest.class);
     static final String TABLE_NAME = "wpt";
     static Connection connection;
-    private final String mode;
-    public WsPstmtReconnectFetchTest(String mode) {
-        this.mode = mode;
-    }
-    @Parameterized.Parameters
-    public static Collection<String> data() {
-        return Arrays.asList("","line");
-    }
+
     @Test(expected = SQLException.class)
     public void testStmt2ReconnectException() throws SQLException, IOException {
         TaosAdapterMock mockB = new TaosAdapterMock();
@@ -46,10 +34,6 @@ public class WsPstmtReconnectFetchTest {
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_INTERVAL_MS, "2000");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_RECONNECT_RETRY_COUNT, "3");
         properties.setProperty(TSDBDriver.PROPERTY_KEY_MESSAGE_WAIT_TIMEOUT, "5000");
-
-        if ("line".equalsIgnoreCase(this.mode)) {
-            properties.setProperty(TSDBDriver.PROPERTY_KEY_PBS_MODE, this.mode);
-        }
 
         String sql = "select * from " + DB_NAME + "." + TABLE_NAME + " where ts > ? and ts < ?";
         int resultCount = 0;
@@ -114,4 +98,3 @@ public class WsPstmtReconnectFetchTest {
         RebalanceManager.getInstance().clearAllForTest();
     }
 }
-

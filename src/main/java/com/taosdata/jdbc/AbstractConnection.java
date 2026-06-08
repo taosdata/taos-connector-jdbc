@@ -19,7 +19,7 @@ public abstract class AbstractConnection extends WrapperImpl implements Connecti
     protected volatile String catalog;
     protected final Properties clientInfoProps = new Properties();
     protected final boolean supportBlob;
-    protected final boolean supportLineBind;
+    protected final boolean supportStmt2BindExec;
 
     protected final String serverVersion;
 
@@ -31,7 +31,7 @@ public abstract class AbstractConnection extends WrapperImpl implements Connecti
         this.catalog = properties.getProperty(TSDBDriver.PROPERTY_KEY_DBNAME);
         serverVersion = version;
         supportBlob = VersionUtil.surpportBlob(serverVersion);
-        supportLineBind = supportBlob;
+        supportStmt2BindExec = VersionUtil.supportStmt2BindExec(serverVersion);
     }
 
     public boolean isSupportBlob(){return supportBlob;}

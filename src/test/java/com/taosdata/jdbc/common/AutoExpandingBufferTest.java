@@ -69,6 +69,20 @@ public class AutoExpandingBufferTest {
         }
     }
 
+    @Test
+    public void writeByte_throwsWhenExpansionWouldExceedMaxComponents() throws SQLException {
+        AutoExpandingBuffer smallBuffer = new AutoExpandingBuffer(1, 1);
+        try {
+            smallBuffer.writeByte((byte) 1);
+            smallBuffer.writeByte((byte) 2);
+
+            SQLException ex = assertThrows(SQLException.class, () -> smallBuffer.writeByte((byte) 3));
+            assertTrue(ex.getMessage().contains("Data too long"));
+        } finally {
+            smallBuffer.release();
+        }
+    }
+
     // ====================================== writeString Tests ======================================
     @Test
     public void writeString_UTF8Encoding() throws SQLException {
@@ -202,6 +216,81 @@ public class AutoExpandingBufferTest {
 
         buffer.stopWrite();
         assertEquals(2, buffer.getBuffer().numComponents());  // Original buffer + new buffer
+    }
+
+    @Test
+    public void writeByte_expandsWhenCurrentBufferIsFull() throws SQLException {
+        AutoExpandingBuffer small = new AutoExpandingBuffer(2, 3);
+        try {
+            small.writeBytes(new byte[]{1, 2});
+            small.writeByte((byte) 3);
+            small.stopWrite();
+
+            assertEquals(2, small.getBuffer().numComponents());
+            assertArrayEquals(new byte[]{1, 2, 3}, getCompositeContent(small.getBuffer()));
+        } finally {
+            small.release();
+        }
+    }
+
+    @Test
+    public void writePrimitiveLE_splitsAcrossComponentsWhenSpaceIsInsufficient() throws SQLException {
+        AutoExpandingBuffer intBuffer = new AutoExpandingBuffer(3, 3);
+        try {
+            intBuffer.writeByte((byte) 0x7F);
+            intBuffer.writeIntLE(0x01020304);
+            intBuffer.stopWrite();
+
+            assertArrayEquals(new byte[]{0x7F, 0x04, 0x03, 0x02, 0x01},
+                    getCompositeContent(intBuffer.getBuffer()));
+        } finally {
+            intBuffer.release();
+        }
+
+        AutoExpandingBuffer longBuffer = new AutoExpandingBuffer(4, 4);
+        try {
+            longBuffer.writeByte((byte) 0x55);
+            longBuffer.writeLongLE(0x0102030405060708L);
+            longBuffer.stopWrite();
+
+            assertArrayEquals(new byte[]{
+                    0x55, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01
+            }, getCompositeContent(longBuffer.getBuffer()));
+        } finally {
+            longBuffer.release();
+        }
+    }
+
+    @Test
+    public void writeFloatAndDoubleLE_encodeRawLittleEndianBits() throws SQLException {
+        buffer.writeFloatLE(3.5f);
+        buffer.writeDoubleLE(-7.25d);
+        buffer.stopWrite();
+
+        byte[] content = getCompositeContent(buffer.getBuffer());
+        assertEquals(Float.floatToRawIntBits(3.5f), getLEInt(content, 0));
+        assertLEDouble(content, 4, -7.25d);
+    }
+
+    @Test
+    public void readableBytes_reportsBufferedBytesBeforeAndAfterStopWrite() throws SQLException {
+        buffer.writeBytes(new byte[]{1, 2, 3});
+        assertEquals(3, buffer.readableBytes());
+
+        buffer.stopWrite();
+        assertEquals(3, buffer.readableBytes());
+
+        buffer.release();
+        assertEquals(0, buffer.readableBytes());
+    }
+
+    @Test
+    public void primitiveWritersRejectWritesAfterStopWrite() {
+        buffer.stopWrite();
+
+        assertThrows(SQLException.class, () -> buffer.writeByte((byte) 1));
+        assertThrows(SQLException.class, () -> buffer.writeIntLE(1));
+        assertThrows(SQLException.class, () -> buffer.writeLongLE(1L));
     }
 
     // ====================================== Resource Management Tests ======================================

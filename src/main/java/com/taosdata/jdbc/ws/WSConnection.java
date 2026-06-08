@@ -99,6 +99,15 @@ public class WSConnection extends AbstractConnection {
             }
 
             if ((efficientWritingSql || "STMT".equalsIgnoreCase(param.getAsyncWrite())) && isInsert && isSuperTable) {
+                if (supportsStmt2BindExec()) {
+                    return new WSEWColumnPreparedStatement(transport,
+                            param,
+                            database,
+                            this,
+                            sql,
+                            idGenerator.getAndIncrement(),
+                            prepareResp);
+                }
                 return new WSEWPreparedStatement(transport,
                         param,
                         database,
@@ -107,18 +116,15 @@ public class WSConnection extends AbstractConnection {
                         idGenerator.getAndIncrement(),
                         prepareResp);
             } else {
-                if ("line".equalsIgnoreCase(param.getPbsMode())){
-                    if (super.supportLineBind) {
-                        return new WSRowPreparedStatement(transport,
-                                param,
-                                database,
-                                this,
-                                sql,
-                                idGenerator.getAndIncrement(),
-                                prepareResp);
-                    } else {
-                        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_LINE_BIND_MODE_UNSUPPORTED_IN_SERVER);
-                    }
+                // Route insert statements to the stmt2 bind-exec producer on supported servers.
+                if (isInsert && supportsStmt2BindExec()) {
+                    return new WSColumnPreparedStatement(transport,
+                            param,
+                            database,
+                            this,
+                            sql,
+                            idGenerator.getAndIncrement(),
+                            prepareResp);
                 }
                 return new TSWSPreparedStatement(transport,
                         param,
@@ -246,5 +252,17 @@ public class WSConnection extends AbstractConnection {
                 }
             }
         }
+    }
+
+    public boolean supportsStmt2BindExec() {
+        String stmt2BindMode = param.getStmt2BindMode();
+        // stmtBindMode is a routing override: column/traditional intentionally bypass version gating.
+        if (ConnectionParam.STMT2_BIND_MODE_COLUMN.equalsIgnoreCase(stmt2BindMode)) {
+            return true;
+        }
+        if (ConnectionParam.STMT2_BIND_MODE_TRADITIONAL.equalsIgnoreCase(stmt2BindMode)) {
+            return false;
+        }
+        return this.supportStmt2BindExec;
     }
 }

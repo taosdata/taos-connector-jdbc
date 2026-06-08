@@ -13,6 +13,8 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Properties;
 
+import static org.junit.Assert.assertEquals;
+
 @Ignore
 public class TimeZoneTest {
 
@@ -78,7 +80,7 @@ public class TimeZoneTest {
             ResultSet rs = stmt.executeQuery("select * from timezone_test.weather");
             while (rs.next()) {
                 Timestamp ts = rs.getTimestamp("ts");
-                assert (ts.equals(Timestamp.valueOf("1970-01-01 00:00:00")));
+                assertEquals(Timestamp.valueOf("1970-01-01 00:00:00"), ts);
             }
             stmt.execute("drop database if exists timezone_test");
             stmt.close();
