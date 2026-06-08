@@ -9,6 +9,7 @@ import java.sql.SQLException;
 import java.util.stream.Stream;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class UtilsTest {
 
@@ -277,6 +278,8 @@ public class UtilsTest {
         // Minor version comparison
         assertEquals(1, VersionUtil.compareVersions("3.1.0", "3.0.0"));
         assertEquals(-1, VersionUtil.compareVersions("3.0.0", "3.1.0"));
+        assertEquals(1, VersionUtil.compareVersions("3.4.1.6.alpha.community", "3.4.1.5"));
+        assertTrue(VersionUtil.compareVersions("3.4.1.13.0603.enterprise", "3.4.1.13") > 0);
 
         // Patch version comparison
         assertEquals(1, VersionUtil.compareVersions("3.0.1", "3.0.0"));

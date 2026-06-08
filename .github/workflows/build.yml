@@ -31,105 +31,15 @@ jobs:
         maven: [ '3.6.3' ]
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout TDengine
-        uses: actions/checkout@v3
-        with:
-          repository: 'taosdata/TDengine'
-          path: 'TDengine'
-          ref: ${{ github.event.pull_request.base.ref || github.ref_name }}
+      - name: Get TDengine
+        run: wget "${{ secrets.NIGHTLY_TDENGINE_ENTERPRISE_BASE_URL }}/tsdb-nightly-main.tar.gz?v=$(date +%s)" -O tsdb-nightly-main.tar.gz
 
-      - name: Get TDengine branch and commit info
-        id: tdengine-info
+      - name: Install TDengine
         run: |
-          cd TDengine
-          echo "commit_id=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
-          echo "branch=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_OUTPUT
-          echo "short_sha=$(git rev-parse --short=8 HEAD)" >> $GITHUB_OUTPUT
-
-      - name: Restore TDengine debug directory cache
-        uses: actions/cache/restore@v4
-        id: cache-debug-dir
-        with:
-          path: TDengine/debug
-          key: ${{ runner.os }}-tdengine-debug-${{ env.CACHE_VERSION }}-${{ steps.tdengine-info.outputs.branch }}-${{ steps.tdengine-info.outputs.commit_id }}
-          restore-keys: |
-            ${{ runner.os }}-tdengine-debug-${{ env.CACHE_VERSION }}-${{ steps.tdengine-info.outputs.branch }}-
-            ${{ runner.os }}-tdengine-debug-${{ env.CACHE_VERSION }}-
-
-      - name: Debug cache hit status
-        run: |
-          echo "Cache hit: ${{ steps.cache-debug-dir.outputs.cache-hit }}"
-          echo "Cache key: ${{ steps.cache-debug-dir.outputs.cache-primary-key }}"
-
-      - name: Check if debug directory exists and is valid
-        id: check-debug-dir
-        run: |
-          if [ -d "TDengine/debug" ] && [ -f "TDengine/debug/CMakeCache.txt" ]; then
-            echo "Debug directory exists and appears valid"
-            echo "is_debug_valid=true" >> $GITHUB_OUTPUT
-          else
-            echo "Debug directory missing or invalid"
-            echo "is_debug_valid=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Install build dependencies
-        if: steps.cache-debug-dir.outputs.cache-hit != 'true'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgeos-dev build-essential cmake gcc g++ make
-
-      - name: Build TDengine (if cache missed)
-        if: steps.cache-debug-dir.outputs.cache-hit != 'true'
-        id: build-step
-        run: |
-          cd TDengine
-          mkdir -p debug
-          cd debug
-          cmake .. -DBUILD_JDBC=false -DBUILD_TOOLS=false -DBUILD_HTTP=false -DBUILD_DEPENDENCY_TESTS=false
-          make -j $(nproc)
-
-      - name: Save cache on build success
-        if: always() && steps.build-step.conclusion == 'success'
-        uses: actions/cache/save@v4
-        with:
-          path: TDengine/debug
-          key: ${{ runner.os }}-tdengine-debug-${{ env.CACHE_VERSION }}-${{ steps.tdengine-info.outputs.branch }}-${{ steps.tdengine-info.outputs.commit_id }}
-
-
-      - name: Verify debug directory
-        run: |
-          echo "=== Verifying debug directory ==="
-          if [ ! -d "TDengine/debug" ]; then
-            echo "❌ Error: Debug directory not found!"
-            exit 1
-          fi
-          
-          echo "Debug directory contents:"
-          ls -la TDengine/debug/
-          
-          if [ ! -d "TDengine/debug/build" ]; then
-            echo "❌ Error: Build directory not found in debug directory!"
-            exit 1
-          fi
-          
-          file_count=$(find TDengine/debug/build -type f 2>/dev/null | wc -l)
-          echo "✅ Build directory exists with $file_count files"
-
-      - name: Install TDengine from debug directory
-        run: |
-          echo "=== Installing TDengine ==="
-          if [ ! -d "TDengine/debug" ]; then
-            echo "❌ Error: Debug directory not found for installation!"
-            exit 1
-          fi
-          
-          cd TDengine/debug
-          echo "Running make install..."
-          if ! sudo make install; then
-            echo "❌ Error: make install failed!"
-            exit 1
-          fi
-          echo "✅ TDengine installed successfully"
+          tar -zxf tsdb-nightly-main.tar.gz
+          rm -rf tsdb-nightly-main.tar.gz
+          cd tsdb-nightly-main
+          sudo ./install.sh -e no
 
       - name: Verify TDengine installation
         run: |

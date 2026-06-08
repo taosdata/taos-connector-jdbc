@@ -5,8 +5,9 @@ import com.taosdata.jdbc.common.Endpoint;
 import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.utils.Utils;
+import com.taosdata.jdbc.ws.AbsWSPreparedStatement;
 import com.taosdata.jdbc.ws.TaosAdapterMock;
-import com.taosdata.jdbc.ws.WSEWPreparedStatement;
+import com.taosdata.jdbc.ws.WSConnection;
 import com.taosdata.jdbc.ws.loadbalance.RebalanceManager;
 import com.taosdata.jdbc.ws.loadbalance.RebalanceTestUtil;
 import io.netty.util.ResourceLeakDetector;
@@ -19,7 +20,7 @@ import java.util.Random;
 
 @FixMethodOrder
 public class WsEfficientWritingTest {
-    private final String host = "localhost";
+    private final String host = TestEnvUtil.getHost();
     private final String db_name = TestUtils.camelToSnake(WsEfficientWritingTest.class);
     private final String tableName = "wpt";
     private final String tableNameCopyData = "wpt_cp";
@@ -177,6 +178,9 @@ public class WsEfficientWritingTest {
         long current = System.currentTimeMillis();
         try (Connection con = getConnection(false, false, proxyPort);
                 PreparedStatement pstmt = con.prepareStatement(sql)) {
+            WSConnection wscon = (WSConnection) con;
+            wscon.getParam().setReconnectIntervalMs(10);
+
             for (int j = 0; j < numOfRow; j++) {
                 current = current + 1000;
                 for (int i = 1; i <= numOfSubTable; i++) {
@@ -326,7 +330,7 @@ public class WsEfficientWritingTest {
     public void testColumnDataAddBatchThrowsSQLException() throws SQLException {
         String sql = "INSERT INTO " + db_name + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
         try (Connection con = getConnection(false);
-                WSEWPreparedStatement pstmt = (WSEWPreparedStatement)con.prepareStatement(sql)) {
+                AbsWSPreparedStatement pstmt = (AbsWSPreparedStatement) con.prepareStatement(sql)) {
             pstmt.columnDataAddBatch();
         }
     }
@@ -335,7 +339,7 @@ public class WsEfficientWritingTest {
     public void testColumnDataExecuteBatchThrowsSQLException() throws SQLException {
         String sql = "INSERT INTO " + db_name + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
         try (Connection con = getConnection(false);
-                WSEWPreparedStatement pstmt = (WSEWPreparedStatement)con.prepareStatement(sql)) {
+                AbsWSPreparedStatement pstmt = (AbsWSPreparedStatement) con.prepareStatement(sql)) {
             pstmt.columnDataExecuteBatch();
         }
     }
@@ -344,7 +348,7 @@ public class WsEfficientWritingTest {
     public void testColumnDataCloseBatchThrowsSQLException() throws SQLException {
         String sql = "INSERT INTO " + db_name + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
         try (Connection con = getConnection(false);
-                WSEWPreparedStatement pstmt = (WSEWPreparedStatement)con.prepareStatement(sql)) {
+                AbsWSPreparedStatement pstmt = (AbsWSPreparedStatement) con.prepareStatement(sql)) {
             pstmt.columnDataCloseBatch();
         }
     }
@@ -441,4 +445,3 @@ public class WsEfficientWritingTest {
         System.setProperty("ENV_TAOS_JDBC_NO_HEALTH_CHECK", "");
     }
 }
-

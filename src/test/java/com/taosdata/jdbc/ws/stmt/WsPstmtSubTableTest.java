@@ -1,8 +1,6 @@
 package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.TSDBConstants;
-import com.taosdata.jdbc.utils.SpecifyAddress;
-import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.TSWSPreparedStatement;
 import io.netty.util.ResourceLeakDetector;
@@ -119,14 +117,7 @@ public class WsPstmtSubTableTest {
 
     @Before
     public void before() throws SQLException {
-        String url = SpecifyAddress.getInstance().getRestWithoutUrl();
-        if (url == null) {
-            url = "jdbc:TAOS-RS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
-        } else {
-            url += "?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&batchfetch=true";
-        }
-        Properties properties = new Properties();
-        connection = DriverManager.getConnection(url, properties);
+        connection = DriverManager.getConnection(WsStmtWriteTestSupport.traditionalWebSocketUrl(), new Properties());
         Statement statement = connection.createStatement();
         statement.execute("drop database if exists " + db_name);
         statement.execute("create database " + db_name);
@@ -157,4 +148,3 @@ public class WsPstmtSubTableTest {
         System.gc();
     }
 }
-
