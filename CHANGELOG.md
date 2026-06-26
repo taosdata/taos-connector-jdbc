@@ -5,16 +5,63 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [unreleased]
+## [3.9.0] - 2026-06-08
 
-**Full Changelog**: [3.8.0...](https://github.com/taosdata/taos-connector-jdbc/compare/3.8.0...)
+**Full Changelog**: [3.8.4...3.9.0](https://github.com/taosdata/taos-connector-jdbc/compare/3.8.4...3.9.0)
+
+### Features
+
+- *stmt*: Add stmt2 column binding surpport (#324) ([1d3ccf3](1d3ccf3ba8d9f876b4a6c9fe48520178ed957d1e))
+
+
+
+## [3.8.4] - 2026-06-07
+
+**Full Changelog**: [3.8.3...3.8.4](https://github.com/taosdata/taos-connector-jdbc/compare/3.8.3...3.8.4)
+
+### Bug Fixes
+
+
+- Initialize catalog from connection properties (#320) ([b16fb9f](https://github.com/taosdata/taos-connector-jdbc/commit/b16fb9f3606ff2855832326f9dbcbe9ca715589e))
+- Add shuffle endpoints before connection (#326) ([5b5bfd2](https://github.com/taosdata/taos-connector-jdbc/commit/5b5bfd27f957f5a660d231176ecda13110698413))
+
+
+### Features
+
+- *ws*: Add adapter HA endpoints discovery (#321) ([94b5d64](94b5d6429b9d089f6027eba20a32772b578bfa59))
+
+
+
+## [3.8.3] - 2026-04-13
+
+**Full Changelog**: [3.8.2...3.8.3](https://github.com/taosdata/taos-connector-jdbc/compare/3.8.2...3.8.3)
+
+### Features
+
+- *ws*: Support bearer token for TMQ consumer auth (#317) ([772ec63](772ec639480689678e53a48903b2fa5c918559d1))
+
+- Suport tmq meta new features(virtual table, new alter table type) (#316) ([1e7dec6](https://github.com/taosdata/taos-connector-jdbc/commit/1e7dec6db0a6dd0e02a0d987a99e685bc2e6ad3f))
+
+
+## [3.8.2] - 2026-04-01
+
+**Full Changelog**: [3.8.1...3.8.2](https://github.com/taosdata/taos-connector-jdbc/compare/3.8.1...3.8.2)
+
+### Features
+
+
+- Support tmq token (#314) ([70b3da3](https://github.com/taosdata/taos-connector-jdbc/commit/70b3da352c5d150f3d9f0e03f5f707b2b8f1dc9d))
+
+
+## [3.8.1] - 2026-01-30
+
+**Full Changelog**: [3.8.0...3.8.1](https://github.com/taosdata/taos-connector-jdbc/compare/3.8.0...3.8.1)
 
 ### Features
 
 
 - Add dependency check actions (#307) ([2811a31](https://github.com/taosdata/taos-connector-jdbc/commit/2811a318fdc9f01ca3f5265b3f0c1768c5f58c11))
-- Feat: support blob and decimal in parameter binding
-Closes: feat/6662931308 ([9e9c2f0](https://github.com/taosdata/taos-connector-jdbc/commit/9e9c2f0146fb539adf93d79254172075ac47794c))
+- Support blob and decimal in parameter binding (#310) ([23ad603](https://github.com/taosdata/taos-connector-jdbc/commit/23ad603e5dfd4cf8b719767235cf985964bf93fc))
 
 
 ## [3.8.0] - 2025-12-31
@@ -213,7 +260,6 @@ Closes: feat/6662931308 ([9e9c2f0](https://github.com/taosdata/taos-connector-jd
 
 
 - Test ci ([c59a577](https://github.com/taosdata/taos-connector-jdbc/commit/c59a577c379a058a542ac764325f5912a348fbda))
-
 
 ## [3.6.0] - 2025-03-26
 **Full Changelog**: [3.5.3...3.6.0](https://github.com/taosdata/taos-connector-jdbc/compare/3.5.3...3.6.0)
