@@ -42,7 +42,7 @@
         <product.version>3.0.0.0</product.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>1.8</java.version>
-        <jackson.version>2.22.0</jackson.version>
+        <jackson.version>2.22.1</jackson.version>
         <httpclient.version>4.5.14</httpclient.version>
         <guava.version>33.5.0-jre</guava.version>
         <netty-all.version>4.2.15.Final</netty-all.version>
