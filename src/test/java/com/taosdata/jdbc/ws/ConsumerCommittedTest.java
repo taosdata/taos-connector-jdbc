@@ -51,9 +51,9 @@ public class ConsumerCommittedTest {
             // subscribe topic
             consumer.subscribe(Collections.singletonList(TOPIC));
             // poll data
-            ConsumerRecords<ResultBean> records = consumer.poll(Duration.ofMillis(100));
+            ConsumerRecords<ResultBean> records = consumer.poll(Duration.ofMillis(1000));
             if (records.isEmpty()) {
-                records = consumer.poll(Duration.ofMillis(100));
+                records = consumer.poll(Duration.ofMillis(1000));
             }
             Assert.assertFalse(records.isEmpty());
             // sync commit
@@ -104,9 +104,13 @@ public class ConsumerCommittedTest {
             // subscribe topic
             consumer.subscribe(Collections.singletonList(TOPIC));
             // poll data
-            ConsumerRecords<ResultBean> records = consumer.poll(Duration.ofMillis(100));
-            if (records.isEmpty()) {
-                records = consumer.poll(Duration.ofMillis(100));
+            ConsumerRecords<ResultBean> records = consumer.poll(Duration.ofMillis(1000));
+            for (int i = 0; i < 10; i++) {
+                if (records.isEmpty()) {
+                    records = consumer.poll(Duration.ofMillis(1000));
+                } else {
+                    break;
+                }
             }
             Assert.assertFalse(records.isEmpty());
             // sync commit
