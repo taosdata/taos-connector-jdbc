@@ -589,6 +589,101 @@ public class WSConsumerMetaMainTest {
     }
   }
 
+  @Test
+  public void testCreateAndAlterBaseOn() throws Exception {
+    // VST inheritance (BASE ON) over the WS path: create parent VSTs + an inherited
+    // child + ALTER ADD/DROP BASE ON, and verify the WS json-meta carries the frozen
+    // contract through taosAdapter into the MetaCreateSuperTable / MetaAlterTable POJOs.
+    String topic = "topic_base_on_" + DB_NAME;
+    statement.executeUpdate("drop topic if exists " + topic);
+    statement.executeUpdate("create topic " + topic + " with meta as database " + DB_NAME);
+
+    try (TaosConsumer<Map<String, Object>> consumer =
+        new TaosConsumer<>(buildConsumerProperties("grp_base_on"))) {
+      consumer.subscribe(Collections.singletonList(topic));
+      consumer.poll(Duration.ofMillis(100));
+
+      statement.execute(
+          "create stable if not exists bo_p_device (ts timestamp, status int, temp float) "
+              + "tags (region int, site binary(32)) virtual 1");
+      statement.execute(
+          "create stable if not exists bo_p_metric (ts timestamp, val double) "
+              + "tags (unit nchar(8)) virtual 1");
+      statement.execute(
+          "create stable if not exists bo_leaf (ts timestamp, accuracy int) tags (sensor_id int) "
+              + "base on "
+              + DB_NAME
+              + ".bo_p_device, "
+              + DB_NAME
+              + ".bo_p_metric virtual 1");
+      statement.execute(
+          "create stable if not exists bo_standalone (ts timestamp, own_col int) "
+              + "tags (own_tag int) virtual 1");
+      statement.execute(
+          "alter stable " + DB_NAME + ".bo_standalone add base on " + DB_NAME + ".bo_p_metric");
+      statement.execute(
+          "alter stable " + DB_NAME + ".bo_standalone drop base on " + DB_NAME + ".bo_p_metric");
+
+      boolean gotCreateBaseOn = false;
+      boolean gotCreateStandaloneNoBaseOn = false;
+      boolean gotAlterAdd = false;
+      boolean gotAlterDrop = false;
+      int loopTime = 20;
+      while ((!gotCreateBaseOn || !gotCreateStandaloneNoBaseOn || !gotAlterAdd || !gotAlterDrop)
+          && loopTime > 0) {
+        ConsumerRecords<Map<String, Object>> records = consumer.poll(Duration.ofMillis(200));
+        for (ConsumerRecord<Map<String, Object>> r : records) {
+          if (r.getMeta() == null) continue;
+          if (r.getMeta().getType() == MetaType.CREATE
+              && "bo_leaf".equals(r.getMeta().getTableName())
+              && r.getMeta() instanceof MetaCreateSuperTable) {
+            MetaCreateSuperTable meta = (MetaCreateSuperTable) r.getMeta();
+            Assert.assertNotNull("bo_leaf must carry baseOn", meta.getBaseOn());
+            Assert.assertEquals(2, meta.getBaseOn().size());
+            Assert.assertTrue(meta.getBaseOn().contains("bo_p_device"));
+            Assert.assertTrue(meta.getBaseOn().contains("bo_p_metric"));
+            Assert.assertNotNull(meta.getOwnColStart());
+            Assert.assertNotNull(meta.getOwnTagStart());
+            Assert.assertTrue(meta.getOwnColStart() > 0);
+            Assert.assertTrue(meta.getOwnTagStart() > 0);
+            gotCreateBaseOn = true;
+          }
+          if (r.getMeta().getType() == MetaType.CREATE
+              && "bo_standalone".equals(r.getMeta().getTableName())
+              && r.getMeta() instanceof MetaCreateSuperTable) {
+            // non-inherited stable: baseOn must be null/absent (old-consumer compat)
+            MetaCreateSuperTable meta = (MetaCreateSuperTable) r.getMeta();
+            Assert.assertTrue(
+                "bo_standalone must NOT carry baseOn",
+                meta.getBaseOn() == null || meta.getBaseOn().isEmpty());
+            gotCreateStandaloneNoBaseOn = true;
+          }
+          if (r.getMeta().getType() == MetaType.ALTER
+              && r.getMeta() instanceof MetaAlterTable) {
+            MetaAlterTable meta = (MetaAlterTable) r.getMeta();
+            if (meta.getAlterType() == AlterType.ADD_BASE_ON.getValue()) {
+              Assert.assertNotNull(meta.getBaseOn());
+              Assert.assertTrue(meta.getBaseOn().contains("bo_p_metric"));
+              gotAlterAdd = true;
+            } else if (meta.getAlterType() == AlterType.DROP_BASE_ON.getValue()) {
+              Assert.assertNotNull(meta.getBaseOn());
+              Assert.assertTrue(meta.getBaseOn().contains("bo_p_metric"));
+              gotAlterDrop = true;
+            }
+          }
+        }
+        loopTime--;
+      }
+      Assert.assertTrue("missing CREATE bo_leaf with baseOn", gotCreateBaseOn);
+      Assert.assertTrue("missing CREATE bo_standalone without baseOn", gotCreateStandaloneNoBaseOn);
+      Assert.assertTrue("missing ALTER ADD BASE ON (22)", gotAlterAdd);
+      Assert.assertTrue("missing ALTER DROP BASE ON (23)", gotAlterDrop);
+      consumer.commitSync();
+      consumer.unsubscribe();
+    }
+    statement.executeUpdate("drop topic if exists " + topic);
+  }
+
   @BeforeClass
   public static void before() throws SQLException {
     TestUtils.runInMain();
