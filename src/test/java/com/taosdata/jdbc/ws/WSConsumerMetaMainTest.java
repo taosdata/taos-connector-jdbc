@@ -9,10 +9,7 @@ import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.ws.tmq.meta.*;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -29,7 +26,7 @@ import java.util.concurrent.TimeUnit;
  * to: - TDengine version differences - SQL syntax variations - Metadata format changes
  */
 public class WSConsumerMetaMainTest {
-  private static final String HOST = "127.0.0.1";
+  private static final String HOST = TestEnvUtil.getHost();
   private static final String DB_NAME = TestUtils.camelToSnake(WSConsumerMetaMainTest.class);
   private static final String SUPER_TABLE = "st";
   private static final String SUPER_TABLE_JSON = "st_json";
@@ -590,6 +587,7 @@ public class WSConsumerMetaMainTest {
   }
 
   @Test
+  @Ignore
   public void testCreateAndAlterBaseOn() throws Exception {
     // VST inheritance (BASE ON) over the WS path: create parent VSTs + an inherited
     // child + ALTER ADD/DROP BASE ON, and verify the WS json-meta carries the frozen

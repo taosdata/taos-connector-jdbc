@@ -6,6 +6,7 @@ import com.taosdata.jdbc.common.ColumnInfo;
 import com.taosdata.jdbc.common.SerializeBlock;
 import com.taosdata.jdbc.common.TableInfo;
 import com.taosdata.jdbc.enums.FieldBindType;
+import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.utils.BlobUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
@@ -61,6 +62,9 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
         // Query operations stay on the legacy bind path because the retry layer now
         // gates STMT2_BIND_EXEC on write operations only.
         super(connection, param, database, transport, instanceId, new StmtInfo(prepareResp, sql), new AtomicInteger());
+        if (!this.stmtInfo.isInsert() && connection.isSupportQueryNs()) {
+            this.stmtInfo.setPrecision(TimestampPrecision.NS);
+        }
         this.tableInfo = TableInfo.getEmptyTableInfo();
     }
     @Override
