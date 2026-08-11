@@ -178,6 +178,11 @@ public class TSDBDriver extends AbstractDriver {
      */
     public static final String HTTP_POOL_SIZE = "httpPoolSize";
 
+    /**
+     * max prepared statement cache size per connection
+     */
+    public static final String PROPERTY_KEY_STMT_CACHE_SIZE = "stmtCacheSize";
+
     public static final String HTTP_KEEP_ALIVE = "httpKeepAlive";
 
     /**

@@ -41,6 +41,7 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
     private final PriorityQueue<ColumnInfo> colListQueue = new PriorityQueue<>();
     private final HashMap<ByteBuffer, TableInfo> tableInfoMap = new HashMap<>();
     private TableInfo tableInfo;
+    private volatile boolean inUse = false;
 
     public AbsWSPreparedStatement(Transport transport,
                                   ConnectionParam param,
@@ -848,14 +849,18 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
 
     @Override
     public void close() throws SQLException {
-        if (!isClosed()) {
-            super.close();
-            if (transport.isConnected() && stmtInfo.getStmtId() != 0) {
-                long reqId = ReqId.getReqID();
-                Request close = RequestFactory.generateClose(stmtInfo.getStmtId(), reqId);
-                transport.send(close, this.getQueryTimeoutInMs());
-            }
+        if (isClosed()) {
+            return;
         }
+
+        connection.unregisterStatement(this.instanceId);
+
+        if (resultSet != null && !resultSet.isClosed()) {
+            resultSet.close();
+            resultSet = null;
+        }
+
+        ((WSConnection) connection).tryCache(this);
     }
 
     @Override
@@ -1241,6 +1246,51 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
     @Override
     public void setTableName(String name) throws SQLException {
         this.tableInfo.setTableName(ByteBuffer.wrap(name.getBytes(StandardCharsets.UTF_8)));
+    }
+
+    // Statement cache support methods
+
+    public boolean isInUse() {
+        return inUse;
+    }
+
+    void markInUse() {
+        this.inUse = true;
+    }
+
+    void markIdle() {
+        this.inUse = false;
+    }
+
+    public String getDatabase() {
+        return this.database;
+    }
+
+    public StmtInfo getStmtInfo() {
+        return this.stmtInfo;
+    }
+
+    void releaseServerResource() throws SQLException {
+        closed.set(true);
+        inUse = false;
+
+        if (transport.isConnected() && stmtInfo.getStmtId() != 0) {
+            Request closeReq = RequestFactory.generateClose(stmtInfo.getStmtId(), ReqId.getReqID());
+            transport.send(closeReq, getQueryTimeoutInMs());
+            stmtInfo.setStmtId(0);
+        }
+    }
+
+    void resetForReuse() throws SQLException {
+        clearParameters();
+        affectedRows = -1;
+        if (batchedArgs != null) {
+            batchedArgs.clear();
+        }
+    }
+
+    void reopenFromCache() {
+        closed.set(false);
     }
 
 }

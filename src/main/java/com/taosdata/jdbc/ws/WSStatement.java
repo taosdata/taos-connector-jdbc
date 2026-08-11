@@ -19,7 +19,7 @@ import static com.taosdata.jdbc.utils.SqlSyntaxValidator.getDatabaseName;
 public class WSStatement extends AbstractStatement {
     protected final Transport transport;
     protected String database;
-    private final AbstractConnection connection;
+    protected final AbstractConnection connection;
 
 
     protected final AtomicBoolean closed = new AtomicBoolean(false);

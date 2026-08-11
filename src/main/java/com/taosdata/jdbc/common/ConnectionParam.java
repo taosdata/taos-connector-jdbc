@@ -68,6 +68,7 @@ public class ConnectionParam {
     private int rebalanceThreshold;
     private int rebalanceConBaseCount;
     private boolean adapterHa;
+    private int stmtCacheSize;
     private Consumer<String> textMessageHandler;
     private Consumer<ByteBuf> binaryMessageHandler;
     static public final int CONNECT_MODE_BI = 1;
@@ -115,6 +116,7 @@ public class ConnectionParam {
         this.rebalanceThreshold = builder.rebalanceThreshold;
         this.rebalanceConBaseCount = builder.rebalanceConBaseCount;
         this.adapterHa = builder.adapterHa;
+        this.stmtCacheSize = builder.stmtCacheSize;
     }
 
     public void setEndpoints(List<Endpoint> endpoints) {
@@ -417,6 +419,10 @@ public class ConnectionParam {
         return adapterHa;
     }
 
+    public int getStmtCacheSize() {
+        return stmtCacheSize;
+    }
+
     public Consumer<String> getTextMessageHandler() {
         return textMessageHandler;
     }
@@ -651,6 +657,11 @@ public class ConnectionParam {
         }
         boolean adapterHa = Boolean.parseBoolean(properties.getProperty(TSDBDriver.PROPERTY_KEY_ADAPTER_HA, "false"));
 
+        int stmtCacheSize = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_STMT_CACHE_SIZE, "5"));
+        if (stmtCacheSize < 0) {
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_STMT_CACHE_SIZE, must be non-negative integer");
+        }
+
         return new Builder(endpoints)
                 .setDatabase(database)
                 .setCloudToken(cloudToken)
@@ -690,6 +701,7 @@ public class ConnectionParam {
                 .setRebalanceThreshold(rebalanceThreshold)
                 .setRebalanceConBaseCount(rebalanceConBaseCount)
                 .setAdapterHa(adapterHa)
+                .setStmtCacheSize(stmtCacheSize)
                 .build();
     }
 
@@ -787,6 +799,7 @@ public class ConnectionParam {
         private int rebalanceThreshold;
         private int rebalanceConBaseCount;
         private boolean adapterHa;
+        private int stmtCacheSize;
         private Consumer<String> textMessageHandler;
         private Consumer<ByteBuf> binaryMessageHandler;
 
@@ -977,6 +990,12 @@ public class ConnectionParam {
             this.adapterHa = adapterHa;
             return this;
         }
+
+        public Builder setStmtCacheSize(int stmtCacheSize) {
+            this.stmtCacheSize = stmtCacheSize;
+            return this;
+        }
+
         public Builder setTextMessageHandler(Consumer<String> textMessageHandler) {
             this.textMessageHandler = textMessageHandler;
             return this;
@@ -1034,6 +1053,7 @@ public class ConnectionParam {
                 .setRebalanceThreshold(original.getRebalanceThreshold())
                 .setRebalanceConBaseCount(original.getRebalanceConBaseCount())
                 .setAdapterHa(original.isAdapterHa())
+                .setStmtCacheSize(original.getStmtCacheSize())
                 .setTextMessageHandler(original.getTextMessageHandler())
                 .setBinaryMessageHandler(original.getBinaryMessageHandler());
     }
