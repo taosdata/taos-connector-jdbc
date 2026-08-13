@@ -41,8 +41,6 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
     private final PriorityQueue<ColumnInfo> colListQueue = new PriorityQueue<>();
     private final HashMap<ByteBuffer, TableInfo> tableInfoMap = new HashMap<>();
     private TableInfo tableInfo;
-    private volatile boolean inUse = false;
-
     public AbsWSPreparedStatement(Transport transport,
                                   ConnectionParam param,
                                   String database,
@@ -860,7 +858,13 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
             resultSet = null;
         }
 
-        ((WSConnection) connection).tryCache(this);
+        if (((WSConnection) connection).tryCache(this)) {
+            return;
+        }
+
+        // Not cached: keep the original close behavior.
+        super.close();
+        releaseStmt();
     }
 
     @Override
@@ -1248,49 +1252,14 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
         this.tableInfo.setTableName(ByteBuffer.wrap(name.getBytes(StandardCharsets.UTF_8)));
     }
 
-    // Statement cache support methods
-
-    public boolean isInUse() {
-        return inUse;
-    }
-
-    void markInUse() {
-        this.inUse = true;
-    }
-
-    void markIdle() {
-        this.inUse = false;
-    }
-
-    public String getDatabase() {
-        return this.database;
-    }
-
-    public StmtInfo getStmtInfo() {
-        return this.stmtInfo;
-    }
-
-    void releaseServerResource() throws SQLException {
-        closed.set(true);
-        inUse = false;
-
-        if (transport.isConnected() && stmtInfo.getStmtId() != 0) {
-            Request closeReq = RequestFactory.generateClose(stmtInfo.getStmtId(), ReqId.getReqID());
-            transport.send(closeReq, getQueryTimeoutInMs());
-            stmtInfo.setStmtId(0);
-        }
-    }
-
-    void resetForReuse() throws SQLException {
+    // Statement cache support — reset per-use state before returning to cache.
+    @Override
+    protected void resetForReuse() throws SQLException {
         clearParameters();
         affectedRows = -1;
         if (batchedArgs != null) {
             batchedArgs.clear();
         }
-    }
-
-    void reopenFromCache() {
-        closed.set(false);
     }
 
 }

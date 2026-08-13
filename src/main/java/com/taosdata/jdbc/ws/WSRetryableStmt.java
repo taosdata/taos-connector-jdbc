@@ -251,6 +251,59 @@ public class WSRetryableStmt extends WSStatement {
         }
     }
 
+    // PreparedStatement cache support (shared by AbsWSPreparedStatement and WSColumnPreparedStatement)
+
+    /** Whether this statement is currently in use (handed out to application code). */
+    public boolean isInUse() {
+        return inUse;
+    }
+
+    void markInUse() {
+        this.inUse = true;
+    }
+
+    void markIdle() {
+        this.inUse = false;
+    }
+
+    /** Return the sql for cache key construction. */
+    public String getSql() {
+        return this.stmtInfo.getSql();
+    }
+
+    /** Return the database for cache key construction. */
+    public String getDatabase() {
+        return this.database;
+    }
+
+    /** Return the stmtInfo for cache decisions. */
+    public StmtInfo getStmtInfo() {
+        return this.stmtInfo;
+    }
+
+    /** Release the server-side stmt2 resource and mark closed. */
+    void releaseServerResource() throws SQLException {
+        closed.set(true);
+        inUse = false;
+        if (transport.isConnected() && stmtInfo.getStmtId() != 0) {
+            Request closeReq = RequestFactory.generateClose(stmtInfo.getStmtId(), ReqId.getReqID());
+            transport.send(closeReq, getQueryTimeoutInMs());
+            stmtInfo.setStmtId(0);
+        }
+    }
+
+    /** Reopen a cached statement so it can be used again. */
+    void reopenFromCache() {
+        closed.set(false);
+    }
+
+    /** Reset per-use state before returning to cache. Subclasses that support caching must override. */
+    protected void resetForReuse() throws SQLException {
+        // Default: no-op (worker threads, query statements don't need caching)
+    }
+
+    private volatile boolean inUse = false;
+
     /**
      * Package-private, test-only hook that exposes whether this statement is eligible to
      * use {@code STMT2_BIND_EXEC} for write operations.

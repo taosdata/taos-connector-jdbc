@@ -946,6 +946,13 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements TaosPr
         if (isClosed()) {
             return;
         }
+        connection.unregisterStatement(this.instanceId);
+
+        if (((WSConnection) connection).tryCache(this)) {
+            return;
+        }
+
+        // Not cached: keep the original close behavior.
         try {
             if (transport.isConnected() && stmtInfo.getStmtId() != 0) {
                 long reqId = ReqId.getReqID();
@@ -959,6 +966,26 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements TaosPr
             expectedRowCount = 0;
             super.close();
         }
+    }
+
+    // Release server resource, override to also clean column buffers.
+    @Override
+    void releaseServerResource() throws SQLException {
+        try {
+            releaseColumnBuffers();
+            columnBuffers = null;
+            bufferSizeHints = null;
+            expectedRowCount = 0;
+        } finally {
+            super.releaseServerResource();
+        }
+    }
+
+    // Reset per-use state before returning to cache. Reuses the same buffer
+    // recycling path as post-execute resets, preserving adaptive buffer sizing.
+    @Override
+    protected void resetForReuse() throws SQLException {
+        resetFastState();
     }
 
     private int executeInsertImpl() throws SQLException {

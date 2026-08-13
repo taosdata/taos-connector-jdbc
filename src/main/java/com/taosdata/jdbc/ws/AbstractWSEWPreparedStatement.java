@@ -208,8 +208,16 @@ public abstract class AbstractWSEWPreparedStatement extends AbsWSPreparedStateme
             return;
         }
 
+        // AbsWSPreparedStatement.close() either caches this statement
+        // (closed stays false) or runs the original close path (closed=true).
         super.close();
 
+        if (!isClosed()) {
+            // Cached: keep worker threads alive for reuse.
+            return;
+        }
+
+        // Not cached: keep the original cleanup behavior.
         while (writerThreads.getActiveCount() != 0) {
             try {
                 Thread.sleep(1);
@@ -226,6 +234,45 @@ public abstract class AbstractWSEWPreparedStatement extends AbsWSPreparedStateme
         }
         for (EWBackendThreadInfo backendThreadInfo : backendThreadInfoList) {
             backendThreadInfo.releaseReusableColumnBuffers();
+        }
+    }
+
+    // Release server resource — shut down worker threads and release stmtIds.
+    @Override
+    void releaseServerResource() throws SQLException {
+        try {
+            while (writerThreads.getActiveCount() != 0) {
+                try {
+                    Thread.sleep(1);
+                } catch (InterruptedException ignored) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+            if (!writerThreads.isShutdown()) {
+                writerThreads.shutdown();
+            }
+
+            for (WorkerThread workerThread : workerThreadList) {
+                workerThread.releaseStmt();
+            }
+            for (EWBackendThreadInfo backendThreadInfo : backendThreadInfoList) {
+                backendThreadInfo.releaseReusableColumnBuffers();
+            }
+        } finally {
+            super.releaseServerResource();
+        }
+    }
+
+    // Reset per-use state before returning to cache. Workers stay alive.
+    @Override
+    protected void resetForReuse() throws SQLException {
+        addBatchCounts = 0;
+        batchInsertedRows.set(0);
+        remainingUnprocessedRows.set(0);
+        flushIn.set(0);
+        // Clear any stale errors on workers
+        for (WorkerThread workerThread : workerThreadList) {
+            workerThread.getAndClearLastError();
         }
     }
 

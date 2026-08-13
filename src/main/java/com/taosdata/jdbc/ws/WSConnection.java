@@ -98,13 +98,13 @@ public class WSConnection extends AbstractConnection {
         StmtCacheKey cacheKey = new StmtCacheKey(sql, database);
         PreparedStatement cached = stmtCache.get(cacheKey);
         if (cached != null) {
-            AbsWSPreparedStatement cachedStmt = (AbsWSPreparedStatement) cached;
+            WSRetryableStmt cachedStmt = (WSRetryableStmt) cached;
             if (!cachedStmt.isInUse()) {
                 // Cache hit and idle, reuse it
                 cachedStmt.markInUse();
                 cachedStmt.reopenFromCache();
-                statementsMap.put(cachedStmt.getInstanceId(), cachedStmt);
-                return cachedStmt;
+                statementsMap.put(cachedStmt.getInstanceId(), (PreparedStatement) cachedStmt);
+                return cached;
             }
             // Cache hit but in use, fall through to create new statement
         }
@@ -125,31 +125,40 @@ public class WSConnection extends AbstractConnection {
 
             if ((efficientWritingSql || "STMT".equalsIgnoreCase(param.getAsyncWrite())) && isInsert && isSuperTable) {
                 if (supportsStmt2BindExec()) {
-                    return new WSEWColumnPreparedStatement(transport,
+                    WSEWColumnPreparedStatement stmt = new WSEWColumnPreparedStatement(transport,
                             param,
                             database,
                             this,
                             sql,
                             idGenerator.getAndIncrement(),
                             prepareResp);
+                    stmt.markInUse();
+                    statementsMap.put(stmt.getInstanceId(), stmt);
+                    return stmt;
                 }
-                return new WSEWPreparedStatement(transport,
+                WSEWPreparedStatement stmt = new WSEWPreparedStatement(transport,
                         param,
                         database,
                         this,
                         sql,
                         idGenerator.getAndIncrement(),
                         prepareResp);
+                stmt.markInUse();
+                statementsMap.put(stmt.getInstanceId(), stmt);
+                return stmt;
             } else {
                 // Route insert statements to the stmt2 bind-exec producer on supported servers.
                 if (isInsert && supportsStmt2BindExec()) {
-                    return new WSColumnPreparedStatement(transport,
+                    WSColumnPreparedStatement stmt = new WSColumnPreparedStatement(transport,
                             param,
                             database,
                             this,
                             sql,
                             idGenerator.getAndIncrement(),
                             prepareResp);
+                    stmt.markInUse();
+                    statementsMap.put(stmt.getInstanceId(), stmt);
+                    return stmt;
                 }
                 TSWSPreparedStatement stmt = new TSWSPreparedStatement(transport,
                         param,
@@ -181,7 +190,7 @@ public class WSConnection extends AbstractConnection {
 
         // Close cached statements
         for (PreparedStatement stmt : stmtCache.values()) {
-            ((AbsWSPreparedStatement) stmt).releaseServerResource();
+            ((WSRetryableStmt) stmt).releaseServerResource();
         }
         stmtCache.clear();
 
@@ -307,32 +316,41 @@ public class WSConnection extends AbstractConnection {
 
     // PreparedStatement cache management
 
-    void tryCache(AbsWSPreparedStatement stmt) throws SQLException {
-        // Cache disabled (connection closing)
+    /**
+     * Try to cache the given statement. Returns true if the statement is now
+     * cached (and must stay alive); false if the caller should run the
+     * original close path ({@code super.close()} + STMT2_CLOSE).
+     */
+    boolean tryCache(PreparedStatement stmt) throws SQLException {
+        WSRetryableStmt retryable = (WSRetryableStmt) stmt;
+
+        // Cache disabled (connection closing or stmtCacheSize=0)
         if (maxCacheSize <= 0) {
-            stmt.releaseServerResource();
-            return;
+            return false;
         }
 
         // Only cache insert statements
-        if (!stmt.getStmtInfo().isInsert()) {
-            stmt.releaseServerResource();
-            return;
+        if (!retryable.getStmtInfo().isInsert()) {
+            return false;
         }
 
-        StmtCacheKey key = new StmtCacheKey(stmt.getStmtInfo().getSql(), stmt.getDatabase());
+        // Only cache the sql with ?
+        if (retryable.getStmtInfo().getFields() == null || retryable.getStmtInfo().getFields().isEmpty()) {
+            return false;
+        }
+
+        StmtCacheKey key = new StmtCacheKey(retryable.getStmtInfo().getSql(), retryable.getDatabase());
         PreparedStatement existing = stmtCache.get(key);
 
         // Already in cache, just mark idle
         if (existing == stmt) {
-            stmt.markIdle();
-            return;
+            retryable.markIdle();
+            return true;
         }
 
-        // Same SQL already cached by different statement, release current
-        if (existing != null && existing != stmt) {
-            stmt.releaseServerResource();
-            return;
+        // Same SQL already cached by different statement, caller closes this one
+        if (existing != null) {
+            return false;
         }
 
         // Cache full, evict eldest (LRU)
@@ -340,17 +358,20 @@ public class WSConnection extends AbstractConnection {
             java.util.Iterator<Map.Entry<StmtCacheKey, PreparedStatement>> it = stmtCache.entrySet().iterator();
             if (it.hasNext()) {
                 Map.Entry<StmtCacheKey, PreparedStatement> eldest = it.next();
-                AbsWSPreparedStatement eldestStmt = (AbsWSPreparedStatement) eldest.getValue();
+                WSRetryableStmt eldestStmt = (WSRetryableStmt) eldest.getValue();
                 it.remove();
-                // Release the evicted statement's server resource
-                eldestStmt.releaseServerResource();
+                // Release the evicted statement's server resource if not in use.
+                if (!eldestStmt.isInUse()) {
+                    eldestStmt.releaseServerResource();
+                }
             }
         }
 
         // Add to cache
-        stmt.resetForReuse();
-        stmt.markIdle();
+        retryable.resetForReuse();
+        retryable.markIdle();
         stmtCache.put(key, stmt);
+        return true;
     }
 
     static class StmtCacheKey {

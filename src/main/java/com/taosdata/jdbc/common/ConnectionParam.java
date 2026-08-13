@@ -603,6 +603,14 @@ public class ConnectionParam {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "PROPERTY_KEY_ASYNC_WRITE only support STMT");
         }
 
+        // Efficient-write statements own write threads, so default to a smaller
+        // cache size when async write is enabled.
+        String defaultStmtCacheSize = asyncWrite.equalsIgnoreCase("STMT") ? "2" : "5";
+        int stmtCacheSize = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_STMT_CACHE_SIZE, defaultStmtCacheSize));
+        if (stmtCacheSize < 0) {
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_STMT_CACHE_SIZE, must be non-negative integer");
+        }
+
         String stmt2BindMode = properties.getProperty(TSDBDriver.PROPERTY_KEY_STMT_BIND_MODE, STMT2_BIND_MODE_AUTO)
                 .trim()
                 .toLowerCase(Locale.ROOT);
@@ -656,11 +664,6 @@ public class ConnectionParam {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_REBALANCE_CON_BASE_COUNT, must be positive integer");
         }
         boolean adapterHa = Boolean.parseBoolean(properties.getProperty(TSDBDriver.PROPERTY_KEY_ADAPTER_HA, "false"));
-
-        int stmtCacheSize = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_STMT_CACHE_SIZE, "5"));
-        if (stmtCacheSize < 0) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_STMT_CACHE_SIZE, must be non-negative integer");
-        }
 
         return new Builder(endpoints)
                 .setDatabase(database)
