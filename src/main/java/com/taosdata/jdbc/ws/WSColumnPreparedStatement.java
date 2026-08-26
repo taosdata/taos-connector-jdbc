@@ -8,8 +8,6 @@ import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.utils.BlobUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
-import com.taosdata.jdbc.utils.ReqId;
-import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.stmt2.Stmt2BindExecRequestBuilder;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnBindSerializer;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnFieldBuffer;
@@ -17,7 +15,6 @@ import com.taosdata.jdbc.ws.stmt2.Stmt2FieldMeta;
 import com.taosdata.jdbc.ws.stmt2.Stmt2VariableWidthReuseHelper;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ChunkSizingUtil;
 import com.taosdata.jdbc.ws.stmt2.entity.Field;
-import com.taosdata.jdbc.ws.stmt2.entity.RequestFactory;
 import com.taosdata.jdbc.ws.stmt2.entity.StmtInfo;
 import com.taosdata.jdbc.ws.stmt2.entity.Stmt2PrepareResp;
 import io.netty.buffer.ByteBuf;
@@ -941,44 +938,13 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements TaosPr
         executeBatch();
     }
 
+    // Clean column buffers; invoked by the releaseServerResource() template.
     @Override
-    public void close() throws SQLException {
-        if (isClosed()) {
-            return;
-        }
-        connection.unregisterStatement(this.instanceId);
-
-        if (((WSConnection) connection).tryCache(this)) {
-            return;
-        }
-
-        // Not cached: keep the original close behavior.
-        try {
-            if (transport.isConnected() && stmtInfo.getStmtId() != 0) {
-                long reqId = ReqId.getReqID();
-                Request close = RequestFactory.generateClose(stmtInfo.getStmtId(), reqId);
-                transport.send(close, this.getQueryTimeoutInMs());
-            }
-        } finally {
-            releaseColumnBuffers();
-            columnBuffers = null;
-            bufferSizeHints = null;
-            expectedRowCount = 0;
-            super.close();
-        }
-    }
-
-    // Release server resource, override to also clean column buffers.
-    @Override
-    void releaseServerResource() throws SQLException {
-        try {
-            releaseColumnBuffers();
-            columnBuffers = null;
-            bufferSizeHints = null;
-            expectedRowCount = 0;
-        } finally {
-            super.releaseServerResource();
-        }
+    protected void doReleaseServerResource() throws SQLException {
+        releaseColumnBuffers();
+        columnBuffers = null;
+        bufferSizeHints = null;
+        expectedRowCount = 0;
     }
 
     // Reset per-use state before returning to cache. Reuses the same buffer

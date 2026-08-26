@@ -202,22 +202,14 @@ public abstract class AbstractWSEWPreparedStatement extends AbsWSPreparedStateme
     }
 
     @Override
-    public void close() throws SQLException {
+    protected void awaitPendingWrites() throws SQLException {
         waitWriteCompleted();
-        if (isClosed()) {
-            return;
-        }
+    }
 
-        // AbsWSPreparedStatement.close() either caches this statement
-        // (closed stays false) or runs the original close path (closed=true).
-        super.close();
-
-        if (!isClosed()) {
-            // Cached: keep worker threads alive for reuse.
-            return;
-        }
-
-        // Not cached: keep the original cleanup behavior.
+    // Shut down worker threads and release their stmtIds. Workers exit once
+    // the releaseServerResource() template has marked this statement closed.
+    @Override
+    protected void doReleaseServerResource() throws SQLException {
         while (writerThreads.getActiveCount() != 0) {
             try {
                 Thread.sleep(1);
@@ -234,32 +226,6 @@ public abstract class AbstractWSEWPreparedStatement extends AbsWSPreparedStateme
         }
         for (EWBackendThreadInfo backendThreadInfo : backendThreadInfoList) {
             backendThreadInfo.releaseReusableColumnBuffers();
-        }
-    }
-
-    // Release server resource — shut down worker threads and release stmtIds.
-    @Override
-    void releaseServerResource() throws SQLException {
-        try {
-            while (writerThreads.getActiveCount() != 0) {
-                try {
-                    Thread.sleep(1);
-                } catch (InterruptedException ignored) {
-                    Thread.currentThread().interrupt();
-                }
-            }
-            if (!writerThreads.isShutdown()) {
-                writerThreads.shutdown();
-            }
-
-            for (WorkerThread workerThread : workerThreadList) {
-                workerThread.releaseStmt();
-            }
-            for (EWBackendThreadInfo backendThreadInfo : backendThreadInfoList) {
-                backendThreadInfo.releaseReusableColumnBuffers();
-            }
-        } finally {
-            super.releaseServerResource();
         }
     }
 

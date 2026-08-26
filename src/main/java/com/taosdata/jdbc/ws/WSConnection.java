@@ -100,10 +100,10 @@ public class WSConnection extends AbstractConnection {
         if (cached != null) {
             WSRetryableStmt cachedStmt = (WSRetryableStmt) cached;
             if (!cachedStmt.isInUse()) {
-                // Cache hit and idle, reuse it
+                // Cache hit and idle, reuse it (statement stays registered
+                // in statementsMap while cached).
                 cachedStmt.markInUse();
                 cachedStmt.reopenFromCache();
-                statementsMap.put(cachedStmt.getInstanceId(), (PreparedStatement) cachedStmt);
                 return cached;
             }
             // Cache hit but in use, fall through to create new statement
@@ -181,20 +181,50 @@ public class WSConnection extends AbstractConnection {
         // Disable cache first
         maxCacheSize = 0;
 
-        // Close statements in use
+        // Release idle cached statements first: they stay registered in
+        // statementsMap, and their close() becomes a no-op once released here.
+        releaseCachedStatements();
+
+        // Close all registered statements (cached ones already released above,
+        // close() sees isClosed() and returns; others take the original path).
         for (Map.Entry<Long, Statement> entry : statementsMap.entrySet()) {
             Statement value = entry.getValue();
             value.close();
         }
         statementsMap.clear();
 
-        // Close cached statements
+        transport.close();
+    }
+
+    @Override
+    public boolean canRebalanced() {
+        // Idle cached statements do not block rebalance: they are released by
+        // releaseCachedStatements() before the transport switches endpoints.
+        for (Statement stmt : statementsMap.values()) {
+            if (!(stmt instanceof WSRetryableStmt) || ((WSRetryableStmt) stmt).isInUse()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Release all cached statements. Called on connection close, and before a
+     * rebalance switch while the old endpoint is still connected (so the
+     * STMT2_CLOSE frames still reach the right server).
+     */
+    @Override
+    public void releaseCachedStatements() {
         for (PreparedStatement stmt : stmtCache.values()) {
-            ((WSRetryableStmt) stmt).releaseServerResource();
+            try {
+                ((WSRetryableStmt) stmt).releaseServerResource();
+            } catch (SQLException e) {
+                // Keep releasing the rest: a failure here must not leak the
+                // remaining statements or abort connection close.
+                log.error("Failed to release cached statement, sql: {}", ((WSRetryableStmt) stmt).getSql(), e);
+            }
         }
         stmtCache.clear();
-
-        transport.close();
     }
 
     @Override

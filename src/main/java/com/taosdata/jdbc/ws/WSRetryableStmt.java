@@ -14,6 +14,7 @@ import io.netty.buffer.ByteBuf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -244,14 +245,74 @@ public class WSRetryableStmt extends WSStatement {
     }
 
     public void releaseStmt() throws SQLException {
-        if (stmtInfo.getStmtId() != 0 && transport.isConnected()) {
-            long reqId = ReqId.getReqID();
-            Request close = RequestFactory.generateClose(stmtInfo.getStmtId(), reqId);
-            transport.send(close, this.getQueryTimeoutInMs());
+        try {
+            if (stmtInfo.getStmtId() != 0 && transport.isConnected()) {
+                long reqId = ReqId.getReqID();
+                Request close = RequestFactory.generateClose(stmtInfo.getStmtId(), reqId);
+                transport.send(close, this.getQueryTimeoutInMs());
+            }
+        } finally {
+            // All call sites are terminal (EW worker teardown, EW constructor
+            // error path). Zeroing guarantees STMT2_CLOSE is sent at most
+            // once even when several release paths run.
+            stmtInfo.setStmtId(0);
         }
     }
 
+    /**
+     * Single close template for all retryable statements; final so subclasses
+     * cannot bypass the statement cache decision.
+     */
+    @Override
+    public final void close() throws SQLException {
+        if (isClosed()) {
+            return;
+        }
+
+        awaitPendingWrites();
+
+        if (resultSet != null && !resultSet.isClosed()) {
+            resultSet.close();
+            resultSet = null;
+        }
+
+        if (tryCache()) {
+            // Cached: statement stays alive and registered with the connection.
+            return;
+        }
+
+        // Not cached: original close behavior, then full resource release
+        // (subclass cleanup lives in the doReleaseServerResource() hook).
+        try {
+            super.close();   // WSStatement.close(): unregister + closed.set(true) + resultSet
+        } finally {
+            releaseServerResource();
+        }
+    }
+
+    /**
+     * Await in-flight asynchronous work before the close decision.
+     * Default is a no-op; efficient-write statements override this to drain
+     * their write queues before the statement may be cached.
+     */
+    protected void awaitPendingWrites() throws SQLException {
+    }
+
     // PreparedStatement cache support (shared by AbsWSPreparedStatement and WSColumnPreparedStatement)
+
+    /**
+     * Try to cache this statement; returns true if the statement is now cached
+     * (and must stay alive), false if the caller should run the original close
+     * path.
+     */
+    protected boolean tryCache() throws SQLException {
+        if (!(this instanceof PreparedStatement)) {
+            // WorkerThread (and any future non-PreparedStatement subclass) is
+            // never cached.
+            return false;
+        }
+        return ((WSConnection) connection).tryCache((PreparedStatement) this);
+    }
 
     /** Whether this statement is currently in use (handed out to application code). */
     public boolean isInUse() {
@@ -281,15 +342,34 @@ public class WSRetryableStmt extends WSStatement {
         return this.stmtInfo;
     }
 
-    /** Release the server-side stmt2 resource and mark closed. */
-    void releaseServerResource() throws SQLException {
+    /**
+     * Release the server-side stmt2 resource; final so subclasses cannot
+     * bypass the release ordering: mark closed first, then subclass cleanup,
+     * then STMT2_CLOSE. Marking closed first is required — EW worker threads
+     * only exit after closed=true, so awaiting them before this point would
+     * deadlock on cached (never-closed) statements.
+     */
+    final void releaseServerResource() throws SQLException {
+        connection.unregisterStatement(this.instanceId);
         closed.set(true);
         inUse = false;
-        if (transport.isConnected() && stmtInfo.getStmtId() != 0) {
-            Request closeReq = RequestFactory.generateClose(stmtInfo.getStmtId(), ReqId.getReqID());
-            transport.send(closeReq, getQueryTimeoutInMs());
-            stmtInfo.setStmtId(0);
+        try {
+            doReleaseServerResource();
+        } finally {
+            try {
+                if (transport.isConnected() && stmtInfo.getStmtId() != 0) {
+                    Request closeReq = RequestFactory.generateClose(stmtInfo.getStmtId(), ReqId.getReqID());
+                    transport.send(closeReq, getQueryTimeoutInMs());
+                }
+            } finally {
+                stmtInfo.setStmtId(0);
+            }
         }
+    }
+
+    /** Subclass cleanup hook invoked by {@link #releaseServerResource()}. */
+    protected void doReleaseServerResource() throws SQLException {
+        // Default: nothing to clean up.
     }
 
     /** Reopen a cached statement so it can be used again. */

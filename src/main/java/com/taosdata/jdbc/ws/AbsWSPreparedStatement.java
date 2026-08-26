@@ -846,28 +846,6 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
     }
 
     @Override
-    public void close() throws SQLException {
-        if (isClosed()) {
-            return;
-        }
-
-        connection.unregisterStatement(this.instanceId);
-
-        if (resultSet != null && !resultSet.isClosed()) {
-            resultSet.close();
-            resultSet = null;
-        }
-
-        if (((WSConnection) connection).tryCache(this)) {
-            return;
-        }
-
-        // Not cached: keep the original close behavior.
-        super.close();
-        releaseStmt();
-    }
-
-    @Override
     public ResultSetMetaData getMetaData() throws SQLException {
         if (this.getResultSet() == null)
             return null;

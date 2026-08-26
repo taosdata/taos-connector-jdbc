@@ -41,6 +41,9 @@ public class WSStatement extends AbstractStatement {
                 && this.connection.canRebalanced()
                 && rebalanceManager.isRebalancing(this.transport.getCurrentEndpoint())
                 && rebalanceManager.handleRebalancing(this.transport.getConnectionParam(), this.transport.getCurrentEndpoint())) {
+            // Release cached statements while the old endpoint is still
+            // connected; their server-side handles die with the switch.
+            this.connection.releaseCachedStatements();
             this.transport.balanceConnection();
         }
         this.connection.registerStatement(this.instanceId, this);

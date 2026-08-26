@@ -51,6 +51,14 @@ public abstract class AbstractConnection extends WrapperImpl implements Connecti
     public boolean canRebalanced() {
         return this.statementsMap.isEmpty();
     }
+
+    /**
+     * Release all cached statements before the transport switches endpoints.
+     * Default is a no-op; connections with a statement cache override this.
+     */
+    public void releaseCachedStatements() {
+        // Default: no statement cache.
+    }
     @Override
     public CallableStatement prepareCall(String sql) throws SQLException {
         checkClosed();

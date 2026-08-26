@@ -316,12 +316,13 @@ public class TSWSPreparedStatementTest {
         String[] types = new String[]{"tinyint", "smallint", "int", "bigint", "bool", "float", "double", "binary(10)", "nchar(10)"};
 
         for (String type : types) {
-            stmt.execute("drop table if exists weather_test");
-            stmt.execute("create table weather_test(ts timestamp, f1 nchar(10), f2 binary(10)) tags (t " + type + ")");
+            String stableName = "weather_test_" + type.substring(0,3);
+            stmt.execute("drop table if exists " + stableName);
+            stmt.execute("create table " + stableName + "(ts timestamp, f1 nchar(10), f2 binary(10)) tags (t " + type + ")");
 
             int numOfRows = 1;
 
-            TSWSPreparedStatement s = (TSWSPreparedStatement) conn.prepareStatement("insert into ? using weather_test tags(?) values(?, ?, ?)");
+            TSWSPreparedStatement s = (TSWSPreparedStatement) conn.prepareStatement("insert into ? using " + stableName + " tags(?) values(?, ?, ?)");
             Random r = new Random();
             s.setTableName("w1");
 
@@ -381,7 +382,7 @@ public class TSWSPreparedStatementTest {
             s.columnDataExecuteBatch();
             s.columnDataCloseBatch();
 
-            String sql = "select * from weather_test";
+            String sql = "select * from " + stableName;
             PreparedStatement statement = conn.prepareStatement(sql);
             ResultSet rs = statement.executeQuery();
             int rows = 0;
@@ -389,6 +390,7 @@ public class TSWSPreparedStatementTest {
                 rows++;
             }
             Assert.assertEquals(numOfRows, rows);
+            stmt.execute("drop table if exists " + stableName);
         }
     }
 
