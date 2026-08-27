@@ -372,8 +372,10 @@ public class WSConnection extends AbstractConnection {
         StmtCacheKey key = new StmtCacheKey(retryable.getStmtInfo().getSql(), retryable.getDatabase());
         PreparedStatement existing = stmtCache.get(key);
 
-        // Already in cache, just mark idle
+        // Already in cache: reset per-use state (parameters bound but never
+        // executed must not linger) and mark idle.
         if (existing == stmt) {
+            retryable.resetForReuse();
             retryable.markIdle();
             return true;
         }

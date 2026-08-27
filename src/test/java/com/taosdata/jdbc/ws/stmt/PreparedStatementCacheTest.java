@@ -328,6 +328,61 @@ public class PreparedStatementCacheTest {
         }
     }
 
+    @Test
+    public void testCacheStateResetOnSecondClose() throws SQLException {
+        String sql = "INSERT INTO " + dbName + "." + tableName + " VALUES(?, ?)";
+
+        // Cycle 1: execute and close; the statement enters the cache
+        PreparedStatement ps1 = connection.prepareStatement(sql);
+        ps1.setLong(1, 1000L);
+        ps1.setInt(2, 1);
+        ps1.executeUpdate();
+        ps1.close();
+
+        // Cycle 2: reuse the cached statement, bind but close WITHOUT execute.
+        // The un-executed parameters must not survive in the cache.
+        PreparedStatement ps2 = connection.prepareStatement(sql);
+        Assert.assertEquals("ps2 should reuse ps1",
+                ((AbsWSPreparedStatement) ps1).getInstanceId(),
+                ((AbsWSPreparedStatement) ps2).getInstanceId());
+        ps2.setLong(1, 2000L);
+        ps2.close();
+
+        // Cycle 3: reuse again; if the cycle-2 ts leaked, this execute would
+        // wrongly write ts=2000. With a clean statement the missing ts fails.
+        PreparedStatement ps3 = connection.prepareStatement(sql);
+        Assert.assertEquals("ps3 should reuse ps1",
+                ((AbsWSPreparedStatement) ps1).getInstanceId(),
+                ((AbsWSPreparedStatement) ps3).getInstanceId());
+        ps3.setInt(2, 99);
+        try {
+            ps3.executeUpdate();
+            Assert.fail("parameters bound in cycle 2 should have been cleared on close");
+        } catch (SQLException expected) {
+            // ts was cleared, so binding only v cannot execute
+        }
+        ps3.close();
+
+        // Cycle 4: a full bind on the reused statement still works
+        PreparedStatement ps4 = connection.prepareStatement(sql);
+        ps4.setLong(1, 3000L);
+        ps4.setInt(2, 3);
+        ps4.executeUpdate();
+        ps4.close();
+
+        // Only the two fully-bound rows exist; no residue from cycle 2
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT ts, v FROM " + dbName + "." + tableName + " ORDER BY ts")) {
+            Assert.assertTrue(rs.next());
+            Assert.assertEquals(1000L, rs.getTimestamp(1).getTime());
+            Assert.assertEquals(1, rs.getInt(2));
+            Assert.assertTrue(rs.next());
+            Assert.assertEquals(3000L, rs.getTimestamp(1).getTime());
+            Assert.assertEquals(3, rs.getInt(2));
+            Assert.assertFalse(rs.next());
+        }
+    }
+
     private Connection openWebSocketConnectionWithCacheSize(int cacheSize) throws SQLException {
         String url = WsStmtWriteTestSupport.traditionalWebSocketUrl();
         Properties props = new Properties();
