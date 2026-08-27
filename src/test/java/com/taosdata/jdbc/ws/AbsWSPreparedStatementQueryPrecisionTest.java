@@ -20,26 +20,26 @@ import static org.mockito.Mockito.when;
 public class AbsWSPreparedStatementQueryPrecisionTest {
     @Test
     public void queryStatement_usesNsPrecisionWhenServerSupportsQueryNs() throws Exception {
-        TSWSPreparedStatement stmt = newQueryStmt(TSDBConstants.MIN_QUERY_NS_VERSION);
+        AbsWSPreparedStatement stmt = newQueryStmt(TSDBConstants.MIN_QUERY_NS_VERSION);
 
         assertEquals(TimestampPrecision.NS, stmt.stmtInfo.getPrecision());
     }
 
     @Test
     public void queryStatement_keepsMsPrecisionWhenServerDoesNotSupportQueryNs() throws Exception {
-        TSWSPreparedStatement stmt = newQueryStmt("3.4.1.10");
+        AbsWSPreparedStatement stmt = newQueryStmt("3.4.1.10");
 
         assertEquals(TimestampPrecision.MS, stmt.stmtInfo.getPrecision());
     }
 
     @Test
     public void insertStatement_keepsPrecisionFromPrepareResponse() throws Exception {
-        TSWSPreparedStatement stmt = newInsertStmt(TSDBConstants.MIN_QUERY_NS_VERSION, TimestampPrecision.US);
+        AbsWSPreparedStatement stmt = newInsertStmt(TSDBConstants.MIN_QUERY_NS_VERSION, TimestampPrecision.US);
 
         assertEquals(TimestampPrecision.US, stmt.stmtInfo.getPrecision());
     }
 
-    private static TSWSPreparedStatement newQueryStmt(String serverVersion) throws SQLException {
+    private static AbsWSPreparedStatement newQueryStmt(String serverVersion) throws SQLException {
         Stmt2PrepareResp prepareResp = new Stmt2PrepareResp();
         prepareResp.setStmtId(1L);
         prepareResp.setInsert(false);
@@ -47,7 +47,7 @@ public class AbsWSPreparedStatementQueryPrecisionTest {
         return newStmt(serverVersion, prepareResp, "select * from t where ts > ?");
     }
 
-    private static TSWSPreparedStatement newInsertStmt(String serverVersion, int precision) throws SQLException {
+    private static AbsWSPreparedStatement newInsertStmt(String serverVersion, int precision) throws SQLException {
         Field timestampField = new Field();
         timestampField.setBindType((byte) FieldBindType.TAOS_FIELD_COL.getValue());
         timestampField.setFieldType((byte) TSDBConstants.TSDB_DATA_TYPE_TIMESTAMP);
@@ -60,7 +60,7 @@ public class AbsWSPreparedStatementQueryPrecisionTest {
         return newStmt(serverVersion, prepareResp, "insert into t values (?)");
     }
 
-    private static TSWSPreparedStatement newStmt(String serverVersion,
+    private static AbsWSPreparedStatement newStmt(String serverVersion,
                                                 Stmt2PrepareResp prepareResp,
                                                 String sql) throws SQLException {
         Transport transport = mock(Transport.class);
@@ -77,7 +77,7 @@ public class AbsWSPreparedStatementQueryPrecisionTest {
                 param,
                 serverVersion);
 
-        return new TSWSPreparedStatement(
+        return new AbsWSPreparedStatement(
                 transport,
                 param,
                 "test_db",

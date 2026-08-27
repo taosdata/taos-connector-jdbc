@@ -3,7 +3,6 @@ package com.taosdata.jdbc.ws;
 import com.taosdata.jdbc.AbstractConnection;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
-import com.taosdata.jdbc.TaosPrepareStatement;
 import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.utils.BlobUtil;
@@ -38,7 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static com.taosdata.jdbc.TSDBConstants.*;
 import static com.taosdata.jdbc.utils.UnsignedDataUtils.toUnsignedLongBits;
 
-public class WSColumnPreparedStatement extends WSRetryableStmt implements TaosPrepareStatement {
+public class WSColumnPreparedStatement extends WSRetryableStmt implements TSWSPreparedStatement {
 
     private final Stmt2FieldMeta[] fieldMetas;
     private final byte[] fixedWidths;

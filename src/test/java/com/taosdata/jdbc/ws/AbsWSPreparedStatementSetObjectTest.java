@@ -45,7 +45,7 @@ public class AbsWSPreparedStatementSetObjectTest {
 
     @Test
     public void setObjectWithTargetSqlType_convertsSupportedValues() throws Exception {
-        TSWSPreparedStatement stmt = newStmt(ZoneId.of("UTC"));
+        AbsWSPreparedStatement stmt = newStmt(ZoneId.of("UTC"));
         int index = 1;
 
         stmt.setObject(index, null, Types.INTEGER);
@@ -136,7 +136,7 @@ public class AbsWSPreparedStatementSetObjectTest {
 
     @Test
     public void setObjectWithTargetSqlType_convertsLocalDateTimeWithoutZone() throws Exception {
-        TSWSPreparedStatement stmt = newStmt(null);
+        AbsWSPreparedStatement stmt = newStmt(null);
 
         stmt.setObject(1, LocalDateTime.of(2024, 1, 2, 3, 4, 5), Types.TIMESTAMP);
 
@@ -145,7 +145,7 @@ public class AbsWSPreparedStatementSetObjectTest {
 
     @Test
     public void setObjectWithTargetSqlType_rejectsUnsupportedValues() throws Exception {
-        TSWSPreparedStatement stmt = newStmt(ZoneId.of("UTC"));
+        AbsWSPreparedStatement stmt = newStmt(ZoneId.of("UTC"));
 
         assertSqlException(() -> stmt.setObject(1, "true", Types.BOOLEAN));
         assertSqlException(() -> stmt.setObject(2, "tiny", Types.TINYINT));
@@ -163,7 +163,7 @@ public class AbsWSPreparedStatementSetObjectTest {
         assertSqlException(() -> stmt.setObject(14, 1, Types.ARRAY));
     }
 
-    private static TSWSPreparedStatement newStmt(ZoneId zoneId) throws SQLException {
+    private static AbsWSPreparedStatement newStmt(ZoneId zoneId) throws SQLException {
         Transport transport = mock(Transport.class);
         when(transport.getReconnectCount()).thenReturn(0);
 
@@ -174,7 +174,7 @@ public class AbsWSPreparedStatementSetObjectTest {
 
         Stmt2PrepareResp prepareResp = new Stmt2PrepareResp();
         prepareResp.setStmtId(1L);
-        return new TSWSPreparedStatement(
+        return new AbsWSPreparedStatement(
                 transport,
                 param,
                 "test_db",
@@ -184,7 +184,7 @@ public class AbsWSPreparedStatementSetObjectTest {
                 prepareResp);
     }
 
-    private static void assertColumn(TSWSPreparedStatement stmt, int index, int type, Object expected) {
+    private static void assertColumn(AbsWSPreparedStatement stmt, int index, int type, Object expected) {
         Column column = stmt.colOrderedMap.get(index);
         assertEquals(type, column.getType());
         if (expected instanceof byte[]) {
@@ -194,7 +194,7 @@ public class AbsWSPreparedStatementSetObjectTest {
         }
     }
 
-    private static void assertColumnType(TSWSPreparedStatement stmt, int index, int type) {
+    private static void assertColumnType(AbsWSPreparedStatement stmt, int index, int type) {
         Column column = stmt.colOrderedMap.get(index);
         assertEquals(type, column.getType());
         assertTrue(column.getData() instanceof Instant);

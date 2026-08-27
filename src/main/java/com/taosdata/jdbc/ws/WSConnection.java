@@ -83,7 +83,7 @@ public class WSConnection extends AbstractConnection {
         }
 
         if (!sql.contains("?")){
-            TSWSPreparedStatement stmt = new TSWSPreparedStatement(transport,
+            AbsWSPreparedStatement stmt = new AbsWSPreparedStatement(transport,
                     param,
                     database,
                     this,
@@ -160,7 +160,7 @@ public class WSConnection extends AbstractConnection {
                     statementsMap.put(stmt.getInstanceId(), stmt);
                     return stmt;
                 }
-                TSWSPreparedStatement stmt = new TSWSPreparedStatement(transport,
+                AbsWSPreparedStatement stmt = new AbsWSPreparedStatement(transport,
                         param,
                         database,
                         this,

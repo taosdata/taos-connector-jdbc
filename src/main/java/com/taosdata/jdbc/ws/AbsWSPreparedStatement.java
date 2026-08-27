@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
 
-public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepareStatement {
+public class AbsWSPreparedStatement extends WSRetryableStmt implements TSWSPreparedStatement {
     private static final List<Object> nullTag = Collections.singletonList(null);
     protected final Map<Integer, Column> colOrderedMap = new HashMap<>();
     private final PriorityQueue<ColumnInfo> tag = new PriorityQueue<>();
@@ -1179,7 +1179,7 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
      * <p>In normal websocket routing, bind-exec-capable ordinary inserts are upgraded
      * earlier in {@link WSConnection#prepareStatement(String)} to
      * {@link WSColumnPreparedStatement}, so this method mainly covers the legacy
-     * {@code TSWSPreparedStatement} path plus direct test construction.
+     * row-based path plus direct test construction.
      */
     private int executeInsertImpl() throws SQLException {
         if (tableInfoMap.isEmpty()) {
