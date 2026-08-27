@@ -11,13 +11,13 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Random;
 
-public class TSWSPreparedStatementTest {
+public class TSWSPreparedStatementTest336 {
         private static Connection conn;
 
     static final String HOST = TestEnvUtil.getHost();
     private static final String SQL_INSERT = "insert into t1 values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     private static final String SQL_SELECT = "select * from t1 where ts >= ? and ts < ? and f1 >= ?";
-    private static final String DB_NAME = TestUtils.camelToSnake(TSWSPreparedStatementTest.class);
+    private static final String DB_NAME = TestUtils.camelToSnake(TSWSPreparedStatementTest336.class);
 
     private PreparedStatement pstmtInsert;
     private PreparedStatement pstmtSelect;
@@ -1157,10 +1157,10 @@ public class TSWSPreparedStatementTest {
 
     @BeforeClass
     public static void beforeClass() throws SQLException {
-        TestUtils.runInMain();
+        TestUtils.runIn336();
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + HOST + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&stmtBindMode=traditional";
+            url = "jdbc:TAOS-WS://" + HOST + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&stmtBindMode=traditional&stmtCacheSize=0";
         }
         conn = DriverManager.getConnection(url);
         try (Statement stmt = conn.createStatement()) {
