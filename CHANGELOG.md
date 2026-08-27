@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.9.1] - 2026-08-26
+
+**Full Changelog**: [3.9.0...3.9.1](https://github.com/taosdata/taos-connector-jdbc/compare/3.9.0...3.9.1)
+
+### Bug Fixes
+
+- *ws*: Release cached EW statements without deadlock ([3605d89](3605d891730cafcbc73d0d5fa2f0784492493c71))
+- *ws*: Keep `unwrap(TSWSPreparedStatement.class)` source compatible on column bind-exec paths by turning TSWSPreparedStatement into an interface; mixed use of extension setters with standard setters is supported on the legacy row-based path via `stmtBindMode=traditional`
+
+### Features
+
+- *ws*: Cache prepared statements per connection ([8b50179](8b50179fe27a5d372f40424563489a3085adec7c))
+- *ws*: Extend stmt cache to column bind-exec and efficient-write paths ([56ebf14](56ebf145e4f688ae12db7f48fa7a40597ee491a4))
+- Use ns precision for websocket query timestamps (rd-public/tsdb!1136) ([64346b0](64346b038357759a8ca413c212bfaab2e8a9b5b6))
+
+
 ## [3.9.0] - 2026-06-08
 
 **Full Changelog**: [3.8.4...3.9.0](https://github.com/taosdata/taos-connector-jdbc/compare/3.8.4...3.9.0)
