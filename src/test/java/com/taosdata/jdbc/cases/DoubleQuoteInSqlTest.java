@@ -62,7 +62,7 @@ public class DoubleQuoteInSqlTest {
         stmt.execute("drop database if exists " + DB_NAME);
         stmt.execute("create database if not exists " + DB_NAME);
         stmt.execute("use " + DB_NAME);
-        stmt.execute("create table weather(ts timestamp, text binary(64))");
+        stmt.execute("create table weather(ts timestamp, text1 binary(64))");
     }
 
     @After
