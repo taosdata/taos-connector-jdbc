@@ -365,10 +365,7 @@ public class WSConnectionValidationTest {private static volatile int queryExecut
         System.setProperty("ENV_TAOS_JDBC_TEST", "test");
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            // Use REST instead of JNI here: this class only needs DDL, and the
-            // native client breaks the JVM attach mechanism (SIGQUIT handshake)
-            // that mockito-inline relies on.
-            url = "jdbc:TAOS-RS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getRsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
+            url = "jdbc:TAOS://" + TestEnvUtil.getHost() + ":" + TestEnvUtil.getJniPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_LOCALE, "C");
