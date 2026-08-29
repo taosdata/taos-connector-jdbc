@@ -19,6 +19,35 @@ import java.sql.SQLException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * Base class for statements with retryable writes and statement-cache support.
+ *
+ * <p>Lifecycle state machine (JDBC connections are single-threaded):
+ * <ul>
+ *   <li><b>in use</b>: handed out by {@link WSConnection#prepareStatement(String)};
+ *       {@link #isInUse()} is true.</li>
+ *   <li><b>cached/idle</b>: the application called {@link #close()}, but the
+ *       statement was kept in the connection's statement cache instead of being
+ *       closed. {@code closed} stays false so that a later prepare of the same
+ *       SQL can reopen the same object via {@link #reopenFromCache()}; therefore
+ *       {@link #isClosed()} is intentionally NOT true here, and the application
+ *       must not touch its reference after {@code close()} regardless.</li>
+ *   <li><b>closed</b>: not cached; {@code closed=true} and the server-side
+ *       stmt2 resource has been released via STMT2_CLOSE.</li>
+ * </ul>
+ *
+ * <p>{@link #close()} is final and routes through {@link #tryCache()}: cacheable
+ * statements get {@link #resetForReuse()} + {@link #markIdle()}; all others go
+ * through the original close + {@link #releaseServerResource()} path.
+ *
+ * <p>Subclass contract: a subclass that supports caching (e.g.
+ * {@link AbsWSPreparedStatement}, {@code WSColumnPreparedStatement},
+ * {@code AbstractWSEWPreparedStatement}) must override {@link #resetForReuse()},
+ * and the override MUST call {@code super.resetForReuse()} so that inherited
+ * per-use state (bound parameters, affected rows, batch state) is cleared.
+ * Skipping the super call leaks the previous borrower's bindings into the next
+ * one.
+ */
 public class WSRetryableStmt extends WSStatement {
     private static final Logger log = LoggerFactory.getLogger(WSRetryableStmt.class);
 
@@ -298,7 +327,8 @@ public class WSRetryableStmt extends WSStatement {
     protected void awaitPendingWrites() throws SQLException {
     }
 
-    // PreparedStatement cache support (shared by AbsWSPreparedStatement and WSColumnPreparedStatement)
+    // PreparedStatement cache support (shared by AbsWSPreparedStatement,
+    // WSColumnPreparedStatement and the EW AbstractWSEWPreparedStatement family)
 
     /**
      * Try to cache this statement; returns true if the statement is now cached
@@ -328,17 +358,17 @@ public class WSRetryableStmt extends WSStatement {
     }
 
     /** Return the sql for cache key construction. */
-    public String getSql() {
+    String getSql() {
         return this.stmtInfo.getSql();
     }
 
     /** Return the database for cache key construction. */
-    public String getDatabase() {
+    String getDatabase() {
         return this.database;
     }
 
     /** Return the stmtInfo for cache decisions. */
-    public StmtInfo getStmtInfo() {
+    StmtInfo getStmtInfo() {
         return this.stmtInfo;
     }
 
@@ -361,6 +391,11 @@ public class WSRetryableStmt extends WSStatement {
                     Request closeReq = RequestFactory.generateClose(stmtInfo.getStmtId(), ReqId.getReqID());
                     transport.send(closeReq, getQueryTimeoutInMs());
                 }
+            } catch (SQLException e) {
+                // STMT2_CLOSE is best-effort: transport already retried the
+                // send; on failure just close locally and let the server
+                // reclaim the handle when the connection drops.
+                log.warn("Failed to send STMT2_CLOSE for stmtId {}, closing locally", stmtInfo.getStmtId(), e);
             } finally {
                 stmtInfo.setStmtId(0);
             }
@@ -377,7 +412,12 @@ public class WSRetryableStmt extends WSStatement {
         closed.set(false);
     }
 
-    /** Reset per-use state before returning to cache. Subclasses that support caching must override. */
+    /**
+     * Reset per-use state before returning to cache. Subclasses that support
+     * caching must override, and the override MUST call
+     * {@code super.resetForReuse()} so inherited bindings and counters are
+     * cleared.
+     */
     protected void resetForReuse() throws SQLException {
         // Default: no-op (worker threads, query statements don't need caching)
     }

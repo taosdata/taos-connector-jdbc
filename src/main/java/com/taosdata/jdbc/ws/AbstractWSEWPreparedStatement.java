@@ -232,6 +232,7 @@ public abstract class AbstractWSEWPreparedStatement extends AbsWSPreparedStateme
     // Reset per-use state before returning to cache. Workers stay alive.
     @Override
     protected void resetForReuse() throws SQLException {
+        super.resetForReuse();
         addBatchCounts = 0;
         batchInsertedRows.set(0);
         remainingUnprocessedRows.set(0);

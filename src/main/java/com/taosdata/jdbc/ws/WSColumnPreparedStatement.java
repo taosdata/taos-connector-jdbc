@@ -951,6 +951,7 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements TSWSPr
     @Override
     protected void resetForReuse() throws SQLException {
         resetFastState();
+        affectedRows = -1;
     }
 
     private int executeInsertImpl() throws SQLException {
