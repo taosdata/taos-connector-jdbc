@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Bug Fixes
 
 - *ws*: Release cached EW statements without deadlock ([3605d89](3605d891730cafcbc73d0d5fa2f0784492493c71))
-- *ws*: Keep `unwrap(TSWSPreparedStatement.class)` source compatible on column bind-exec paths by turning TSWSPreparedStatement into an interface; mixed use of extension setters with standard setters is supported on the legacy row-based path via `stmtBindMode=traditional`
+- *ws*: Keep `unwrap(TSWSPreparedStatement.class)` source compatible on column bind-exec paths by turning TSWSPreparedStatement into an interface; mixed use of extension setters with standard setters is supported on the legacy row-based path via `stmtBindMode=traditional`. Note: this change is source compatible but NOT binary compatible — clients compiled against 3.9.0 or earlier that reference `TSWSPreparedStatement` must be recompiled (otherwise `IncompatibleClassChangeError` at runtime), and code extending the old class no longer compiles
 
 ### Features
 
