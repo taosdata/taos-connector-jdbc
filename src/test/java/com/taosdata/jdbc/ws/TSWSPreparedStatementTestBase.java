@@ -11,13 +11,14 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Random;
 
-public class TSWSPreparedStatementTest336 {
-        private static Connection conn;
+abstract class TSWSPreparedStatementTestBase {
+        protected static Connection conn;
 
     static final String HOST = TestEnvUtil.getHost();
     private static final String SQL_INSERT = "insert into t1 values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     private static final String SQL_SELECT = "select * from t1 where ts >= ? and ts < ? and f1 >= ?";
-    private static final String DB_NAME = TestUtils.camelToSnake(TSWSPreparedStatementTest336.class);
+    // Set by each concrete subclass in its @BeforeClass before any test runs.
+    protected static String dbName;
 
     private PreparedStatement pstmtInsert;
     private PreparedStatement pstmtSelect;
@@ -1155,29 +1156,36 @@ public class TSWSPreparedStatementTest336 {
 
     }
 
-    @BeforeClass
-    public static void beforeClass() throws SQLException {
-        TestUtils.runIn336();
+    /**
+     * Connect and recreate the test database. Each concrete subclass calls this
+     * from its own @BeforeClass after setting {@link #dbName} and checking its
+     * environment gate.
+     *
+     * @param extraUrlParams appended to the default WebSocket URL (e.g.
+     *                       "&stmtCacheSize=0"); ignored when SpecifyAddress
+     *                       provides a URL, matching the historical behavior
+     */
+    protected static void setUpDatabase(String extraUrlParams) throws SQLException {
         String url = SpecifyAddress.getInstance().getRestUrl();
         if (url == null) {
-            url = "jdbc:TAOS-WS://" + HOST + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&stmtBindMode=traditional&stmtCacheSize=0";
+            url = "jdbc:TAOS-WS://" + HOST + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword() + "&stmtBindMode=traditional" + extraUrlParams;
         }
         conn = DriverManager.getConnection(url);
         try (Statement stmt = conn.createStatement()) {
-            stmt.execute("drop database if exists " + DB_NAME);
-            stmt.execute("create database if not exists " + DB_NAME);
-            stmt.execute("use " + DB_NAME);
+            stmt.execute("drop database if exists " + dbName);
+            stmt.execute("create database if not exists " + dbName);
+            stmt.execute("use " + dbName);
         }
     }
 
-    @AfterClass
-    public static void afterClass() {
+    /** Drop the test database and close the shared connection. */
+    protected static void tearDownDatabase() {
         if (conn == null) {
             return;
         }
         try {
             Statement statement = conn.createStatement();
-            statement.execute("drop database if exists " + DB_NAME);
+            statement.execute("drop database if exists " + dbName);
             statement.execute("drop database if exists dbtest");
             statement.close();
             if (conn != null)
