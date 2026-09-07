@@ -8,7 +8,7 @@ public class AlterTypeTest {
 
   @Test
   public void testEnumValues() {
-    assertEquals(19, AlterType.values().length);
+    assertEquals(22, AlterType.values().length);
 
     assertEquals(AlterType.ADD_TAG, AlterType.valueOf("ADD_TAG"));
     assertEquals(AlterType.DROP_TAG, AlterType.valueOf("DROP_TAG"));
@@ -114,7 +114,7 @@ public class AlterTypeTest {
   @Test
   public void testEnumIteration() {
     // Values are non-sequential (12 is not used), verify expected set
-    int[] expectedValues = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20};
+    int[] expectedValues = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23};
     AlterType[] types = AlterType.values();
     assertEquals(expectedValues.length, types.length);
     for (int i = 0; i < expectedValues.length; i++) {

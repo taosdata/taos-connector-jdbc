@@ -19,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.*;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,6 +39,10 @@ public class WSConnection extends AbstractConnection {
     private static final ConcurrentHashMap<String, ConCheckInfo> conCheckInfoMap = new ConcurrentHashMap<>();
     private static final Map<String, Object> jdbcUrlLocks = new ConcurrentHashMap<>();
 
+    // PreparedStatement cache
+    private final LinkedHashMap<StmtCacheKey, PreparedStatement> stmtCache;
+    private int maxCacheSize;
+
     public WSConnection(String url, Properties properties, Transport transport, ConnectionParam param, String serverVersion) {
         super(properties, serverVersion);
         this.transport = transport;
@@ -45,6 +50,8 @@ public class WSConnection extends AbstractConnection {
         this.param = param;
         this.jdbcUrl = StringUtils.retainHostPortPart(url);
         this.metaData = new WSDatabaseMetaData(url, properties.getProperty(TSDBDriver.PROPERTY_KEY_USER), this);
+        this.maxCacheSize = param.getStmtCacheSize();
+        this.stmtCache = new LinkedHashMap<>(16, 0.75f, true);
     }
 
     @Override
@@ -76,12 +83,30 @@ public class WSConnection extends AbstractConnection {
         }
 
         if (!sql.contains("?")){
-            return new TSWSPreparedStatement(transport,
+            AbsWSPreparedStatement stmt = new AbsWSPreparedStatement(transport,
                     param,
                     database,
                     this,
                     sql,
                     idGenerator.getAndIncrement());
+            stmt.markInUse();
+            statementsMap.put(stmt.getInstanceId(), stmt);
+            return stmt;
+        }
+
+        // Check cache for parameterized SQL
+        StmtCacheKey cacheKey = new StmtCacheKey(sql, database);
+        PreparedStatement cached = stmtCache.get(cacheKey);
+        if (cached != null) {
+            WSRetryableStmt cachedStmt = (WSRetryableStmt) cached;
+            if (!cachedStmt.isInUse()) {
+                // Cache hit and idle, reuse it (statement stays registered
+                // in statementsMap while cached).
+                cachedStmt.markInUse();
+                cachedStmt.reopenFromCache();
+                return cached;
+            }
+            // Cache hit but in use, fall through to create new statement
         }
 
         if (transport != null && !transport.isClosed()) {
@@ -100,39 +125,51 @@ public class WSConnection extends AbstractConnection {
 
             if ((efficientWritingSql || "STMT".equalsIgnoreCase(param.getAsyncWrite())) && isInsert && isSuperTable) {
                 if (supportsStmt2BindExec()) {
-                    return new WSEWColumnPreparedStatement(transport,
+                    WSEWColumnPreparedStatement stmt = new WSEWColumnPreparedStatement(transport,
                             param,
                             database,
                             this,
                             sql,
                             idGenerator.getAndIncrement(),
                             prepareResp);
+                    stmt.markInUse();
+                    statementsMap.put(stmt.getInstanceId(), stmt);
+                    return stmt;
                 }
-                return new WSEWPreparedStatement(transport,
+                WSEWPreparedStatement stmt = new WSEWPreparedStatement(transport,
                         param,
                         database,
                         this,
                         sql,
                         idGenerator.getAndIncrement(),
                         prepareResp);
+                stmt.markInUse();
+                statementsMap.put(stmt.getInstanceId(), stmt);
+                return stmt;
             } else {
                 // Route insert statements to the stmt2 bind-exec producer on supported servers.
                 if (isInsert && supportsStmt2BindExec()) {
-                    return new WSColumnPreparedStatement(transport,
+                    WSColumnPreparedStatement stmt = new WSColumnPreparedStatement(transport,
                             param,
                             database,
                             this,
                             sql,
                             idGenerator.getAndIncrement(),
                             prepareResp);
+                    stmt.markInUse();
+                    statementsMap.put(stmt.getInstanceId(), stmt);
+                    return stmt;
                 }
-                return new TSWSPreparedStatement(transport,
+                AbsWSPreparedStatement stmt = new AbsWSPreparedStatement(transport,
                         param,
                         database,
                         this,
                         sql,
                         idGenerator.getAndIncrement(),
                         prepareResp);
+                stmt.markInUse();
+                statementsMap.put(stmt.getInstanceId(), stmt);
+                return stmt;
             }
         } else {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
@@ -141,12 +178,53 @@ public class WSConnection extends AbstractConnection {
 
     @Override
     public void close() throws SQLException {
+        // Disable cache first
+        maxCacheSize = 0;
+
+        // Release idle cached statements first: they stay registered in
+        // statementsMap, and their close() becomes a no-op once released here.
+        releaseCachedStatements();
+
+        // Close all registered statements (cached ones already released above,
+        // close() sees isClosed() and returns; others take the original path).
         for (Map.Entry<Long, Statement> entry : statementsMap.entrySet()) {
             Statement value = entry.getValue();
             value.close();
         }
         statementsMap.clear();
+
         transport.close();
+    }
+
+    @Override
+    public boolean canRebalanced() {
+        // Idle cached statements do not block rebalance: they are released by
+        // releaseCachedStatements() before the transport switches endpoints.
+        for (Statement stmt : statementsMap.values()) {
+            if (!(stmt instanceof WSRetryableStmt) || ((WSRetryableStmt) stmt).isInUse()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Release all cached statements. Called on connection close, and before a
+     * rebalance switch while the old endpoint is still connected (so the
+     * STMT2_CLOSE frames still reach the right server).
+     */
+    @Override
+    public void releaseCachedStatements() {
+        for (PreparedStatement stmt : stmtCache.values()) {
+            try {
+                ((WSRetryableStmt) stmt).releaseServerResource();
+            } catch (SQLException e) {
+                // Keep releasing the rest: a failure here must not leak the
+                // remaining statements or abort connection close.
+                log.error("Failed to release cached statement, sql: {}", ((WSRetryableStmt) stmt).getSql(), e);
+            }
+        }
+        stmtCache.clear();
     }
 
     @Override
@@ -264,5 +342,90 @@ public class WSConnection extends AbstractConnection {
             return false;
         }
         return this.supportStmt2BindExec;
+    }
+
+    // PreparedStatement cache management
+
+    /**
+     * Try to cache the given statement. Returns true if the statement is now
+     * cached (and must stay alive); false if the caller should run the
+     * original close path ({@code super.close()} + STMT2_CLOSE).
+     */
+    boolean tryCache(PreparedStatement stmt) throws SQLException {
+        WSRetryableStmt retryable = (WSRetryableStmt) stmt;
+
+        // Cache disabled (connection closing or stmtCacheSize=0)
+        if (maxCacheSize <= 0) {
+            return false;
+        }
+
+        // Only cache insert statements
+        if (!retryable.getStmtInfo().isInsert()) {
+            return false;
+        }
+
+        // Only cache the sql with ?
+        if (retryable.getStmtInfo().getFields() == null || retryable.getStmtInfo().getFields().isEmpty()) {
+            return false;
+        }
+
+        StmtCacheKey key = new StmtCacheKey(retryable.getStmtInfo().getSql(), retryable.getDatabase());
+        PreparedStatement existing = stmtCache.get(key);
+
+        // Already in cache: reset per-use state (parameters bound but never
+        // executed must not linger) and mark idle.
+        if (existing == stmt) {
+            retryable.resetForReuse();
+            retryable.markIdle();
+            return true;
+        }
+
+        // Same SQL already cached by different statement, caller closes this one
+        if (existing != null) {
+            return false;
+        }
+
+        // Cache full, evict eldest (LRU)
+        if (stmtCache.size() >= maxCacheSize) {
+            java.util.Iterator<Map.Entry<StmtCacheKey, PreparedStatement>> it = stmtCache.entrySet().iterator();
+            if (it.hasNext()) {
+                Map.Entry<StmtCacheKey, PreparedStatement> eldest = it.next();
+                WSRetryableStmt eldestStmt = (WSRetryableStmt) eldest.getValue();
+                it.remove();
+                // Release the evicted statement's server resource if not in use.
+                if (!eldestStmt.isInUse()) {
+                    eldestStmt.releaseServerResource();
+                }
+            }
+        }
+
+        // Add to cache
+        retryable.resetForReuse();
+        retryable.markIdle();
+        stmtCache.put(key, stmt);
+        return true;
+    }
+
+    static class StmtCacheKey {
+        final String sql;
+        final String database;
+
+        StmtCacheKey(String sql, String database) {
+            this.sql = sql;
+            this.database = database;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof StmtCacheKey)) return false;
+            StmtCacheKey that = (StmtCacheKey) o;
+            return sql.equals(that.sql) && java.util.Objects.equals(database, that.database);
+        }
+
+        @Override
+        public int hashCode() {
+            return java.util.Objects.hash(sql, database);
+        }
     }
 }
