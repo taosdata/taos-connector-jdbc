@@ -4,6 +4,7 @@ import com.taosdata.jdbc.common.TDBlob;
 import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
+import com.taosdata.jdbc.ws.AbsWSPreparedStatement;
 import com.taosdata.jdbc.ws.TSWSPreparedStatement;
 import io.netty.util.ResourceLeakDetector;
 import org.junit.*;
@@ -240,7 +241,7 @@ public class WsPstmtTest {
 
     @Test
     public void test111_SetTagNull() throws SQLException {
-        TSWSPreparedStatement wsPreparedStatement = pstmt.unwrap(TSWSPreparedStatement.class);
+        AbsWSPreparedStatement wsPreparedStatement = pstmt.unwrap(AbsWSPreparedStatement.class);
         wsPreparedStatement.setTagSqlTypeNull(1, Types.BOOLEAN);
         wsPreparedStatement.setTagSqlTypeNull(1, Types.TINYINT);
         wsPreparedStatement.setTagSqlTypeNull(1, Types.SMALLINT);

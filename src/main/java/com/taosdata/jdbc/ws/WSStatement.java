@@ -19,7 +19,7 @@ import static com.taosdata.jdbc.utils.SqlSyntaxValidator.getDatabaseName;
 public class WSStatement extends AbstractStatement {
     protected final Transport transport;
     protected String database;
-    private final AbstractConnection connection;
+    protected final AbstractConnection connection;
 
 
     protected final AtomicBoolean closed = new AtomicBoolean(false);
@@ -41,6 +41,9 @@ public class WSStatement extends AbstractStatement {
                 && this.connection.canRebalanced()
                 && rebalanceManager.isRebalancing(this.transport.getCurrentEndpoint())
                 && rebalanceManager.handleRebalancing(this.transport.getConnectionParam(), this.transport.getCurrentEndpoint())) {
+            // Release cached statements while the old endpoint is still
+            // connected; their server-side handles die with the switch.
+            this.connection.releaseCachedStatements();
             this.transport.balanceConnection();
         }
         this.connection.registerStatement(this.instanceId, this);

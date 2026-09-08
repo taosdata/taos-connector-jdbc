@@ -3,13 +3,10 @@ package com.taosdata.jdbc.ws;
 import com.taosdata.jdbc.AbstractConnection;
 import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
-import com.taosdata.jdbc.TaosPrepareStatement;
 import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.enums.FieldBindType;
 import com.taosdata.jdbc.utils.BlobUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
-import com.taosdata.jdbc.utils.ReqId;
-import com.taosdata.jdbc.ws.entity.Request;
 import com.taosdata.jdbc.ws.stmt2.Stmt2BindExecRequestBuilder;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnBindSerializer;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ColumnFieldBuffer;
@@ -17,7 +14,6 @@ import com.taosdata.jdbc.ws.stmt2.Stmt2FieldMeta;
 import com.taosdata.jdbc.ws.stmt2.Stmt2VariableWidthReuseHelper;
 import com.taosdata.jdbc.ws.stmt2.Stmt2ChunkSizingUtil;
 import com.taosdata.jdbc.ws.stmt2.entity.Field;
-import com.taosdata.jdbc.ws.stmt2.entity.RequestFactory;
 import com.taosdata.jdbc.ws.stmt2.entity.StmtInfo;
 import com.taosdata.jdbc.ws.stmt2.entity.Stmt2PrepareResp;
 import io.netty.buffer.ByteBuf;
@@ -41,7 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static com.taosdata.jdbc.TSDBConstants.*;
 import static com.taosdata.jdbc.utils.UnsignedDataUtils.toUnsignedLongBits;
 
-public class WSColumnPreparedStatement extends WSRetryableStmt implements TaosPrepareStatement {
+public class WSColumnPreparedStatement extends WSRetryableStmt implements TSWSPreparedStatement {
 
     private final Stmt2FieldMeta[] fieldMetas;
     private final byte[] fixedWidths;
@@ -941,24 +937,21 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements TaosPr
         executeBatch();
     }
 
+    // Clean column buffers; invoked by the releaseServerResource() template.
     @Override
-    public void close() throws SQLException {
-        if (isClosed()) {
-            return;
-        }
-        try {
-            if (transport.isConnected() && stmtInfo.getStmtId() != 0) {
-                long reqId = ReqId.getReqID();
-                Request close = RequestFactory.generateClose(stmtInfo.getStmtId(), reqId);
-                transport.send(close, this.getQueryTimeoutInMs());
-            }
-        } finally {
-            releaseColumnBuffers();
-            columnBuffers = null;
-            bufferSizeHints = null;
-            expectedRowCount = 0;
-            super.close();
-        }
+    protected void doReleaseServerResource() throws SQLException {
+        releaseColumnBuffers();
+        columnBuffers = null;
+        bufferSizeHints = null;
+        expectedRowCount = 0;
+    }
+
+    // Reset per-use state before returning to cache. Reuses the same buffer
+    // recycling path as post-execute resets, preserving adaptive buffer sizing.
+    @Override
+    protected void resetForReuse() throws SQLException {
+        resetFastState();
+        affectedRows = -1;
     }
 
     private int executeInsertImpl() throws SQLException {

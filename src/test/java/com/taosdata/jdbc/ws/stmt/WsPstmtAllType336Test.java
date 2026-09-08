@@ -5,6 +5,7 @@ import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
+import com.taosdata.jdbc.ws.AbsWSPreparedStatement;
 import com.taosdata.jdbc.ws.TSWSPreparedStatement;
 import io.netty.util.ResourceLeakDetector;
 import org.junit.*;
@@ -141,7 +142,7 @@ public class WsPstmtAllType336Test {
     @Test
     public void testExecuteCriticalValue() throws SQLException {
         String sql = "insert into " + dbName + "." + tableName + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        TSWSPreparedStatement statement = connection.prepareStatement(sql).unwrap(TSWSPreparedStatement.class);
+        AbsWSPreparedStatement statement = connection.prepareStatement(sql).unwrap(AbsWSPreparedStatement.class);
         statement.setTimestamp(1, new Timestamp(0));
         statement.setByte(2, (byte) 127);
         statement.setShort(3, (short) 32767);

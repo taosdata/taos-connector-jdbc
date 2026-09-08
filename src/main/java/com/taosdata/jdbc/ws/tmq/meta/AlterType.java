@@ -19,7 +19,10 @@ public enum AlterType {
   SET_REF_NULL(17),
   ADD_COLUMN_WITH_REF(18),
   ALTER_MULTI_TABLE_TAG(19),
-  ALTER_STABLE_TAG_WITH_FILTER(20);
+  ALTER_STABLE_TAG_WITH_FILTER(20),
+  ALTER_TAG_REF(21),
+  ADD_BASE_ON(22),
+  DROP_BASE_ON(23);
   private final int value;
 
   AlterType(int value) {

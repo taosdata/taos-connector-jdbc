@@ -280,6 +280,69 @@ public class WsEfficientWritingTest {
         Assert.assertEquals(numOfSubTable * numOfRow, Utils.getSqlRows(connection, db_name + "." + asyncSqlTable));
     }
 
+    @Test
+    public void testCachedStatementClearsUnexecutedParams() throws SQLException {
+        // Regression: a cached EW statement must not leak bound-but-unexecuted
+        // parameters into the next borrower (resetForReuse must clear them).
+        String sql = "INSERT INTO " + db_name + "." + tableReconnect + "(tbname, ts, i, groupId) VALUES (?,?,?,?)";
+        long baseTs = System.currentTimeMillis() + 1000000;
+
+        // Cycle 1: full bind, execute, close -> statement enters the cache
+        PreparedStatement ps1 = connection.prepareStatement(sql);
+        ps1.setString(1, "rc_reuse_1");
+        ps1.setTimestamp(2, new Timestamp(baseTs));
+        ps1.setInt(3, 1);
+        ps1.setInt(4, 1);
+        ps1.addBatch();
+        ps1.executeBatch();
+        ps1.close();
+
+        // Cycle 2: reuse the cached statement, bind all params, close WITHOUT execute
+        PreparedStatement ps2 = connection.prepareStatement(sql);
+        Assert.assertEquals("ps2 should reuse ps1",
+                ((AbsWSPreparedStatement) ps1).getInstanceId(),
+                ((AbsWSPreparedStatement) ps2).getInstanceId());
+        ps2.setString(1, "rc_reuse_2");
+        ps2.setTimestamp(2, new Timestamp(baseTs + 1000));
+        ps2.setInt(3, 2);
+        ps2.setInt(4, 2);
+        ps2.close();
+
+        // Cycle 3: reuse again, bind everything except ts. If cycle-2 params
+        // leaked, addBatch would silently accept the stale ts and write wrong
+        // data; with a clean statement it must fail fast instead.
+        PreparedStatement ps3 = connection.prepareStatement(sql);
+        Assert.assertEquals("ps3 should reuse ps1",
+                ((AbsWSPreparedStatement) ps1).getInstanceId(),
+                ((AbsWSPreparedStatement) ps3).getInstanceId());
+        ps3.setString(1, "rc_reuse_3");
+        ps3.setInt(3, 3);
+        ps3.setInt(4, 3);
+        try {
+            ps3.addBatch();
+            Assert.fail("parameters bound in cycle 2 should have been cleared on close");
+        } catch (SQLException expected) {
+            // ts was cleared, so the partial bind cannot be batched
+        }
+        ps3.close();
+
+        // Cycle 4: a full bind on the reused statement still works
+        PreparedStatement ps4 = connection.prepareStatement(sql);
+        ps4.setString(1, "rc_reuse_4");
+        ps4.setTimestamp(2, new Timestamp(baseTs + 3000));
+        ps4.setInt(3, 4);
+        ps4.setInt(4, 4);
+        ps4.addBatch();
+        ps4.executeBatch();
+        ps4.close();
+
+        // Only cycle 1 and 4 rows exist; no residue from cycle 2/3
+        Assert.assertEquals(0, Utils.getSqlRows(connection,
+                db_name + "." + tableReconnect + " where tbname in ('rc_reuse_2', 'rc_reuse_3')"));
+        Assert.assertEquals(2, Utils.getSqlRows(connection,
+                db_name + "." + tableReconnect + " where tbname in ('rc_reuse_1', 'rc_reuse_4')"));
+    }
+
     @Test(expected = SQLException.class)
     public void testStrictCheck() throws SQLException, InterruptedException {
         String sql = "INSERT INTO " + db_name + "." + tableNameCopyData + "(tbname, ts, b, groupId) VALUES (?,?,?,?)";

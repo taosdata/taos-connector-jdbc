@@ -402,8 +402,11 @@ public class WsPstmtStmt2Test {
         String sql2 = "select * from " + db_name + "." + tableName + " where ts > ? and ts < ? order by ts desc limit ?, ?";
 
         try (TSWSPreparedStatement pstmt = connection.prepareStatement(sql2).unwrap(TSWSPreparedStatement.class)) {
-            pstmt.setTimestamp(0, new Timestamp(System.currentTimeMillis() - 1000));
-            pstmt.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
+            // Use a wider time window so the assertion is not flaky on slow runners,
+            // where total insert latency may exceed the previous 1s window and push
+            // the earliest rows out of range.
+            pstmt.setTimestamp(0, new Timestamp(System.currentTimeMillis() - 60000));
+            pstmt.setTimestamp(1, new Timestamp(System.currentTimeMillis() + 60000));
             pstmt.setInt(2, 5);
             pstmt.setInt(3, 6);
             ResultSet rs = pstmt.executeQuery();

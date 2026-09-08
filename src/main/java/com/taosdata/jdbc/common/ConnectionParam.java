@@ -68,6 +68,7 @@ public class ConnectionParam {
     private int rebalanceThreshold;
     private int rebalanceConBaseCount;
     private boolean adapterHa;
+    private int stmtCacheSize;
     private Consumer<String> textMessageHandler;
     private Consumer<ByteBuf> binaryMessageHandler;
     static public final int CONNECT_MODE_BI = 1;
@@ -115,6 +116,7 @@ public class ConnectionParam {
         this.rebalanceThreshold = builder.rebalanceThreshold;
         this.rebalanceConBaseCount = builder.rebalanceConBaseCount;
         this.adapterHa = builder.adapterHa;
+        this.stmtCacheSize = builder.stmtCacheSize;
     }
 
     public void setEndpoints(List<Endpoint> endpoints) {
@@ -417,6 +419,10 @@ public class ConnectionParam {
         return adapterHa;
     }
 
+    public int getStmtCacheSize() {
+        return stmtCacheSize;
+    }
+
     public Consumer<String> getTextMessageHandler() {
         return textMessageHandler;
     }
@@ -597,6 +603,14 @@ public class ConnectionParam {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "PROPERTY_KEY_ASYNC_WRITE only support STMT");
         }
 
+        // Efficient-write statements own write threads, so default to a smaller
+        // cache size when async write is enabled.
+        String defaultStmtCacheSize = asyncWrite.equalsIgnoreCase("STMT") ? "2" : "5";
+        int stmtCacheSize = Integer.parseInt(properties.getProperty(TSDBDriver.PROPERTY_KEY_STMT_CACHE_SIZE, defaultStmtCacheSize));
+        if (stmtCacheSize < 0) {
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid para PROPERTY_KEY_STMT_CACHE_SIZE, must be non-negative integer");
+        }
+
         String stmt2BindMode = properties.getProperty(TSDBDriver.PROPERTY_KEY_STMT_BIND_MODE, STMT2_BIND_MODE_AUTO)
                 .trim()
                 .toLowerCase(Locale.ROOT);
@@ -690,6 +704,7 @@ public class ConnectionParam {
                 .setRebalanceThreshold(rebalanceThreshold)
                 .setRebalanceConBaseCount(rebalanceConBaseCount)
                 .setAdapterHa(adapterHa)
+                .setStmtCacheSize(stmtCacheSize)
                 .build();
     }
 
@@ -787,6 +802,7 @@ public class ConnectionParam {
         private int rebalanceThreshold;
         private int rebalanceConBaseCount;
         private boolean adapterHa;
+        private int stmtCacheSize;
         private Consumer<String> textMessageHandler;
         private Consumer<ByteBuf> binaryMessageHandler;
 
@@ -977,6 +993,12 @@ public class ConnectionParam {
             this.adapterHa = adapterHa;
             return this;
         }
+
+        public Builder setStmtCacheSize(int stmtCacheSize) {
+            this.stmtCacheSize = stmtCacheSize;
+            return this;
+        }
+
         public Builder setTextMessageHandler(Consumer<String> textMessageHandler) {
             this.textMessageHandler = textMessageHandler;
             return this;
@@ -1034,6 +1056,7 @@ public class ConnectionParam {
                 .setRebalanceThreshold(original.getRebalanceThreshold())
                 .setRebalanceConBaseCount(original.getRebalanceConBaseCount())
                 .setAdapterHa(original.isAdapterHa())
+                .setStmtCacheSize(original.getStmtCacheSize())
                 .setTextMessageHandler(original.getTextMessageHandler())
                 .setBinaryMessageHandler(original.getBinaryMessageHandler());
     }

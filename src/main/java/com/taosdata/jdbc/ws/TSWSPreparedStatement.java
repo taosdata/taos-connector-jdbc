@@ -1,28 +1,26 @@
 package com.taosdata.jdbc.ws;
 
-
-import com.taosdata.jdbc.AbstractConnection;
-import com.taosdata.jdbc.common.ConnectionParam;
-import com.taosdata.jdbc.ws.stmt2.entity.Stmt2PrepareResp;
+import com.taosdata.jdbc.TaosPrepareStatement;
 
 import java.sql.SQLException;
-public class TSWSPreparedStatement extends AbsWSPreparedStatement {
-    public TSWSPreparedStatement(Transport transport,
-                                 ConnectionParam param,
-                                 String database,
-                                 AbstractConnection connection,
-                                 String sql,
-                                 Long instanceId,
-                                 Stmt2PrepareResp prepareResp) throws SQLException {
-        super(transport, param, database, connection, sql, instanceId, prepareResp);
-    }
 
-    public TSWSPreparedStatement(Transport transport,
-                                 ConnectionParam param,
-                                 String database,
-                                 AbstractConnection connection,
-                                 String sql,
-                                 Long instanceId) throws SQLException {
-        super(transport, param, database, connection, sql, instanceId);
+/**
+ * Public contract type for all WebSocket prepared statements.
+ *
+ * <p>Historically this was the concrete class returned for every WebSocket
+ * prepared statement. Since 3.9.0 the driver routes insert statements to
+ * column-based implementations, so this type is kept as an interface to keep
+ * {@code unwrap(TSWSPreparedStatement.class)} and {@code instanceof} working
+ * across all WebSocket prepared statement implementations.
+ */
+public interface TSWSPreparedStatement extends TaosPrepareStatement {
+
+    /**
+     * Closes the column-data batch. Equivalent to {@link #close()}; declared here
+     * for source compatibility with code that called it on TSWSPreparedStatement-typed
+     * references when it was a concrete class.
+     */
+    default void columnDataCloseBatch() throws SQLException {
+        close();
     }
 }
