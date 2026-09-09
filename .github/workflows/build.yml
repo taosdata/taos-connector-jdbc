@@ -69,7 +69,7 @@ jobs:
             echo "⚠️  /usr/local/taos/bin/ not found"
           fi
           
-          echo "✅ TDengine installation verified"
+          echo "✅ TDengine installation verified."
 
       - name: Create taos.cfg
         run: |
