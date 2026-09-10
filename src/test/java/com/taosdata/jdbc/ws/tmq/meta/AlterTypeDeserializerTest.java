@@ -125,6 +125,27 @@ public class AlterTypeDeserializerTest {
   }
 
   @Test
+  public void testDeserializeVstInheritanceAlterTypes() throws IOException {
+    // VST inheritance (BASE ON): 21 (tag ref), 22 (ADD BASE ON), 23 (DROP BASE ON).
+    // Before these were added to the enum, value 22/23 from a VST DDL would throw
+    // and crash ws_tmq deserialization, so this guards the regression.
+    when(jsonParser.getIntValue()).thenReturn(21);
+    assertEquals(
+        AlterType.ALTER_TAG_REF,
+        alterTypeDeserializer.deserialize(jsonParser, deserializationContext));
+
+    when(jsonParser.getIntValue()).thenReturn(22);
+    assertEquals(
+        AlterType.ADD_BASE_ON,
+        alterTypeDeserializer.deserialize(jsonParser, deserializationContext));
+
+    when(jsonParser.getIntValue()).thenReturn(23);
+    assertEquals(
+        AlterType.DROP_BASE_ON,
+        alterTypeDeserializer.deserialize(jsonParser, deserializationContext));
+  }
+
+  @Test
   public void testDeserializeGapValue() throws IOException {
     // Value 12 is not defined
     when(jsonParser.getIntValue()).thenReturn(12);

@@ -202,14 +202,14 @@ public abstract class AbstractWSEWPreparedStatement extends AbsWSPreparedStateme
     }
 
     @Override
-    public void close() throws SQLException {
+    protected void awaitPendingWrites() throws SQLException {
         waitWriteCompleted();
-        if (isClosed()) {
-            return;
-        }
+    }
 
-        super.close();
-
+    // Shut down worker threads and release their stmtIds. Workers exit once
+    // the releaseServerResource() template has marked this statement closed.
+    @Override
+    protected void doReleaseServerResource() throws SQLException {
         while (writerThreads.getActiveCount() != 0) {
             try {
                 Thread.sleep(1);
@@ -226,6 +226,20 @@ public abstract class AbstractWSEWPreparedStatement extends AbsWSPreparedStateme
         }
         for (EWBackendThreadInfo backendThreadInfo : backendThreadInfoList) {
             backendThreadInfo.releaseReusableColumnBuffers();
+        }
+    }
+
+    // Reset per-use state before returning to cache. Workers stay alive.
+    @Override
+    protected void resetForReuse() throws SQLException {
+        super.resetForReuse();
+        addBatchCounts = 0;
+        batchInsertedRows.set(0);
+        remainingUnprocessedRows.set(0);
+        flushIn.set(0);
+        // Clear any stale errors on workers
+        for (WorkerThread workerThread : workerThreadList) {
+            workerThread.getAndClearLastError();
         }
     }
 

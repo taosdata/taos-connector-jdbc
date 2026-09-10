@@ -6,6 +6,7 @@ import com.taosdata.jdbc.common.ColumnInfo;
 import com.taosdata.jdbc.common.SerializeBlock;
 import com.taosdata.jdbc.common.TableInfo;
 import com.taosdata.jdbc.enums.FieldBindType;
+import com.taosdata.jdbc.enums.TimestampPrecision;
 import com.taosdata.jdbc.common.ConnectionParam;
 import com.taosdata.jdbc.utils.BlobUtil;
 import com.taosdata.jdbc.utils.DateTimeUtils;
@@ -33,14 +34,13 @@ import java.util.stream.Collectors;
 
 import static com.taosdata.jdbc.TSDBConstants.*;
 
-public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepareStatement {
+public class AbsWSPreparedStatement extends WSRetryableStmt implements TSWSPreparedStatement {
     private static final List<Object> nullTag = Collections.singletonList(null);
     protected final Map<Integer, Column> colOrderedMap = new HashMap<>();
     private final PriorityQueue<ColumnInfo> tag = new PriorityQueue<>();
     private final PriorityQueue<ColumnInfo> colListQueue = new PriorityQueue<>();
     private final HashMap<ByteBuffer, TableInfo> tableInfoMap = new HashMap<>();
     private TableInfo tableInfo;
-
     public AbsWSPreparedStatement(Transport transport,
                                   ConnectionParam param,
                                   String database,
@@ -61,6 +61,9 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
         // Query operations stay on the legacy bind path because the retry layer now
         // gates STMT2_BIND_EXEC on write operations only.
         super(connection, param, database, transport, instanceId, new StmtInfo(prepareResp, sql), new AtomicInteger());
+        if (!this.stmtInfo.isInsert() && connection.isSupportQueryNs()) {
+            this.stmtInfo.setPrecision(TimestampPrecision.NS);
+        }
         this.tableInfo = TableInfo.getEmptyTableInfo();
     }
     @Override
@@ -843,18 +846,6 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
     }
 
     @Override
-    public void close() throws SQLException {
-        if (!isClosed()) {
-            super.close();
-            if (transport.isConnected() && stmtInfo.getStmtId() != 0) {
-                long reqId = ReqId.getReqID();
-                Request close = RequestFactory.generateClose(stmtInfo.getStmtId(), reqId);
-                transport.send(close, this.getQueryTimeoutInMs());
-            }
-        }
-    }
-
-    @Override
     public ResultSetMetaData getMetaData() throws SQLException {
         if (this.getResultSet() == null)
             return null;
@@ -1188,7 +1179,7 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
      * <p>In normal websocket routing, bind-exec-capable ordinary inserts are upgraded
      * earlier in {@link WSConnection#prepareStatement(String)} to
      * {@link WSColumnPreparedStatement}, so this method mainly covers the legacy
-     * {@code TSWSPreparedStatement} path plus direct test construction.
+     * row-based path plus direct test construction.
      */
     private int executeInsertImpl() throws SQLException {
         if (tableInfoMap.isEmpty()) {
@@ -1237,6 +1228,16 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TaosPrepa
     @Override
     public void setTableName(String name) throws SQLException {
         this.tableInfo.setTableName(ByteBuffer.wrap(name.getBytes(StandardCharsets.UTF_8)));
+    }
+
+    // Statement cache support — reset per-use state before returning to cache.
+    @Override
+    protected void resetForReuse() throws SQLException {
+        clearParameters();
+        affectedRows = -1;
+        if (batchedArgs != null) {
+            batchedArgs.clear();
+        }
     }
 
 }

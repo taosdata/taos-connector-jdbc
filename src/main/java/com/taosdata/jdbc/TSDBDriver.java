@@ -178,6 +178,14 @@ public class TSDBDriver extends AbstractDriver {
      */
     public static final String HTTP_POOL_SIZE = "httpPoolSize";
 
+    /**
+     * max prepared statement cache size per connection.
+     * Closed insert statements may be pooled and handed out again by a later
+     * prepareStatement with the same SQL, so an application must not use a
+     * statement reference after calling close() on it.
+     */
+    public static final String PROPERTY_KEY_STMT_CACHE_SIZE = "stmtCacheSize";
+
     public static final String HTTP_KEEP_ALIVE = "httpKeepAlive";
 
     /**

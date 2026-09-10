@@ -20,6 +20,7 @@ public abstract class AbstractConnection extends WrapperImpl implements Connecti
     protected final Properties clientInfoProps = new Properties();
     protected final boolean supportBlob;
     protected final boolean supportStmt2BindExec;
+    protected final boolean supportQueryNs;
 
     protected final String serverVersion;
 
@@ -32,9 +33,13 @@ public abstract class AbstractConnection extends WrapperImpl implements Connecti
         serverVersion = version;
         supportBlob = VersionUtil.surpportBlob(serverVersion);
         supportStmt2BindExec = VersionUtil.supportStmt2BindExec(serverVersion);
+        supportQueryNs = VersionUtil.supportQueryNs(serverVersion);
     }
 
     public boolean isSupportBlob(){return supportBlob;}
+
+    public boolean isSupportQueryNs(){return supportQueryNs;}
+
     public void unregisterStatement(Long stmtId) {
         this.statementsMap.remove(stmtId);
     }
@@ -45,6 +50,14 @@ public abstract class AbstractConnection extends WrapperImpl implements Connecti
 
     public boolean canRebalanced() {
         return this.statementsMap.isEmpty();
+    }
+
+    /**
+     * Release all cached statements before the transport switches endpoints.
+     * Default is a no-op; connections with a statement cache override this.
+     */
+    public void releaseCachedStatements() {
+        // Default: no statement cache.
     }
     @Override
     public CallableStatement prepareCall(String sql) throws SQLException {

@@ -24,6 +24,7 @@ public class MetaAlterTable extends Meta {
   //          "refDbName","refTbName","refColName" // enable for alterType 16,18
   //          "tables"                      // enable for alterType 19
   //          "where"                       // enable for alterType 20
+  //          "baseOn"                      // enable for alterType 22 (ADD BASE ON), 23 (DROP BASE ON)
   private int alterType;
   private String colName;
   private String colNewName;
@@ -40,6 +41,7 @@ public class MetaAlterTable extends Meta {
   private String refColName;
   private List<AlterTableTagsInfo> tables;
   private String where;
+  private List<String> baseOn;
 
   public int getAlterType() {
     return alterType;
@@ -169,6 +171,14 @@ public class MetaAlterTable extends Meta {
     this.where = where;
   }
 
+  public List<String> getBaseOn() {
+    return baseOn;
+  }
+
+  public void setBaseOn(List<String> baseOn) {
+    this.baseOn = baseOn;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
@@ -190,7 +200,8 @@ public class MetaAlterTable extends Meta {
         && Objects.equals(refTbName, that.refTbName)
         && Objects.equals(refColName, that.refColName)
         && Objects.equals(tables, that.tables)
-        && Objects.equals(where, that.where);
+        && Objects.equals(where, that.where)
+        && Objects.equals(baseOn, that.baseOn);
   }
 
   @Override
@@ -212,6 +223,7 @@ public class MetaAlterTable extends Meta {
         refTbName,
         refColName,
         tables,
-        where);
+        where,
+        baseOn);
   }
 }

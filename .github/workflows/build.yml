@@ -32,13 +32,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Get TDengine
-        run: wget "${{ secrets.NIGHTLY_TDENGINE_ENTERPRISE_BASE_URL }}/tsdb-nightly-main.tar.gz?v=$(date +%s)" -O tsdb-nightly-main.tar.gz
+        run: wget "${{ secrets.NIGHTLY_TDENGINE_ENTERPRISE_BASE_URL }}/tsdb-nightly-main-linux-x64.tar.gz?v=$(date +%s)" -O tsdb-nightly-main-linux-x64.tar.gz
 
       - name: Install TDengine
         run: |
-          tar -zxf tsdb-nightly-main.tar.gz
-          rm -rf tsdb-nightly-main.tar.gz
-          cd tsdb-nightly-main
+          tar -zxf tsdb-nightly-main-linux-x64.tar.gz
+          rm -rf tsdb-nightly-main-linux-x64.tar.gz
+          cd tsdb-nightly-main-linux-x64
           sudo ./install.sh -e no
 
       - name: Verify TDengine installation
@@ -69,7 +69,7 @@ jobs:
             echo "⚠️  /usr/local/taos/bin/ not found"
           fi
           
-          echo "✅ TDengine installation verified"
+          echo "✅ TDengine installation verified."
 
       - name: Create taos.cfg
         run: |

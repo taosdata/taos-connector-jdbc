@@ -257,4 +257,45 @@ public class MetaCreateSuperTableTest {
     assertEquals("device_id", metaCreateSuperTable.getTags().get(0).getName());
     assertEquals("location", metaCreateSuperTable.getTags().get(1).getName());
   }
+
+  @Test
+  public void testBaseOnDefaultsNull() {
+    // Non-inherited super tables carry no BASE ON fields.
+    assertNull(metaCreateSuperTable.getBaseOn());
+    assertNull(metaCreateSuperTable.getOwnColStart());
+    assertNull(metaCreateSuperTable.getOwnTagStart());
+  }
+
+  @Test
+  public void testBaseOnGettersAndSetters() {
+    List<String> baseOn = Arrays.asList("vst_parent_a", "vst_parent_b");
+    metaCreateSuperTable.setBaseOn(baseOn);
+    metaCreateSuperTable.setOwnColStart(2);
+    metaCreateSuperTable.setOwnTagStart(1);
+
+    assertEquals(baseOn, metaCreateSuperTable.getBaseOn());
+    assertEquals(Integer.valueOf(2), metaCreateSuperTable.getOwnColStart());
+    assertEquals(Integer.valueOf(1), metaCreateSuperTable.getOwnTagStart());
+  }
+
+  @Test
+  public void testBaseOnAffectsEqualsAndHashCode() {
+    MetaCreateSuperTable table1 = new MetaCreateSuperTable();
+    table1.setColumns(Arrays.asList(new Column("col1", 1, 10, true, "UTF8", "GZIP", "low")));
+    table1.setBaseOn(Arrays.asList("vst_parent_a"));
+    table1.setOwnColStart(2);
+    table1.setOwnTagStart(1);
+
+    MetaCreateSuperTable table2 = new MetaCreateSuperTable();
+    table2.setColumns(Arrays.asList(new Column("col1", 1, 10, true, "UTF8", "GZIP", "low")));
+
+    // Differs only by BASE ON fields.
+    assertNotEquals(table1, table2);
+
+    table2.setBaseOn(Arrays.asList("vst_parent_a"));
+    table2.setOwnColStart(2);
+    table2.setOwnTagStart(1);
+    assertEquals(table1, table2);
+    assertEquals(table1.hashCode(), table2.hashCode());
+  }
 }

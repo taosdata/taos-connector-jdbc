@@ -544,4 +544,39 @@ public class MetaAlterTableTest {
     assertTrue(result.contains("tableName='ct1'"));
     assertTrue(result.contains("tags="));
   }
+
+  @Test
+  public void testBaseOnDefaultsNull() {
+    assertNull(metaAlterTable.getBaseOn());
+  }
+
+  @Test
+  public void testBaseOnGetterAndSetter() {
+    // alterType 22 = ADD BASE ON, 23 = DROP BASE ON; baseOn carries parent names.
+    List<String> baseOn = Arrays.asList("vst_parent_a", "vst_parent_b");
+    metaAlterTable.setAlterType(AlterType.ADD_BASE_ON.getValue());
+    metaAlterTable.setBaseOn(baseOn);
+
+    assertEquals(22, metaAlterTable.getAlterType());
+    assertEquals(baseOn, metaAlterTable.getBaseOn());
+
+    metaAlterTable.setBaseOn(null);
+    assertNull(metaAlterTable.getBaseOn());
+  }
+
+  @Test
+  public void testBaseOnAffectsEqualsAndHashCode() {
+    MetaAlterTable a = new MetaAlterTable();
+    a.setAlterType(AlterType.ADD_BASE_ON.getValue());
+    a.setBaseOn(Arrays.asList("vst_parent_a"));
+
+    MetaAlterTable b = new MetaAlterTable();
+    b.setAlterType(AlterType.ADD_BASE_ON.getValue());
+
+    assertNotEquals(a, b);
+
+    b.setBaseOn(Arrays.asList("vst_parent_a"));
+    assertEquals(a, b);
+    assertEquals(a.hashCode(), b.hashCode());
+  }
 }
