@@ -269,6 +269,56 @@ public class WSSchemalessNewTest {
         statement.close();
     }
 
+    // Regression guard for issue #35361: a multi-line LINE batch must be coalesced into a
+    // single WS frame on the client. If the WS path ever reverts to one frame per line,
+    // either the row count breaks or the wall-clock balloons by orders of magnitude.
+    @Test
+    public void testLargeLineBatchCoalesced() throws SQLException {
+        int n = 1000;
+        String[] lines = new String[n];
+        long baseTs = 1700000000000L;
+        for (int i = 0; i < n; i++) {
+            lines[i] = "stb_batch,host=h" + (i % 16)
+                    + " v=" + (i * 1.5) + "f64,k=" + i + "i64"
+                    + " " + (baseTs + i);
+        }
+
+        long t0 = System.nanoTime();
+        ((AbstractConnection) connection).write(lines, SchemalessProtocolType.LINE, SchemalessTimestampType.MILLI_SECONDS);
+        long elapsedMs = (System.nanoTime() - t0) / 1_000_000L;
+
+        try (Statement s = connection.createStatement()) {
+            s.executeUpdate("use " + DB_NAME);
+            try (ResultSet rs = s.executeQuery("select count(*) from stb_batch")) {
+                Assert.assertTrue(rs.next());
+                Assert.assertEquals(n, rs.getLong(1));
+            }
+        }
+        // The pre-fix per-line loop did >1000 round-trips; that was multi-second even on
+        // localhost. 5s is a generous ceiling that still catches a regression.
+        Assert.assertTrue("batch took " + elapsedMs + " ms; suspect per-line round-trip regression",
+                elapsedMs < 5000);
+    }
+
+    // Defensive: a null element in the batch must be rejected up-front. Without this guard
+    // String.join("\n", lines) would inline the literal "null" into the coalesced payload
+    // and the server would fail to parse it (potentially polluting the rest of the batch).
+    @Test
+    public void testRejectsNullLineInBatch() {
+        String[] lines = new String[]{
+                "stb_null_check,host=h1 v=1i64 1700000001000",
+                null,
+                "stb_null_check,host=h2 v=2i64 1700000002000"
+        };
+        try {
+            ((AbstractConnection) connection).write(lines, SchemalessProtocolType.LINE, SchemalessTimestampType.MILLI_SECONDS);
+            Assert.fail("expected SQLException for null element at index 1");
+        } catch (SQLException e) {
+            Assert.assertTrue("error message should mention the offending index, got: " + e.getMessage(),
+                    e.getMessage() != null && e.getMessage().contains("index 1"));
+        }
+    }
+
     @Test
     public void telnetListInsert() throws SQLException {
         // given
