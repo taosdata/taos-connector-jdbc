@@ -106,4 +106,16 @@ public class TSDBConnection extends AbstractConnection {
             return connector.insertRawWithTtlAndReqId(line, protocolType, timestampType, ttl, reqId);
         }
     }
+
+    @Override
+    public void setTimezone(String timezone) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD,
+                "setTimezone is only supported on WebSocket connections");
+    }
+
+    @Override
+    public String getTimezone() throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD,
+                "getTimezone is only supported on WebSocket connections");
+    }
 }

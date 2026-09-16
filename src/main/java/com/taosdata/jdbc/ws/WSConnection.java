@@ -19,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.*;
+import java.time.ZoneId;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -61,7 +62,7 @@ public class WSConnection extends AbstractConnection {
 
         if (this.getClientInfo(TSDBDriver.PROPERTY_KEY_DBNAME) != null)
             database = this.getClientInfo(TSDBDriver.PROPERTY_KEY_DBNAME);
-        WSStatement statement = new WSStatement(transport, database, this, idGenerator.getAndIncrement(), param.getZoneId());
+        WSStatement statement = new WSStatement(transport, database, this, idGenerator.getAndIncrement());
 
         statementsMap.put(statement.getInstanceId(), statement);
         return statement;
@@ -279,6 +280,33 @@ public class WSConnection extends AbstractConnection {
         }
         // websocket don't return the num of schemaless insert
         return 0;
+    }
+
+    @Override
+    public void setTimezone(String timezone) throws SQLException {
+        if (isClosed())
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
+
+        ZoneId zoneId = ConnectionParam.resolveTimezone(timezone);
+        String normalizedTz = (timezone == null || timezone.isEmpty()) ? null : timezone;
+
+        OptionsConnectionReq req = OptionsConnectionReq.ofTimezone(normalizedTz);
+        CommonResp resp = (CommonResp) transport.send(new Request(Action.OPTIONS_CONNECTION.getAction(), req), param.getRequestTimeout());
+        if (Code.SUCCESS.getCode() != resp.getCode()) {
+            throw TSDBError.createSQLException(resp.getCode(), resp.getMessage());
+        }
+
+        // update in place so that reconnects and new statements pick up the new timezone
+        param.setTz(normalizedTz == null ? "" : normalizedTz);
+        param.setZoneId(zoneId);
+    }
+
+    @Override
+    public String getTimezone() throws SQLException {
+        if (isClosed())
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
+        String tz = param.getTz();
+        return (tz == null || tz.isEmpty()) ? null : tz;
     }
 
     private boolean noNeedCheck(){

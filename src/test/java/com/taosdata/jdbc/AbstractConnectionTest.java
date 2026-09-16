@@ -57,6 +57,16 @@ public class AbstractConnectionTest {
                 return 0;
             }
 
+            @Override
+            public void setTimezone(String timezone) throws SQLException {
+                // do nothing
+            }
+
+            @Override
+            public String getTimezone() throws SQLException {
+                return null; // Mock implementation
+            }
+
         };
     }
 

@@ -11,7 +11,6 @@ import java.nio.ByteOrder;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.ZoneId;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.taosdata.jdbc.utils.SqlSyntaxValidator.getDatabaseName;
@@ -26,9 +25,8 @@ public class WSStatement extends AbstractStatement {
     protected ResultSet resultSet;
     private volatile int queryTimeoutInSeconds;
     private volatile long queryTimeoutInMs;
-    protected final ZoneId zoneId;
 
-    public WSStatement(Transport transport, String database, AbstractConnection connection, Long instanceId, ZoneId zoneId) {
+    public WSStatement(Transport transport, String database, AbstractConnection connection, Long instanceId) {
         this.transport = transport;
         this.database = database;
         this.connection = connection;
@@ -47,7 +45,6 @@ public class WSStatement extends AbstractStatement {
             this.transport.balanceConnection();
         }
         this.connection.registerStatement(this.instanceId, this);
-        this.zoneId = zoneId;
         this.queryTimeoutInSeconds = (transport.getConnectionParam().getRequestTimeout() + (1000 - 1)) / 1000;
         this.queryTimeoutInMs = transport.getConnectionParam().getRequestTimeout();
     }
@@ -127,7 +124,7 @@ public class WSStatement extends AbstractStatement {
             this.affectedRows = queryResp.getAffectedRows();
             return false;
         } else {
-            this.resultSet = new BlockResultSet(this, this.transport, queryResp, this.database, this.zoneId);
+            this.resultSet = new BlockResultSet(this, this.transport, queryResp, this.database, this.transport.getConnectionParam().getZoneId());
             this.affectedRows = -1;
             return true;
         }

@@ -28,6 +28,11 @@ public class RestfulConnectionTest {
         // already test in beforeClass method
     }
 
+    @Test(expected = SQLFeatureNotSupportedException.class)
+    public void getTimezone() throws SQLException {
+        ((RestfulConnection) conn).getTimezone();
+    }
+
     @Test
     public void createStatement() throws SQLException {
         try (Statement stmt = conn.createStatement()) {

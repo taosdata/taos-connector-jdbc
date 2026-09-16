@@ -44,6 +44,11 @@ public class TSDBConnectionTest {
         Assert.assertEquals("select * from test_db", nativeSQL);
     }
 
+    @Test(expected = SQLFeatureNotSupportedException.class)
+    public void getTimezone() throws SQLException {
+        ((TSDBConnection) conn).getTimezone();
+    }
+
     @Test
     public void setAutoCommit() throws SQLException {
         conn.setAutoCommit(true);
