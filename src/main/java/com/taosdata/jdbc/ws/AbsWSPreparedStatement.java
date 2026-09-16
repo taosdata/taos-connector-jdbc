@@ -27,6 +27,7 @@ import java.sql.*;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -101,7 +102,7 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TSWSPrepa
 
         ResultResp resp = this.executeQueryImpl();
 
-        this.resultSet = new BlockResultSet(this, this.transport, resp, this.database, this.zoneId);
+        this.resultSet = new BlockResultSet(this, this.transport, resp, this.database, this.param.getZoneId());
         this.affectedRows = -1;
         return this.resultSet;
     }
@@ -289,7 +290,7 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TSWSPrepa
 
     @Override
     public void setTagTimestamp(int index, Timestamp value) {
-        tag.add(new ColumnInfo(index, Collections.singletonList(DateTimeUtils.toInstant(value, this.zoneId)), TSDB_DATA_TYPE_TIMESTAMP));
+        tag.add(new ColumnInfo(index, Collections.singletonList(DateTimeUtils.toInstant(value, this.param.getZoneId())), TSDB_DATA_TYPE_TIMESTAMP));
     }
 
     @Override
@@ -460,7 +461,7 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TSWSPrepa
 
     @Override
     public void setTimestamp(int parameterIndex, Timestamp x) throws SQLException {
-        colOrderedMap.put(parameterIndex, new Column(DateTimeUtils.toInstant(x, this.zoneId), TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
+        colOrderedMap.put(parameterIndex, new Column(DateTimeUtils.toInstant(x, this.param.getZoneId()), TSDB_DATA_TYPE_TIMESTAMP, parameterIndex));
     }
 
     @Override
@@ -567,6 +568,7 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TSWSPrepa
                 } else if (x instanceof Time) {
                     setTime(parameterIndex, (Time) x);
                 } else if (x instanceof LocalDateTime) {
+                    ZoneId zoneId = param.getZoneId();
                     if (zoneId == null) {
                         setTimestamp(parameterIndex, Timestamp.valueOf((LocalDateTime) x));
                     } else {
@@ -679,6 +681,7 @@ public class AbsWSPreparedStatement extends WSRetryableStmt implements TSWSPrepa
         } else if (x instanceof Timestamp) {
             setTimestamp(parameterIndex, (Timestamp) x);
         } else if (x instanceof LocalDateTime) {
+            ZoneId zoneId = param.getZoneId();
             if (zoneId == null) {
                 setTimestamp(parameterIndex, Timestamp.valueOf((LocalDateTime) x));
             } else {

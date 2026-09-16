@@ -71,7 +71,7 @@ public class WSRetryableStmt extends WSStatement {
                            Long instanceId,
                            StmtInfo stmtInfo,
                            AtomicInteger batchInsertedRows) {
-        super(transport, database, connection, instanceId, param.getZoneId());
+        super(transport, database, connection, instanceId);
         this.param = param;
         this.stmtInfo = stmtInfo;
         this.batchInsertedRowsInner = batchInsertedRows;

@@ -28,6 +28,7 @@ import java.sql.*;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -327,7 +328,7 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements TSWSPr
             stageNull(parameterIndex - 1);
             return;
         }
-        long ts = DateTimeUtils.toLong(DateTimeUtils.toInstant(x, this.zoneId), stmtInfo.getPrecision());
+        long ts = DateTimeUtils.toLong(DateTimeUtils.toInstant(x, this.param.getZoneId()), stmtInfo.getPrecision());
         stageTimestamp(parameterIndex, ts);
     }
 
@@ -510,6 +511,7 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements TSWSPr
                     setTime(parameterIndex, (Time) x);
                 } else if (x instanceof LocalDateTime) {
                     LocalDateTime ldt = (LocalDateTime) x;
+                    ZoneId zoneId = param.getZoneId();
                     if (zoneId == null) {
                         setTimestamp(parameterIndex, Timestamp.valueOf(ldt));
                     } else {
@@ -595,6 +597,7 @@ public class WSColumnPreparedStatement extends WSRetryableStmt implements TSWSPr
         } else if (x instanceof Timestamp) {
             setTimestamp(parameterIndex, (Timestamp) x);
         } else if (x instanceof LocalDateTime) {
+            ZoneId zoneId = param.getZoneId();
             if (zoneId == null) {
                 setTimestamp(parameterIndex, Timestamp.valueOf((LocalDateTime) x));
             } else {

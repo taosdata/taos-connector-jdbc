@@ -84,6 +84,18 @@ public class RestfulConnection extends AbstractConnection {
     public int writeRaw(String line, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, Integer ttl, Long reqId) throws SQLException {
         throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD);
     }
+
+    @Override
+    public void setTimezone(String timezone) throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD,
+                "setTimezone is only supported on WebSocket connections");
+    }
+
+    @Override
+    public String getTimezone() throws SQLException {
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNSUPPORTED_METHOD,
+                "getTimezone is only supported on WebSocket connections");
+    }
     // getters
     public String getHost() {
         return host;

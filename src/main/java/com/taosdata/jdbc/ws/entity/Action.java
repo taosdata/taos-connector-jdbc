@@ -25,6 +25,9 @@ public enum Action {
     // free_result's class is meaningless
     FREE_RESULT("free_result", Response.class),
 
+    // options
+    OPTIONS_CONNECTION("options_connection", CommonResp.class),
+
     // stmt2
     STMT2_INIT("stmt2_init", Stmt2Resp.class),
     STMT2_PREPARE("stmt2_prepare", Stmt2PrepareResp.class),

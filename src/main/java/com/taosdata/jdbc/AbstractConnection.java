@@ -530,7 +530,28 @@ public abstract class AbstractConnection extends WrapperImpl implements Connecti
     }
 
     public abstract int writeRaw(String line, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, Integer ttl, Long reqId) throws SQLException;
-    
+
+    /**
+     * Sets the timezone of this connection at runtime. Only WebSocket connections support this method.
+     *
+     * <p>The new timezone takes effect from the next executed SQL; result sets that are already
+     * open are not affected. For PreparedStatement, timestamp values are converted with the
+     * timezone in effect at bind time.</p>
+     *
+     * @param timezone IANA timezone name, e.g. "Asia/Shanghai"; null or empty clears the
+     *                 timezone and falls back to the JVM default timezone
+     * @throws SQLException if the timezone is invalid or the operation fails
+     */
+    public abstract void setTimezone(String timezone) throws SQLException;
+
+    /**
+     * Returns the timezone currently set on this connection.
+     *
+     * @return IANA timezone name, or null if no timezone is set and the JVM default timezone is used
+     * @throws SQLException if the connection is closed
+     */
+    public abstract String getTimezone() throws SQLException;
+
     private void checkClosed() throws SQLException {
         if (this.isClosed) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);

@@ -32,8 +32,8 @@ public class ConnectionParam {
     private String user;
     private String password;
     private String bearerToken;
-    private String tz;
-    private ZoneId zoneId;
+    private volatile String tz;
+    private volatile ZoneId zoneId;
     private boolean useSsl;
     private int maxRequest;
     private int connectTimeout;
@@ -441,26 +441,39 @@ public class ConnectionParam {
 
     public static ConnectionParam getParamWs(Properties perperties) throws SQLException {
         ConnectionParam connectionParam = getParam(perperties);
-        if (connectionParam.getTz() == null
-                || connectionParam.getTz().contains("+")
-                || connectionParam.getTz().contains("-")
-                || !connectionParam.getTz().contains("/")){
+        String tz = connectionParam.getTz();
+        if (tz == null || tz.contains("+") || tz.contains("-") || !tz.contains("/")) {
             // for history reason, we will not support time zone with offset in websocket connection
             connectionParam.setTz("");
             return connectionParam;
         }
+        connectionParam.setZoneId(resolveTimezone(tz));
+        return connectionParam;
+    }
 
+    /**
+     * Validates a timezone for websocket connections and resolves it to a ZoneId.
+     *
+     * @param tz IANA timezone name, e.g. Asia/Shanghai; null or empty means no timezone set
+     * @return the resolved ZoneId, or null when tz is empty or equals the JVM default timezone
+     * @throws SQLException if tz is not a valid IANA timezone name
+     */
+    public static ZoneId resolveTimezone(String tz) throws SQLException {
+        if (tz == null || tz.isEmpty()) {
+            return null;
+        }
+        if (tz.contains("+") || tz.contains("-") || !tz.contains("/")) {
+            // only IANA timezone names are supported in websocket connections
+            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid time zone: " + tz);
+        }
         try {
-            ZoneId zoneId = ZoneId.of(connectionParam.getTz());
+            ZoneId zoneId = ZoneId.of(tz);
             ZoneId defaultZoneId = ZoneId.systemDefault();
-            if (!defaultZoneId.equals(zoneId)){
-                //  Only set the time zone if it differs from the system default
-                connectionParam.setZoneId(zoneId);
-            }
+            // Only set the time zone if it differs from the system default
+            return defaultZoneId.equals(zoneId) ? null : zoneId;
         } catch (DateTimeException e) {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "invalid time zone");
         }
-        return connectionParam;
     }
 
     public static ConnectionParam getParam(Properties properties) throws SQLException {
