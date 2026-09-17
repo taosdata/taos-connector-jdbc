@@ -23,6 +23,8 @@ import java.time.ZoneId;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -247,39 +249,62 @@ public class WSConnection extends AbstractConnection {
     @Override
     public void write(String[] lines, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, Integer ttl, Long reqId) throws SQLException {
         for (String line : lines) {
-            InsertReq insertReq = new InsertReq();
-            insertReq.setReqId(insertId.getAndIncrement());
-            insertReq.setProtocol(protocolType.ordinal());
-            insertReq.setPrecision(timestampType.getType());
-            insertReq.setData(line);
-            if (ttl != null)
-                insertReq.setTtl(ttl);
-            if (reqId != null)
-                insertReq.setReqId(reqId);
-            CommonResp response = (CommonResp) transport.send(new Request(SchemalessAction.INSERT.getAction(), insertReq), param.getRequestTimeout());
+            CommonResp response = (CommonResp) transport.send(buildSchemalessInsertRequest(line, protocolType, timestampType, ttl, reqId), param.getRequestTimeout());
             if (Code.SUCCESS.getCode() != response.getCode()) {
                 throw new SQLException("0x" + Integer.toHexString(response.getCode()) + ":" + response.getMessage());
             }
         }
     }
 
+    /**
+     * Writes schemaless payload without blocking the caller for the server ack.
+     * The payload may contain multiple lines separated by {@code \n}, same as {@link #writeRaw}.
+     *
+     * @return a future completed with the insert response, or exceptionally with {@link SQLException}
+     */
+    public CompletableFuture<Response> writeAsync(String line, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType) {
+        return writeAsync(line, protocolType, timestampType, null, null);
+    }
+
+    /**
+     * Writes schemaless payload without blocking the caller for the server ack.
+     *
+     * @return a future completed with the insert response, or exceptionally with {@link SQLException}
+     */
+    public CompletableFuture<Response> writeAsync(String line, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, Integer ttl, Long reqId) {
+        return transport.sendAsync(buildSchemalessInsertRequest(line, protocolType, timestampType, ttl, reqId), param.getRequestTimeout())
+                .thenApply(response -> {
+                    CommonResp commonResp = (CommonResp) response;
+                    if (Code.SUCCESS.getCode() != commonResp.getCode()) {
+                        throw new CompletionException(new SQLException("(0x" + Integer.toHexString(commonResp.getCode()) + "):" + commonResp.getMessage()));
+                    }
+                    return response;
+                });
+    }
+
     @Override
     public int writeRaw(String line, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, Integer ttl, Long reqId) throws SQLException {
-        InsertReq insertReq = new InsertReq();
-        insertReq.setReqId(insertId.getAndIncrement());
-        insertReq.setProtocol(protocolType.ordinal());
-        insertReq.setPrecision(timestampType.getType());
-        insertReq.setData(line);
-        if (ttl != null)
-            insertReq.setTtl(ttl);
-        if (reqId != null)
-            insertReq.setReqId(reqId);
-        CommonResp response = (CommonResp) transport.send(new Request(SchemalessAction.INSERT.getAction(), insertReq), param.getRequestTimeout());
+        CommonResp response = (CommonResp) transport.send(buildSchemalessInsertRequest(line, protocolType, timestampType, ttl, reqId), param.getRequestTimeout());
         if (Code.SUCCESS.getCode() != response.getCode()) {
             throw new SQLException("(0x" + Integer.toHexString(response.getCode()) + "):" + response.getMessage());
         }
         // websocket don't return the num of schemaless insert
         return 0;
+    }
+
+    private Request buildSchemalessInsertRequest(String line, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, Integer ttl, Long reqId) {
+        InsertReq insertReq = new InsertReq();
+        insertReq.setReqId(insertId.getAndIncrement());
+        insertReq.setProtocol(protocolType.ordinal());
+        insertReq.setPrecision(timestampType.getType());
+        insertReq.setData(line);
+        if (ttl != null) {
+            insertReq.setTtl(ttl);
+        }
+        if (reqId != null) {
+            insertReq.setReqId(reqId);
+        }
+        return new Request(SchemalessAction.INSERT.getAction(), insertReq);
     }
 
     @Override

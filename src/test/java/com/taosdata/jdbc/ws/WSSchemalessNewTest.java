@@ -12,12 +12,16 @@ import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.utils.Utils;
+import com.taosdata.jdbc.ws.entity.Code;
+import com.taosdata.jdbc.ws.entity.CommonResp;
+import com.taosdata.jdbc.ws.entity.Response;
 import org.junit.*;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 public class WSSchemalessNewTest {
 
@@ -170,6 +174,47 @@ public class WSSchemalessNewTest {
             rowCnt++;
         }
         Assert.assertEquals(lines.length, Utils.getSqlRows(connection, DB_NAME + ".stb1"));
+        rs.close();
+        statement.close();
+    }
+
+    @Test
+    @Description("async schemaless write")
+    public void testWriteAsync() throws Exception {
+        String line = "st,t1=3i64,t2=4f64,t3=\"t3\" c1=3i64,c3=L\"passit\",c2=false,c4=4f64 1626006833639000000";
+
+        Response response = ((WSConnection) connection).writeAsync(line, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS)
+                .get(30, TimeUnit.SECONDS);
+        Assert.assertTrue(response instanceof CommonResp);
+        Assert.assertEquals(Code.SUCCESS.getCode(), ((CommonResp) response).getCode());
+
+        Statement statement = connection.createStatement();
+        ResultSet rs = statement.executeQuery("show tables");
+        Assert.assertNotNull(rs);
+        int rowCnt = 0;
+        while (rs.next()) {
+            rowCnt++;
+        }
+        Assert.assertEquals(1, rowCnt);
+        rs.close();
+        statement.close();
+    }
+
+    @Test
+    public void testWriteAsyncWithTtl() throws Exception {
+        String line = "st,t1=3i64,t2=4f64,t3=\"t3\" c1=3i64,c3=L\"passit\",c2=false,c4=4f64 1626006833639000000";
+        Response response = ((WSConnection) connection).writeAsync(line, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS, 10000, 100L)
+                .get(30, TimeUnit.SECONDS);
+        Assert.assertEquals(Code.SUCCESS.getCode(), ((CommonResp) response).getCode());
+
+        Statement statement = connection.createStatement();
+        statement.executeUpdate("use " + DB_NAME);
+        ResultSet rs = statement.executeQuery("show tables");
+        int rowCnt = 0;
+        while (rs.next()) {
+            rowCnt++;
+        }
+        Assert.assertEquals(1, rowCnt);
         rs.close();
         statement.close();
     }

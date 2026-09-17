@@ -96,6 +96,80 @@ public class Transport implements AutoCloseable {
     }
 
     /**
+     * Sends a request asynchronously with default timeout and retry enabled.
+     *
+     * @param request the request to send
+     * @return a future completed with the server response
+     */
+    public CompletableFuture<Response> sendAsync(Request request) {
+        return sendAsync(request, true, defaultTimeout);
+    }
+
+    /**
+     * Sends a request asynchronously with specified timeout and retry enabled.
+     *
+     * @param request the request to send
+     * @param timeout the timeout in milliseconds
+     * @return a future completed with the server response
+     */
+    public CompletableFuture<Response> sendAsync(Request request, long timeout) {
+        return sendAsync(request, true, timeout);
+    }
+
+    /**
+     * Sends a request asynchronously with specified timeout and retry configuration.
+     * Completes exceptionally with {@link SQLException} on closed connection, send failure, or timeout.
+     *
+     * @param request the request to send
+     * @param reSend whether to retry on connection failure
+     * @param timeout the timeout in milliseconds
+     * @return a future completed with the server response
+     */
+    public CompletableFuture<Response> sendAsync(Request request, boolean reSend, long timeout) {
+        if (isClosed()) {
+            CompletableFuture<Response> failed = new CompletableFuture<>();
+            failed.completeExceptionally(TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, ERROR_MSG_CONNECTION_CLOSED));
+            return failed;
+        }
+
+        CompletableFuture<Response> completableFuture = new CompletableFuture<>();
+        String reqString = request.toString();
+
+        try {
+            inFlightRequest.put(new FutureResponse(request.getAction(), request.id(), completableFuture));
+            connectionManager.getCurrentClient().send(reqString);
+        } catch (WebsocketNotConnectedException e) {
+            try {
+                connectionManager.handleConnectionException(this);
+                if (!reSend) {
+                    inFlightRequest.remove(request.getAction(), request.id());
+                    completableFuture.completeExceptionally(TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED));
+                    return completableFuture;
+                }
+                connectionManager.getCurrentClient().send(reqString);
+            } catch (SQLException ex) {
+                inFlightRequest.remove(request.getAction(), request.id());
+                completableFuture.completeExceptionally(ex);
+                return completableFuture;
+            } catch (Exception ex) {
+                inFlightRequest.remove(request.getAction(), request.id());
+                completableFuture.completeExceptionally(TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFUL_CLIENT_IOEXCEPTION, e.getMessage()));
+                return completableFuture;
+            }
+        } catch (SQLException e) {
+            completableFuture.completeExceptionally(e);
+            return completableFuture;
+        }
+
+        return CompletableFutureTimeout.orTimeout(
+                completableFuture, timeout, TimeUnit.MILLISECONDS, getPrintString(reqString, request))
+                .thenApply(response -> {
+                    handleTaosdError(response);
+                    return response;
+                });
+    }
+
+    /**
      * Sends a request with specified timeout and retry configuration.
      *
      * @param request the request to send
@@ -105,49 +179,20 @@ public class Transport implements AutoCloseable {
      * @throws SQLException if sending fails or timeout occurs
      */
     public Response send(Request request, boolean reSend, long timeout) throws SQLException {
-        if (isClosed()) {
-            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, ERROR_MSG_CONNECTION_CLOSED);
-        }
-
-        Response response = null;
-        CompletableFuture<Response> completableFuture = new CompletableFuture<>();
-        String reqString = request.toString();
-
-        inFlightRequest.put(new FutureResponse(request.getAction(), request.id(), completableFuture));
-
         try {
-            connectionManager.getCurrentClient().send(reqString);
-        } catch (WebsocketNotConnectedException e) {
-            try {
-                connectionManager.handleConnectionException(this);
-                if (!reSend) {
-                    inFlightRequest.remove(request.getAction(), request.id());
-                    throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
-                }
-                connectionManager.getCurrentClient().send(reqString);
-            } catch (SQLException ex) {
-                inFlightRequest.remove(request.getAction(), request.id());
-                throw ex;
-            } catch (Exception ex) {
-                inFlightRequest.remove(request.getAction(), request.id());
-                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFUL_CLIENT_IOEXCEPTION, e.getMessage());
-            }
-        }
-
-        CompletableFuture<Response> responseFuture = CompletableFutureTimeout.orTimeout(
-                completableFuture, timeout, TimeUnit.MILLISECONDS, getPrintString(reqString, request));
-        try {
-            response = responseFuture.get();
-            handleTaosdError(response);
+            return sendAsync(request, reSend, timeout).get();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             inFlightRequest.remove(request.getAction(), request.id());
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_QUERY_TIMEOUT, e.getMessage());
         } catch (ExecutionException e) {
             inFlightRequest.remove(request.getAction(), request.id());
+            Throwable cause = e.getCause();
+            if (cause instanceof SQLException) {
+                throw (SQLException) cause;
+            }
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_QUERY_TIMEOUT, e.getMessage());
         }
-        return response;
     }
 
     /**
