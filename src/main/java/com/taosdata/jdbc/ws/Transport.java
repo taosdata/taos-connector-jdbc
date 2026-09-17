@@ -18,8 +18,10 @@ import org.slf4j.LoggerFactory;
 
 import java.sql.SQLException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Handles message sending and receiving over WebSocket connections to TDengine.
@@ -137,6 +139,12 @@ public class Transport implements AutoCloseable {
 
         try {
             inFlightRequest.put(new FutureResponse(request.getAction(), request.id(), completableFuture));
+        } catch (SQLException e) {
+            completableFuture.completeExceptionally(e);
+            return completableFuture;
+        }
+
+        try {
             connectionManager.getCurrentClient().send(reqString);
         } catch (WebsocketNotConnectedException e) {
             try {
@@ -153,20 +161,35 @@ public class Transport implements AutoCloseable {
                 return completableFuture;
             } catch (Exception ex) {
                 inFlightRequest.remove(request.getAction(), request.id());
-                completableFuture.completeExceptionally(TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFUL_CLIENT_IOEXCEPTION, e.getMessage()));
+                completableFuture.completeExceptionally(TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFUL_CLIENT_IOEXCEPTION, firstMessage(ex, e)));
                 return completableFuture;
             }
-        } catch (SQLException e) {
-            completableFuture.completeExceptionally(e);
+        } catch (Exception e) {
+            inFlightRequest.remove(request.getAction(), request.id());
+            completableFuture.completeExceptionally(TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFUL_CLIENT_IOEXCEPTION, firstMessage(e, null)));
             return completableFuture;
         }
 
-        return CompletableFutureTimeout.orTimeout(
-                completableFuture, timeout, TimeUnit.MILLISECONDS, getPrintString(reqString, request))
-                .thenApply(response -> {
+        CompletableFuture<Response> timed = CompletableFutureTimeout.orTimeout(
+                completableFuture, timeout, TimeUnit.MILLISECONDS, getPrintString(reqString, request));
+        CompletableFuture<Response> result = new CompletableFuture<>();
+        timed.whenComplete((response, error) -> {
+            if (error != null) {
+                inFlightRequest.remove(request.getAction(), request.id());
+                result.completeExceptionally(translateAsyncError(error));
+                return;
+            }
+            // handleTaosdError may closeBlocking(); do not run it on the Netty event loop.
+            CompletableFuture.runAsync(() -> {
+                try {
                     handleTaosdError(response);
-                    return response;
-                });
+                    result.complete(response);
+                } catch (Throwable t) {
+                    result.completeExceptionally(translateAsyncError(t));
+                }
+            });
+        });
+        return result;
     }
 
     /**
@@ -187,7 +210,7 @@ public class Transport implements AutoCloseable {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_QUERY_TIMEOUT, e.getMessage());
         } catch (ExecutionException e) {
             inFlightRequest.remove(request.getAction(), request.id());
-            Throwable cause = e.getCause();
+            Throwable cause = unwrapAsyncCause(e.getCause());
             if (cause instanceof SQLException) {
                 throw (SQLException) cause;
             }
@@ -388,6 +411,38 @@ public class Transport implements AutoCloseable {
                 connectionManager.getCurrentClient().closeBlocking();
             }
         }
+    }
+
+    private static SQLException translateAsyncError(Throwable error) {
+        Throwable cause = unwrapAsyncCause(error);
+        if (cause instanceof SQLException) {
+            return (SQLException) cause;
+        }
+        if (cause instanceof TimeoutException) {
+            return TSDBError.createSQLException(TSDBErrorNumbers.ERROR_QUERY_TIMEOUT, cause.getMessage());
+        }
+        if (cause != null && "close all inFlightRequest".equals(cause.getMessage())) {
+            return TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, ERROR_MSG_CONNECTION_CLOSED);
+        }
+        return TSDBError.createSQLException(TSDBErrorNumbers.ERROR_QUERY_TIMEOUT, firstMessage(cause, error));
+    }
+
+    private static Throwable unwrapAsyncCause(Throwable error) {
+        Throwable cause = error;
+        while (cause instanceof CompletionException && cause.getCause() != null && cause.getCause() != cause) {
+            cause = cause.getCause();
+        }
+        return cause;
+    }
+
+    private static String firstMessage(Throwable primary, Throwable fallback) {
+        if (primary != null && primary.getMessage() != null && !primary.getMessage().isEmpty()) {
+            return primary.getMessage();
+        }
+        if (fallback != null && fallback.getMessage() != null) {
+            return fallback.getMessage();
+        }
+        return "";
     }
 
     /**
