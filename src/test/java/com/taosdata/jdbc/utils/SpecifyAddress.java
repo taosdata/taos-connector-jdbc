@@ -44,8 +44,8 @@ public class SpecifyAddress {
 
             String websocket = System.getProperty("maven.test.port.websocket");
             if (null != websocket && !"".equals(websocket.trim())) {
-                webSocketUrl = "jdbc:TAOS-WS://" + host.trim() + ":" + rest.trim() + "/?" + userAndPassword;
-                webSocketWithoutPropUrl = "jdbc:TAOS-WS://" + host.trim() + ":" + rest.trim() + "/";
+                webSocketUrl = "jdbc:TAOS-WS://" + host.trim() + ":" + websocket.trim() + "/?" + userAndPassword;
+                webSocketWithoutPropUrl = "jdbc:TAOS-WS://" + host.trim() + ":" + websocket.trim() + "/";
                 webSocketPort = websocket.trim();
             } else {
                 webSocketUrl = "jdbc:TAOS-WS://" + host.trim() + ":" + WEB_SOCKET_PORT_DEFAULT + "/?" + userAndPassword;

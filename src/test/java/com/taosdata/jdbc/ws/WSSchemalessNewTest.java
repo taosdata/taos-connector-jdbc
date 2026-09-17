@@ -12,12 +12,19 @@ import com.taosdata.jdbc.utils.SpecifyAddress;
 import com.taosdata.jdbc.utils.TestEnvUtil;
 import com.taosdata.jdbc.utils.TestUtils;
 import com.taosdata.jdbc.utils.Utils;
+import com.taosdata.jdbc.ws.entity.Code;
+import com.taosdata.jdbc.ws.entity.CommonResp;
+import com.taosdata.jdbc.ws.entity.Response;
 import org.junit.*;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class WSSchemalessNewTest {
 
@@ -27,9 +34,14 @@ public class WSSchemalessNewTest {
 
     @Before
     public void before() throws SQLException {
-        String url = SpecifyAddress.getInstance().getJniUrl();
-        if (url == null) {
-            url = "jdbc:TAOS-RS://" + HOST + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
+        SpecifyAddress addr = SpecifyAddress.getInstance();
+        String url;
+        if (addr.getHost() != null) {
+            url = "jdbc:TAOS-WS://" + addr.getHost() + ":" + addr.getWebSocketPort()
+                    + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
+        } else {
+            url = "jdbc:TAOS-WS://" + HOST + ":" + TestEnvUtil.getWsPort()
+                    + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");
@@ -172,6 +184,84 @@ public class WSSchemalessNewTest {
         Assert.assertEquals(lines.length, Utils.getSqlRows(connection, DB_NAME + ".stb1"));
         rs.close();
         statement.close();
+    }
+
+    @Test
+    @Description("async schemaless write")
+    public void testWriteAsync() throws Exception {
+        String line = "st,t1=3i64,t2=4f64,t3=\"t3\" c1=3i64,c3=L\"passit\",c2=false,c4=4f64 1626006833639000000";
+
+        Response response = ((WSConnection) connection).writeAsync(line, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS)
+                .get(30, TimeUnit.SECONDS);
+        Assert.assertTrue(response instanceof CommonResp);
+        Assert.assertEquals(Code.SUCCESS.getCode(), ((CommonResp) response).getCode());
+
+        Statement statement = connection.createStatement();
+        ResultSet rs = statement.executeQuery("show tables");
+        Assert.assertNotNull(rs);
+        int rowCnt = 0;
+        while (rs.next()) {
+            rowCnt++;
+        }
+        Assert.assertEquals(1, rowCnt);
+        rs.close();
+        statement.close();
+    }
+
+    @Test
+    public void testWriteAsyncWithTtl() throws Exception {
+        String line = "st,t1=3i64,t2=4f64,t3=\"t3\" c1=3i64,c3=L\"passit\",c2=false,c4=4f64 1626006833639000000";
+        Response response = ((WSConnection) connection).writeAsync(line, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS, 10000, 100L)
+                .get(30, TimeUnit.SECONDS);
+        Assert.assertEquals(Code.SUCCESS.getCode(), ((CommonResp) response).getCode());
+
+        Statement statement = connection.createStatement();
+        statement.executeUpdate("use " + DB_NAME);
+        ResultSet rs = statement.executeQuery("show tables");
+        int rowCnt = 0;
+        while (rs.next()) {
+            rowCnt++;
+        }
+        Assert.assertEquals(1, rowCnt);
+        rs.close();
+        statement.close();
+    }
+
+    @Test
+    @Description("async schemaless write accepts multiple LINE rows in one payload")
+    public void testWriteAsyncMultiLine() throws Exception {
+        String lines = "st,t1=3i64,t2=4f64,t3=\"t3\" c1=3i64,c3=L\"passit\",c2=false,c4=4f64 1626006833639000000\n"
+                + "st,t1=4i64,t3=\"t4\",t2=5f64,t4=5f64 c1=3i64,c3=L\"passitagin\",c2=true,c4=5f64,c5=5f64 1626006833640000000";
+        Response response = ((WSConnection) connection).writeAsync(lines, SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS)
+                .get(30, TimeUnit.SECONDS);
+        Assert.assertEquals(Code.SUCCESS.getCode(), ((CommonResp) response).getCode());
+
+        Statement statement = connection.createStatement();
+        ResultSet rs = statement.executeQuery("show tables");
+        int rowCnt = 0;
+        while (rs.next()) {
+            rowCnt++;
+        }
+        Assert.assertEquals(2, rowCnt);
+        rs.close();
+        statement.close();
+    }
+
+    @Test
+    @Description("async schemaless write completes with SQLException, not CompletionException, on server error")
+    public void testWriteAsyncServerError() throws Exception {
+        AtomicReference<Throwable> observed = new AtomicReference<>();
+        try {
+            ((WSConnection) connection).writeAsync("this is not line protocol", SchemalessProtocolType.LINE, SchemalessTimestampType.NANO_SECONDS)
+                    .whenComplete((response, error) -> observed.set(error))
+                    .get(30, TimeUnit.SECONDS);
+            Assert.fail("expected server error");
+        } catch (ExecutionException e) {
+            Assert.assertTrue(e.getCause() instanceof SQLException);
+            Assert.assertFalse(e.getCause() instanceof CompletionException);
+            Assert.assertTrue(observed.get() instanceof SQLException);
+            Assert.assertFalse(observed.get() instanceof CompletionException);
+        }
     }
 
     @Test
