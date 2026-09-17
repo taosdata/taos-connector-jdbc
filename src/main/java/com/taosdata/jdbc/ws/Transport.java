@@ -25,6 +25,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Handles message sending and receiving over WebSocket connections to TDengine.
@@ -133,88 +134,58 @@ public class Transport implements AutoCloseable {
      * @return a future completed with the server response
      */
     public CompletableFuture<Response> sendAsync(Request request, boolean reSend, long timeout) {
-        if (isClosed()) {
-            CompletableFuture<Response> failed = new CompletableFuture<>();
-            failed.completeExceptionally(TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, ERROR_MSG_CONNECTION_CLOSED));
-            return failed;
-        }
-
         CompletableFuture<Response> completableFuture = new CompletableFuture<>();
-        String reqString = request.toString();
-
-        try {
-            inFlightRequest.put(new FutureResponse(request.getAction(), request.id(), completableFuture));
-        } catch (SQLException e) {
-            completableFuture.completeExceptionally(e);
-            return completableFuture;
-        }
-
-        try {
-            connectionManager.getCurrentClient().send(reqString);
-        } catch (WebsocketNotConnectedException e) {
-            try {
-                connectionManager.handleConnectionException(this);
-                if (!reSend) {
-                    inFlightRequest.remove(request.getAction(), request.id());
-                    completableFuture.completeExceptionally(TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED));
-                    return completableFuture;
-                }
-                connectionManager.getCurrentClient().send(reqString);
-            } catch (SQLException ex) {
-                inFlightRequest.remove(request.getAction(), request.id());
-                completableFuture.completeExceptionally(ex);
-                return completableFuture;
-            } catch (Exception ex) {
-                inFlightRequest.remove(request.getAction(), request.id());
-                completableFuture.completeExceptionally(TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFUL_CLIENT_IOEXCEPTION, firstMessage(ex, e)));
+        synchronized (this) {
+            if (closed) {
+                completableFuture.completeExceptionally(closedSqlException());
                 return completableFuture;
             }
-        } catch (Exception e) {
-            inFlightRequest.remove(request.getAction(), request.id());
-            completableFuture.completeExceptionally(TSDBError.createSQLException(TSDBErrorNumbers.ERROR_RESTFUL_CLIENT_IOEXCEPTION, firstMessage(e, null)));
-            return completableFuture;
+            try {
+                inFlightRequest.put(new FutureResponse(request.getAction(), request.id(), completableFuture));
+            } catch (SQLException e) {
+                completableFuture.completeExceptionally(e);
+                return completableFuture;
+            }
         }
 
-        CompletableFuture<Response> timed = CompletableFutureTimeout.orTimeout(
-                completableFuture, timeout, TimeUnit.MILLISECONDS, getPrintString(reqString, request));
+        String reqString = request.toString();
+        AtomicReference<WSClient> sentClient = new AtomicReference<>();
         CompletableFuture<Response> result = new CompletableFuture<>();
-        timed.whenComplete((response, error) -> {
+        // Settle from the in-flight future directly so close()/send failures do not wait on
+        // CompletableFutureTimeout.orTimeout (applyToEither + timeout stage).
+        completableFuture.whenComplete((ignored, error) -> {
             if (error != null) {
                 inFlightRequest.remove(request.getAction(), request.id());
                 result.completeExceptionally(translateAsyncError(error));
-                return;
-            }
-            // Happy path completes on the response thread. closeBlocking() is only
-            // offloaded onto this transport's daemon thread, never ForkJoinPool.commonPool().
-            if (!needsBlockingCleanup(response)) {
-                try {
-                    handleTaosdError(response);
-                    result.complete(response);
-                } catch (Throwable t) {
-                    result.completeExceptionally(translateAsyncError(t));
-                }
-                return;
-            }
-            try {
-                ExecutorService executor = blockingCleanupExecutor();
-                if (executor == null) {
-                    result.completeExceptionally(TSDBError.createSQLException(
-                            TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, ERROR_MSG_CONNECTION_CLOSED));
-                    return;
-                }
-                executor.execute(() -> {
-                    try {
-                        handleTaosdError(response);
-                        result.complete(response);
-                    } catch (Throwable t) {
-                        result.completeExceptionally(translateAsyncError(t));
-                    }
-                });
-            } catch (RejectedExecutionException e) {
-                result.completeExceptionally(TSDBError.createSQLException(
-                        TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, firstMessage(e, null)));
             }
         });
+        CompletableFutureTimeout.orTimeout(completableFuture, timeout, TimeUnit.MILLISECONDS, getPrintString(reqString, request))
+                .whenComplete((response, error) -> {
+                    if (result.isDone()) {
+                        return;
+                    }
+                    if (error != null) {
+                        inFlightRequest.remove(request.getAction(), request.id());
+                        result.completeExceptionally(translateAsyncError(error));
+                        return;
+                    }
+                    completeWithOptionalCleanup(result, response, sentClient.get());
+                });
+
+        try {
+            WSClient client = connectionManager.getCurrentClient();
+            sentClient.set(client);
+            client.send(reqString);
+        } catch (WebsocketNotConnectedException e) {
+            if (!reSend) {
+                failInFlight(request, completableFuture, TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED));
+                return result;
+            }
+            runBlocking(() -> reconnectAndSend(request, reqString, completableFuture, sentClient, e), completableFuture);
+        } catch (Exception e) {
+            failInFlight(request, completableFuture, TSDBError.createSQLException(
+                    TSDBErrorNumbers.ERROR_RESTFUL_CLIENT_IOEXCEPTION, firstMessage(e, null)));
+        }
         return result;
     }
 
@@ -429,9 +400,88 @@ public class Transport implements AutoCloseable {
      * @param response the response to check for errors
      */
     private void handleTaosdError(Response response) {
-        if (needsBlockingCleanup(response)) {
-            connectionManager.getCurrentClient().closeBlocking();
+        handleTaosdError(response, connectionManager == null ? null : connectionManager.getCurrentClient());
+    }
+
+    private void handleTaosdError(Response response, WSClient client) {
+        if (client != null && needsBlockingCleanup(response)) {
+            client.closeBlocking();
         }
+    }
+
+    private void completeWithOptionalCleanup(CompletableFuture<Response> result, Response response, WSClient sentClient) {
+        if (!needsBlockingCleanup(response)) {
+            try {
+                handleTaosdError(response, sentClient);
+                result.complete(response);
+            } catch (Throwable t) {
+                result.completeExceptionally(translateAsyncError(t));
+            }
+            return;
+        }
+        ExecutorService executor = blockingCleanupExecutor();
+        if (executor == null) {
+            result.complete(response);
+            return;
+        }
+        try {
+            executor.execute(() -> {
+                try {
+                    handleTaosdError(response, sentClient);
+                } catch (Throwable ignore) {
+                    // response is already the server ack; do not hang the caller if cleanup fails
+                }
+                result.complete(response);
+            });
+        } catch (RejectedExecutionException e) {
+            result.complete(response);
+        }
+    }
+
+    private void reconnectAndSend(Request request, String reqString, CompletableFuture<Response> inner,
+                                  AtomicReference<WSClient> sentClient, WebsocketNotConnectedException original) {
+        try {
+            if (closed) {
+                failInFlight(request, inner, closedSqlException());
+                return;
+            }
+            connectionManager.handleConnectionException(this);
+            if (closed) {
+                failInFlight(request, inner, closedSqlException());
+                return;
+            }
+            WSClient client = connectionManager.getCurrentClient();
+            sentClient.set(client);
+            client.send(reqString);
+        } catch (SQLException ex) {
+            failInFlight(request, inner, ex);
+        } catch (Exception ex) {
+            failInFlight(request, inner, TSDBError.createSQLException(
+                    TSDBErrorNumbers.ERROR_RESTFUL_CLIENT_IOEXCEPTION, firstMessage(ex, original)));
+        }
+    }
+
+    private void runBlocking(Runnable task, CompletableFuture<Response> onReject) {
+        ExecutorService executor = blockingCleanupExecutor();
+        if (executor == null) {
+            onReject.completeExceptionally(closedSqlException());
+            return;
+        }
+        try {
+            executor.execute(task);
+        } catch (RejectedExecutionException e) {
+            onReject.completeExceptionally(TSDBError.createSQLException(
+                    TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, firstMessage(e, null)));
+        }
+    }
+
+    private void failInFlight(Request request, CompletableFuture<Response> inner, SQLException error) {
+        inFlightRequest.remove(request.getAction(), request.id());
+        inner.completeExceptionally(error);
+    }
+
+    private SQLException closedSqlException() {
+        return TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, ERROR_MSG_CONNECTION_CLOSED);
     }
 
     private boolean needsBlockingCleanup(Response response) {

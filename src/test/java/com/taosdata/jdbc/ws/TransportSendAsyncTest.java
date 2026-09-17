@@ -178,12 +178,50 @@ public class TransportSendAsyncTest {
 
         CompletableFuture<Response> rejected = transport.sendAsync(insertRequest(22L), true, 5000);
         completeInsert(inFlightRequest, 22L, networkUnavail);
+        CommonResp rejectedResp = (CommonResp) rejected.get(2, TimeUnit.SECONDS);
+        assertEquals(Transport.TSDB_CODE_RPC_NETWORK_UNAVAIL, rejectedResp.getCode());
+    }
+
+    @Test
+    public void haCleanupClosesTheClientThatSentNotTheRebalancedClient() throws Exception {
+        List<Endpoint> ha = Arrays.asList(
+                new Endpoint("127.0.0.1", 6041, false),
+                new Endpoint("127.0.0.1", 6042, false));
+        ConnectionParam param = new ConnectionParam.Builder(ha).setRequestTimeout(5000).build();
+        StubClient sent = new StubClient(param, null);
+        StubClient other = new StubClient(param, null);
+        InFlightRequest inFlightRequest = new InFlightRequest(16);
+        Transport transport = buildTransport(inFlightRequest, param, Arrays.asList(sent, other));
+
+        CompletableFuture<Response> future = transport.sendAsync(insertRequest(41L), true, 5000);
+        Field managerField = Transport.class.getDeclaredField("connectionManager");
+        managerField.setAccessible(true);
+        setField(managerField.get(transport), "currentNodeIndex", 1);
+
+        CommonResp networkUnavail = new CommonResp();
+        networkUnavail.setCode(Transport.TSDB_CODE_RPC_NETWORK_UNAVAIL);
+        completeInsert(inFlightRequest, 41L, networkUnavail);
+        future.get(2, TimeUnit.SECONDS);
+
+        assertEquals(1, sent.closeBlockingCalls.get());
+        assertEquals(0, other.closeBlockingCalls.get());
+        transport.close();
+    }
+
+    @Test
+    public void disconnectedSendDoesNotBlockCaller() throws Exception {
+        InFlightRequest inFlightRequest = new InFlightRequest(16);
+        Transport transport = buildTransport(inFlightRequest, new WebsocketNotConnectedException());
+        long start = System.nanoTime();
+        CompletableFuture<Response> future = transport.sendAsync(insertRequest(31L), true, 5000);
+        assertTrue(System.nanoTime() - start < TimeUnit.MILLISECONDS.toNanos(200));
         try {
-            rejected.get(2, TimeUnit.SECONDS);
-            fail("expected closed connection after executor shutdown");
+            future.get(2, TimeUnit.SECONDS);
+            fail("expected reconnect failure");
         } catch (ExecutionException e) {
-            assertSqlException(e.getCause(), TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
+            assertTrue(e.getCause() instanceof SQLException);
         }
+        transport.close();
     }
 
     private static Transport buildTransport(InFlightRequest inFlightRequest, RuntimeException sendError) throws Exception {
@@ -196,13 +234,15 @@ public class TransportSendAsyncTest {
         ConnectionParam param = new ConnectionParam.Builder(endpoints)
                 .setRequestTimeout(5000)
                 .build();
-        StubClient client = new StubClient(param, sendError);
+        return buildTransport(inFlightRequest, param, Collections.singletonList(new StubClient(param, sendError)));
+    }
+
+    private static Transport buildTransport(InFlightRequest inFlightRequest, ConnectionParam param,
+                                            List<WSClient> clients) throws Exception {
         WSConnectionManager connectionManager = new ObjenesisStd().newInstance(WSConnectionManager.class);
         setField(connectionManager, "connectionParam", param);
         setField(connectionManager, "closed", true);
-        ArrayList<WSClient> clients = new ArrayList<>();
-        clients.add(client);
-        setField(connectionManager, "clientArr", clients);
+        setField(connectionManager, "clientArr", new ArrayList<>(clients));
         setField(connectionManager, "currentNodeIndex", 0);
 
         Transport transport = new Transport() {
@@ -254,6 +294,7 @@ public class TransportSendAsyncTest {
 
     private static final class StubClient extends WSClient {
         private final RuntimeException sendError;
+        private final java.util.concurrent.atomic.AtomicInteger closeBlockingCalls = new java.util.concurrent.atomic.AtomicInteger();
 
         StubClient(ConnectionParam param, RuntimeException sendError) {
             super(URI.create("ws://127.0.0.1:6041"), param);
@@ -270,6 +311,11 @@ public class TransportSendAsyncTest {
         @Override
         public void close() {
             // no-op for unit tests
+        }
+
+        @Override
+        public void closeBlocking() {
+            closeBlockingCalls.incrementAndGet();
         }
     }
 }
