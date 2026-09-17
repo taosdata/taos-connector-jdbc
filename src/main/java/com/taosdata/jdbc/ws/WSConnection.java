@@ -272,14 +272,36 @@ public class WSConnection extends AbstractConnection {
      * @return a future completed with the insert response, or exceptionally with {@link SQLException}
      */
     public CompletableFuture<Response> writeAsync(String line, SchemalessProtocolType protocolType, SchemalessTimestampType timestampType, Integer ttl, Long reqId) {
-        return transport.sendAsync(buildSchemalessInsertRequest(line, protocolType, timestampType, ttl, reqId), param.getRequestTimeout())
-                .thenApply(response -> {
+        CompletableFuture<Response> result = new CompletableFuture<>();
+        transport.sendAsync(buildSchemalessInsertRequest(line, protocolType, timestampType, ttl, reqId), param.getRequestTimeout())
+                .whenComplete((response, error) -> {
+                    if (error != null) {
+                        result.completeExceptionally(asSQLException(error));
+                        return;
+                    }
                     CommonResp commonResp = (CommonResp) response;
                     if (Code.SUCCESS.getCode() != commonResp.getCode()) {
-                        throw new CompletionException(new SQLException("(0x" + Integer.toHexString(commonResp.getCode()) + "):" + commonResp.getMessage()));
+                        result.completeExceptionally(new SQLException(
+                                "(0x" + Integer.toHexString(commonResp.getCode()) + "):" + commonResp.getMessage()));
+                        return;
                     }
-                    return response;
+                    result.complete(response);
                 });
+        return result;
+    }
+
+    private static SQLException asSQLException(Throwable error) {
+        Throwable cause = error;
+        while (cause instanceof CompletionException && cause.getCause() != null) {
+            cause = cause.getCause();
+        }
+        if (cause instanceof SQLException) {
+            return (SQLException) cause;
+        }
+        if (cause instanceof Exception) {
+            return new SQLException(cause.getMessage(), (Exception) cause);
+        }
+        return new SQLException(String.valueOf(cause));
     }
 
     @Override

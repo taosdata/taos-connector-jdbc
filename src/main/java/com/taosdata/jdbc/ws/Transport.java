@@ -20,6 +20,8 @@ import java.sql.SQLException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -42,6 +44,8 @@ public class Transport implements AutoCloseable {
 
     /** Error message for closed connection */
     public static final String ERROR_MSG_CONNECTION_CLOSED = "Websocket Not Connected Exception for connection closed";
+
+    private static volatile Executor blockingCleanupExecutor;
 
     private final WSConnectionManager connectionManager;
     private final InFlightRequest inFlightRequest;
@@ -179,8 +183,18 @@ public class Transport implements AutoCloseable {
                 result.completeExceptionally(translateAsyncError(error));
                 return;
             }
-            // handleTaosdError may closeBlocking(); do not run it on the Netty event loop.
-            CompletableFuture.runAsync(() -> {
+            // Happy path completes on the response thread. closeBlocking() is only
+            // offloaded onto a transport-owned daemon thread, never ForkJoinPool.commonPool().
+            if (!needsBlockingCleanup(response)) {
+                try {
+                    handleTaosdError(response);
+                    result.complete(response);
+                } catch (Throwable t) {
+                    result.completeExceptionally(translateAsyncError(t));
+                }
+                return;
+            }
+            blockingCleanupExecutor().execute(() -> {
                 try {
                     handleTaosdError(response);
                     result.complete(response);
@@ -403,14 +417,38 @@ public class Transport implements AutoCloseable {
      * @param response the response to check for errors
      */
     private void handleTaosdError(Response response) {
-        if (connectionManager.getConnectionParam().getEndpoints().size() > 1 &&
-                response instanceof com.taosdata.jdbc.ws.entity.CommonResp) {
-            com.taosdata.jdbc.ws.entity.CommonResp commonResp = (com.taosdata.jdbc.ws.entity.CommonResp) response;
-            if (TSDB_CODE_RPC_NETWORK_UNAVAIL == commonResp.getCode() ||
-                    TSDB_CODE_RPC_SOMENODE_NOT_CONNECTED == commonResp.getCode()) {
-                connectionManager.getCurrentClient().closeBlocking();
+        if (needsBlockingCleanup(response)) {
+            connectionManager.getCurrentClient().closeBlocking();
+        }
+    }
+
+    private boolean needsBlockingCleanup(Response response) {
+        if (connectionManager == null || connectionManager.getConnectionParam() == null
+                || connectionManager.getConnectionParam().getEndpoints() == null
+                || connectionManager.getConnectionParam().getEndpoints().size() <= 1) {
+            return false;
+        }
+        if (!(response instanceof com.taosdata.jdbc.ws.entity.CommonResp)) {
+            return false;
+        }
+        com.taosdata.jdbc.ws.entity.CommonResp commonResp = (com.taosdata.jdbc.ws.entity.CommonResp) response;
+        return TSDB_CODE_RPC_NETWORK_UNAVAIL == commonResp.getCode()
+                || TSDB_CODE_RPC_SOMENODE_NOT_CONNECTED == commonResp.getCode();
+    }
+
+    private static Executor blockingCleanupExecutor() {
+        if (blockingCleanupExecutor == null) {
+            synchronized (Transport.class) {
+                if (blockingCleanupExecutor == null) {
+                    blockingCleanupExecutor = Executors.newSingleThreadExecutor(r -> {
+                        Thread thread = new Thread(r, "tdengine-ws-async-cleanup");
+                        thread.setDaemon(true);
+                        return thread;
+                    });
+                }
             }
         }
+        return blockingCleanupExecutor;
     }
 
     private static SQLException translateAsyncError(Throwable error) {
