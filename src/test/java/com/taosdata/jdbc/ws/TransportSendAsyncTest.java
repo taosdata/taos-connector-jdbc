@@ -14,15 +14,19 @@ import org.junit.Test;
 import org.objenesis.ObjenesisStd;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.net.URI;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -116,9 +120,51 @@ public class TransportSendAsyncTest {
                 threadName.get() != null && threadName.get().startsWith("ForkJoinPool"));
     }
 
+    @Test
+    public void blockingCleanupExecutorIsPerTransportAndShutdownOnClose() throws Exception {
+        List<Endpoint> ha = Arrays.asList(
+                new Endpoint("127.0.0.1", 6041, false),
+                new Endpoint("127.0.0.1", 6042, false));
+        InFlightRequest firstInFlight = new InFlightRequest(16);
+        InFlightRequest secondInFlight = new InFlightRequest(16);
+        Transport first = buildTransport(firstInFlight, null, ha);
+        Transport second = buildTransport(secondInFlight, null, ha);
+
+        CommonResp networkUnavail = new CommonResp();
+        networkUnavail.setCode(Transport.TSDB_CODE_RPC_NETWORK_UNAVAIL);
+
+        CompletableFuture<Response> firstFuture = first.sendAsync(insertRequest(11L), true, 5000);
+        completeInsert(firstInFlight, 11L, networkUnavail);
+        firstFuture.get(2, TimeUnit.SECONDS);
+
+        CompletableFuture<Response> secondFuture = second.sendAsync(insertRequest(12L), true, 5000);
+        completeInsert(secondInFlight, 12L, networkUnavail);
+        secondFuture.get(2, TimeUnit.SECONDS);
+
+        Field executorField = Transport.class.getDeclaredField("blockingCleanupExecutor");
+        executorField.setAccessible(true);
+        assertFalse(Modifier.isStatic(executorField.getModifiers()));
+        ExecutorService firstExecutor = (ExecutorService) executorField.get(first);
+        ExecutorService secondExecutor = (ExecutorService) executorField.get(second);
+        assertTrue(firstExecutor != null);
+        assertTrue(secondExecutor != null);
+        assertFalse(firstExecutor == secondExecutor);
+
+        first.close();
+        assertTrue(firstExecutor.isShutdown());
+        assertFalse(secondExecutor.isShutdown());
+        second.close();
+        assertTrue(secondExecutor.isShutdown());
+    }
+
     private static Transport buildTransport(InFlightRequest inFlightRequest, RuntimeException sendError) throws Exception {
-        ConnectionParam param = new ConnectionParam.Builder(
-                Collections.singletonList(new Endpoint("127.0.0.1", 6041, false)))
+        return buildTransport(inFlightRequest, sendError,
+                Collections.singletonList(new Endpoint("127.0.0.1", 6041, false)));
+    }
+
+    private static Transport buildTransport(InFlightRequest inFlightRequest, RuntimeException sendError,
+                                            List<Endpoint> endpoints) throws Exception {
+        ConnectionParam param = new ConnectionParam.Builder(endpoints)
                 .setRequestTimeout(5000)
                 .build();
         StubClient client = new StubClient(param, sendError);

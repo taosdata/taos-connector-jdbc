@@ -34,9 +34,14 @@ public class WSSchemalessNewTest {
 
     @Before
     public void before() throws SQLException {
-        String url = SpecifyAddress.getInstance().getWebSocketUrl();
-        if (url == null) {
-            url = "jdbc:TAOS-WS://" + HOST + ":" + TestEnvUtil.getWsPort() + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
+        SpecifyAddress addr = SpecifyAddress.getInstance();
+        String url;
+        if (addr.getHost() != null) {
+            url = "jdbc:TAOS-WS://" + addr.getHost() + ":" + addr.getWebSocketPort()
+                    + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
+        } else {
+            url = "jdbc:TAOS-WS://" + HOST + ":" + TestEnvUtil.getWsPort()
+                    + "/?user=" + TestEnvUtil.getUser() + "&password=" + TestEnvUtil.getPassword();
         }
         Properties properties = new Properties();
         properties.setProperty(TSDBDriver.PROPERTY_KEY_BATCH_LOAD, "true");

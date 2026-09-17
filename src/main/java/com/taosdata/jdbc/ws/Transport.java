@@ -20,7 +20,7 @@ import java.sql.SQLException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -45,7 +45,7 @@ public class Transport implements AutoCloseable {
     /** Error message for closed connection */
     public static final String ERROR_MSG_CONNECTION_CLOSED = "Websocket Not Connected Exception for connection closed";
 
-    private static volatile Executor blockingCleanupExecutor;
+    private volatile ExecutorService blockingCleanupExecutor;
 
     private final WSConnectionManager connectionManager;
     private final InFlightRequest inFlightRequest;
@@ -184,7 +184,7 @@ public class Transport implements AutoCloseable {
                 return;
             }
             // Happy path completes on the response thread. closeBlocking() is only
-            // offloaded onto a transport-owned daemon thread, never ForkJoinPool.commonPool().
+            // offloaded onto this transport's daemon thread, never ForkJoinPool.commonPool().
             if (!needsBlockingCleanup(response)) {
                 try {
                     handleTaosdError(response);
@@ -436,19 +436,21 @@ public class Transport implements AutoCloseable {
                 || TSDB_CODE_RPC_SOMENODE_NOT_CONNECTED == commonResp.getCode();
     }
 
-    private static Executor blockingCleanupExecutor() {
-        if (blockingCleanupExecutor == null) {
-            synchronized (Transport.class) {
-                if (blockingCleanupExecutor == null) {
-                    blockingCleanupExecutor = Executors.newSingleThreadExecutor(r -> {
-                        Thread thread = new Thread(r, "tdengine-ws-async-cleanup");
-                        thread.setDaemon(true);
-                        return thread;
-                    });
-                }
-            }
+    private ExecutorService blockingCleanupExecutor() {
+        ExecutorService existing = blockingCleanupExecutor;
+        if (existing != null) {
+            return existing;
         }
-        return blockingCleanupExecutor;
+        synchronized (this) {
+            if (blockingCleanupExecutor == null) {
+                blockingCleanupExecutor = Executors.newSingleThreadExecutor(r -> {
+                    Thread thread = new Thread(r, "tdengine-ws-async-cleanup");
+                    thread.setDaemon(true);
+                    return thread;
+                });
+            }
+            return blockingCleanupExecutor;
+        }
     }
 
     private static SQLException translateAsyncError(Throwable error) {
@@ -579,6 +581,10 @@ public class Transport implements AutoCloseable {
 
         if (connectionManager != null) {
             connectionManager.close();
+        }
+        ExecutorService executor = blockingCleanupExecutor;
+        if (executor != null) {
+            executor.shutdown();
         }
     }
 
