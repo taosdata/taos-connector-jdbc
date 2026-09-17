@@ -157,6 +157,35 @@ public class TransportSendAsyncTest {
         assertTrue(secondExecutor.isShutdown());
     }
 
+    @Test
+    public void rejectedCleanupExecutorCompletesInsteadOfHanging() throws Exception {
+        List<Endpoint> ha = Arrays.asList(
+                new Endpoint("127.0.0.1", 6041, false),
+                new Endpoint("127.0.0.1", 6042, false));
+        InFlightRequest inFlightRequest = new InFlightRequest(16);
+        Transport transport = buildTransport(inFlightRequest, null, ha);
+
+        CommonResp networkUnavail = new CommonResp();
+        networkUnavail.setCode(Transport.TSDB_CODE_RPC_NETWORK_UNAVAIL);
+
+        CompletableFuture<Response> primed = transport.sendAsync(insertRequest(21L), true, 5000);
+        completeInsert(inFlightRequest, 21L, networkUnavail);
+        primed.get(2, TimeUnit.SECONDS);
+
+        Field executorField = Transport.class.getDeclaredField("blockingCleanupExecutor");
+        executorField.setAccessible(true);
+        ((ExecutorService) executorField.get(transport)).shutdownNow();
+
+        CompletableFuture<Response> rejected = transport.sendAsync(insertRequest(22L), true, 5000);
+        completeInsert(inFlightRequest, 22L, networkUnavail);
+        try {
+            rejected.get(2, TimeUnit.SECONDS);
+            fail("expected closed connection after executor shutdown");
+        } catch (ExecutionException e) {
+            assertSqlException(e.getCause(), TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
+        }
+    }
+
     private static Transport buildTransport(InFlightRequest inFlightRequest, RuntimeException sendError) throws Exception {
         return buildTransport(inFlightRequest, sendError,
                 Collections.singletonList(new Endpoint("127.0.0.1", 6041, false)));

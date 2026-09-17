@@ -22,6 +22,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -194,14 +195,25 @@ public class Transport implements AutoCloseable {
                 }
                 return;
             }
-            blockingCleanupExecutor().execute(() -> {
-                try {
-                    handleTaosdError(response);
-                    result.complete(response);
-                } catch (Throwable t) {
-                    result.completeExceptionally(translateAsyncError(t));
+            try {
+                ExecutorService executor = blockingCleanupExecutor();
+                if (executor == null) {
+                    result.completeExceptionally(TSDBError.createSQLException(
+                            TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, ERROR_MSG_CONNECTION_CLOSED));
+                    return;
                 }
-            });
+                executor.execute(() -> {
+                    try {
+                        handleTaosdError(response);
+                        result.complete(response);
+                    } catch (Throwable t) {
+                        result.completeExceptionally(translateAsyncError(t));
+                    }
+                });
+            } catch (RejectedExecutionException e) {
+                result.completeExceptionally(TSDBError.createSQLException(
+                        TSDBErrorNumbers.ERROR_CONNECTION_CLOSED, firstMessage(e, null)));
+            }
         });
         return result;
     }
@@ -437,11 +449,17 @@ public class Transport implements AutoCloseable {
     }
 
     private ExecutorService blockingCleanupExecutor() {
+        if (closed) {
+            return null;
+        }
         ExecutorService existing = blockingCleanupExecutor;
         if (existing != null) {
             return existing;
         }
         synchronized (this) {
+            if (closed) {
+                return null;
+            }
             if (blockingCleanupExecutor == null) {
                 blockingCleanupExecutor = Executors.newSingleThreadExecutor(r -> {
                     Thread thread = new Thread(r, "tdengine-ws-async-cleanup");
