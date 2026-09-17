@@ -224,6 +224,75 @@ public class TransportSendAsyncTest {
         transport.close();
     }
 
+    @Test
+    public void disconnectedWithoutResendReconnectsButDoesNotResend() throws Exception {
+        ConnectionParam param = new ConnectionParam.Builder(
+                Collections.singletonList(new Endpoint("127.0.0.1", 6041, false)))
+                .setRequestTimeout(5000)
+                .build();
+        StubClient client = new StubClient(param, null);
+        client.disconnectOnce = true;
+        client.reportOpen = true;
+        InFlightRequest inFlightRequest = new InFlightRequest(16);
+        Transport transport = buildTransport(inFlightRequest, param, Collections.singletonList(client));
+        try {
+            transport.sendAsync(insertRequest(51L), false, 5000).get(2, TimeUnit.SECONDS);
+            fail("expected closed after reconnect without resend");
+        } catch (ExecutionException e) {
+            assertSqlException(e.getCause(), TSDBErrorNumbers.ERROR_CONNECTION_CLOSED);
+        }
+        assertEquals(1, client.sendCalls.get());
+        transport.close();
+    }
+
+    @Test
+    public void disconnectedWithResendSendsAgainAfterReconnect() throws Exception {
+        ConnectionParam param = new ConnectionParam.Builder(
+                Collections.singletonList(new Endpoint("127.0.0.1", 6041, false)))
+                .setRequestTimeout(5000)
+                .build();
+        StubClient client = new StubClient(param, null);
+        client.disconnectOnce = true;
+        client.reportOpen = true;
+        InFlightRequest inFlightRequest = new InFlightRequest(16);
+        Transport transport = buildTransport(inFlightRequest, param, Collections.singletonList(client));
+
+        CompletableFuture<Response> future = transport.sendAsync(insertRequest(52L), true, 5000);
+        long deadline = System.currentTimeMillis() + 2000;
+        while (client.sendCalls.get() < 2 && System.currentTimeMillis() < deadline) {
+            Thread.sleep(10);
+        }
+        assertEquals(2, client.sendCalls.get());
+        CommonResp ok = new CommonResp();
+        ok.setCode(0);
+        completeInsert(inFlightRequest, 52L, ok);
+        assertEquals(0, ((CommonResp) future.get(2, TimeUnit.SECONDS)).getCode());
+        transport.close();
+    }
+
+    @Test
+    public void timeoutDuringReconnectDoesNotSendAfterCallerTimedOut() throws Exception {
+        ConnectionParam param = new ConnectionParam.Builder(
+                Collections.singletonList(new Endpoint("127.0.0.1", 6041, false)))
+                .setRequestTimeout(5000)
+                .build();
+        StubClient client = new StubClient(param, null);
+        client.disconnectOnce = true;
+        client.reportOpen = true;
+        client.slowOpenMs = 300;
+        InFlightRequest inFlightRequest = new InFlightRequest(16);
+        Transport transport = buildTransport(inFlightRequest, param, Collections.singletonList(client));
+        try {
+            transport.sendAsync(insertRequest(53L), true, 50).get(2, TimeUnit.SECONDS);
+            fail("expected timeout");
+        } catch (ExecutionException e) {
+            assertSqlException(e.getCause(), TSDBErrorNumbers.ERROR_QUERY_TIMEOUT);
+        }
+        Thread.sleep(400);
+        assertEquals(1, client.sendCalls.get());
+        transport.close();
+    }
+
     private static Transport buildTransport(InFlightRequest inFlightRequest, RuntimeException sendError) throws Exception {
         return buildTransport(inFlightRequest, sendError,
                 Collections.singletonList(new Endpoint("127.0.0.1", 6041, false)));
@@ -295,6 +364,10 @@ public class TransportSendAsyncTest {
     private static final class StubClient extends WSClient {
         private final RuntimeException sendError;
         private final java.util.concurrent.atomic.AtomicInteger closeBlockingCalls = new java.util.concurrent.atomic.AtomicInteger();
+        private final java.util.concurrent.atomic.AtomicInteger sendCalls = new java.util.concurrent.atomic.AtomicInteger();
+        private boolean disconnectOnce;
+        private boolean reportOpen;
+        private int slowOpenMs;
 
         StubClient(ConnectionParam param, RuntimeException sendError) {
             super(URI.create("ws://127.0.0.1:6041"), param);
@@ -303,9 +376,25 @@ public class TransportSendAsyncTest {
 
         @Override
         public void send(String strData) {
+            int n = sendCalls.incrementAndGet();
             if (sendError != null) {
                 throw sendError;
             }
+            if (disconnectOnce && n == 1) {
+                throw new WebsocketNotConnectedException();
+            }
+        }
+
+        @Override
+        public boolean isOpen() {
+            if (slowOpenMs > 0) {
+                try {
+                    Thread.sleep(slowOpenMs);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+            return reportOpen;
         }
 
         @Override

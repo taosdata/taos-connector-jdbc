@@ -177,11 +177,8 @@ public class Transport implements AutoCloseable {
             sentClient.set(client);
             client.send(reqString);
         } catch (WebsocketNotConnectedException e) {
-            if (!reSend) {
-                failInFlight(request, completableFuture, TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED));
-                return result;
-            }
-            runBlocking(() -> reconnectAndSend(request, reqString, completableFuture, sentClient, e), completableFuture);
+            runBlocking(() -> reconnectAndSend(request, reqString, completableFuture, result, sentClient, e, reSend),
+                    completableFuture);
         } catch (Exception e) {
             failInFlight(request, completableFuture, TSDBError.createSQLException(
                     TSDBErrorNumbers.ERROR_RESTFUL_CLIENT_IOEXCEPTION, firstMessage(e, null)));
@@ -439,25 +436,34 @@ public class Transport implements AutoCloseable {
     }
 
     private void reconnectAndSend(Request request, String reqString, CompletableFuture<Response> inner,
-                                  AtomicReference<WSClient> sentClient, WebsocketNotConnectedException original) {
+                                  CompletableFuture<Response> result, AtomicReference<WSClient> sentClient,
+                                  WebsocketNotConnectedException original, boolean reSend) {
         try {
-            if (closed) {
-                failInFlight(request, inner, closedSqlException());
+            if (!closed) {
+                connectionManager.handleConnectionException(this);
+            }
+            if (closed || inner.isDone() || result.isDone()) {
+                if (!inner.isDone() && closed) {
+                    failInFlight(request, inner, closedSqlException());
+                }
                 return;
             }
-            connectionManager.handleConnectionException(this);
-            if (closed) {
-                failInFlight(request, inner, closedSqlException());
+            if (!reSend) {
+                failInFlight(request, inner, TSDBError.createSQLException(TSDBErrorNumbers.ERROR_CONNECTION_CLOSED));
                 return;
             }
             WSClient client = connectionManager.getCurrentClient();
             sentClient.set(client);
             client.send(reqString);
         } catch (SQLException ex) {
-            failInFlight(request, inner, ex);
+            if (!inner.isDone() && !result.isDone()) {
+                failInFlight(request, inner, ex);
+            }
         } catch (Exception ex) {
-            failInFlight(request, inner, TSDBError.createSQLException(
-                    TSDBErrorNumbers.ERROR_RESTFUL_CLIENT_IOEXCEPTION, firstMessage(ex, original)));
+            if (!inner.isDone() && !result.isDone()) {
+                failInFlight(request, inner, TSDBError.createSQLException(
+                        TSDBErrorNumbers.ERROR_RESTFUL_CLIENT_IOEXCEPTION, firstMessage(ex, original)));
+            }
         }
     }
 
