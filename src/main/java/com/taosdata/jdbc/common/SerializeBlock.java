@@ -1,3 +1,27 @@
+/*
+ * Copyright (c) 2023 TAOS Data, Inc.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package com.taosdata.jdbc.common;
 
 import com.taosdata.jdbc.TSDBError;
@@ -8,6 +32,7 @@ import com.taosdata.jdbc.ws.stmt2.entity.StmtInfo;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.sql.SQLException;
@@ -26,6 +51,123 @@ public class SerializeBlock {
     }
     private static void serializeShort(ByteBuf buf, short v){
         buf.writeShortLE(v);
+    }
+
+    /**
+     * Returns the numeric value of a bound object for serialization into a numeric
+     * column. The bound runtime type may differ from the column type (e.g. Apache
+     * Spark binds ByteType/ShortType via setInt). A Boolean binds as 1/0, matching
+     * the stmt2 column-bind path (WSEWColumnBufferWriter); any other non-Number
+     * type is rejected with SQLException instead of a bare ClassCastException.
+     */
+    private static Number toNumber(Object o) throws SQLException {
+        if (o instanceof Number) {
+            return (Number) o;
+        }
+        if (o instanceof Boolean) {
+            return (Boolean) o ? 1 : 0;
+        }
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE,
+                "unsupported data type : " + (o == null ? "null" : o.getClass().getName()));
+    }
+
+    /**
+     * Returns the boolean value of a bound object for serialization into a BOOL
+     * column. A Number binds as intValue() != 0, matching the stmt2 column-bind
+     * path (WSEWColumnBufferWriter).
+     */
+    private static boolean toBoolean(Object o) throws SQLException {
+        if (o instanceof Boolean) {
+            return (Boolean) o;
+        }
+        if (o instanceof Number) {
+            return ((Number) o).intValue() != 0;
+        }
+        throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE,
+                "unsupported data type : " + (o == null ? "null" : o.getClass().getName()));
+    }
+
+    private static SQLException outOfRange(String typeName) {
+        return TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE,
+                typeName + " value is out of range");
+    }
+
+    /**
+     * Narrows a bound object to a long within [min, max], raising SQLException on
+     * overflow. This is the SQL-standard SQLSTATE 22003 (numeric_value_out_of_range)
+     * behavior: PostgreSQL, Derby and H2 all reject out-of-range narrowing instead
+     * of wrapping. BigInteger/BigDecimal are compared exactly (their longValue()
+     * would wrap); Float/Double saturate on longValue(), so the range check still
+     * triggers, and non-finite inputs are rejected outright since no integer column
+     * can hold them.
+     */
+    private static long toExactLong(Object o, long min, long max, String typeName) throws SQLException {
+        Number n = toNumber(o);
+        long v;
+        if (n instanceof BigDecimal) {
+            BigDecimal bd = (BigDecimal) n;
+            if (bd.compareTo(BigDecimal.valueOf(min)) < 0 || bd.compareTo(BigDecimal.valueOf(max)) > 0) {
+                throw outOfRange(typeName);
+            }
+            v = bd.longValue();
+        } else if (n instanceof BigInteger) {
+            BigInteger bi = (BigInteger) n;
+            if (bi.compareTo(BigInteger.valueOf(min)) < 0 || bi.compareTo(BigInteger.valueOf(max)) > 0) {
+                throw outOfRange(typeName);
+            }
+            v = bi.longValue();
+        } else {
+            if (n instanceof Double || n instanceof Float) {
+                double d = n.doubleValue();
+                // reject NaN/Infinity and values beyond the long range; longValue()
+                // would silently map them to 0 or saturate to Long.MIN/MAX_VALUE
+                if (!Double.isFinite(d) || d < -0x1p63 || d >= 0x1p63) {
+                    throw outOfRange(typeName);
+                }
+            }
+            v = n.longValue();
+            if (v < min || v > max) {
+                throw outOfRange(typeName);
+            }
+        }
+        return v;
+    }
+
+    private static float toExactFloat(Object o) throws SQLException {
+        Number n = toNumber(o);
+        float v = n.floatValue();
+        // narrowing a finite value must not silently become Infinity; an input that
+        // is already NaN/Infinity is preserved, matching the stmt2 column-bind path.
+        // BigInteger/BigDecimal are always finite, though their doubleValue() may
+        // saturate to Infinity.
+        if (Float.isInfinite(v) && (n instanceof BigInteger || n instanceof BigDecimal
+                || Double.isFinite(n.doubleValue()))) {
+            throw outOfRange("float");
+        }
+        return v;
+    }
+
+    /**
+     * Converts a bound object to BigInteger for the UBIGINT branch, where the range
+     * check happens in toUnsignedLongBits. Float/Double may exceed the long range,
+     * so they go through BigDecimal instead of a saturating longValue().
+     */
+    private static BigInteger toBigInteger(Object o) throws SQLException {
+        Number n = toNumber(o);
+        if (n instanceof BigInteger) {
+            return (BigInteger) n;
+        }
+        if (n instanceof BigDecimal) {
+            return ((BigDecimal) n).toBigInteger();
+        }
+        if (n instanceof Double || n instanceof Float) {
+            double d = n.doubleValue();
+            if (!Double.isFinite(d)) {
+                throw outOfRange("ubigint");
+            }
+            return BigDecimal.valueOf(d).toBigInteger();
+        }
+        return BigInteger.valueOf(n.longValue());
     }
 
     public static void serializeByteArray(ByteBuf buf, byte[] data) {
@@ -104,8 +246,7 @@ public class SerializeBlock {
                     if (o == null) {
                         buf.writeByte(0);
                     } else {
-                        boolean v = (Boolean) o;
-                        buf.writeByte(v ? 1 : 0);
+                        buf.writeByte(toBoolean(o) ? 1 : 0);
                     }
                 }
                 break;
@@ -117,8 +258,7 @@ public class SerializeBlock {
                     if (o == null) {
                         buf.writeByte(0);
                     } else {
-                        byte v = (Byte) o;
-                        buf.writeByte(v);
+                        buf.writeByte((byte) toExactLong(o, Byte.MIN_VALUE, Byte.MAX_VALUE, "tinyint"));
                     }
                 }
                 break;
@@ -130,11 +270,7 @@ public class SerializeBlock {
                     if (o == null) {
                         buf.writeByte(0);
                     } else {
-                        short v = (Short) o;
-                        if (v < 0 || v > MAX_UNSIGNED_BYTE){
-                            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "utinyint value is out of range");
-                        }
-                        buf.writeByte((v & 0xFF));
+                        buf.writeByte((byte) toExactLong(o, 0, MAX_UNSIGNED_BYTE, "utinyint"));
                     }
                 }
                 break;
@@ -144,7 +280,7 @@ public class SerializeBlock {
 
                 for (Object o: objectList){
                     if (o != null) {
-                        serializeShort(buf, (Short) o);
+                        serializeShort(buf, (short) toExactLong(o, Short.MIN_VALUE, Short.MAX_VALUE, "smallint"));
                     } else {
                         serializeShort(buf, (short)0);
                     }
@@ -156,11 +292,7 @@ public class SerializeBlock {
 
                 for (Object o: objectList){
                     if (o != null) {
-                        int v = (Integer) o;
-                        if (v < 0 || v > MAX_UNSIGNED_SHORT){
-                            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "usmallint value is out of range");
-                        }
-                        buf.writeShortLE((v & 0xFFFF));
+                        buf.writeShortLE((short) toExactLong(o, 0, MAX_UNSIGNED_SHORT, "usmallint"));
                     } else {
                         buf.writeShortLE(0);
                     }
@@ -172,7 +304,7 @@ public class SerializeBlock {
 
                 for (Object o: objectList){
                     if (o != null) {
-                        buf.writeIntLE((Integer) o);
+                        buf.writeIntLE((int) toExactLong(o, Integer.MIN_VALUE, Integer.MAX_VALUE, "int"));
                     } else {
                         buf.writeIntLE(0);
                     }
@@ -184,12 +316,7 @@ public class SerializeBlock {
 
                 for (Object o: objectList){
                     if (o != null) {
-                        long v = (Long) o;
-                        if (v < 0 || v > MAX_UNSIGNED_INT){
-                            throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE, "uint value is out of range");
-                        }
-                         buf.writeIntLE((int)(v & 0xFFFFFFFFL));
-
+                        buf.writeIntLE((int) toExactLong(o, 0, MAX_UNSIGNED_INT, "uint"));
                     } else {
                         buf.writeIntLE(0);
                     }
@@ -201,7 +328,7 @@ public class SerializeBlock {
 
                 for (Object o: objectList){
                     if (o != null) {
-                        buf.writeLongLE((Long)o);
+                        buf.writeLongLE(toExactLong(o, Long.MIN_VALUE, Long.MAX_VALUE, "bigint"));
                     } else {
                         buf.writeLongLE(0L);
                     }
@@ -213,7 +340,7 @@ public class SerializeBlock {
 
                 for (Object o: objectList){
                     if (o != null) {
-                        buf.writeLongLE(toUnsignedLongBits((BigInteger) o));
+                        buf.writeLongLE(toUnsignedLongBits(toBigInteger(o)));
                     } else {
                         buf.writeLongLE(0L);
                     }
@@ -226,7 +353,7 @@ public class SerializeBlock {
                 for (Object o: objectList){
                     float v = 0;
                     if (o != null) {
-                        v = (Float) o;
+                        v = toExactFloat(o);
                     }
                     buf.writeFloatLE(v);
                 }
@@ -238,7 +365,7 @@ public class SerializeBlock {
                 for (Object o: objectList){
                     double v = 0;
                     if (o != null) {
-                        v = (Double) o;
+                        v = toNumber(o).doubleValue();
                     }
                     buf.writeDoubleLE(v);
                 }

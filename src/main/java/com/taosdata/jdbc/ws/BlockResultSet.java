@@ -1,3 +1,27 @@
+/*
+ * Copyright (c) 2020 TAOS Data, Inc.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBError;
@@ -52,7 +76,7 @@ public class BlockResultSet extends AbstractWSResultSet {
         if (value instanceof String)
             return (String) value;
         if (value instanceof Instant)
-            return DateTimeUtils.getTimestamp((Instant) value, zoneId).toString();
+            return DateTimeUtils.formatTimestamp((Instant) value, zoneId);
 
         if (value instanceof byte[]) {
             // for websocket, only support utf8
@@ -304,6 +328,8 @@ public class BlockResultSet extends AbstractWSResultSet {
         } else {
             try {
                 if (type == String.class) {
+                    if (value instanceof Instant)
+                        return type.cast(DateTimeUtils.formatTimestamp((Instant) value, zoneId));
                     if (value instanceof byte[]) {
                         String charset = StandardCharsets.UTF_8.name();
                         return type.cast(new String((byte[]) value, charset));

@@ -1,3 +1,27 @@
+/*
+ * Copyright (c) 2026 TAOS Data, Inc.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBErrorNumbers;
@@ -18,12 +42,16 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
+import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
+import java.util.TimeZone;
 
 import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_BIGINT;
 import static com.taosdata.jdbc.TSDBConstants.TSDB_DATA_TYPE_INT;
@@ -655,6 +683,48 @@ public class WSColumnPreparedStatementTest {
         SQLException ex = assertSqlException(() -> stmt.setObject(1, new Object()));
 
         assertTrue(ex.getMessage().contains("Unsupported data type"));
+    }
+
+    @Test
+    public void setTimestampWithCalendar_preservesEpochAtAllPrecisions() throws Exception {
+        TimeZone originalTimeZone = TimeZone.getDefault();
+        try {
+            TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
+            Mockito.when(param.getZoneId()).thenReturn(ZoneId.of("Asia/Shanghai"));
+            Timestamp timestamp = Timestamp.valueOf("2024-01-01 09:00:00.123456789");
+            Calendar[] calendars = {
+                    Calendar.getInstance(TimeZone.getTimeZone("Asia/Tokyo")),
+                    Calendar.getInstance(TimeZone.getTimeZone("America/Los_Angeles")),
+                    null
+            };
+            long[] expectedEpochs = {
+                    1704099600123L,
+                    1704099600123456L,
+                    1704099600123456789L
+            };
+
+            for (int precision = 0; precision < expectedEpochs.length; precision++) {
+                Field timestampField = field(
+                        (byte) FieldBindType.TAOS_FIELD_COL.getValue(), TSDB_DATA_TYPE_TIMESTAMP);
+                timestampField.setPrecision((byte) precision);
+                try (WSColumnPreparedStatement stmt = buildStmt(Collections.singletonList(timestampField))) {
+                    stmt.setTimestamp(1, timestamp);
+                    for (Calendar calendar : calendars) {
+                        stmt.setTimestamp(1, timestamp, calendar);
+                    }
+
+                    int rowCount = calendars.length + 1;
+                    assertEquals(rowCount, stmt.getColumnBuffer(0).getRowCount());
+                    byte[] block = rawFixedBlock(stmt, 1);
+                    for (int row = 0; row < rowCount; row++) {
+                        assertEquals("Timestamp epoch at precision " + precision + ", row " + row,
+                                expectedEpochs[precision], readFixedRaw(block, rowCount, Long.BYTES, row));
+                    }
+                }
+            }
+        } finally {
+            TimeZone.setDefault(originalTimeZone);
+        }
     }
 
     @Test

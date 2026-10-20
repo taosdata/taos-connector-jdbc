@@ -1,3 +1,27 @@
+/*
+ * Copyright (c) 2024 TAOS Data, Inc.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package com.taosdata.jdbc.utils;
 
 import com.taosdata.jdbc.enums.TimestampPrecision;
@@ -9,8 +33,8 @@ import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoField;
 import java.util.Calendar;
-import java.util.TimeZone;
 
 public class DateTimeUtils {
     private DateTimeUtils() {
@@ -20,86 +44,57 @@ public class DateTimeUtils {
     private static final DateTimeFormatter milliSecFormatter = new DateTimeFormatterBuilder().appendPattern("yyyy-MM-dd HH:mm:ss.SSS").toFormatter();
     private static final DateTimeFormatter microSecFormatter = new DateTimeFormatterBuilder().appendPattern("yyyy-MM-dd HH:mm:ss.SSSSSS").toFormatter();
     private static final DateTimeFormatter nanoSecFormatter = new DateTimeFormatterBuilder().appendPattern("yyyy-MM-dd HH:mm:ss.SSSSSSSSS").toFormatter();
+    private static final DateTimeFormatter timestampFormatter = new DateTimeFormatterBuilder()
+            .appendPattern("uuuu-MM-dd HH:mm:ss")
+            .appendFraction(ChronoField.NANO_OF_SECOND, 1, 9, true)
+            .toFormatter();
 
     public static Time parseTime(String timestampStr, ZoneId zoneId) throws DateTimeParseException {
-        LocalDateTime dateTime = parseLocalDateTime(timestampStr, zoneId);
+        LocalDateTime dateTime = parseLocalDateTime(timestampStr);
         return dateTime != null ? Time.valueOf(dateTime.toLocalTime()) : null;
     }
 
     public static Date parseDate(String timestampStr, ZoneId zoneId) {
-        LocalDateTime dateTime = parseLocalDateTime(timestampStr, zoneId);
+        LocalDateTime dateTime = parseLocalDateTime(timestampStr);
         return dateTime != null ? Date.valueOf(dateTime.toLocalDate()) : null;
     }
 
+    /**
+     * Parses a zone-less timestamp string. When zoneId is given, the wall-clock
+     * fields are interpreted in that zone; otherwise in the JVM default zone.
+     */
     public static Timestamp parseTimestamp(String timeStampStr, ZoneId zoneId) {
-        LocalDateTime dateTime = parseLocalDateTime(timeStampStr, zoneId);
-        return dateTime != null ? Timestamp.valueOf(dateTime) : null;
+        LocalDateTime dateTime = parseLocalDateTime(timeStampStr);
+        if (dateTime == null) {
+            return null;
+        }
+        return zoneId == null
+                ? Timestamp.valueOf(dateTime)
+                : Timestamp.from(dateTime.atZone(zoneId).toInstant());
     }
 
-    private static LocalDateTime parseLocalDateTime(String timeStampStr, ZoneId zoneId) {
+    private static LocalDateTime parseLocalDateTime(String timeStampStr) {
         try {
-            return parseMilliSecTimestamp(timeStampStr, zoneId);
+            return LocalDateTime.parse(timeStampStr, milliSecFormatter);
         } catch (DateTimeParseException e) {
             try {
-                return parseMicroSecTimestamp(timeStampStr, zoneId);
+                return LocalDateTime.parse(timeStampStr, microSecFormatter);
             } catch (DateTimeParseException ee) {
-                return parseNanoSecTimestamp(timeStampStr, zoneId);
+                return LocalDateTime.parse(timeStampStr, nanoSecFormatter);
             }
         }
     }
 
-    private static LocalDateTime parseMilliSecTimestamp(String timeStampStr, ZoneId zoneId) throws DateTimeParseException {
-        if (zoneId == null){
-            return LocalDateTime.parse(timeStampStr, milliSecFormatter);
-        } else {
-            LocalDateTime dateTime = LocalDateTime.parse(timeStampStr, milliSecFormatter);
-            ZonedDateTime zonedDateTime = dateTime.atZone(zoneId);
-            return zonedDateTime.toLocalDateTime();
-        }
-    }
-
-    private static LocalDateTime parseMicroSecTimestamp(String timeStampStr, ZoneId zoneId) throws DateTimeParseException {
-        if (zoneId == null) {
-            return LocalDateTime.parse(timeStampStr, microSecFormatter);
-        } else {
-            LocalDateTime dateTime = LocalDateTime.parse(timeStampStr, microSecFormatter);
-            ZonedDateTime zonedDateTime = dateTime.atZone(zoneId);
-            return zonedDateTime.toLocalDateTime();
-        }
-    }
-
-    private static LocalDateTime parseNanoSecTimestamp(String timeStampStr, ZoneId zoneId) throws DateTimeParseException {
-        if (zoneId == null) {
-            return LocalDateTime.parse(timeStampStr, nanoSecFormatter);
-        } else {
-            LocalDateTime dateTime = LocalDateTime.parse(timeStampStr, nanoSecFormatter);
-            ZonedDateTime zonedDateTime = dateTime.atZone(zoneId);
-            return zonedDateTime.toLocalDateTime();
-        }
-    }
-
+    /**
+     * TIMESTAMP columns store absolute instants, so the zone is intentionally
+     * not applied to the value; it only affects display and zone-less literal
+     * parsing.
+     */
     public static Instant toInstant(Timestamp timestamp, ZoneId zoneId) {
-        if (timestamp == null) {
-            return null;
-        }
-
-        if (zoneId == null) {
-            return timestamp.toInstant();
-        }
-
-        LocalDateTime localDateTime = timestamp.toLocalDateTime();
-        ZonedDateTime zonedDateTime = localDateTime.atZone(zoneId);
-        return zonedDateTime.toInstant();
+        return timestamp == null ? null : timestamp.toInstant();
     }
     public static Instant toInstant(Timestamp timestamp, Calendar cal) {
-        if (cal == null) {
-            return timestamp.toInstant();
-        }
-
-        TimeZone calTimeZone = cal.getTimeZone();
-        ZoneId zoneId = calTimeZone.toZoneId();
-
-        return toInstant(timestamp, zoneId);
+        return timestamp == null ? null : timestamp.toInstant();
     }
 
     public static long toLong(Instant instant, int precision) {
@@ -157,11 +152,24 @@ public class DateTimeUtils {
         return null;
     }
 
+    /**
+     * Returns a Timestamp holding exactly the given instant; the zone is
+     * intentionally not applied to the value. Use formatTimestamp for
+     * zone-aware display.
+     */
     public static Timestamp getTimestamp(Instant instant, ZoneId zoneId) {
-        if (zoneId == null){
-            return Timestamp.from(instant);
+        return Timestamp.from(instant);
+    }
+
+    /**
+     * Renders the instant as a wall-clock string in the given zone, or in the
+     * JVM default zone when null.
+     */
+    public static String formatTimestamp(Instant instant, ZoneId zoneId) {
+        if (zoneId == null) {
+            return Timestamp.from(instant).toString();
         }
-        return Timestamp.valueOf(LocalDateTime.ofInstant(instant, zoneId));
+        return timestampFormatter.format(LocalDateTime.ofInstant(instant, zoneId));
     }
 
     public static LocalDateTime getLocalDateTime(Instant instant, ZoneId zoneId) {
@@ -192,19 +200,9 @@ public class DateTimeUtils {
     }
 
     public static Date getDate(Instant instant, ZoneId zoneId) {
-        if (zoneId == null){
-            return new Date(instant.toEpochMilli());
-        }
-
-        Timestamp timestamp = getTimestamp(instant, zoneId);
-        return new Date(timestamp.getTime());
+        return new Date(instant.toEpochMilli());
     }
     public static Time getTime(Instant instant, ZoneId zoneId) {
-        if (zoneId == null){
-            return new Time(instant.toEpochMilli());
-        }
-
-        Timestamp timestamp = getTimestamp(instant, zoneId);
-        return new Time(timestamp.getTime());
+        return new Time(instant.toEpochMilli());
     }
 }
