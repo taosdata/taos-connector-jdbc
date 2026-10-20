@@ -1,3 +1,27 @@
+/*
+ * Copyright (c) 2025 TAOS Data, Inc.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package com.taosdata.jdbc.utils;
 
 import com.taosdata.jdbc.enums.TimestampPrecision;
@@ -221,6 +245,64 @@ public class DateTimeUtilsTest {
         assertNotNull(resultWithZone);
         assertEquals(Timestamp.valueOf("2024-01-15 10:30:45.123").getTime(), resultWithZone.getTime());
         assertEquals(123000000, resultWithZone.getNanos());
+    }
+
+    @Test
+    public void testTimestampValueIsZoneIndependent() {
+        // Regression: the zone must never shift the epoch value of a TIMESTAMP
+        // column (a JVM in UTC plus a connection zone of Asia/Shanghai used to
+        // produce values shifted by +8h)
+        Instant instant = Instant.parse("2024-01-15T10:30:45.123Z");
+
+        Timestamp ts = DateTimeUtils.getTimestamp(instant, NEW_YORK_ZONE);
+        assertEquals(Timestamp.from(instant), ts);
+        assertEquals(instant.toEpochMilli(), ts.getTime());
+
+        Timestamp wallClock = Timestamp.valueOf("2024-01-15 10:30:45.123");
+        assertEquals(wallClock.toInstant(), DateTimeUtils.toInstant(wallClock, NEW_YORK_ZONE));
+        assertEquals(wallClock.toInstant(), DateTimeUtils.toInstant(wallClock,
+                Calendar.getInstance(TimeZone.getTimeZone(NEW_YORK_ZONE))));
+    }
+
+    @Test
+    public void testFormatTimestampRendersInZone() {
+        // America/New_York is UTC-5 in January
+        Instant instant = Instant.parse("2024-01-15T10:30:45.123Z");
+        assertEquals("2024-01-15 05:30:45.123", DateTimeUtils.formatTimestamp(instant, NEW_YORK_ZONE));
+        assertEquals("2024-01-15 10:30:45.123", DateTimeUtils.formatTimestamp(instant, UTC_ZONE));
+        assertEquals(Timestamp.from(instant).toString(), DateTimeUtils.formatTimestamp(instant, null));
+    }
+
+    @Test
+    public void testFormatTimestampIgnoresJvmDaylightSavingGap() {
+        TimeZone previousTimeZone = TimeZone.getDefault();
+        try {
+            TimeZone.setDefault(TimeZone.getTimeZone(NEW_YORK_ZONE));
+            Instant instant = Instant.parse("2024-03-09T17:30:00.123456789Z");
+
+            assertEquals("2024-03-10 02:30:00.123456789",
+                    DateTimeUtils.formatTimestamp(instant, ZoneId.of("Asia/Tokyo")));
+        } finally {
+            TimeZone.setDefault(previousTimeZone);
+        }
+    }
+
+    @Test
+    public void testFormatTimestampPreservesTimestampFractionFormat() {
+        assertEquals("2024-01-01 00:00:00.0",
+                DateTimeUtils.formatTimestamp(Instant.parse("2024-01-01T00:00:00Z"), UTC_ZONE));
+        assertEquals("2024-01-01 00:00:00.1234",
+                DateTimeUtils.formatTimestamp(Instant.parse("2024-01-01T00:00:00.123400Z"), UTC_ZONE));
+    }
+
+    @Test
+    public void testParseTimestampAppliesZone() {
+        // the same wall-clock string denotes different instants in different zones;
+        // America/New_York is UTC-5 in January, so the New York reading is 5h later
+        Timestamp utc = DateTimeUtils.parseTimestamp(MILLISECOND_STRING, UTC_ZONE);
+        Timestamp ny = DateTimeUtils.parseTimestamp(MILLISECOND_STRING, NEW_YORK_ZONE);
+        assertEquals(utc.getTime() + 5 * 3600_000L, ny.getTime());
+        assertEquals(123000000, ny.getNanos());
     }
 
     @Test

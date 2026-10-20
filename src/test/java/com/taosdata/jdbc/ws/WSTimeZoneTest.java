@@ -1,3 +1,27 @@
+/*
+ * Copyright (c) 2024 TAOS Data, Inc.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package com.taosdata.jdbc.ws;
 
 import com.taosdata.jdbc.TSDBDriver;
@@ -58,7 +82,10 @@ public class WSTimeZoneTest {
 
                 System.out.println("ts: " + ts);
                 System.out.println("ts: " + ts.getTime());
-                Assert.assertEquals("2024-01-01 01:00:00." + precisionMap.get(this.precision), ts.toString());
+                // the epoch is zone-independent: 2024-01-01T00:00:00.123+08:00
+                Assert.assertEquals(1704038400123L, ts.getTime());
+                // the connection zone (Asia/Tokyo) only drives the getString rendering
+                Assert.assertEquals("2024-01-01 01:00:00." + precisionMap.get(this.precision), resultSet.getString("ts"));
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -89,13 +116,14 @@ public class WSTimeZoneTest {
             while (resultSet.next()) {
 
                 Timestamp ts = resultSet.getTimestamp("ts");
-                Assert.assertEquals("2024-01-02 01:02:03." + precisionMap.get(this.precision), ts.toString());
+                Assert.assertEquals(instant.toEpochMilli(), ts.getTime());
+                Assert.assertEquals("2024-01-02 01:02:03." + precisionMap.get(this.precision), resultSet.getString("ts"));
 
                 Date date = resultSet.getDate("ts");
-                Assert.assertEquals("2024-01-02", date.toString());
+                Assert.assertEquals(instant.toEpochMilli(), date.getTime());
 
                 Time time = resultSet.getTime("ts");
-                Assert.assertEquals("01:02:03", time.toString());
+                Assert.assertEquals(instant.toEpochMilli(), time.getTime());
 
                 Instant ins = resultSet.getObject("ts", Instant.class);
                 Assert.assertEquals(ins.toEpochMilli(), instant.toEpochMilli());
@@ -152,16 +180,18 @@ public class WSTimeZoneTest {
             while (resultSet.next()) {
 
                 Timestamp ts1 = resultSet.getTimestamp("ts1");
-                Timestamp ts2 = resultSet.getTimestamp("ts2");
-                Timestamp ts3 = resultSet.getTimestamp("ts3");
-                Timestamp ts4 = resultSet.getTimestamp("ts4");
                 Timestamp ts5 = resultSet.getTimestamp("ts5");
                 Timestamp ts6 = resultSet.getTimestamp("ts6");
 
-                Assert.assertEquals("2024-01-02 01:02:03." + precisionMap.get(this.precision), ts1.toString());
-                Assert.assertEquals("2024-01-02 01:02:03." + precisionMap.get(this.precision), ts2.toString());
-                Assert.assertEquals("2024-01-02 01:02:03." + precisionMap.get(this.precision), ts3.toString());
-                Assert.assertEquals("2024-01-02 01:02:03." + precisionMap.get(this.precision), ts4.toString());
+                // the epoch is zone-independent; all four columns hold the same instant
+                Assert.assertEquals(instant.toEpochMilli(), ts1.getTime());
+
+                // the connection zone (Asia/Tokyo) only drives the getString rendering
+                String expected = "2024-01-02 01:02:03." + precisionMap.get(this.precision);
+                Assert.assertEquals(expected, resultSet.getString("ts1"));
+                Assert.assertEquals(expected, resultSet.getString("ts2"));
+                Assert.assertEquals(expected, resultSet.getString("ts3"));
+                Assert.assertEquals(expected, resultSet.getString("ts4"));
 
                 Assert.assertEquals("2024-01-02", new Date(ts5.getTime()).toString());
                 Assert.assertEquals("01:02:03", new Time(ts6.getTime()).toString());

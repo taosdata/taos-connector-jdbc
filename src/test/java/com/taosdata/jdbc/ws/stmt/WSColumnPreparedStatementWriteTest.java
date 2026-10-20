@@ -1,3 +1,27 @@
+/*
+ * Copyright (c) 2026 TAOS Data, Inc.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package com.taosdata.jdbc.ws.stmt;
 
 import com.taosdata.jdbc.TSDBConstants;
@@ -32,6 +56,10 @@ public class WSColumnPreparedStatementWriteTest {
     private static final byte[] EXPECTED_BLOB = new byte[]{1, 2, 3, 4};
     private static final String DECIMAL_VALUE_1 = "12.32";
     private static final String DECIMAL_VALUE_2 = "1234567890111.12345678";
+    // First main-branch build supporting 16MB BLOB; older servers cap BLOB values at 4MB
+    private static final String MIN_LARGE_BLOB_VERSION = "3.4.2.8.alpha";
+    // 5MB payload: exceeds the legacy 4MB BLOB limit and stays within the 16MB payload ceiling
+    private static final int LARGE_BLOB_SIZE = 5 * 1024 * 1024;
 
     @Test
     public void testExecuteUpdate_columnRoute_roundTripsAllTypes() throws SQLException {
@@ -453,6 +481,34 @@ public class WSColumnPreparedStatementWriteTest {
                 Assert.assertTrue(resultSet.next());
                 Assert.assertEquals(new Timestamp(current), resultSet.getTimestamp(1));
                 Assert.assertArrayEquals(EXPECTED_BLOB, resultSet.getBlob(2).getBytes(1, EXPECTED_BLOB.length));
+                Assert.assertFalse(resultSet.next());
+            }
+        }
+    }
+
+    @Test
+    public void testExecuteUpdate_columnRoute_roundTripsLargeBlob() throws SQLException {
+        String serverVersion = connection.getMetaData().getDatabaseProductVersion();
+        Assume.assumeTrue("16MB BLOB requires server >= " + MIN_LARGE_BLOB_VERSION + ", but was " + serverVersion,
+                VersionUtil.compareVersions(serverVersion, MIN_LARGE_BLOB_VERSION) >= 0);
+
+        byte[] largeBlob = new byte[LARGE_BLOB_SIZE];
+        for (int i = 0; i < largeBlob.length; i++) {
+            largeBlob[i] = (byte) (i % 251);
+        }
+
+        String sql = "insert into " + dbName + "." + blobTableName + " values(?, ?)";
+        try (PreparedStatement statement = prepareColumnStatement(sql)) {
+            long current = System.currentTimeMillis();
+            statement.setTimestamp(1, new Timestamp(current));
+            statement.setBlob(2, new TDBlob(largeBlob, true));
+
+            statement.executeUpdate();
+
+            try (ResultSet resultSet = statement.executeQuery("select * from " + dbName + "." + blobTableName)) {
+                Assert.assertTrue(resultSet.next());
+                Assert.assertEquals(new Timestamp(current), resultSet.getTimestamp(1));
+                Assert.assertArrayEquals(largeBlob, resultSet.getBlob(2).getBytes(1, largeBlob.length));
                 Assert.assertFalse(resultSet.next());
             }
         }
