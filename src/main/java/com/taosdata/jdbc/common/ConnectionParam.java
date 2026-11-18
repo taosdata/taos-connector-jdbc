@@ -33,9 +33,6 @@ import com.taosdata.jdbc.utils.StringUtils;
 import com.taosdata.jdbc.utils.Utils;
 import io.netty.buffer.ByteBuf;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.time.DateTimeException;
 import java.time.ZoneId;
@@ -537,15 +534,6 @@ public class ConnectionParam {
             }
             if (password == null) {
                 throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_PASSWORD_IS_REQUIRED);
-            }
-
-            try {
-                user = URLDecoder.decode(user, StandardCharsets.UTF_8.displayName());
-                password = URLDecoder.decode(password, StandardCharsets.UTF_8.displayName());
-            } catch (UnsupportedEncodingException e) {
-                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE,
-                        "unsupported UTF-8 concoding, user: " + properties.getProperty(TSDBDriver.PROPERTY_KEY_USER)
-                                + ", password: " + properties.getProperty(TSDBDriver.PROPERTY_KEY_PASSWORD));
             }
         }
 

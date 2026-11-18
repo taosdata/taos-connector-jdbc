@@ -296,7 +296,7 @@ public class TSDBDriver extends AbstractDriver {
             return new Properties();
 
         // parse properties
-        Properties urlProps = StringUtils.parseUrl(url, defaults);
+        Properties urlProps = StringUtils.parseRawUrl(url, defaults);
         this.dbMetaData = new TSDBDatabaseMetaData(url, urlProps.getProperty(TSDBDriver.PROPERTY_KEY_USER));
         return urlProps;
     }

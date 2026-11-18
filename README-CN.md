@@ -42,6 +42,8 @@
 - 其他参考信息请看 [参考手册](https://docs.taosdata.com/reference/connector/java/)，包含了版本历史、数据类型、示例程序汇总、API 说明和常见问题等。
 - 本 README 主要是为想自己贡献、编译、测试 JDBC Connector 的开发者写的。如果要学习 TDengine，可以浏览 [官方文档](https://docs.taosdata.com/)。
 
+WebSocket 或 REST 使用密码认证时，省略 `token` 和 `bearerToken` 属性。向 JDBC `Properties`、`DriverManager.getConnection(url, user, password)` 或连接池传入原始用户名和密码。把用户名或密码放入 JDBC URL 查询参数时，需要按 UTF-8 表单编码一次。例如，密码 `a+b%2B` 在 `Properties` 中填 `a+b%2B`，在 URL 中写作 `password=a%2Bb%252B`。如果应用曾对传入 `Properties` 的凭据预编码，升级时请移除这一步。
+
 ## 3. 前置条件
 
 - 已安装 Java 1.8 或以上版本运行时环境和 Maven 3.6 或以上版本，且正确设置了环境变量。
