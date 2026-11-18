@@ -114,15 +114,21 @@ public class ConsumerParam {
 
     private final HashMap<String, String> config = new HashMap<>();
 
-    public ConsumerParam(Properties properties) throws SQLException {
-        if (null != properties.getProperty(TMQConstants.CONNECT_URL)) {
-            String url = properties.getProperty(TMQConstants.CONNECT_URL);
-            StringUtils.parseUrl(url, properties);
-        }
-        if (null != properties.getProperty(TMQConstants.CONNECT_USER))
+    public ConsumerParam(Properties consumerProperties) throws SQLException {
+        Properties properties = (Properties) consumerProperties.clone();
+        String url = properties.getProperty(TMQConstants.CONNECT_URL);
+        Properties fromUrl = StringUtils.parseRawUrl(url, null);
+        properties.putAll(fromUrl);
+        String urlUser = fromUrl.getProperty(TSDBDriver.PROPERTY_KEY_USER);
+        String urlPassword = fromUrl.getProperty(TSDBDriver.PROPERTY_KEY_PASSWORD);
+        if (properties.getProperty(TMQConstants.CONNECT_USER) != null) {
             properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, properties.getProperty(TMQConstants.CONNECT_USER));
-        if (null != properties.getProperty(TMQConstants.CONNECT_PASS))
+            urlUser = fromUrl.getProperty(TMQConstants.CONNECT_USER);
+        }
+        if (properties.getProperty(TMQConstants.CONNECT_PASS) != null) {
             properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, properties.getProperty(TMQConstants.CONNECT_PASS));
+            urlPassword = fromUrl.getProperty(TMQConstants.CONNECT_PASS);
+        }
 
         // Store td.connect.token in config for later use in SubscribeReq
         String token = properties.getProperty(TMQConstants.TMQ_CONNECT_TOKEN);
@@ -130,6 +136,7 @@ public class ConsumerParam {
             config.put(TMQConstants.TMQ_CONNECT_TOKEN, token);
             properties.setProperty(TSDBDriver.PROPERTY_KEY_BEARER_TOKEN, token);
         }
+        StringUtils.decodeUrlCredentials(properties, urlUser, urlPassword);
 
         if (null != properties.getProperty(TMQConstants.CONNECT_IP))
             properties.setProperty(TSDBDriver.PROPERTY_KEY_HOST, properties.getProperty(TMQConstants.CONNECT_IP));

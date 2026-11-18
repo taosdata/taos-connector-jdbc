@@ -125,24 +125,24 @@ public class SchemalessWriter implements AutoCloseable {
 
     private void init(String url, String user, String password, String cloudToken, String dbName, Boolean useSSL) throws SQLException {
         String t;
-        Properties properties;
-
         if (url.startsWith(TSDBDriver.URL_PREFIX)) {
             t = "jni";
-            properties = StringUtils.parseUrl(url, null);
         } else if (url.startsWith(RestfulDriver.URL_PREFIX)) {
             t = "ws";
-            properties = StringUtils.parseUrl(url, null);
         } else {
             throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_UNKNOWN, "unknown url：" + url);
         }
 
+        Properties properties = StringUtils.parseRawUrl(url, null);
         if (user != null)
             properties.setProperty(TSDBDriver.PROPERTY_KEY_USER, user);
         if (password != null)
             properties.setProperty(TSDBDriver.PROPERTY_KEY_PASSWORD, password);
         if (cloudToken != null)
             properties.setProperty(TSDBDriver.PROPERTY_KEY_TOKEN, cloudToken);
+        StringUtils.decodeUrlCredentials(properties,
+                user == null ? properties.getProperty(TSDBDriver.PROPERTY_KEY_USER) : null,
+                password == null ? properties.getProperty(TSDBDriver.PROPERTY_KEY_PASSWORD) : null);
         if (dbName != null)
             properties.setProperty(TSDBDriver.PROPERTY_KEY_DBNAME, dbName);
         if (useSSL != null)

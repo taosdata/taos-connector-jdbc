@@ -42,6 +42,8 @@ English | [简体中文](./README-CN.md)
 - For other reference information, please check [Reference Manual](https://docs.tdengine.com/tdengine-reference/client-libraries/java/), which includes version history, data types, example programs, API descriptions, and FAQs.
 - This quick guide is mainly for developers who like to contribute/build/test the JDBC connector by themselves. To learn about TDengine, you can visit the [official documentation](https://docs.tdengine.com).
 
+For WebSocket and REST password authentication, omit the `token` and `bearerToken` properties. Pass the original username and password to JDBC `Properties`, `DriverManager.getConnection(url, user, password)`, or your connection pool. When placing either value in the JDBC URL query, form-encode it once using UTF-8. For example, the password `a+b%2B` is `a+b%2B` in `Properties` and `password=a%2Bb%252B` in the URL. When upgrading an application that pre-encoded credentials for `Properties`, remove that encoding step.
+
 ## 3. Prerequisites
 ### System Requirements
 - JDK >= 8 (JDK 17 recommended)

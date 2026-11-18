@@ -29,6 +29,9 @@ import com.taosdata.jdbc.TSDBError;
 import com.taosdata.jdbc.TSDBErrorNumbers;
 import com.taosdata.jdbc.common.Endpoint;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -123,7 +126,47 @@ public class StringUtils {
 
         return result;
     }
+
     public static Properties parseUrl(String url, Properties defaults) throws SQLException {
+        Properties fromUrl = parseRawUrl(url, null);
+        if (defaults == null || !hasToken(defaults)) {
+            decodeUrlCredentials(fromUrl, fromUrl.getProperty(TSDBDriver.PROPERTY_KEY_USER),
+                    fromUrl.getProperty(TSDBDriver.PROPERTY_KEY_PASSWORD));
+        }
+        if (defaults == null) {
+            return fromUrl;
+        }
+        defaults.putAll(fromUrl);
+        return defaults;
+    }
+
+    /** Decodes only credentials supplied by the URL. Pass null for each credential supplied separately. */
+    public static void decodeUrlCredentials(Properties properties, String urlUser, String urlPassword) throws SQLException {
+        if (hasToken(properties)) {
+            return;
+        }
+        decodeUrlCredential(properties, TSDBDriver.PROPERTY_KEY_USER, urlUser);
+        decodeUrlCredential(properties, TSDBDriver.PROPERTY_KEY_PASSWORD, urlPassword);
+    }
+
+    private static boolean hasToken(Properties properties) {
+        return properties.containsKey(TSDBDriver.PROPERTY_KEY_TOKEN)
+                || properties.containsKey(TSDBDriver.PROPERTY_KEY_BEARER_TOKEN);
+    }
+
+    private static void decodeUrlCredential(Properties properties, String key, String value) throws SQLException {
+        if (value != null) {
+            try {
+                properties.setProperty(key, URLDecoder.decode(value, StandardCharsets.UTF_8.name()));
+            } catch (IllegalArgumentException | UnsupportedEncodingException e) {
+                throw TSDBError.createSQLException(TSDBErrorNumbers.ERROR_INVALID_VARIABLE,
+                        "Invalid URL encoding for JDBC parameter " + key);
+            }
+        }
+    }
+
+    /** The native JDBC driver historically passes URL credentials to JNI verbatim. */
+    public static Properties parseRawUrl(String url, Properties defaults) throws SQLException {
         Properties urlProps = (defaults != null) ? defaults : new Properties();
         if (StringUtils.isEmpty(url)) {
             return urlProps;
